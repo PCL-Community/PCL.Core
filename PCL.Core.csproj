@@ -140,6 +140,10 @@
     <Compile Include="Service\System.Runtime.CompilerServices.cs" />
     <Compile Include="Service\WebServer.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\Modpack\CurseForge.cs" />
+    <Compile Include="Utils\Mod\CurseForge.cs" />
+    <Compile Include="Utils\Network.cs" />
+    <Compile Include="Utils\Override.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\StringStream.cs" />
   </ItemGroup>

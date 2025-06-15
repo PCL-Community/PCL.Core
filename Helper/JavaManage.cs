@@ -48,6 +48,7 @@ public class JavaManage
                 var newJavaList = new HashSet<string>(_javas.Select(x => x.JavaExePath).Concat(javaPaths), StringComparer.OrdinalIgnoreCase);
 
                 var ret = newJavaList
+                    .Where(x => !x.Contains("javapath"))
                     .Select(x => Java.Parse(x))
                     .Where(x => x != null)
                     .ToList();

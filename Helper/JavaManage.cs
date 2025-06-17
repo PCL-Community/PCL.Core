@@ -211,9 +211,13 @@ public class JavaManage
             // 根目录搜索
             foreach (var dri in from d in DriveInfo.GetDrives() where isDriverSuitable(d) select d.Name)
             {
-                programFilesPaths.AddRange(from dir in Directory.EnumerateDirectories(dri)
-                                           where mostPossibleKeyWords.Any(x => dir.IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0)
-                                           select dir);
+                try{
+                    programFilesPaths.AddRange(from dir in Directory.EnumerateDirectories(dri)
+                                            where mostPossibleKeyWords.Any(x => dir.IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0)
+                                            select dir);
+                }catch(UnauthorizedAccessException){
+                    continue;
+                }
             }
         }
         else

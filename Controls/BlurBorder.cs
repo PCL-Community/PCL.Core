@@ -14,7 +14,7 @@ using System.Windows.Media.Effects;
 
 namespace PCL.Core.Controls
 {
-    public class MyBlurBorder : Border
+    public class BlurBorder : Border
     {
         private readonly Stack<UIElement> _panelStack = new();
 
@@ -176,7 +176,7 @@ namespace PCL.Core.Controls
         /// The key needed set a read-only property
         /// </summary>
         private static readonly DependencyPropertyKey ContentClipPropertyKey =
-            DependencyProperty.RegisterReadOnly(nameof(ContentClip), typeof(Geometry), typeof(MyBlurBorder), new FrameworkPropertyMetadata(default(Geometry)));
+            DependencyProperty.RegisterReadOnly(nameof(ContentClip), typeof(Geometry), typeof(BlurBorder), new FrameworkPropertyMetadata(default(Geometry)));
 
         /// <summary>
         /// The DependencyProperty for the ContentClip property. <br/>
@@ -190,25 +190,25 @@ namespace PCL.Core.Controls
         /// The maximum depth of the visual tree to render.
         /// </summary>
         public static readonly DependencyProperty MaxDepthProperty =
-            BackgroundPresenter.MaxDepthProperty.AddOwner(typeof(MyBlurBorder));
+            BackgroundPresenter.MaxDepthProperty.AddOwner(typeof(BlurBorder));
 
         /// <summary>
         /// The radius of the blur effect applied to the background.
         /// </summary>
         public static readonly DependencyProperty BlurRadiusProperty =
-            DependencyProperty.Register(nameof(BlurRadius), typeof(double), typeof(MyBlurBorder), new FrameworkPropertyMetadata(25.0, propertyChangedCallback: OnRenderPropertyChanged));
+            DependencyProperty.Register(nameof(BlurRadius), typeof(double), typeof(BlurBorder), new FrameworkPropertyMetadata(25.0, propertyChangedCallback: OnRenderPropertyChanged));
 
         /// <summary>
         /// The type of kernel used for the blur effect.
         /// </summary>
         public static readonly DependencyProperty BlurKernelTypeProperty =
-            DependencyProperty.Register(nameof(BlurKernelType), typeof(KernelType), typeof(MyBlurBorder), new FrameworkPropertyMetadata(KernelType.Gaussian, propertyChangedCallback: OnRenderPropertyChanged));
+            DependencyProperty.Register(nameof(BlurKernelType), typeof(KernelType), typeof(BlurBorder), new FrameworkPropertyMetadata(KernelType.Gaussian, propertyChangedCallback: OnRenderPropertyChanged));
 
         /// <summary>
         /// The rendering bias for the blur effect, which can affect performance and quality.
         /// </summary>
         public static readonly DependencyProperty BlurRenderingBiasProperty =
-            DependencyProperty.Register(nameof(BlurRenderingBias), typeof(RenderingBias), typeof(MyBlurBorder), new FrameworkPropertyMetadata(RenderingBias.Quality, propertyChangedCallback: OnRenderPropertyChanged));
+            DependencyProperty.Register(nameof(BlurRenderingBias), typeof(RenderingBias), typeof(BlurBorder), new FrameworkPropertyMetadata(RenderingBias.Quality, propertyChangedCallback: OnRenderPropertyChanged));
 
         private static void OnRenderPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {

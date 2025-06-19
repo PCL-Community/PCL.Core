@@ -8,11 +8,11 @@ namespace PCL.Core.Helper
 {
     public static class BlurHelper
     {
-        public static event EventHandler<bool> BlurChanged;
+        public static event EventHandler<int> BlurChanged;
 
-        public static void RaiseBlurChanged(bool isBlurred)
+        public static void RaiseBlurChanged(int blurValue)
         {
-            BlurChanged?.Invoke(null, isBlurred);
+            BlurChanged?.Invoke(null, blurValue);
         }
     }
 }

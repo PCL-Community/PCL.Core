@@ -16,6 +16,14 @@ namespace PCL.Core.Controls
 {
     public class BlurBorder : Border
     {
+        public BlurBorder()
+        {
+            BlurHelper.BlurChanged += OnBlurChanged;
+            
+            // 防止内存泄漏
+            Unloaded += (_, _) => BlurHelper.BlurChanged -= OnBlurChanged;
+        }
+
         private readonly Stack<UIElement> _panelStack = new();
 
         /// <summary>
@@ -170,6 +178,13 @@ namespace PCL.Core.Controls
             base.OnRender(dc);
         }
 
+        private void OnBlurChanged(object? sender, int e)
+        {
+            BlurRadius = e;
+
+            // 强制渲染
+            BackgroundPresenter.ForceRender(this);
+        }
 
 
         /// <summary>

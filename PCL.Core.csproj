@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{A0C2209D-64FB-4C11-9459-8E86304B6F94}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -89,6 +89,9 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=1.4.2.13, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpZipLib.1.4.2\lib\netstandard2.0\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.9.0.6\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
@@ -141,12 +144,39 @@
     <Compile Include="Helper\BlurHelper.cs" />
     <Compile Include="Helper\JavaManage.cs" />
     <Compile Include="Helper\MathHelper.cs" />
+    <Compile Include="Helper\Configure\IConfigure.cs" />
+    <Compile Include="Helper\Configure\IniConfigure.cs" />
+    <Compile Include="Helper\Configure\JsonConfigure.cs" />
+    <Compile Include="Helper\Diff\BsDiff.cs" />
+    <Compile Include="Helper\Diff\IBinaryDiff.cs" />
+    <Compile Include="Helper\JavaManage.cs" />
+    <Compile Include="Helper\Logger\Logger.cs" />
+    <Compile Include="Helper\Logger\LoggerConfiguration.cs" />
+    <Compile Include="Helper\Logger\LoggerSegmentMode.cs" />
+    <Compile Include="Helper\LogWrapper.cs" />
+    <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
+    <Compile Include="Helper\VarInt.cs" />
     <Compile Include="Model\Java.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeFile.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeHashes.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeLinks.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgePictures.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeProject.cs" />
+    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeResponseData.cs" />
+    <Compile Include="Model\ResourceProject\Modrinth\ModrinthDonationUrl.cs" />
+    <Compile Include="Model\ResourceProject\Modrinth\ModrinthGallery.cs" />
+    <Compile Include="Model\ResourceProject\Modrinth\ModrinthLicense.cs" />
+    <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
+    <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service\Rpc.cs" />
     <Compile Include="Service\RoutedWebServer.cs" />
     <Compile Include="Service\System.Runtime.CompilerServices.cs" />
     <Compile Include="Service\WebServer.cs" />
+    <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\StringStream.cs" />

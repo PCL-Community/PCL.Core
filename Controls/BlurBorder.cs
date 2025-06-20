@@ -143,6 +143,13 @@ namespace PCL.Core.Controls
         /// <inheritdoc/>
         protected override void OnRender(DrawingContext dc)
         {
+            // 防止无意义渲染
+            if (BlurRadius == 0)
+            {
+                base.OnRender(dc);
+                return;
+            }
+            
             DrawingVisual drawingVisual = new DrawingVisual()
             {
                 Clip = new RectangleGeometry(new Rect(0, 0, RenderSize.Width, RenderSize.Height)),
@@ -223,7 +230,7 @@ namespace PCL.Core.Controls
         /// The rendering bias for the blur effect, which can affect performance and quality.
         /// </summary>
         public static readonly DependencyProperty BlurRenderingBiasProperty =
-            DependencyProperty.Register(nameof(BlurRenderingBias), typeof(RenderingBias), typeof(BlurBorder), new FrameworkPropertyMetadata(RenderingBias.Quality, propertyChangedCallback: OnRenderPropertyChanged));
+            DependencyProperty.Register(nameof(BlurRenderingBias), typeof(RenderingBias), typeof(BlurBorder), new FrameworkPropertyMetadata(RenderingBias.Performance, propertyChangedCallback: OnRenderPropertyChanged));
 
         private static void OnRenderPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {

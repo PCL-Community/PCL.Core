@@ -42,7 +42,7 @@ namespace PCL.Core.Helper
         private delegate void GetContentBoundsDelegate(VisualBrush visualBrush, out Rect bounds);
         private readonly Stack<UIElement> _parentStack = new();
 
-        internal static void ForceRender(UIElement target)
+        public static void ForceRender(UIElement target)
         {
             using DrawingContext drawingContext = _renderOpenMethod(target);
 

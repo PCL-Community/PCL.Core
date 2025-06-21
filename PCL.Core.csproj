@@ -161,6 +161,16 @@
     <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Helper\VarInt.cs" />
+    <Compile Include="Lifecycle\ILifecycleLogService.cs" />
+    <Compile Include="Lifecycle\ILifecycleService.cs" />
+    <Compile Include="Lifecycle\Lifecycle.cs" />
+    <Compile Include="Lifecycle\LifecycleActionLevel.cs" />
+    <Compile Include="Lifecycle\LifecycleContext.cs" />
+    <Compile Include="Lifecycle\LifecycleLogItem.cs" />
+    <Compile Include="Lifecycle\LifecycleLogLevel.cs" />
+    <Compile Include="Lifecycle\LifecycleService.cs" />
+    <Compile Include="Lifecycle\LifecycleServiceInfo.cs" />
+    <Compile Include="Lifecycle\LifecycleState.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
@@ -189,6 +199,16 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
+  <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
+    <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
+    <ItemGroup>
+      <PowerShellScript Include="$(MSBuildProjectDirectory)\Lifecycle\LifecycleServiceTypesGenerator.ps1" />
+    </ItemGroup>
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+  </Target>
+  <ItemGroup>
+    <Compile Include="Lifecycle\LifecycleServiceTypes.g.cs" Condition="Exists('Lifecycle\LifecycleServiceTypes.g.cs')" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

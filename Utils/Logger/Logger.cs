@@ -16,7 +16,8 @@ public sealed class Logger : IDisposable
     {
         _configuration = configuration;
         CreateNewFile();
-        Task.Run(() => ProcessLogQueue(_cts.Token));
+        _processingThread = new Thread(() => ProcessLogQueue(_cts.Token));
+        _processingThread.Start();
     }
 
     private readonly LoggerConfiguration _configuration;
@@ -24,6 +25,7 @@ public sealed class Logger : IDisposable
     private FileStream? _currentFile;
     private List<string> _files = [];
     
+    private readonly Thread _processingThread;
     private readonly ConcurrentQueue<string> _logQueue = new();
     private readonly ManualResetEventSlim _logEvent = new(false);
     private readonly CancellationTokenSource _cts = new();
@@ -77,49 +79,47 @@ public sealed class Logger : IDisposable
     
     private static readonly Regex PatternNewLine = new(@"\r\n|\n|\r");
 
-    private readonly object _lockLogWriter = new();
     private void ProcessLogQueue(CancellationToken token)
     {
         const int maxBatchCount = 100;
-        var batch = new StringBuilder();
-        long currentBatchCount = 0;
-        lock (_lockLogWriter)
+        try
         {
-            while (!token.IsCancellationRequested)
+            StringBuilder batch = new();
+            long currentBatchCount = 0;
+            while (true) // 循环一次写入一次日志
             {
-                try
+                while (true) // 循环一次从队列里拿一条待打印的日志
                 {
-                    _logEvent.Wait(600, token);
-                    while (_logQueue.TryDequeue(out var message))
+                    _logEvent.Wait(millisecondsTimeout: 600);
+                    if (!_logQueue.TryDequeue(out var message))
                     {
-#if DEBUG
-                        message = PatternNewLine.Replace(message, "\r\n");
-                        Console.WriteLine(message);
-#endif
-                        batch.AppendLine(message);
-                        currentBatchCount++;
-                        if (currentBatchCount >= maxBatchCount || _logQueue.IsEmpty)
-                        {
-                            DoWrite(batch.ToString());
-                            batch.Clear();
-                            currentBatchCount = 0;
-                        }
+                        // 日志队列为空时
+                        if (currentBatchCount != 0) // 有待写入的日志 => 写入一次
+                            break;
+                        if (token.IsCancellationRequested) // 已被 Dispose => 结束运行
+                            throw new OperationCanceledException();
+                        _logEvent.Reset(); // 否则 => 接着等待下一次 Log() 调用
+                        continue;
                     }
-                    _logEvent.Reset();
+#if DEBUG
+                    message = PatternNewLine.Replace(message, "\r\n");
+                    Console.WriteLine(message);
+#endif
+                    batch.AppendLine(message);
+                    if (++currentBatchCount >= maxBatchCount) // 行数达到缓冲上限 => 写入一次
+                        break;
                 }
-                catch (OperationCanceledException) {}
-                catch (Exception e)
-                {
-                    // 出错了先干到标准输出流中吧 Orz
-                    Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
-                    throw;
-                }
-                finally
-                {
-                    batch.Clear();
-                    currentBatchCount = 0;
-                }
+                DoWrite(batch.ToString());
+                batch.Clear();
+                currentBatchCount = 0;
             }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e)
+        {
+            // 出错了先干到标准输出流中吧 Orz
+            Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
+            throw;
         }
     }
 
@@ -146,11 +146,8 @@ public sealed class Logger : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        if (!_logQueue.IsEmpty && !_logEvent.IsSet)
-            _logEvent.Set();
         _cts.Cancel();
-        lock (_lockLogWriter) { };
-        _logEvent.Dispose();
+        _processingThread.Join();
         _currentStream?.Dispose();
         _currentFile?.Dispose();
     }

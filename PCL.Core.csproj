@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props" Condition="Exists('..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{A0C2209D-64FB-4C11-9459-8E86304B6F94}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -89,56 +90,63 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.9.0.6\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
-    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression" />
-    <Reference Include="System.IO.Pipelines, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.IO.Pipelines.9.0.6\lib\net462\System.IO.Pipelines.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
-    </Reference>
+    <Reference Include="System.Management" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Encodings.Web, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Encodings.Web.9.0.6\lib\net462\System.Text.Encodings.Web.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Json, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Json.9.0.6\lib\net462\System.Text.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
-    </Reference>
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.14.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="PolySharp" Version="1.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+    <PackageReference Include="System.Text.Json" Version="9.0.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Controls\BlurBorder.cs" />
+    <Compile Include="Helper\BackgroundPresenter.cs" />
+    <Compile Include="Helper\ByteHelper.cs" />
+    <Compile Include="Helper\EncryptHelper.cs" />
+    <Compile Include="Helper\HashHelper.cs" />
+    <Compile Include="Helper\Identify.cs" />
+    <Compile Include="Helper\JavaManage.cs" />
+    <Compile Include="Helper\MathHelper.cs" />
     <Compile Include="Helper\Configure\IConfigure.cs" />
     <Compile Include="Helper\Configure\IniConfigure.cs" />
     <Compile Include="Helper\Configure\JsonConfigure.cs" />
     <Compile Include="Helper\Diff\BsDiff.cs" />
     <Compile Include="Helper\Diff\IBinaryDiff.cs" />
-    <Compile Include="Helper\JavaManage.cs" />
+    <Compile Include="Helper\LogWrapper.cs" />
+    <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
+    <Compile Include="Helper\VarInt.cs" />
+    <Compile Include="LifecycleManagement\ILifecycleLogService.cs" />
+    <Compile Include="LifecycleManagement\ILifecycleService.cs" />
+    <Compile Include="LifecycleManagement\Lifecycle.cs" />
+    <Compile Include="LifecycleManagement\LifecycleActionLevel.cs" />
+    <Compile Include="LifecycleManagement\LifecycleContext.cs" />
+    <Compile Include="LifecycleManagement\LifecycleLogItem.cs" />
+    <Compile Include="LifecycleManagement\LifecycleLogLevel.cs" />
+    <Compile Include="LifecycleManagement\LifecycleService.cs" />
+    <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
+    <Compile Include="LifecycleManagement\LifecycleState.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
@@ -154,20 +162,35 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Service\RoutedWebServer.cs" />
-    <Compile Include="Service\System.Runtime.CompilerServices.cs" />
-    <Compile Include="Service\WebServer.cs" />
+    <Compile Include="Service\ApplicationService.cs" />
+    <Compile Include="Service\LogService.cs" />
+    <Compile Include="Service\RpcService.cs" />
+    <Compile Include="Service\MainWindowService.cs" />
+    <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\Logger\Logger.cs" />
+    <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
+    <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
     <Compile Include="Utils\Modpack\CurseForge.cs" />
     <Compile Include="Utils\Mod\CurseForge.cs" />
     <Compile Include="Utils\Network.cs" />
     <Compile Include="Utils\Override.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
+    <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
+    <Compile Include="Utils\System.Runtime.CompilerServices.cs" />
+    <Compile Include="Utils\WebServer.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
+  <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
+  <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
+    <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
+    <ItemGroup>
+      <PowerShellScript Include="$(MSBuildProjectDirectory)\LifecycleManagement\LifecycleServiceTypesGenerator.ps1" />
+    </ItemGroup>
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+    <ItemGroup>
+      <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
+    </ItemGroup>
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

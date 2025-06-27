@@ -2,9 +2,8 @@
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using PCL.Core.Utils;
 
-namespace PCL.Core.Service;
+namespace PCL.Core.Utils;
 
 /// <summary>
 /// 用于处理 HTTP 客户端请求的委托。

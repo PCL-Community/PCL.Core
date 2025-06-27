@@ -16,52 +16,58 @@ public class JsonConfigure : IConfigure
     {
         _filePath  = filePath ?? throw new ArgumentNullException(nameof(filePath));
         _load();
-        _content ??= new();
+        _content ??= new ConcurrentDictionary<string, string>();
     }
 
     private void _load()
     {
         lock (_fileOpLock)
         {
-            var folder = _filePath.Substring(0, _filePath.LastIndexOf(Path.DirectorySeparatorChar) + 1);
-            if (!Directory.Exists(folder))
-                Directory.CreateDirectory(folder);
-            using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-            using var reader = new StreamReader(fs, Encoding.UTF8);
-            var ctx = reader.ReadToEnd();
-            if (string.IsNullOrEmpty(ctx))
-            {
-                _content = new();
-            }
             try
             {
+                var folder = Path.GetDirectoryName(_filePath);
+                if (!string.IsNullOrEmpty(folder))
+                    Directory.CreateDirectory(folder);
+                using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
+                using var reader = new StreamReader(fs, Encoding.UTF8);
+                var ctx = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(ctx))
+                    _content = new ConcurrentDictionary<string, string>();
                 var jObject = JsonSerializer.Deserialize<ConcurrentDictionary<string, String>>(ctx);
-                _content = jObject ?? new();
+                _content = jObject ?? new ConcurrentDictionary<string, string>();
             }
-            catch
+            catch (JsonException)
             {
-                _content = new();
+                _content = new ConcurrentDictionary<string, string>();
+            }
+            catch (Exception e)
+            {
+                LogWrapper.Warn(e, $"[Config] 初始化 {_filePath} 文件出现问题");
+                throw;
             }
         }
     }
 
     public void Set(string key, object value)
     {
-        _content.AddOrUpdate(key, _ => value.ToString(),(_, _) => value.ToString());
+        _content.AddOrUpdate(key, _ => value?.ToString() ?? string.Empty,(_, _) => value?.ToString() ?? string.Empty);
         Flush();
     }
 
     public TValue? Get<TValue>(string key)
     {
+        if (!_content.TryGetValue(key, out var ret) || string.IsNullOrEmpty(ret)) return default;
+        if (typeof(TValue) == typeof(string))
+            return (TValue)(object)ret;
         try
         {
-            if (_content.TryGetValue(key, out string? ret))
-            {
-                return (TValue)Convert.ChangeType(ret, typeof(TValue));
-            }
+            return (TValue)Convert.ChangeType(ret, typeof(TValue));
         }
-        catch { }
-        return default;
+        catch (Exception ex) when (ex is InvalidCastException || ex is FormatException)
+        {
+            LogWrapper.Warn(ex, $"[Config] {_filePath} 尝试将参数值 {ret} 从 string 转到 {typeof(TValue)} 失败");
+            return default;
+        }
     }
 
     public bool Contains(string key)
@@ -86,12 +92,14 @@ public class JsonConfigure : IConfigure
         lock (_fileOpLock)
         {
             var res = JsonSerializer.Serialize(_content);
-            using var fs = new FileStream($"{_filePath}.temp",FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+            string tempFile = $"{_filePath}.temp";
+            string bakFile = $"{_filePath}.bak";
+            using var fs = new FileStream(tempFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             using var writer = new StreamWriter(fs, Encoding.UTF8);
             writer.Write(res);
             writer.Close();
             fs.Close();
-            File.Replace($"{_filePath}.temp", _filePath, $"{_filePath}.bak");
+            File.Replace(tempFile, _filePath, bakFile);
         }
     }
 

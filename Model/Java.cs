@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using PCL.Core.Helper;
 using PCL.Core.Utils.PE;
 
 namespace PCL.Core.Model;
@@ -61,6 +62,13 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         return $" {(IsJre ? "JRE" : "JDK")} {JavaMajorVersion} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
     }
 
+    public string ToString(bool detailed)
+    {
+        if (!detailed)
+            return ToString();
+        return $" {(IsJre ? "JRE" : "JDK")} {Version} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
+    }
+
     public override bool Equals(object? obj)
     {
         if (obj is Java model)
@@ -88,6 +96,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         {
             if (!File.Exists(javaExePath))
                 return null;
+            LogWrapper.Info($"[Java] 解析 {javaExePath} 的 Java 程序信息");
             var javaFileVersion = FileVersionInfo.GetVersionInfo(javaExePath);
             var javaVersion = Version.Parse(javaFileVersion.FileVersion);
             var companyName = javaFileVersion.CompanyName
@@ -116,7 +125,10 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
                 isJavaJre
             );
         }
-        catch { /* 忽略无法获取版本的Java路径 */ }
+        catch(Exception e)
+        {
+            LogWrapper.Error(e, $"[Java] 解析 {javaExePath} 的信息时出现错误");
+        }
         return null;
     }
     
@@ -129,16 +141,18 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["Amazon"] = JavaBrandType.AmazonCorretto,
         ["Azul"] = JavaBrandType.AzulZulu,
         ["IBM"] = JavaBrandType.IBMSemeru,
-        ["Oracle"] = JavaBrandType.OpenJDK,
+        ["Oracle"] = JavaBrandType.Oracle,
         ["Tencent"] = JavaBrandType.TencentKona,
-        ["Java(TM)"] = JavaBrandType.Oracle,
+        ["Java(TM)"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
     };
 
     private static JavaBrandType DetermineBrand(string? output)
     {
         if (output == null) return JavaBrandType.Unknown;
-        var result = _brandMap.Keys.First(item => output.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0);
-        return result == null ? JavaBrandType.Unknown : _brandMap[result];
+        var result = _brandMap.Keys.Where(item => output.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0);
+        return result.Any()
+            ? _brandMap[result.First()]
+            : JavaBrandType.Unknown;
     }
 }

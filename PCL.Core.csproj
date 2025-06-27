@@ -171,6 +171,10 @@
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
     <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
+    <Compile Include="Utils\Modpack\CurseForge.cs" />
+    <Compile Include="Utils\Mod\CurseForge.cs" />
+    <Compile Include="Utils\Network.cs" />
+    <Compile Include="Utils\Override.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />

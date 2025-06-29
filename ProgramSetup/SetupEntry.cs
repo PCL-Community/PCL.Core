@@ -14,7 +14,7 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
 
     public T Value { get; set; }
 
-    public static T GetDefaultDefaultValue()
+    private static T GetDefaultDefaultValue()
     {
         var type = typeof(T);
         if (type == typeof(bool))
@@ -23,8 +23,8 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
             return (T)(object)string.Empty;
         if (type == typeof(int))
             return (T)(object)0;
-        if (type == typeof(object))
-            return (T)(object)null;
+        if (type.IsEnum && Enum.GetUnderlyingType(type) == typeof(int))
+            return (T)(object)0;
         throw new ArgumentException($"不支持为类型 {type} 提供默认值");
     }
 }

@@ -164,12 +164,14 @@
     <Compile Include="ProgramSetup\Setup.cs" />
     <Compile Include="ProgramSetup\SetupEntry.cs" />
     <Compile Include="ProgramSetup\SetupEntrySource.cs" />
+    <Compile Include="ProgramSetup\SetupJsonManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
     <Compile Include="Service\LogService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
+    <Compile Include="Utils\CallbackDisposable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />

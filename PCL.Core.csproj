@@ -161,10 +161,11 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthLicense.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
+    <Compile Include="ProgramSetup\ISetupFileSerializer.cs" />
     <Compile Include="ProgramSetup\Setup.cs" />
     <Compile Include="ProgramSetup\SetupEntry.cs" />
     <Compile Include="ProgramSetup\SetupEntrySource.cs" />
-    <Compile Include="ProgramSetup\SetupJsonManager.cs" />
+    <Compile Include="ProgramSetup\SetupFileManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
     <Compile Include="Service\LogService.cs" />

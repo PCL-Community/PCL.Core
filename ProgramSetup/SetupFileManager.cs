@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Utils;
 
 namespace PCL.Core.ProgramSetup;
 
-public sealed class SetupJsonManager : IDisposable
+public sealed class SetupFileManager : IDisposable
 {
     private readonly string _filePath;
+    private readonly ISetupFileSerializer _serializer;
     private readonly ReaderWriterLockSlim _rwLock = new();
     private readonly ManualResetEventSlim _saveEvent = new();
     private readonly CancellationTokenSource _cts = new();
@@ -18,9 +18,10 @@ public sealed class SetupJsonManager : IDisposable
     private ConcurrentDictionary<string, string> _content = new();
     private bool _disposed = false;
 
-    public SetupJsonManager(string filePath)
+    public SetupFileManager(string filePath, ISetupFileSerializer serializer)
     {
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _saveTask = new Task(() => Save(_cts.Token), TaskCreationOptions.LongRunning);
         _saveTask.Start();
         Load();
@@ -62,7 +63,7 @@ public sealed class SetupJsonManager : IDisposable
         return new CallbackDisposable(() =>
         {
             if (Environment.CurrentManagedThreadId != threadId)
-                throw new InvalidOperationException($"{nameof(SetupJsonManager)} 必须在同一线程进入与退出多重操作");
+                throw new InvalidOperationException("必须在同一线程进入与退出多重操作");
             _rwLock.ExitReadLock();
         });
     }
@@ -76,12 +77,12 @@ public sealed class SetupJsonManager : IDisposable
             if (!string.IsNullOrEmpty(folder))
                 Directory.CreateDirectory(folder);
             using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-            var jResult = JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(fs);
+            var jResult = _serializer.Deserialize(fs);
             _content = jResult ?? throw new NullReferenceException(nameof(jResult) + " is null");
         }
         catch (Exception ex)
         {
-            throw new Exception($"将文件解析为 json 配置文件失败：{_filePath}", ex);
+            throw new Exception($"将文件解析为配置文件失败：{_filePath}", ex);
         }
         finally
         {
@@ -104,7 +105,7 @@ public sealed class SetupJsonManager : IDisposable
             }
             _rwLock.EnterWriteLock();
             _saveEvent.Reset();
-            string jResult = JsonSerializer.Serialize(_content);
+            string jResult = _serializer.Serialize(_content);
             _rwLock.ExitWriteLock();
             try
             {
@@ -116,7 +117,7 @@ public sealed class SetupJsonManager : IDisposable
             catch (Exception ex)
             {
                 _saveEvent.Dispose();
-                throw new Exception($"向硬盘同步 Json 文件失败：{_filePath}", ex);
+                throw new Exception($"向硬盘同步文件失败：{_filePath}", ex);
             }
         }
     }

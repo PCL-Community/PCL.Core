@@ -7,19 +7,24 @@ namespace PCL.Core.ProgramSetup.FileManager;
 /// </summary>
 public sealed class InstanceSetupFileManager : ISetupFileManager
 {
-    public string? this[string key, string? mcPath]
+    public string? Get(string key, string? mcPath)
     {
-        get
-        {
-            if (mcPath is null)
-                throw new ArgumentNullException(nameof(mcPath));
-            throw new NotImplementedException();
-        }
-        set
-        {
-            if (mcPath is null)
-                throw new ArgumentNullException(nameof(mcPath));
-            throw new NotImplementedException();
-        }
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        throw new NotImplementedException();
+    }
+
+    public string? Set(string key, string value, string? mcPath)
+    {
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        throw new NotImplementedException();
+    }
+
+    public string? Remove(string key, string? mcPath)
+    {
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        throw new NotImplementedException();
     }
 }

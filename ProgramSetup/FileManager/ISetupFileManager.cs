@@ -3,8 +3,17 @@
 public interface ISetupFileManager
 {
     /// <summary>
-    /// 获取或设置某个键对应的值 <br/>
-    /// 获取时若键不存在则返回空，设置时若传入空则删除键
+    /// 获取某个键对应的值，键不存在时返回 <see langword="null"/>
     /// </summary>
-    string? this[string key, string? mcPath] { get; set; }
+    string? Get(string key, string? mcPath);
+
+    /// <summary>
+    /// 设置某个键对应的值，返回旧值（如果之前不存在该键则返回 <see langword="null"/>）
+    /// </summary>
+    string? Set(string key, string value, string? mcPath);
+
+    /// <summary>
+    /// 删除某个键，返回该键的值（如果之前不存在该键则返回 <see langword="null"/>）
+    /// </summary>
+    string? Remove(string key, string? mcPath);
 }

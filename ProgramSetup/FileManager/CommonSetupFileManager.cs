@@ -30,32 +30,37 @@ public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
         Load();
     }
 
-    public string? this[string key, string? mcPath]
+    public string? Get(string key, string? mcPath)
     {
-        get
+        _content.TryGetValue(key, out string? value);
+        return value;
+    }
+
+    public string? Set(string key, string value, string? mcPath)
+    {
+        string? result = null;
+        _rwLock.EnterReadLock();
+        _content.AddOrUpdate(key, _ =>
         {
-            _content.TryGetValue(key, out string? value);
+            result = null;
             return value;
-        }
-        set
+        }, (_, existingValue) =>
         {
-            if (value is not null)
-            {
-                // set
-                _rwLock.EnterReadLock();
-                _content.AddOrUpdate(key, value, (_, _) => value);
-                _saveEvent.Set();
-                _rwLock.EnterReadLock();
-            }
-            else
-            {
-                // delete
-                _rwLock.EnterReadLock();
-                _content.TryRemove(key, out _);
-                _saveEvent.Set();
-                _rwLock.EnterReadLock();
-            }
-        }
+            result = existingValue;
+            return value;
+        });
+        _saveEvent.Set();
+        _rwLock.ExitReadLock();
+        return result;
+    }
+
+    public string? Remove(string key, string? mcPath)
+    {
+        _rwLock.EnterReadLock();
+        _content.TryRemove(key, out string? value);
+        _saveEvent.Set();
+        _rwLock.ExitReadLock();
+        return value;
     }
 
     /// <summary>

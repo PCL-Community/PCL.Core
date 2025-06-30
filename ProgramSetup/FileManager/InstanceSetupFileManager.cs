@@ -2,17 +2,24 @@
 
 namespace PCL.Core.ProgramSetup.FileManager;
 
+/// <summary>
+/// 用于托管某个位于游戏实例文件夹内的配置文件的类，同步地写入文件
+/// </summary>
 public sealed class InstanceSetupFileManager : ISetupFileManager
 {
-    string? ISetupFileManager.this[string key, string? mcPath]
+    public string? this[string key, string? mcPath]
     {
-        get => this[key, mcPath ?? throw new ArgumentNullException(nameof(mcPath))];
-        set => this[key, mcPath ?? throw new ArgumentNullException(nameof(mcPath))] = value;
-    }
-
-    public string? this[string key, string mcPath]
-    {
-        get => throw new NotImplementedException();
-        set => throw new NotImplementedException();
+        get
+        {
+            if (mcPath is null)
+                throw new ArgumentNullException(nameof(mcPath));
+            throw new NotImplementedException();
+        }
+        set
+        {
+            if (mcPath is null)
+                throw new ArgumentNullException(nameof(mcPath));
+            throw new NotImplementedException();
+        }
     }
 }

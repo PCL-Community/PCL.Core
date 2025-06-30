@@ -7,6 +7,9 @@ using PCL.Core.Utils;
 
 namespace PCL.Core.ProgramSetup.FileManager;
 
+/// <summary>
+/// 用于托管某个特定的设置文件的类，会异步地写入文件
+/// </summary>
 public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
 {
     private readonly string _filePath;
@@ -27,13 +30,7 @@ public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
         Load();
     }
 
-    string? ISetupFileManager.this[string key, string? mcPath]
-    {
-        get => this[key];
-        set => this[key] = value;
-    }
-
-    public string? this[string key]
+    public string? this[string key, string? mcPath]
     {
         get
         {
@@ -61,6 +58,10 @@ public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
         }
     }
 
+    /// <summary>
+    /// 开始多重操作，在操作中暂缓对文件的写入，待操作结束后再写入文件，用于在更新多个配置项时的性能优化。<br/>
+    /// note：不支持跨线程
+    /// </summary>
     public IDisposable BeginMultipleOperation()
     {
         var threadId = Environment.CurrentManagedThreadId;

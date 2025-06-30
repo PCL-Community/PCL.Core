@@ -7,7 +7,7 @@ using PCL.Core.Utils;
 
 namespace PCL.Core.ProgramSetup;
 
-public sealed class SetupFileManager : IDisposable
+public sealed class SetupFileManager : ISetupFileManager, IDisposable
 {
     private readonly string _filePath;
     private readonly ISetupFileSerializer _serializer;
@@ -25,6 +25,12 @@ public sealed class SetupFileManager : IDisposable
         _saveTask = new Task(() => Save(_cts.Token), TaskCreationOptions.LongRunning);
         _saveTask.Start();
         Load();
+    }
+
+    string? ISetupFileManager.this[string key, string? mcPath]
+    {
+        get => this[key];
+        set => this[key] = value;
     }
 
     public string? this[string key]

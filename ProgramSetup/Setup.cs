@@ -10,8 +10,6 @@ public sealed class Setup
 {
     public const int SetupVersionNum = 1;
 
-    public static Setup Current => throw new NotImplementedException();
-
     public readonly Identifications Identification = new();
     public readonly Counters Counter = new();
     public readonly Hints Hint = new();

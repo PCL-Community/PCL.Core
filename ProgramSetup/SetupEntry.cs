@@ -4,43 +4,70 @@ using PCL.Core.ProgramSetup.FileManager;
 namespace PCL.Core.ProgramSetup;
 
 public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySource source, bool isEncrypted = false)
+    where T : notnull
 {
-    public readonly string KeyName = keyName;
-    public readonly SetupEntrySource Source = source;
-    public readonly bool IsEncrypted = isEncrypted;
-    public readonly T DefaultValue = defaultValue;
-    private readonly Func<T, string> _serializer = Companion.GetSerializer<T>();
-    private readonly Func<string, T> _deserializer = Companion.GetDeserializer<T>();
+    private readonly Func<T, string> _serializer = Companion.GetSerializer<T>(isEncrypted);
+    private readonly Func<string, T> _deserializer = Companion.GetDeserializer<T>(isEncrypted);
     private readonly ISetupFileManager _fileManager = Companion.GetFileManager(source);
 
     public SetupEntry(string keyName, SetupEntrySource source, bool isEncrypted = false)
         : this(keyName, Companion.GetDefaultDefaultValue<T>(), source, isEncrypted) { }
 
-    public event Action<T?, T?>? ValueChanged;
+    /// <summary>
+    /// 值改变时触发，参数分别是 mc 路径、旧值与新值，<br/>
+    /// 若之前/现在配置文件中不存在该键将传入 <see langword="null"/>
+    /// </summary>
+    public event ValueChangedHandler? ValueChanged;
 
+    public delegate void ValueChangedHandler(string? mcPath, T? oldValue, T? newValue);
+
+    /// <summary>
+    /// 获取该项的值，配置文件中不存在该键时返回 <see cref="defaultValue"/>
+    /// </summary>
     public T Get(string? mcPath = null)
     {
-        throw new NotImplementedException();
+        var rawValue = _fileManager.Get(keyName, mcPath);
+        return rawValue is null ? defaultValue : _deserializer.Invoke(rawValue);
     }
 
-    public void Set(T value, string? mcPath = null, bool forceRaiseEvent = false)
+    /// <summary>
+    /// 设置该项的值，会触发 <see cref="ValueChanged"/> 事件
+    /// </summary>
+    public void Set(T value, string? mcPath = null)
     {
-        throw new NotImplementedException();
+        var rawValue = _serializer.Invoke(value);
+        var prevRawValue = _fileManager.Set(keyName, rawValue, mcPath);
+        T? prevValue = prevRawValue is null ? default : _deserializer.Invoke(prevRawValue);
+        ValueChanged?.Invoke(mcPath, prevValue, value);
     }
 
+    /// <summary>
+    /// 从配置文件中删除该键，会触发 <see cref="ValueChanged"/> 事件
+    /// </summary>
     public void Reset(string? mcPath = null)
     {
-        throw new NotImplementedException();
+        var prevRawValue = _fileManager.Remove(keyName, mcPath);
+        T? prevValue = prevRawValue is null ? default : _deserializer.Invoke(prevRawValue);
+        ValueChanged?.Invoke(mcPath, prevValue, default);
     }
 
+    /// <summary>
+    /// 判断配置文件中是否含有该项的键
+    /// </summary>
+    /// <returns><see langword="true"/> - 如果配置文件中不含有该项的键</returns>
     public bool IsUnset(string? mcPath = null)
     {
-        throw new NotImplementedException();
+        return _fileManager.Get(keyName, mcPath) is null;
     }
 
-    public void SyncValueFromDisk(string? mcPath = null) // Load
+    /// <summary>
+    /// 手动触发一次 <see cref="ValueChanged"/> 事件
+    /// </summary>
+    public void RaiseChangedEvent(string? mcPath = null)
     {
-        throw new NotImplementedException();
+        var rawValue = _fileManager.Get(keyName, mcPath);
+        T? value = rawValue is null ? default : _deserializer.Invoke(rawValue);
+        ValueChanged?.Invoke(mcPath, value, value);
     }
 }
 
@@ -57,25 +84,43 @@ file static class Companion
         throw new ArgumentException($"不支持为类型 {type} 提供默认值");
     }
 
-    public static Func<T, string> GetSerializer<T>()
+    public static Func<T, string> GetSerializer<T>(bool isEncrypted)
     {
         var type = typeof(T);
         if (type.IsEnum)
             type = Enum.GetUnderlyingType(type);
-        if (type == typeof(int)) return v => ((int)(object)v!).ToString();
-        if (type == typeof(string)) return v => (string)(object)v!;
-        if (type == typeof(bool)) return v => ((bool)(object)v!).ToString();
+        if (isEncrypted)
+        {
+            if (type == typeof(int)) return v => Encrypt(((int)(object)v!).ToString());
+            if (type == typeof(string)) return v => Encrypt((string)(object)v!);
+            if (type == typeof(bool)) return v => Encrypt(((bool)(object)v!).ToString());
+        }
+        else
+        {
+            if (type == typeof(int)) return v => ((int)(object)v!).ToString();
+            if (type == typeof(string)) return v => (string)(object)v!;
+            if (type == typeof(bool)) return v => ((bool)(object)v!).ToString();
+        }
         throw new ArgumentException($"不支持为类型 {type} 提供序列化器");
     }
 
-    public static Func<string, T> GetDeserializer<T>()
+    public static Func<string, T> GetDeserializer<T>(bool isEncrypted)
     {
         var type = typeof(T);
         if (type.IsEnum)
             type = Enum.GetUnderlyingType(type);
-        if (type == typeof(int)) return v => (T)(object)int.Parse(v);
-        if (type == typeof(string)) return v => (T)(object)v!;
-        if (type == typeof(bool)) return v => (T)(object)bool.Parse(v);
+        if (isEncrypted)
+        {
+            if (type == typeof(int)) return v => (T)(object)int.Parse(Decrypt(v));
+            if (type == typeof(string)) return v => (T)(object)Decrypt(v);
+            if (type == typeof(bool)) return v => (T)(object)bool.Parse(Decrypt(v));
+        }
+        else
+        {
+            if (type == typeof(int)) return v => (T)(object)int.Parse(v);
+            if (type == typeof(string)) return v => (T)(object)v;
+            if (type == typeof(bool)) return v => (T)(object)bool.Parse(v);
+        }
         throw new ArgumentException($"不支持为类型 {type} 提供反序列化器");
     }
 
@@ -86,7 +131,11 @@ file static class Companion
             SetupEntrySource.PathLocal => SetupManager.LocalSetupFile,
             SetupEntrySource.SystemGlobal => SetupManager.GlobalSetupFile,
             SetupEntrySource.MinecraftInstance => SetupManager.InstanceSetupFile,
-            _ => throw new ArgumentOutOfRangeException(nameof(source), source, $"需为 {nameof(SetupEntrySource)} 枚举值")
+            _ => throw new ArgumentOutOfRangeException(nameof(source), source, $"须为 {nameof(SetupEntrySource)} 枚举值")
         };
     }
+
+    private static string Encrypt(string value) => throw new NotImplementedException();
+
+    private static string Decrypt(string value) => throw new NotImplementedException();
 }

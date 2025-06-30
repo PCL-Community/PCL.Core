@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.ProgramSetup;
+namespace PCL.Core.ProgramSetup.FileManager;
 
 public sealed class InstanceSetupFileManager : ISetupFileManager
 {

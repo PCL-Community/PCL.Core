@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Utils;
 
-namespace PCL.Core.ProgramSetup;
+namespace PCL.Core.ProgramSetup.FileManager;
 
-public sealed class SetupFileManager : ISetupFileManager, IDisposable
+public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
 {
     private readonly string _filePath;
     private readonly ISetupFileSerializer _serializer;
@@ -18,7 +18,7 @@ public sealed class SetupFileManager : ISetupFileManager, IDisposable
     private ConcurrentDictionary<string, string> _content = new();
     private bool _disposed = false;
 
-    public SetupFileManager(string filePath, ISetupFileSerializer serializer)
+    public CommonSetupFileManager(string filePath, ISetupFileSerializer serializer)
     {
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));

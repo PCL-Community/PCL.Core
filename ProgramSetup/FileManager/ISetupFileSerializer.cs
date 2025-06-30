@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
-namespace PCL.Core.ProgramSetup;
+namespace PCL.Core.ProgramSetup.FileManager;
 
 public interface ISetupFileSerializer
 {

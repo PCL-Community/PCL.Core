@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.ProgramSetup;
+﻿namespace PCL.Core.ProgramSetup.FileManager;
 
 public interface ISetupFileManager
 {

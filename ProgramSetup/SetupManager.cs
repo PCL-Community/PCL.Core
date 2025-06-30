@@ -1,4 +1,5 @@
 ﻿using System;
+using PCL.Core.ProgramSetup.FileManager;
 
 namespace PCL.Core.ProgramSetup;
 
@@ -7,11 +8,11 @@ namespace PCL.Core.ProgramSetup;
 /// </summary>
 public static class SetupManager
 {
-    public static Setup Setup => throw new NotImplementedException();
+    public static SetupModel Setup => throw new NotImplementedException();
 
-    public static SetupFileManager GlobalSetupFile => throw new NotImplementedException();
+    public static CommonSetupFileManager GlobalSetupFile => throw new NotImplementedException();
 
-    public static SetupFileManager LocalSetupFile => throw new NotImplementedException();
+    public static CommonSetupFileManager LocalSetupFile => throw new NotImplementedException();
 
     public static InstanceSetupFileManager InstanceSetupFile => throw new NotImplementedException();
 }

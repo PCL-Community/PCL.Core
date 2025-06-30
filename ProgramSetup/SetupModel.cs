@@ -6,7 +6,7 @@ namespace PCL.Core.ProgramSetup;
 /// <summary>
 /// 设置模型，完全没有使用的设置项会被标记为 Obsolete（需要从旧版迁移至新版的不会被标记）
 /// </summary>
-public sealed class Setup
+public sealed class SetupModel
 {
     public const int SetupVersionNum = 1;
 

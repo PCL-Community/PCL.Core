@@ -11,7 +11,7 @@ public sealed class FileHandle(string filePath, FileStream stream, Action releas
     private bool _disposed = false;
 
     public string FilePath => filePath;
-    public FileStream UnderlyingStream => stream;
+    public FileStream UnderlyingStream => !_disposed ? stream : throw new ObjectDisposedException(nameof(FileHandle));
 
     public byte[] ReadAllBytes()
     {

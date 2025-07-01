@@ -62,7 +62,7 @@ public class FileManageService : ILifecycleService
             filePath,
             p =>
             {
-                _context.Trace("托管文件被释放：" + filePath);
+                _context.Trace("托管文件被释放：" + p);
                 _activeFiles.TryRemove(p, out _);
             });
         return result;

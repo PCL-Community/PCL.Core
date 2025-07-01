@@ -8,8 +8,8 @@ namespace PCL.Core.Service;
 [LifecycleService(LifecycleState.Loading, Priority = 10000)]
 public class FileManageService : ILifecycleService
 {
-    private readonly LifecycleContext _context;
-    private ConcurrentDictionary<string, IFileOwner> _activeFiles = [];
+    private static LifecycleContext _context = null!;
+    private static ConcurrentDictionary<string, IFileOwner> _activeFiles = [];
 
     private FileManageService()
     {
@@ -44,13 +44,20 @@ public class FileManageService : ILifecycleService
     /// <paramref name="filePath"/> 或 <paramref name="owner"/>为 <see langword="null"/>
     /// </exception>
     /// <exception cref="InvalidOperationException">该文件已被打开</exception>
-    public AutoManagedFileHandle OpenAutoManagedFile(string filePath, IFileOwner owner)
+    public static AutoManagedFileHandle OpenAutoManagedFile(string filePath, IFileOwner owner)
     {
-        _context.Trace("打开托管文件：" + filePath);
-        if (!_activeFiles.TryAdd(
-                filePath ?? throw new ArgumentNullException(nameof(filePath)),
-                owner ?? throw new ArgumentNullException(nameof(owner))))
-            throw new InvalidOperationException("该文件已被托管至另一个所有者");
+        try
+        {
+            _context.Trace("打开托管文件：" + filePath);
+            if (!_activeFiles.TryAdd(
+                    filePath ?? throw new ArgumentNullException(nameof(filePath)),
+                    owner ?? throw new ArgumentNullException(nameof(owner))))
+                throw new InvalidOperationException("该文件已被托管至另一个所有者");
+        }
+        catch (NullReferenceException)
+        {
+            throw new ObjectDisposedException(nameof(FileManageService), "服务未开始或已停止");
+        }
         var result = new AutoManagedFileHandle(
             filePath,
             p =>

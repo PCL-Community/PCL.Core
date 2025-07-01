@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
 using PCL.Core.LifecycleManagement;
 using PCL.Core.Utils.FileResource;
 
@@ -34,37 +35,43 @@ public class FileManageService : ILifecycleService
         _activeFiles = null!;
     }
 
-    /// <summary>
-    /// 打开一个自动托管文件，可通过返回的 <see cref="AutoManagedFileHandle"/> 操作文件内容
-    /// </summary>
-    /// <param name="filePath">文件路径</param>
-    /// <param name="owner">文件所有者，用于请求强制释放文件</param>
-    /// <returns>打开的 <see cref="AutoManagedFileHandle"/></returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="filePath"/> 或 <paramref name="owner"/>为 <see langword="null"/>
-    /// </exception>
-    /// <exception cref="InvalidOperationException">该文件已被打开</exception>
-    public static AutoManagedFileHandle OpenAutoManagedFile(string filePath, IFileOwner owner)
+    public static FileHandle OpenFile(
+        string filePath,
+        IFileOwner owner,
+        FileMode mode,
+        FileAccess access,
+        FileShare share)
     {
+        if (filePath is null)
+            throw new ArgumentNullException(nameof(filePath));
+        if (owner is null)
+            throw new ArgumentNullException(nameof(owner));
         try
         {
-            _context.Trace("打开托管文件：" + filePath);
-            if (!_activeFiles.TryAdd(
-                    filePath ?? throw new ArgumentNullException(nameof(filePath)),
-                    owner ?? throw new ArgumentNullException(nameof(owner))))
-                throw new InvalidOperationException("该文件已被托管至另一个所有者");
+            _context.Trace("打开文件：" + filePath);
+            if (!_activeFiles.TryAdd(filePath, owner))
+                throw new InvalidOperationException("文件已被其他所有者打开");
         }
         catch (NullReferenceException)
         {
-            throw new ObjectDisposedException(nameof(FileManageService), "服务未开始或已停止");
+            throw new ObjectDisposedException(nameof(FileManageService), "服务未开始或已结束");
         }
-        var result = new AutoManagedFileHandle(
-            filePath,
-            p =>
-            {
-                _context.Trace("托管文件被释放：" + p);
-                _activeFiles.TryRemove(p, out _);
-            });
-        return result;
+        FileStream fs;
+        try
+        {
+            if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
+                Directory.CreateDirectory(dir);
+            fs = new FileStream(filePath, mode, access, share);
+        }
+        catch (Exception ex)
+        {
+            _context.Warn("文件打开失败：" + filePath);
+            throw new IOException("文件打开失败", ex);
+        }
+        return new FileHandle(filePath, fs, () =>
+        {
+            _context.Trace("释放文件：" + filePath);
+            _activeFiles.TryRemove(filePath, out _);
+        });
     }
 }

@@ -66,6 +66,7 @@ public class FileManageService : ILifecycleService
         catch (Exception ex)
         {
             _context.Warn("文件打开失败：" + filePath);
+            _activeFiles.TryRemove(filePath, out _);
             throw new IOException("文件打开失败", ex);
         }
         return new FileHandle(filePath, fs, () =>

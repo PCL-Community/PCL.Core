@@ -177,6 +177,8 @@
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\FileResource\AutoManagedFileHandle.cs" />
+    <Compile Include="Utils\FileResource\IFileOwner.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />
     <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />

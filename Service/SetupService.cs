@@ -47,11 +47,7 @@ public sealed class SetupService : ILifecycleService
         catch (Exception ex)
         {
             _Context.Fatal("全局配置文件托管器初始化失败", ex);
-            File.Move(globalPath, globalPath + ".bak");
-            _Context.Info($"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
-                          $"请删除 {globalPath}{Environment.NewLine}" +
-                          $"并使用备份配置文件 {globalPath}.bak", actionLevel: LifecycleActionLevel.MsgBoxExit);
-            Lifecycle.ForceShutdown(1);
+            BackupFileAndShutdown(globalPath);
         }
         // 局部配置文件托管器
         var localPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "PCL", "Setup.ini");
@@ -62,11 +58,7 @@ public sealed class SetupService : ILifecycleService
         catch (Exception ex)
         {
             _Context.Fatal("局部配置文件托管器初始化失败", ex);
-            File.Move(localPath, localPath + ".bak");
-            _Context.Info($"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
-                          $"请删除 {localPath}{Environment.NewLine}" +
-                          $"并使用备份配置文件 {localPath}.bak", actionLevel: LifecycleActionLevel.MsgBoxExit);
-            Lifecycle.ForceShutdown(1);
+            BackupFileAndShutdown(localPath);
         }
         // 实例配置文件托管器
         InstanceSetupFile = new InstanceSetupFileManager();
@@ -81,5 +73,18 @@ public sealed class SetupService : ILifecycleService
         GlobalSetupFile.Dispose();
         LocalSetupFile.Dispose();
         InstanceSetupFile.Dispose();
+    }
+
+    private static void BackupFileAndShutdown(string filePath)
+    {
+        var bakPath = filePath + ".bak";
+        if (File.Exists(bakPath))
+            File.Replace(filePath, bakPath, filePath + ".tmp");
+        else
+            File.Move(filePath, bakPath);
+        _Context.Info($"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
+                      $"请删除 {filePath}{Environment.NewLine}" +
+                      $"并使用备份配置文件 {bakPath}", actionLevel: LifecycleActionLevel.MsgBoxExit);
+        Lifecycle.ForceShutdown(1);
     }
 }

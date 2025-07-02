@@ -176,6 +176,7 @@
     <Compile Include="Service\SetupService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\CallbackDisposable.cs" />
+    <Compile Include="Utils\CountingDictionary.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />

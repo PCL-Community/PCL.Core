@@ -16,8 +16,12 @@ public sealed class SetupJsonSerializer : ISetupFileSerializer
 {
     public static readonly SetupJsonSerializer Instance = new();
 
-    public ConcurrentDictionary<string, string>? Deserialize(Stream stream) =>
-        JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(stream);
+    public ConcurrentDictionary<string, string>? Deserialize(Stream stream)
+    {
+        if (stream.Length == 0)
+            return null;
+        return JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(stream);
+    }
 
     public string Serialize(ConcurrentDictionary<string, string> dictionary) =>
         JsonSerializer.Serialize(dictionary);

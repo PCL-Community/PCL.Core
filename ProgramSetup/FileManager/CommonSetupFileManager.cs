@@ -89,8 +89,8 @@ public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
             if (!string.IsNullOrEmpty(folder))
                 Directory.CreateDirectory(folder);
             using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-            var jResult = _serializer.Deserialize(fs);
-            _content = jResult ?? throw new NullReferenceException(nameof(jResult) + " is null");
+            var deserialized = _serializer.Deserialize(fs);
+            _content = deserialized ?? new ConcurrentDictionary<string, string>();
         }
         catch (Exception ex)
         {

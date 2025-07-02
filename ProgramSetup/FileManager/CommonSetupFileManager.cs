@@ -63,16 +63,16 @@ public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
         return value;
     }
 
-    /// <summary>
-    /// 开始多重操作，在操作中暂缓对文件的写入，待操作结束后再写入文件，用于在更新多个配置项时的性能优化。<br/>
-    /// note：不支持跨线程
-    /// </summary>
-    public IDisposable BeginMultipleOperation()
+    /// <inheritdoc />
+    /// <remarks>
+    /// 只能在同一线程进入与退出多重操作
+    /// </remarks>
+    public MultipleOperationHandle BeginMultipleOperation(string? mcPath)
     {
         var threadId = Environment.CurrentManagedThreadId;
         _rwLock.EnterReadLock();
         _saveEvent.Set();
-        return new CallbackDisposable(() =>
+        return new MultipleOperationHandle(() =>
         {
             if (Environment.CurrentManagedThreadId != threadId)
                 throw new InvalidOperationException("必须在同一线程进入与退出多重操作");

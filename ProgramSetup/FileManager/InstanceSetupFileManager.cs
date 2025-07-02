@@ -58,12 +58,12 @@ public sealed class InstanceSetupFileManager : ISetupFileManager, IDisposable
         return result;
     }
 
-    public IDisposable BeginMultipleOperation(string mcPath)
+    public MultipleOperationHandle BeginMultipleOperation(string? mcPath)
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
         _activeFilesDict.Acquire(mcPath);
-        return new CallbackDisposable(() => _activeFilesDict.Release(mcPath));
+        return new MultipleOperationHandle(() => _activeFilesDict.Release(mcPath));
     }
 
     public void Dispose()

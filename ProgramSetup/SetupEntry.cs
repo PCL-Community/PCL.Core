@@ -1,5 +1,6 @@
 ﻿using System;
 using PCL.Core.ProgramSetup.FileManager;
+using PCL.Core.Service;
 
 namespace PCL.Core.ProgramSetup;
 
@@ -128,9 +129,9 @@ file static class Companion
     {
         return source switch
         {
-            SetupEntrySource.PathLocal => SetupManager.LocalSetupFile,
-            SetupEntrySource.SystemGlobal => SetupManager.GlobalSetupFile,
-            SetupEntrySource.MinecraftInstance => SetupManager.InstanceSetupFile,
+            SetupEntrySource.PathLocal => SetupService.LocalSetupFile,
+            SetupEntrySource.SystemGlobal => SetupService.GlobalSetupFile,
+            SetupEntrySource.MinecraftInstance => SetupService.InstanceSetupFile,
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, $"须为 {nameof(SetupEntrySource)} 枚举值")
         };
     }

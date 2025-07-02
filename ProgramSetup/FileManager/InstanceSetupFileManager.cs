@@ -5,7 +5,7 @@ namespace PCL.Core.ProgramSetup.FileManager;
 /// <summary>
 /// 用于托管某个位于游戏实例文件夹内的配置文件的类，同步地写入文件
 /// </summary>
-public sealed class InstanceSetupFileManager : ISetupFileManager
+public sealed class InstanceSetupFileManager : ISetupFileManager, IDisposable
 {
     public string? Get(string key, string? mcPath)
     {
@@ -25,6 +25,11 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
+        throw new NotImplementedException();
+    }
+
+    public void Dispose()
+    {
         throw new NotImplementedException();
     }
 }

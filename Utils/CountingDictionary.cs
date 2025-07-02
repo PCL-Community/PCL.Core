@@ -87,8 +87,8 @@ public sealed class CountingDictionary<TKey, TValue> : IDisposable
             // 仅在引用被刚好减到 0 时移除并释放，虽然应该也不会有人无缘无故多调几次 方法
             if (Interlocked.Decrement(ref holder.Count) != 0)
                 return;
-            _dictionary.TryRemove(key, out _);
             (disposer ?? _valueDisposer)?.Invoke(key, holder.Value);
+            _dictionary.TryRemove(key, out _);
         }
     }
 

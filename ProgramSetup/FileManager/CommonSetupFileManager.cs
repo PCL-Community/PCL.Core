@@ -14,7 +14,7 @@ public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
 {
     private readonly string _filePath;
     private readonly ISetupFileSerializer _serializer;
-    private readonly ReaderWriterLockSlim _rwLock = new();
+    private readonly ReaderWriterLockSlim _rwLock = new(LockRecursionPolicy.SupportsRecursion);
     private readonly ManualResetEventSlim _saveEvent = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _saveTask;

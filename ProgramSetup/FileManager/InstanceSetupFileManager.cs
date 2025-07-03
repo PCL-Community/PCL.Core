@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
+using System.Threading;
 using PCL.Core.Utils;
 
 namespace PCL.Core.ProgramSetup.FileManager;
@@ -14,12 +15,15 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
     private readonly CountingDictionary<string, ConcurrentDictionary<string, string>> _activeFilesDict =
         new(Companion.LoadFile, Companion.WriteFile);
 
-    private bool _disposed = false;
+    private volatile int _disposed = 0;
 
     public string? Get(string key, string? mcPath)
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
         var filePath = GetSetupFilePath(mcPath);
         var content = _activeFilesDict.Acquire(filePath);
         var result = content.TryGetValue(key, out var value) ? value : null;
@@ -31,6 +35,9 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
         var filePath = GetSetupFilePath(mcPath);
         var content = _activeFilesDict.Acquire(filePath);
         string? result = null;
@@ -51,6 +58,9 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
         var filePath = GetSetupFilePath(mcPath);
         var content = _activeFilesDict.Acquire(filePath);
         content.TryRemove(key, out var result);
@@ -62,6 +72,9 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
         var filePath = GetSetupFilePath(mcPath);
         _activeFilesDict.Acquire(filePath);
         return new MultipleOperationHandle(() => _activeFilesDict.Release(filePath));
@@ -69,10 +82,8 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
-        _disposed = true;
-        _activeFilesDict.Dispose();
     }
 
     private static string GetSetupFilePath(string mcPath) => Path.Combine(mcPath, "PCL", "Setup.ini");

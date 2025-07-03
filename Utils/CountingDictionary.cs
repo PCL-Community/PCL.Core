@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Threading;
 
 namespace PCL.Core.Utils;
 
 /// <summary>
 /// 带引用计数的字典，计数归零后释放资源
 /// </summary>
-public sealed class CountingDictionary<TKey, TValue> : IDisposable
+public sealed class CountingDictionary<TKey, TValue>
 {
-    private ConcurrentDictionary<TKey, ValueHolder> _dictionary = new();
-    private bool _disposed = false;
+    private readonly ConcurrentDictionary<TKey, ValueHolder> _dictionary = new();
     private readonly Func<TKey, TValue>? _valueFactory;
     private readonly Action<TKey, TValue>? _valueDisposer;
 
@@ -34,19 +32,16 @@ public sealed class CountingDictionary<TKey, TValue> : IDisposable
     /// <exception cref="ArgumentNullException">
     /// <paramref name="valueFactory"/> 和构造时传入的 valueFactory 都为 <see langword="null"/>
     /// </exception>
-    /// <exception cref="ObjectDisposedException">该计数字典已被销毁</exception>
     public TValue Acquire(TKey key, Func<TKey, TValue>? valueFactory = null)
     {
         if ((valueFactory ??= _valueFactory) is null)
             throw new ArgumentNullException(nameof(valueFactory));
-        if (_disposed)
-            throw new ObjectDisposedException("CountingDictionary");
 
         ValueHolder? newHolder = null;
         while (true)
         {
             // 尝试获取现有值
-            if (_dictionary.TryGetValue(key, out var holder))
+            while (_dictionary.TryGetValue(key, out var holder))
             {
                 lock (holder)
                 {
@@ -54,7 +49,7 @@ public sealed class CountingDictionary<TKey, TValue> : IDisposable
                     if (holder.Count > 0)
                     {
                         // 增加引用
-                        Interlocked.Increment(ref holder.Count);
+                        holder.Count++;
                         // 返回值
                         return holder.Value;
                     }
@@ -74,37 +69,19 @@ public sealed class CountingDictionary<TKey, TValue> : IDisposable
     /// </summary>
     /// <param name="key">键</param>
     /// <param name="disposer">可以通过此参数覆盖构造时传入的 valueDisposer</param>
-    /// <exception cref="ObjectDisposedException">该计数字典已被销毁</exception>
     public void Release(TKey key, Action<TKey, TValue>? disposer = null)
     {
-        if (_disposed)
-            throw new ObjectDisposedException("CountingDictionary");
         if (!_dictionary.TryGetValue(key, out var holder))
             return;
-
         lock (holder)
         {
-            // 仅在引用被刚好减到 0 时移除并释放，虽然应该也不会有人无缘无故多调几次 方法
-            if (Interlocked.Decrement(ref holder.Count) != 0)
-                return;
-            (disposer ?? _valueDisposer)?.Invoke(key, holder.Value);
-            _dictionary.TryRemove(key, out _);
+            // 仅在引用被刚好减到 0 时移除并释放，虽然应该也不会有人无缘无故多调几次方法
+            if (--holder.Count == 0)
+            {
+                (disposer ?? _valueDisposer)?.Invoke(key, holder.Value);
+                _dictionary.TryRemove(key, out _);
+            }
         }
-    }
-
-    /// <summary>
-    /// 释放所有资源
-    /// </summary>
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-        _disposed = true;
-        // 挨个调用 valueDisposer
-        foreach (var pair in _dictionary)
-            _valueDisposer?.Invoke(pair.Key, pair.Value.Value);
-        // 置空字典
-        _dictionary = null!;
     }
 
     private sealed class ValueHolder(Lazy<TValue> lazyValue)

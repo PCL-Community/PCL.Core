@@ -9,8 +9,8 @@ namespace PCL.Core.Service;
 [LifecycleService(LifecycleState.Loading, Priority = 10000)]
 public sealed class FileService : ILifecycleService
 {
-    private static LifecycleContext _context = null!;
-    private static ConcurrentDictionary<string, IFileOwner> _activeFiles = [];
+    private static LifecycleContext? _context = null;
+    private static ConcurrentDictionary<string, IFileOwner>? _activeFiles = null;
 
     private FileService()
     {
@@ -21,17 +21,23 @@ public sealed class FileService : ILifecycleService
     public string Name => "文件资源管理";
     public bool SupportAsyncStart => true;
 
+    private static LifecycleContext Context =>
+        _context ?? throw new ObjectDisposedException("服务未启动");
+
+    private static ConcurrentDictionary<string, IFileOwner> ActiveFiles =>
+        _activeFiles ?? throw new ObjectDisposedException("服务已停止");
+
     public void Start() { }
 
     public void Stop()
     {
-        foreach (var pair in _activeFiles)
+        foreach (var pair in ActiveFiles)
         {
-            _context.Trace("强制释放文件：" + pair.Key);
+            Context.Trace("强制释放文件：" + pair.Key);
             pair.Value.ForceReleaseFile();
         }
         foreach (var pair in _activeFiles)
-            _context.Warn("文件释放失败：" + pair.Key);
+            Context.Warn("文件释放失败：" + pair.Key);
         _activeFiles = null!;
     }
 
@@ -46,16 +52,9 @@ public sealed class FileService : ILifecycleService
             throw new ArgumentNullException(nameof(filePath));
         if (owner is null)
             throw new ArgumentNullException(nameof(owner));
-        try
-        {
-            _context.Trace("打开文件：" + filePath);
-            if (!_activeFiles.TryAdd(filePath, owner))
-                throw new InvalidOperationException("文件已被其他所有者打开");
-        }
-        catch (NullReferenceException)
-        {
-            throw new ObjectDisposedException(nameof(FileService), "服务未开始或已结束");
-        }
+        Context.Trace("打开文件：" + filePath);
+        if (!ActiveFiles.TryAdd(filePath, owner))
+            throw new InvalidOperationException("文件已被其他所有者打开");
         FileStream fs;
         try
         {
@@ -65,14 +64,14 @@ public sealed class FileService : ILifecycleService
         }
         catch (Exception ex)
         {
-            _context.Warn("文件打开失败：" + filePath);
-            _activeFiles.TryRemove(filePath, out _);
+            Context.Warn("文件打开失败：" + filePath);
+            ActiveFiles.TryRemove(filePath, out _);
             throw new IOException("文件打开失败", ex);
         }
         return new FileHandle(filePath, fs, () =>
         {
-            _context.Trace("释放文件：" + filePath);
-            _activeFiles.TryRemove(filePath, out _);
+            Context.Trace("释放文件：" + filePath);
+            ActiveFiles.TryRemove(filePath, out _);
         });
     }
 }

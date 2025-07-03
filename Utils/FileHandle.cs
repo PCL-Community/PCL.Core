@@ -8,15 +8,15 @@ public sealed class FileHandle : IDisposable
 {
     private bool _disposed = false;
     private readonly FileStream _stream;
-    private Action _releaseCallback;
+    private Action? _releaseCallback;
 
     public readonly string FilePath;
 
-    public FileHandle(string filePath, FileStream stream, Action releaseCallback)
+    public FileHandle(string filePath, FileStream stream, Action? releaseCallback)
     {
         FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _releaseCallback = releaseCallback ?? throw new ArgumentNullException(nameof(releaseCallback));
+        _releaseCallback = releaseCallback;
     }
 
     public FileStream UnderlyingStream => !_disposed ? _stream : throw new ObjectDisposedException(nameof(FileHandle));
@@ -68,7 +68,7 @@ public sealed class FileHandle : IDisposable
             return;
         _disposed = true;
         _stream.Dispose();
-        _releaseCallback.Invoke();
-        _releaseCallback = null!;
+        _releaseCallback?.Invoke();
+        _releaseCallback = null;
     }
 }

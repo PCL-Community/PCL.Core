@@ -48,10 +48,6 @@ public sealed class FileService : ILifecycleService
         FileAccess access = FileAccess.Read,
         FileShare share = FileShare.Read)
     {
-        if (filePath is null)
-            throw new ArgumentNullException(nameof(filePath));
-        if (owner is null)
-            throw new ArgumentNullException(nameof(owner));
         Context.Trace("打开文件：" + filePath);
         if (!ActiveFiles.TryAdd(filePath, owner))
             throw new InvalidOperationException("文件已被其他所有者打开");

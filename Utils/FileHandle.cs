@@ -7,18 +7,17 @@ namespace PCL.Core.Utils;
 public sealed class FileHandle(string filePath, FileStream stream, Action? releaseCallback)
     : IDisposable
 {
-    public readonly string FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-    private readonly FileStream _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+    public readonly string FilePath = filePath;
     private bool _disposed = false;
 
-    public FileStream UnderlyingStream => !_disposed ? _stream : throw new ObjectDisposedException(nameof(FileHandle));
+    public FileStream UnderlyingStream => !_disposed ? stream : throw new ObjectDisposedException(nameof(FileHandle));
 
     public byte[] ReadAllBytes()
     {
         CheckDisposed();
-        _stream.Seek(0, SeekOrigin.Begin);
+        stream.Seek(0, SeekOrigin.Begin);
         using var ms = new MemoryStream();
-        _stream.CopyTo(ms);
+        stream.CopyTo(ms);
         return ms.ToArray();
     }
 
@@ -26,32 +25,26 @@ public sealed class FileHandle(string filePath, FileStream stream, Action? relea
     {
         encoding ??= Encoding.UTF8;
         CheckDisposed();
-        _stream.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_stream, encoding, true, 1024, true);
+        stream.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(stream, encoding, true, 1024, true);
         return reader.ReadToEnd();
     }
 
     public void WriteAllBytes(byte[] data)
     {
-        if (data is null)
-            throw new ArgumentNullException(nameof(data));
-
         CheckDisposed();
-        _stream.SetLength(0);
-        _stream.Write(data, 0, data.Length);
-        _stream.Flush();
+        stream.SetLength(0);
+        stream.Write(data, 0, data.Length);
+        stream.Flush();
     }
 
     public void WriteAllText(string data, Encoding? encoding = null)
     {
-        if (data is null)
-            throw new ArgumentNullException(nameof(data));
-
         encoding ??= Encoding.UTF8;
         CheckDisposed();
-        _stream.SetLength(0);
+        stream.SetLength(0);
         byte[] bytes = encoding.GetBytes(data);
-        _stream.Write(bytes, 0, bytes.Length);
+        stream.Write(bytes, 0, bytes.Length);
     }
 
     private void CheckDisposed()
@@ -65,7 +58,7 @@ public sealed class FileHandle(string filePath, FileStream stream, Action? relea
         if (_disposed)
             return;
         _disposed = true;
-        _stream.Dispose();
+        stream.Dispose();
         releaseCallback?.Invoke();
         releaseCallback = null;
     }

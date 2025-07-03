@@ -33,6 +33,9 @@ public sealed class FileHandle(string filePath, FileStream stream, Action? relea
 
     public void WriteAllBytes(byte[] data)
     {
+        if (data is null)
+            throw new ArgumentNullException(nameof(data));
+
         CheckDisposed();
         _stream.SetLength(0);
         _stream.Write(data, 0, data.Length);
@@ -41,6 +44,9 @@ public sealed class FileHandle(string filePath, FileStream stream, Action? relea
 
     public void WriteAllText(string data, Encoding? encoding = null)
     {
+        if (data is null)
+            throw new ArgumentNullException(nameof(data));
+
         encoding ??= Encoding.UTF8;
         CheckDisposed();
         _stream.SetLength(0);

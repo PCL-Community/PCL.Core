@@ -10,7 +10,7 @@ namespace PCL.Core.ProgramSetup.FileManager;
 /// <summary>
 /// 用于托管某个特定的设置文件的类，会异步地写入文件
 /// </summary>
-public sealed class CommonSetupFileManager : ISetupFileManager, IDisposable
+public sealed class CommonSetupFileManager : ISetupFileManager
 {
     private readonly string _filePath;
     private readonly ISetupFileSerializer _serializer;

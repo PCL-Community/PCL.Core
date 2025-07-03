@@ -9,7 +9,7 @@ namespace PCL.Core.ProgramSetup.FileManager;
 /// <summary>
 /// 用于托管某个位于游戏实例文件夹内的配置文件的类，同步地写入文件
 /// </summary>
-public sealed class InstanceSetupFileManager : ISetupFileManager, IDisposable
+public sealed class InstanceSetupFileManager : ISetupFileManager
 {
     private readonly CountingDictionary<string, ConcurrentDictionary<string, string>> _activeFilesDict =
         new(Companion.LoadFile, Companion.WriteFile);

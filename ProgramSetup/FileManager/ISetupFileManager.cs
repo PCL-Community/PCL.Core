@@ -2,7 +2,7 @@
 
 namespace PCL.Core.ProgramSetup.FileManager;
 
-public interface ISetupFileManager
+public interface ISetupFileManager : IDisposable
 {
     /// <summary>
     /// 获取某个键对应的值，键不存在时返回 <see langword="null"/>

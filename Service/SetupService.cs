@@ -27,9 +27,9 @@ public sealed class SetupService : ILifecycleService
     public bool SupportAsyncStart => true;
 
     public static SetupModel Setup { get; private set; } = null!;
-    public static CommonSetupFileManager GlobalSetupFile { get; private set; } = null!;
-    public static CommonSetupFileManager LocalSetupFile { get; private set; } = null!;
-    public static InstanceSetupFileManager InstanceSetupFile { get; private set; } = null!;
+    public static ISetupFileManager GlobalSetupFile { get; private set; } = null!;
+    public static ISetupFileManager LocalSetupFile { get; private set; } = null!;
+    public static ISetupFileManager InstanceSetupFile { get; private set; } = null!;
 
     public void Start()
     {

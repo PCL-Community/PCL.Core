@@ -20,7 +20,7 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     /// </summary>
     public event ValueChangedHandler? ValueChanged;
 
-    public delegate void ValueChangedHandler(string? mcPath, T? oldValue, T? newValue);
+    public delegate void ValueChangedHandler(string? mcPath, Tuple<T>? oldValue, Tuple<T>? newValue);
 
     /// <summary>
     /// 获取该项的值，配置文件中不存在该键时返回 <see cref="defaultValue"/>
@@ -38,8 +38,8 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     {
         var rawValue = _serializer.Invoke(value);
         var prevRawValue = _fileManager.Set(keyName, rawValue, mcPath);
-        T? prevValue = prevRawValue is null ? default : _deserializer.Invoke(prevRawValue);
-        ValueChanged?.Invoke(mcPath, prevValue, value);
+        var prevValueTuple = DeserializeToTuple(prevRawValue);
+        ValueChanged?.Invoke(mcPath, prevValueTuple, Tuple.Create(value));
     }
 
     /// <summary>
@@ -48,8 +48,8 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     public void Reset(string? mcPath = null)
     {
         var prevRawValue = _fileManager.Remove(keyName, mcPath);
-        T? prevValue = prevRawValue is null ? default : _deserializer.Invoke(prevRawValue);
-        ValueChanged?.Invoke(mcPath, prevValue, default);
+        var prevValueTuple = DeserializeToTuple(prevRawValue);
+        ValueChanged?.Invoke(mcPath, prevValueTuple, null);
     }
 
     /// <summary>
@@ -67,9 +67,12 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     public void RaiseChangedEvent(string? mcPath = null)
     {
         var rawValue = _fileManager.Get(keyName, mcPath);
-        T? value = rawValue is null ? default : _deserializer.Invoke(rawValue);
-        ValueChanged?.Invoke(mcPath, value, value);
+        var valueTuple = DeserializeToTuple(rawValue);
+        ValueChanged?.Invoke(mcPath, valueTuple, valueTuple);
     }
+
+    private Tuple<T>? DeserializeToTuple(string? rawValue) =>
+        rawValue is null ? null : Tuple.Create(_deserializer.Invoke(rawValue));
 }
 
 file static class Companion

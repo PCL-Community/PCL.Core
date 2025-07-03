@@ -171,14 +171,13 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
-    <Compile Include="Service\FileManageService.cs" />
+    <Compile Include="Service\FileService.cs" />
     <Compile Include="Service\LogService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
-    <Compile Include="Utils\FileResource\FileHandle.cs" />
-    <Compile Include="Utils\FileResource\IFileOwner.cs" />
+    <Compile Include="Utils\FileHandle.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />
     <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace PCL.Core.Utils.FileResource;
+namespace PCL.Core.Utils;
 
 public sealed class FileHandle(string filePath, FileStream stream, Action releaseCallback) : IDisposable
 {

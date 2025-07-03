@@ -2,17 +2,17 @@
 using System.Collections.Concurrent;
 using System.IO;
 using PCL.Core.LifecycleManagement;
-using PCL.Core.Utils.FileResource;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Service;
 
 [LifecycleService(LifecycleState.Loading, Priority = 10000)]
-public class FileManageService : ILifecycleService
+public sealed class FileService : ILifecycleService
 {
     private static LifecycleContext _context = null!;
     private static ConcurrentDictionary<string, IFileOwner> _activeFiles = [];
 
-    private FileManageService()
+    private FileService()
     {
         _context = Lifecycle.GetContext(this);
     }
@@ -35,12 +35,12 @@ public class FileManageService : ILifecycleService
         _activeFiles = null!;
     }
 
-    public static FileHandle OpenFile(
+    public static FileHandle Open(
         string filePath,
         IFileOwner owner,
-        FileMode mode,
-        FileAccess access,
-        FileShare share)
+        FileMode mode = FileMode.OpenOrCreate,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read)
     {
         if (filePath is null)
             throw new ArgumentNullException(nameof(filePath));
@@ -54,7 +54,7 @@ public class FileManageService : ILifecycleService
         }
         catch (NullReferenceException)
         {
-            throw new ObjectDisposedException(nameof(FileManageService), "服务未开始或已结束");
+            throw new ObjectDisposedException(nameof(FileService), "服务未开始或已结束");
         }
         FileStream fs;
         try
@@ -75,4 +75,9 @@ public class FileManageService : ILifecycleService
             _activeFiles.TryRemove(filePath, out _);
         });
     }
+}
+
+public interface IFileOwner
+{
+    void ForceReleaseFile();
 }

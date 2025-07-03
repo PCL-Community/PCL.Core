@@ -62,8 +62,9 @@ public sealed class InstanceSetupFileManager : ISetupFileManager, IDisposable
     {
         if (mcPath is null)
             throw new ArgumentNullException(nameof(mcPath));
-        _activeFilesDict.Acquire(mcPath);
-        return new MultipleOperationHandle(() => _activeFilesDict.Release(mcPath));
+        var filePath = GetSetupFilePath(mcPath);
+        _activeFilesDict.Acquire(filePath);
+        return new MultipleOperationHandle(() => _activeFilesDict.Release(filePath));
     }
 
     public void Dispose()

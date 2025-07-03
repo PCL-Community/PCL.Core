@@ -4,20 +4,12 @@ using System.Text;
 
 namespace PCL.Core.Utils;
 
-public sealed class FileHandle : IDisposable
+public sealed class FileHandle(string filePath, FileStream stream, Action? releaseCallback)
+    : IDisposable
 {
+    public readonly string FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+    private readonly FileStream _stream = stream ?? throw new ArgumentNullException(nameof(stream));
     private bool _disposed = false;
-    private readonly FileStream _stream;
-    private Action? _releaseCallback;
-
-    public readonly string FilePath;
-
-    public FileHandle(string filePath, FileStream stream, Action? releaseCallback)
-    {
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _releaseCallback = releaseCallback;
-    }
 
     public FileStream UnderlyingStream => !_disposed ? _stream : throw new ObjectDisposedException(nameof(FileHandle));
 
@@ -68,7 +60,7 @@ public sealed class FileHandle : IDisposable
             return;
         _disposed = true;
         _stream.Dispose();
-        _releaseCallback?.Invoke();
-        _releaseCallback = null;
+        releaseCallback?.Invoke();
+        releaseCallback = null;
     }
 }

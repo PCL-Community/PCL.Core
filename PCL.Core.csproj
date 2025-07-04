@@ -165,6 +165,7 @@
     <Compile Include="ProgramSetup\FileManager\ISetupFileManager.cs" />
     <Compile Include="ProgramSetup\FileManager\ISetupFileSerializer.cs" />
     <Compile Include="ProgramSetup\FileManager\CommonSetupFileManager.cs" />
+    <Compile Include="ProgramSetup\FileManager\SetupRegManager.cs" />
     <Compile Include="ProgramSetup\SetupModel.cs" />
     <Compile Include="ProgramSetup\SetupEntry.cs" />
     <Compile Include="ProgramSetup\SetupEntrySource.cs" />

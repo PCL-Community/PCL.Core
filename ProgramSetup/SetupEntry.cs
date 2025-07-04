@@ -139,6 +139,8 @@ file static class Companion
         };
     }
 
+    public static ISetupFileManager RegManager => SetupService.GlobalSetupReg;
+
     private static string Encrypt(string value) => throw new NotImplementedException();
 
     private static string Decrypt(string value) => throw new NotImplementedException();

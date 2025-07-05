@@ -185,6 +185,10 @@
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
     <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
+    <Compile Include="Utils\ResourceProject\IOnlineProject.cs" />
+    <Compile Include="Utils\ResourceProject\IProjectFile.cs" />
+    <Compile Include="Utils\ResourceProject\ProjectFileChannel.cs" />
+    <Compile Include="Utils\ResourceProject\ProjectFileStatus.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
     <Compile Include="Utils\System.Runtime.CompilerServices.cs" />

@@ -28,6 +28,15 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     public T Get(string? mcPath = null)
     {
         var rawValue = _fileManager.Get(keyName, mcPath);
+        if (source == SetupEntrySource.SystemGlobal && rawValue is null)
+        {
+            var rawRegValue = Companion.RegManager.Remove(keyName, mcPath);
+            if (rawRegValue is not null)
+            {
+                rawValue = !isEncrypted ? rawRegValue : Companion.Encrypt(Companion.DecryptOld(rawRegValue));
+                _fileManager.Set(keyName, rawValue, mcPath);
+            }
+        }
         return rawValue is null ? defaultValue : _deserializer.Invoke(rawValue);
     }
 
@@ -48,6 +57,11 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     public void Reset(string? mcPath = null)
     {
         var prevRawValue = _fileManager.Remove(keyName, mcPath);
+        if (source == SetupEntrySource.SystemGlobal)
+        {
+            var regValue = Companion.RegManager.Remove(keyName, mcPath);
+            prevRawValue ??= regValue;
+        }
         var prevValueTuple = DeserializeToTuple(prevRawValue);
         ValueChanged?.Invoke(mcPath, prevValueTuple, null);
     }
@@ -58,6 +72,10 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     /// <returns><see langword="true"/> - 如果配置文件中不含有该项的键</returns>
     public bool IsUnset(string? mcPath = null)
     {
+        if (source == SetupEntrySource.SystemGlobal && Companion.RegManager.Get(keyName, mcPath) is not null)
+        {
+            return false;
+        }
         return _fileManager.Get(keyName, mcPath) is null;
     }
 
@@ -67,6 +85,15 @@ public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySour
     public void RaiseChangedEvent(string? mcPath = null)
     {
         var rawValue = _fileManager.Get(keyName, mcPath);
+        if (source == SetupEntrySource.SystemGlobal && rawValue is null)
+        {
+            var rawRegValue = Companion.RegManager.Remove(keyName, mcPath);
+            if (rawRegValue is not null)
+            {
+                rawValue = !isEncrypted ? rawRegValue : Companion.Encrypt(Companion.DecryptOld(rawRegValue));
+                _fileManager.Set(keyName, rawValue, mcPath);
+            }
+        }
         var valueTuple = DeserializeToTuple(rawValue);
         ValueChanged?.Invoke(mcPath, valueTuple, valueTuple);
     }
@@ -141,7 +168,9 @@ file static class Companion
 
     public static ISetupFileManager RegManager => SetupService.GlobalSetupReg;
 
-    private static string Encrypt(string value) => throw new NotImplementedException();
+    public static string Encrypt(string value) => throw new NotImplementedException();
 
-    private static string Decrypt(string value) => throw new NotImplementedException();
+    public static string Decrypt(string value) => throw new NotImplementedException();
+    
+    public static string DecryptOld(string value) => throw new NotImplementedException();
 }

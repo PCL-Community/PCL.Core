@@ -16,10 +16,10 @@ public sealed class SetupService : ILifecycleService
 #endif
 
     private static LifecycleContext _context = null!;
-    private static ISetupFileManager? _globalSetupFile;
-    private static ISetupFileManager? _localSetupFile;
-    private static ISetupFileManager? _instanceSetupFile;
-    private static ISetupFileManager? _globalSetupReg;
+    private static CommonSetupFileManager? _globalSetupFile;
+    private static CommonSetupFileManager? _localSetupFile;
+    private static InstanceSetupFileManager? _instanceSetupFile;
+    private static SetupRegManager? _globalSetupReg;
 
     private SetupService()
     {
@@ -32,16 +32,16 @@ public sealed class SetupService : ILifecycleService
 
     public static SetupModel Setup { get; private set; } = null!;
 
-    public static ISetupFileManager GlobalSetupFile =>
+    public static CommonSetupFileManager GlobalSetupFile =>
         _globalSetupFile ?? throw new InvalidOperationException("服务未开始");
 
-    public static ISetupFileManager LocalSetupFile =>
+    public static CommonSetupFileManager LocalSetupFile =>
         _localSetupFile ?? throw new InvalidOperationException("服务未开始");
 
-    public static ISetupFileManager InstanceSetupFile =>
+    public static InstanceSetupFileManager InstanceSetupFile =>
         _instanceSetupFile ?? throw new InvalidOperationException("服务未开始");
 
-    public static ISetupFileManager GlobalSetupReg =>
+    public static SetupRegManager GlobalSetupReg =>
         _globalSetupReg ?? throw new InvalidOperationException("服务未开始");
 
     public void Start()

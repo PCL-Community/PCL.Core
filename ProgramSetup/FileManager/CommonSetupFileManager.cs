@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Utils;
+using PCL.Core.Helper;
 
 namespace PCL.Core.ProgramSetup.FileManager;
 
@@ -14,11 +14,10 @@ public sealed class CommonSetupFileManager : ISetupFileManager
 {
     private readonly string _filePath;
     private readonly ISetupFileSerializer _serializer;
-    private readonly ReaderWriterLockSlim _rwLock = new(LockRecursionPolicy.SupportsRecursion);
     private readonly ManualResetEventSlim _saveEvent = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _saveTask;
-    private ConcurrentDictionary<string, string> _content = new();
+    private readonly ConcurrentDictionary<string, string> _content;
     private bool _disposed = false;
 
     public CommonSetupFileManager(string filePath, ISetupFileSerializer serializer)
@@ -27,7 +26,7 @@ public sealed class CommonSetupFileManager : ISetupFileManager
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _saveTask = new Task(() => Save(_cts.Token), TaskCreationOptions.LongRunning);
         _saveTask.Start();
-        Load();
+        _content = Load();
     }
 
     public string? Get(string key, string? mcPath)
@@ -39,7 +38,6 @@ public sealed class CommonSetupFileManager : ISetupFileManager
     public string? Set(string key, string value, string? mcPath)
     {
         string? result = null;
-        _rwLock.EnterReadLock();
         _content.AddOrUpdate(key, _ =>
         {
             result = null;
@@ -50,55 +48,29 @@ public sealed class CommonSetupFileManager : ISetupFileManager
             return value;
         });
         _saveEvent.Set();
-        _rwLock.ExitReadLock();
         return result;
     }
 
     public string? Remove(string key, string? mcPath)
     {
-        _rwLock.EnterReadLock();
         _content.TryRemove(key, out string? value);
         _saveEvent.Set();
-        _rwLock.ExitReadLock();
         return value;
     }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// 只能在同一线程进入与退出多重操作
-    /// </remarks>
-    public MultipleOperationHandle BeginMultipleOperation(string? mcPath)
+    private ConcurrentDictionary<string, string> Load()
     {
-        var threadId = Environment.CurrentManagedThreadId;
-        _rwLock.EnterReadLock();
-        _saveEvent.Set();
-        return new MultipleOperationHandle(() =>
-        {
-            if (Environment.CurrentManagedThreadId != threadId)
-                throw new InvalidOperationException("必须在同一线程进入与退出多重操作");
-            _rwLock.ExitReadLock();
-        });
-    }
-
-    private void Load()
-    {
-        _rwLock.EnterWriteLock();
         try
         {
             var folder = Path.GetDirectoryName(_filePath);
             if (!string.IsNullOrEmpty(folder))
                 Directory.CreateDirectory(folder);
             using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-            var deserialized = _serializer.Deserialize(fs);
-            _content = deserialized ?? new ConcurrentDictionary<string, string>();
+            return _serializer.Deserialize(fs) ?? new ConcurrentDictionary<string, string>();
         }
         catch (Exception ex)
         {
             throw new Exception($"将文件解析为配置文件失败：{_filePath}", ex);
-        }
-        finally
-        {
-            _rwLock.ExitWriteLock();
         }
     }
 
@@ -115,21 +87,18 @@ public sealed class CommonSetupFileManager : ISetupFileManager
                 if (!_saveEvent.IsSet)
                     break;
             }
-            _rwLock.EnterWriteLock();
-            _saveEvent.Reset();
-            string jResult = _serializer.Serialize(_content);
-            _rwLock.ExitWriteLock();
             try
             {
+                _saveEvent.Reset();
+                string serializedContent = _serializer.Serialize(_content);
                 var tmpFile = _filePath + ".tmp";
                 var bakFile = _filePath + ".bak";
-                File.WriteAllText(tmpFile, jResult);
+                File.WriteAllText(tmpFile, serializedContent);
                 File.Replace(tmpFile, _filePath, bakFile);
             }
             catch (Exception ex)
             {
-                _saveEvent.Dispose();
-                throw new Exception($"向硬盘同步文件失败：{_filePath}", ex);
+                LogWrapper.Error(ex, "Setup", "向硬盘同步配置文件失败：" + _filePath);
             }
         }
     }
@@ -141,7 +110,6 @@ public sealed class CommonSetupFileManager : ISetupFileManager
         _disposed = true;
         _cts.Cancel();
         _saveTask.Wait();
-        _rwLock.Dispose();
         _cts.Dispose();
         _saveEvent.Dispose();
         _saveTask.Dispose();

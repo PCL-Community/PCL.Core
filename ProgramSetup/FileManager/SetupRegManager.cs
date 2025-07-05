@@ -64,9 +64,7 @@ public sealed class SetupRegManager(string regPath) : ISetupFileManager
         }
     }
 
-    MultipleOperationHandle ISetupFileManager.BeginMultipleOperation(string? mcPath) => new(() => { });
-
-    void IDisposable.Dispose() { }
+    public void Dispose() { }
 
     private static string? ProcessRegRawValue(object? rawValue)
     {

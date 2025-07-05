@@ -11,10 +11,15 @@ namespace PCL.Core.ProgramSetup.FileManager;
 /// </summary>
 public sealed class InstanceSetupFileManager : ISetupFileManager
 {
-    private readonly CountingDictionary<string, ConcurrentDictionary<string, string>> _activeFilesDict =
-        new(Companion.LoadFile, Companion.WriteFile);
-
+    private readonly CountingDictionary<string, ConcurrentDictionary<string, string>> _activeFilesDict;
+    private readonly ISetupFileSerializer _serializer;
     private volatile int _disposed = 0;
+
+    public InstanceSetupFileManager(ISetupFileSerializer serializer)
+    {
+        _serializer = serializer;
+        _activeFilesDict = new CountingDictionary<string, ConcurrentDictionary<string, string>>(LoadFile, WriteFile);
+    }
 
     public string? Get(string key, string? mcPath)
     {
@@ -85,28 +90,23 @@ public sealed class InstanceSetupFileManager : ISetupFileManager
             return;
     }
 
-    private static string GetSetupFilePath(string mcPath) => Path.Combine(mcPath, "PCL", "Setup.ini");
-}
-
-file static class Companion
-{
-    private static ISetupFileSerializer Serializer => SetupIniSerializer.Instance;
-
-    public static ConcurrentDictionary<string, string> LoadFile(string filePath)
+    private ConcurrentDictionary<string, string> LoadFile(string filePath)
     {
         if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
             Directory.CreateDirectory(dir);
         var result = new ConcurrentDictionary<string, string>();
         using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-        Serializer.Deserialize(fs, result);
+        _serializer.Deserialize(fs, result);
         return result;
     }
 
-    public static void WriteFile(string filePath, ConcurrentDictionary<string, string> content)
+    private void WriteFile(string filePath, ConcurrentDictionary<string, string> content)
     {
         if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
             Directory.CreateDirectory(dir);
         using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
-        Serializer.Serialize(content, fs);
+        _serializer.Serialize(content, fs);
     }
+
+    private static string GetSetupFilePath(string mcPath) => Path.Combine(mcPath, "PCL", "Setup.ini");
 }

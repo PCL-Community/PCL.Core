@@ -74,7 +74,7 @@ public sealed class SetupService : ILifecycleService
             BackupFileAndShutdown(localPath);
         }
         // 实例配置文件托管器
-        _instanceSetupFile = new InstanceSetupFileManager();
+        _instanceSetupFile = new InstanceSetupFileManager(SetupIniSerializer.Instance);
         // 配置注册表托管器
         _globalSetupReg = new SetupRegManager(@"Software\" + GlobalSetupFolder);
         // 初始化配置模型

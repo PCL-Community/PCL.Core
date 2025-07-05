@@ -92,9 +92,8 @@ public sealed class CommonSetupFileManager : ISetupFileManager
                 _saveEvent.Reset();
                 string serializedContent = _serializer.Serialize(_content);
                 var tmpFile = _filePath + ".tmp";
-                var bakFile = _filePath + ".bak";
                 File.WriteAllText(tmpFile, serializedContent);
-                File.Replace(tmpFile, _filePath, bakFile);
+                File.Replace(tmpFile, _filePath, null);
             }
             catch (Exception ex)
             {

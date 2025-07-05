@@ -10,7 +10,8 @@ public class LifecycleContext(
     Action<LifecycleLogItem> onLog,
     Action<int> onRequestExit,
     Action<string?> onRequestRestart,
-    Action onDeclareStopped)
+    Action onDeclareStopped,
+    Action onRequestStopLoading)
 {
     public void CustomLog(
         string message,
@@ -27,9 +28,10 @@ public class LifecycleContext(
     public void Fatal(string message, Exception? ex = null, LifecycleActionLevel? actionLevel = null) => CustomLog(message, ex, LifecycleLogLevel.Fatal, actionLevel);
 
     /// <summary>
-    /// 请求退出程序。仅可在 <see cref="LifecycleState.BeforeLoading"/> 时使用。
+    /// 请求退出程序。仅可在 <see cref="LifecycleState.BeforeLoading"/> 状态调用。
     /// </summary>
     /// <param name="statusCode">程序返回的状态码</param>
+    /// <exception cref="InvalidOperationException">尝试在非 <see cref="LifecycleState.BeforeLoading"/> 状态调用</exception>
     public void RequestExit(int statusCode = 0) => onRequestExit(statusCode);
     
     /// <summary>
@@ -39,7 +41,16 @@ public class LifecycleContext(
     public void RequestRestartOnExit(string? arguments = null) => onRequestRestart(arguments);
     
     /// <summary>
-    /// 标记自身已经结束运行。调用该方法将会直接从正在运行列表中移除该服务项，后续的 <c>Stop</c> 等均不会触发。仅可在 <c>Start</c> 方法中使用。
+    /// 标记自身已经结束运行。调用该方法将会直接从正在运行列表中移除该服务项，后续的
+    /// <c>Stop</c> 等均不会触发。仅可在服务启动阶段即 <c>Start</c> 方法结束前调用。
     /// </summary>
+    /// <exception cref="InvalidOperationException">尝试在非启动阶段调用</exception>
     public void DeclareStopped() => onDeclareStopped();
+    
+    /// <summary>
+    /// 请求停止继续加载。多用于初始阶段在非 STA 线程中运行的服务接管进程整个生命周期，仅可在
+    /// <see cref="LifecycleState.BeforeLoading"/> 状态调用。
+    /// </summary>
+    /// <exception cref="InvalidOperationException">尝试在非 <see cref="LifecycleState.BeforeLoading"/> 状态调用</exception>
+    public void RequestStopLoading() => onRequestStopLoading();
 }

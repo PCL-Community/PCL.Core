@@ -103,8 +103,15 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
                               ?? javaFileVersion.FileDescription
                               ?? javaFileVersion.ProductName
                               ?? string.Empty;
-            if (companyName == "N/A") // 某 O 开头的 Java 信息不写全
-                companyName = javaFileVersion.FileDescription;
+            // 某 O 开头的公司乱写文件属性
+            if (companyName.Contains("Oracle") || companyName == "N/A")
+            {
+                if (javaFileVersion.FileDescription?.Contains("Java(TM)") ?? javaFileVersion.ProductName?.Contains("Java(TM)") ?? false)
+                    companyName = "Oracle";
+                else
+                    companyName = "OpenJDK";
+            }
+            
             var javaBrand = DetermineBrand(companyName);
 
             var currentJavaFolder = Path.GetDirectoryName(javaExePath)!;
@@ -143,7 +150,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["IBM"] = JavaBrandType.IBMSemeru,
         ["Oracle"] = JavaBrandType.Oracle,
         ["Tencent"] = JavaBrandType.TencentKona,
-        ["Java(TM)"] = JavaBrandType.OpenJDK,
+        ["OpenJDK"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
     };
 

@@ -337,7 +337,7 @@ public sealed class RpcService : ILifecycleService
                     if (name.EndsWith("$"))
                     {
                         indent = true;
-                        name = name.Substring(0, name.Length - 1);
+                        name = name[..^1];
                     }
                     var result = FunctionMap.TryGetValue(name, out var func);
                     if (!result) throw new RpcException($"不存在函数 {name}");

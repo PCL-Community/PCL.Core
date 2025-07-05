@@ -2,6 +2,7 @@
 using System.Management;
 using System.Security.Cryptography;
 using System.Text;
+using PCL.Core.Helper.Hash;
 
 namespace PCL.Core.Helper;
 
@@ -24,6 +25,6 @@ public static class Identify
 
     public static string GetMachineId(string randomId)
     {
-        return HashHelper.ComputeSHA512($"{randomId}|{GetCpuId()}");
+        return SHA512Provider.Instance.ComputeHash($"{randomId}|{GetCpuId()}").ToUpper();
     }
 }

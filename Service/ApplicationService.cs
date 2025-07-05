@@ -1,6 +1,8 @@
 ﻿using PCL.Core.LifecycleManagement;
 using System;
+using System.Threading;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace PCL.Core.Service;
 
@@ -23,8 +25,45 @@ public sealed class ApplicationService : ILifecycleService
         app.DispatcherUnhandledException += (_, e) => Lifecycle.OnException(e.Exception);
         app.Startup += (_, _) => Lifecycle.OnLoading();
         Lifecycle.CurrentApplication = app;
+        Loading = null;
         Context.Trace("应用程序容器初始化完毕");
     }
 
-    public void Stop() { }
+    public void Stop()
+    {
+        var app = Lifecycle.CurrentApplication;
+        var dispatcher = app.Dispatcher;
+        if (Lifecycle.IsForceShutdown)
+        {
+            Context.Warn("已指定强制关闭，跳过 WPF 标准关闭流程");
+            return;
+        }
+        if (dispatcher == null || dispatcher.HasShutdownFinished) return;
+        using var exited = new ManualResetEventSlim();
+        dispatcher.BeginInvoke(DispatcherPriority.Send, () =>
+        {
+            app.Exit += Exited;
+            if (dispatcher.HasShutdownStarted) return;
+            Context.Debug("发起 WPF 退出流程");
+            app.Shutdown();
+        });
+        try
+        {
+            Context.Debug("正在等待应用程序容器退出");
+            var result = exited.Wait(5000);
+            if (result) Context.Trace("应用程序容器已退出");
+            else Context.Warn("应用程序容器退出超时，停止等待");
+        }
+        finally
+        {
+            dispatcher.BeginInvoke(DispatcherPriority.Send, () => app.Exit -= Exited);
+        }
+        return;
+        
+        void Exited(object? sender, EventArgs e)
+        {
+            // ReSharper disable once AccessToDisposedClosure
+            exited.Set();
+        }
+    }
 }

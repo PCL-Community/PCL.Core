@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using PCL.Core.Utils;
 
 namespace PCL.Core.LifecycleManagement;
 
@@ -20,12 +19,13 @@ public sealed class Lifecycle : ILifecycleService
     public string Identifier => "lifecycle";
     public string Name => "生命周期";
     public bool SupportAsyncStart => false;
-    public void Start() { }
-    public void Stop() { }
     
     private static LifecycleContext? _context;
     private Lifecycle() { _context = GetContext(this); }
     private static LifecycleContext Context => _context ?? System;
+    
+    public void Start() { }
+    public void Stop() { _context = null; }
     
     // -- 日志管理 --
     
@@ -37,6 +37,8 @@ public sealed class Lifecycle : ILifecycleService
         service.OnLog(item);
     }
 
+    public static string PendingLogFileName { get; set; } = "LastPending.log";
+
     private static void _SavePendingLogs()
     {
         if (PendingLogs.Count == 0) return;
@@ -45,7 +47,7 @@ public sealed class Lifecycle : ILifecycleService
             // 直接写入剩余未输出日志到程序目录
             var dir = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, "PCL", "Log");
             Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, "LastPending.log");
+            var path = Path.Combine(dir, PendingLogFileName);
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
             foreach (var item in PendingLogs) writer.WriteLine(item.ComposeMessage());
@@ -168,6 +170,7 @@ public sealed class Lifecycle : ILifecycleService
             var instance = _CreateService(service);
             if (instance.SupportAsyncStart) asyncInstances.Add(instance);
             else _StartService(instance);
+            if (_requestedStopLoading) return; // 若请求停止加载则提前结束
         }
         // 运行异步启动服务并等待所有服务启动完成
         var taskList = asyncInstances.Select(
@@ -203,7 +206,6 @@ public sealed class Lifecycle : ILifecycleService
     private static void _StopService(ILifecycleService service, bool async, bool manual = false)
     {
         var name = _ServiceName(service, manual ? LifecycleState.Manual : CurrentState);
-        Context.Trace($"正在停止 {name}");
         if (async) Task.Run(Stop);
         else Stop();
         return;
@@ -212,6 +214,7 @@ public sealed class Lifecycle : ILifecycleService
         {
             try
             {
+                Context.Trace($"正在停止 {name}");
                 service.Stop();
                 Context.Debug($"{name} 已停止");
             }
@@ -235,51 +238,49 @@ public sealed class Lifecycle : ILifecycleService
     private static bool _hasRequestedRestart = false;
     private static string? _requestRestartArguments;
     private static ILifecycleService? _requestRestartService;
-    private static readonly AtomicVariable<bool> _hasExited = new();
     
     private static void _Exit(int statusCode = 0)
     {
-        if (Environment.HasShutdownStarted) return;
-        lock (_hasExited) {
-            if (_hasExited.Value) return;
-            _hasExited.Value = true;
-            // 停止 Running 计时并进入下一周期
-            if (_countRunningStart is { } start)
-            {
-                var countSpan = DateTime.Now - start;
-                _LogStateCount(countSpan, LifecycleState.Running);
-            }
-            _NextState(LifecycleState.Exiting);
-            Context.Debug("开始退出程序，停止正在运行的服务");
-            ILifecycleLogService? logService = null;
-            foreach (var service in RunningServiceList.ToArray())
-            {
-                if (service is ILifecycleLogService ls)
-                {
-                    // 跳过日志服务
-                    Context.Trace($"已跳过日志服务 {_ServiceName(ls)}");
-                    logService = ls;
-                    continue;
-                }
-                _StopService(service, service.SupportAsyncStart);
-            }
-            if (logService != null)
-            {
-                Context.Trace($"退出过程已结束，正在停止日志服务");
-                _StopService(logService, false);
-            }
-            _SavePendingLogs();
-            if (_hasRequestedRestart && _requestRestartService is { } s)
-            {
-                Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program...");
-                _RunCurrentExecutable(_requestRestartArguments);
-            }
-            Environment.Exit(statusCode);
-            // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
-            Thread.Sleep(1000);
-            Console.WriteLine("[Lifecycle] Trying to force kill the process");
-            Process.Start("taskkill.exe", $"/PID {Process.GetCurrentProcess().Id} /F /T");
+        if (HasShutdownStarted) return;
+        HasShutdownStarted = true;
+        // 结束 Running 计时
+        if (_countRunningStart is { } start)
+        { 
+            var countSpan = DateTime.Now - start; 
+            _LogStateCount(countSpan, LifecycleState.Running);
         }
+        // 开始 Exiting 状态
+        _StartStateFlow(LifecycleState.Exiting, count: false);
+        // 停止服务并退出
+        Context.Debug("正在停止运行中的服务"); 
+        ILifecycleLogService? logService = null; 
+        foreach (var service in RunningServiceList.ToArray()) 
+        { 
+            if (service is ILifecycleLogService ls) 
+            {
+                // 跳过日志服务
+                Context.Trace($"已跳过日志服务: {_ServiceName(ls)}"); 
+                logService = ls; 
+                continue;
+            }
+            _StopService(service, service.SupportAsyncStart);
+        }
+        if (logService != null)
+        { 
+            Context.Trace($"退出过程已结束，正在停止日志服务"); 
+            _StopService(logService, false);
+        }
+        _SavePendingLogs();
+        if (_hasRequestedRestart && _requestRestartService is { } s)
+        { 
+            Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program..."); 
+            _RunCurrentExecutable(_requestRestartArguments);
+        }
+        Environment.Exit(statusCode); 
+        // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
+        Thread.Sleep(1000);
+        Console.WriteLine("[Lifecycle] Trying to force kill the process");
+        Process.Start("taskkill.exe", $"/PID {Process.GetCurrentProcess().Id} /F /T");
     }
 
     private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
@@ -380,6 +381,8 @@ public sealed class Lifecycle : ILifecycleService
     private static bool _isLoadingStarted = false;
     private static bool _isWindowCreated = false;
 
+    private static bool _requestedStopLoading = false;
+
     /// <summary>
     /// [请勿调用] 处理未捕获异常流程
     /// </summary>
@@ -424,9 +427,10 @@ public sealed class Lifecycle : ILifecycleService
         }
         // 运行预加载服务
         _StartStateFlow(LifecycleState.BeforeLoading);
+        if (_requestedStopLoading) return;
         // 运行应用程序容器
         var statusCode = CurrentApplication.Run();
-        _Exit(statusCode);
+        if (!HasShutdownStarted) _Exit(statusCode);
     }
 
     /// <summary>
@@ -497,7 +501,17 @@ public sealed class Lifecycle : ILifecycleService
     /// 日志服务启动状态
     /// </summary>
     public static bool IsLogServiceStarted => _logService != null;
+
+    /// <summary>
+    /// 是否正在关闭程序
+    /// </summary>
+    public static bool HasShutdownStarted { get; private set; } = false;
     
+    /// <summary>
+    /// 正在进行的关闭程序流程是否是强制关闭
+    /// </summary>
+    public static bool IsForceShutdown { get; private set; } = false;
+
     /// <summary>
     /// 所有正在运行的服务项标识符（即 <see cref="ILifecycleService.Identifier"/> 属性）
     /// </summary>
@@ -565,25 +579,26 @@ public sealed class Lifecycle : ILifecycleService
     }
 
     /// <summary>
-    /// 开始关闭流程，仅可在 <see cref="LifecycleState.Loading"/> 及之后的状态调用。<br/>
-    /// 由于 WPF 和龙猫的双重石山，启动器经常面临无法直接经由 <see cref="Application.Shutdown()"/>
-    /// 等发起关闭事件的情况，此方法将尝试使用指定状态码调用 <see cref="Application.Shutdown(int)"/>
-    /// 然后等待 3 秒后直接发起关闭程序流程，并阻塞当前线程以确保不产生无法预料的行为。
+    /// 发起关闭程序流程。
     /// </summary>
+    /// <param name="statusCode">退出状态码 (返回值)</param>
+    /// <param name="force">指定是否强制关闭，即不执行 WPF 标准关闭流程</param>
     /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
-    public static void ForceShutdown(int statusCode = 0)
+    public static void Shutdown(int statusCode = 0, bool force = false)
     {
-        if (CurrentState < LifecycleState.Loading) throw new InvalidOperationException("应用程序容器未初始化");
-        CurrentApplication.Dispatcher.Invoke(() => CurrentApplication.Shutdown(statusCode));
-        var shutdownWait = Task.Run(async () =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(3));
-            if (CurrentState == LifecycleState.Exiting) return;
-            Context.Warn("石山发作，直接发起退出流程");
-            _Exit(statusCode);
-        });
-        shutdownWait.Wait();
+        if (HasShutdownStarted) return;
+        Context.Info(force ? "开始强制关闭程序" : "正在关闭程序");
+        IsForceShutdown = force;
+        if (force) _Exit(statusCode);
+        else new Thread(() => _Exit(statusCode)) { Name = "Shutdown" }.Start();
     }
+
+    /// <summary>
+    /// 强制关闭程序，不执行 WPF 标准关闭流程。
+    /// </summary>
+    /// <param name="statusCode">退出状态码 (返回值)</param>
+    /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
+    public static void ForceShutdown(int statusCode = 0) => Shutdown(statusCode, true);
     
     /// <summary>
     /// 获取指定服务项对应的上下文实例用于日志输出、多任务通信等。一般情况下只推荐获取自身上下文。
@@ -615,7 +630,17 @@ public sealed class Lifecycle : ILifecycleService
         },
         onDeclareStopped: () =>
         {
+            var identifier = self.Identifier;
+            if (GetServiceInfo(identifier)?.Identifier == identifier)
+                throw new InvalidOperationException("只能在服务启动阶段调用");
             DeclaredStoppedServices.Add(self);
+        },
+        onRequestStopLoading: () =>
+        {
+            if (CurrentState != LifecycleState.BeforeLoading)
+                throw new InvalidOperationException("只能在 BeforeLoading 时请求停止加载");
+            Context.Info($"{_ServiceName(self)} 已请求停止继续加载");
+            _requestedStopLoading = true;
         }
     );
 

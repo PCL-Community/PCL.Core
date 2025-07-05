@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Text;
 using System.Threading;
 using PCL.Core.Utils;
 
@@ -97,16 +96,17 @@ file static class Companion
     {
         if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
             Directory.CreateDirectory(dir);
+        var result = new ConcurrentDictionary<string, string>();
         using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-        return Serializer.Deserialize(fs) ?? new ConcurrentDictionary<string, string>();
+        Serializer.Deserialize(fs, result);
+        return result;
     }
 
     public static void WriteFile(string filePath, ConcurrentDictionary<string, string> content)
     {
         if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
             Directory.CreateDirectory(dir);
-        var serialized = Encoding.UTF8.GetBytes(Serializer.Serialize(content));
         using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
-        fs.Write(serialized, 0, serialized.Length);
+        Serializer.Serialize(content, fs);
     }
 }

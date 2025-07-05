@@ -17,7 +17,7 @@ public sealed class CommonSetupFileManager : ISetupFileManager
     private readonly ManualResetEventSlim _saveEvent = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _saveTask;
-    private readonly ConcurrentDictionary<string, string> _content;
+    private readonly ConcurrentDictionary<string, string> _content = new();
     private bool _disposed = false;
 
     public CommonSetupFileManager(string filePath, ISetupFileSerializer serializer)
@@ -26,7 +26,7 @@ public sealed class CommonSetupFileManager : ISetupFileManager
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _saveTask = new Task(() => Save(_cts.Token), TaskCreationOptions.LongRunning);
         _saveTask.Start();
-        _content = Load();
+        Load();
     }
 
     public string? Get(string key, string? mcPath)
@@ -58,15 +58,15 @@ public sealed class CommonSetupFileManager : ISetupFileManager
         return value;
     }
 
-    private ConcurrentDictionary<string, string> Load()
+    private void Load()
     {
         try
         {
-            var folder = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(folder))
-                Directory.CreateDirectory(folder);
+            if (Path.GetDirectoryName(_filePath) is { Length: > 0 } dir)
+                Directory.CreateDirectory(dir);
             using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-            return _serializer.Deserialize(fs) ?? new ConcurrentDictionary<string, string>();
+            _content.Clear();
+            _serializer.Deserialize(fs, _content);
         }
         catch (Exception ex)
         {
@@ -90,9 +90,9 @@ public sealed class CommonSetupFileManager : ISetupFileManager
             try
             {
                 _saveEvent.Reset();
-                string serializedContent = _serializer.Serialize(_content);
                 var tmpFile = _filePath + ".tmp";
-                File.WriteAllText(tmpFile, serializedContent);
+                using (var fs = new FileStream(tmpFile, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    _serializer.Serialize(_content, fs);
                 File.Replace(tmpFile, _filePath, null);
             }
             catch (Exception ex)

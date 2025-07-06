@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using static PCL.Core.ProgramSetup.SetupEntrySource;
 
 namespace PCL.Core.ProgramSetup;
@@ -10,6 +11,8 @@ public sealed class SetupModel
 {
     public const int SetupVersionNum = 1;
 
+    private readonly IReadOnlyDictionary<string, object> SetupPathMap;
+
     public readonly Identifications Identification = new();
     public readonly Counters Counter = new();
     public readonly Hints Hint = new();
@@ -19,6 +22,45 @@ public sealed class SetupModel
     public readonly ToolSettings Tool = new();
     public readonly LaunchSettings Launch = new();
     public readonly McInstanceSettings Minecraft = new();
+
+    public SetupModel()
+    {
+        SetupPathMap = new Dictionary<string, object>
+        {
+            ["Identification"] = Identification,
+            ["Counter"] = Counter,
+            ["Hint"] = Hint,
+            ["Cache"] = Cache,
+            ["Ui"] = Ui,
+            ["Ui.Hide"] = Ui.Hide,
+            ["Ui.Music"] = Ui.Music,
+            ["Ui.Background"] = Ui.Background,
+            ["Ui.MainPage"] = Ui.MainPage,
+            ["System"] = System,
+            ["System.Debug"] = System.Debug,
+            ["System.Link"] = System.Link,
+            ["System.Login"] = System.Login,
+            ["Tool"] = Tool,
+            ["Tool.Download"] = Tool.Download,
+            ["Launch"] = Launch,
+            ["Minecraft"] = Minecraft
+        };
+    }
+    
+    public ISetupEntry? GetEntryFromPath(string path)
+    {
+        try
+        {
+            var index = path.LastIndexOf('.');
+            var owner = SetupPathMap[path[..index]];
+            var result = owner.GetType().GetField(path[(index + 1)..]).GetValue(owner);
+            return result as ISetupEntry;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     public sealed class Identifications
     {

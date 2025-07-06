@@ -122,6 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controls\BlurBorder.cs" />
+    <Compile Include="Controls\SetupRefExtension.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
@@ -171,6 +172,7 @@
     <Compile Include="ProgramSetup\FileManager\ISetupFileSerializer.cs" />
     <Compile Include="ProgramSetup\FileManager\CommonSetupFileManager.cs" />
     <Compile Include="ProgramSetup\FileManager\SetupRegManager.cs" />
+    <Compile Include="ProgramSetup\ISetupEntry.cs" />
     <Compile Include="ProgramSetup\SetupModel.cs" />
     <Compile Include="ProgramSetup\SetupEntry.cs" />
     <Compile Include="ProgramSetup\SetupEntrySource.cs" />

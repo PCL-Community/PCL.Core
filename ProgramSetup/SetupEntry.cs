@@ -5,7 +5,8 @@ using PCL.Core.Service;
 
 namespace PCL.Core.ProgramSetup;
 
-public sealed class SetupEntry<T>(string keyName, T defaultValue, SetupEntrySource source, bool isEncrypted = false)
+public sealed partial class SetupEntry<T>
+    (string keyName, T defaultValue, SetupEntrySource source, bool isEncrypted = false)
     where T : notnull
 {
     private readonly Func<T, string> _serializer = Companion.GetSerializer<T>(isEncrypted);

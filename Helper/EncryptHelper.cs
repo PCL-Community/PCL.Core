@@ -7,6 +7,25 @@ namespace PCL.Core.Helper;
 
 public static class EncryptHelper
 {
+    public static string SecretEncrypt(string data) => AESEncrypt(data, Identify.EncryptKey);
+
+    public static string SecretDecrypt(string data) => AESDecrypt(data, Identify.EncryptKey);
+
+    public static string SecretDecryptOld(string data)
+    {
+        const string key = "00000000";
+        const string IV = "87160295";
+        var btKey = Encoding.UTF8.GetBytes(key);
+        var btIV = Encoding.UTF8.GetBytes(IV);
+        using var des = new DESCryptoServiceProvider();
+        using var ms = new MemoryStream();
+        using var cs = new CryptoStream(ms, des.CreateDecryptor(btKey, btIV), CryptoStreamMode.Write);
+        var inData = Convert.FromBase64String(data);
+        cs.Write(inData, 0, inData.Length);
+        cs.FlushFinalBlock();
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
     /// <summary>
     /// 使用特定的 AES 算法加密数据
     /// </summary>

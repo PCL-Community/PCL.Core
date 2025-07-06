@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
@@ -24,7 +25,9 @@ public sealed class PromoteService : ILifecycleService
     private static Process? _promoteProcess;
     private static NamedPipeServerStream? _promotePipeServer;
     
-    private static readonly LinkedList<KeyValuePair<string, Action<string>>> PendingOperations = [];
+    private static readonly LinkedList<PromoteOperation> PendingOperations = [];
+    
+    private record PromoteOperation(string Command, Action<string>? Callback, bool DetailLog);
     
     /// <summary>
     /// 提权进程是否正在运行。
@@ -41,7 +44,7 @@ public sealed class PromoteService : ILifecycleService
     private static readonly Dictionary<string, Func<string?, string?>> OperationFunctions = new();
 
     /// <summary>
-    /// 添加提权操作。仅在提权进程中有效。
+    /// 添加提权操作，仅在提权进程中有效。
     /// </summary>
     /// <param name="name">操作名</param>
     /// <param name="operation">操作实现，接收参数并返回结果，返回值会被自动压缩为单行</param>
@@ -51,6 +54,23 @@ public sealed class PromoteService : ILifecycleService
         if (!IsCurrentProcessPromoted || OperationFunctions.ContainsKey(name)) return false;
         OperationFunctions[name] = operation;
         return true;
+    }
+
+    /// <summary>
+    /// 添加自动将参数 JSON 反序列化的提权操作，仅在提权进程中有效。
+    /// </summary>
+    /// <param name="name">操作名</param>
+    /// <param name="operation">操作实现，接收反序列化的并返回结果，返回值会被自动压缩为单行</param>
+    /// <typeparam name="TValue">反序列化的目标类型</typeparam>
+    /// <returns>是否添加成功，若在主进程中调用或已存在相同操作名，则为 <c>false</c></returns>
+    public static bool AddJsonOperationFunction<TValue>(string name, Func<TValue?, string?> operation)
+    {
+        return AddOperationFunction(name, arg =>
+        {
+            if (arg == null) return OperationErrEmpty;
+            var obj = JsonSerializer.Deserialize<TValue>(arg);
+            return operation(obj);
+        });
     }
     
     private const string OperationErrNotFound = "ERR_OPERATION_NOT_FOUND";
@@ -62,7 +82,7 @@ public sealed class PromoteService : ILifecycleService
     /// 提权进程接收到操作请求时触发的事件，接收一个字符串作为操作命令并返回一个字符串作为结果。<br/>
     /// <b>注意：如果你不知道这是做什么的，请勿覆盖默认实现。</b>请使用 <see cref="AddOperationFunction"/>。
     /// </summary>
-    public static Func<string, string> Operate { private get; set; } = command =>
+    public static Func<string, string?> Operate { private get; set; } = command =>
     {
         var split = command.Split([' '], 2);
         OperationFunctions.TryGetValue(split[0], out var operation);
@@ -77,6 +97,17 @@ public sealed class PromoteService : ILifecycleService
             return OperationErrExceptionThrown;
         }
     };
+    
+    private static string ShortenString(string str)
+    {
+#if DEBUG || DEBUGCI
+        const int maxLength = 40;
+#else
+        const int maxLength = 15;
+#endif
+        if (str.Length <= maxLength) return str;
+        return str[..maxLength] + "...";
+    }
     
     // 提权进程: 连接管道开始通信
     private static void PerformAsPromoteProcess(string pid)
@@ -105,9 +136,9 @@ public sealed class PromoteService : ILifecycleService
                 Context.Info("管道已关闭，正在退出");
                 break;
             }
-            Context.Debug($"正在执行: {command}");
-            var result = Operate(command);
-            Context.Trace($"返回结果: {result}");
+            Context.Debug($"正在执行: {ShortenString(command)}");
+            var result = Operate(command) ?? OperationErrEmpty;
+            Context.Trace($"返回结果: {ShortenString(result)}");
             writer.WriteLine(result.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' '));
             writer.Flush();
             Context.Trace("返回成功");
@@ -124,8 +155,9 @@ public sealed class PromoteService : ILifecycleService
             ActivateEvent.WaitOne();
             foreach (var operation in PendingOperations.ToArray())
             {
-                var command = operation.Key.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-                Context.Debug($"正在执行: {command}");
+                var command = operation.Command.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+                var detail = operation.DetailLog ? command : ShortenString(command);
+                Context.Debug($"正在执行: {detail}");
                 writer.WriteLine(command);
                 writer.Flush();
                 var result = reader.ReadLine();
@@ -135,7 +167,7 @@ public sealed class PromoteService : ILifecycleService
                     break;
                 }
                 Context.Trace($"执行结果: {result}");
-                operation.Value(result);
+                operation.Callback?.Invoke(result);
                 PendingOperations.RemoveFirst();
             }
         }
@@ -166,11 +198,12 @@ public sealed class PromoteService : ILifecycleService
     /// </summary>
     /// <param name="command">操作命令</param>
     /// <param name="callback">结果返回后的回调</param>
-    public static void AppendOperation(string command, Action<string> callback)
+    /// <param name="detailLog">指定是否打印详细日志，若为 <c>false</c>，则日志仅保留前 40 或 15 字符（取决于是否为调试构建）</param>
+    public static void AppendOperation(string command, Action<string>? callback = null, bool detailLog = true)
     {
         lock (PendingOperations)
         {
-            PendingOperations.AddLast(new KeyValuePair<string, Action<string>>(command, callback));
+            PendingOperations.AddLast(new PromoteOperation(command, callback, detailLog));
         }
     }
 
@@ -185,15 +218,64 @@ public sealed class PromoteService : ILifecycleService
         return true;
     }
 
+    private static readonly Dictionary<string, Process> RunningProcesses = new();
+    
+    // name: kill
+    // arg: process-id [timeout]
+    // return: kill result (false over timeout)
+    private static string? _KillProcess(string? arg)
+    {
+        if (arg == null) return OperationErrInvalidArgument;
+        var split = arg.Split(' ');
+        if (!RunningProcesses.TryGetValue(split[0], out var process)) return null;
+        process.Kill();
+        if (split.Length > 1)
+        {
+            int.TryParse(split[1], out var timeout);
+            return process.WaitForExit(timeout).ToString();
+        }
+        process.WaitForExit();
+        return true.ToString();
+    }
+
     // name: start
-    // arg: path\to\executable ; argument
+    // arg: path\to\executable[.] ; arguments
+    // return: process id
     private static string? _StartProcess(string? arg)
     {
         if (arg == null) return OperationErrInvalidArgument;
         var split = arg.Split([" ; "], 2, StringSplitOptions.RemoveEmptyEntries);
+        var createNoWindow = false;
+        if (split[0].EndsWith("."))
+        {
+            split[0] = split[0][..^1];
+            createNoWindow = true;
+        }
         var psi = new ProcessStartInfo(split[0]);
+        if (createNoWindow)
+        {
+            psi.CreateNoWindow = true;
+            psi.UseShellExecute = false;
+            psi.RedirectStandardInput = true;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+        }
         if (split.Length > 1) psi.Arguments = split[1];
-        return Process.Start(psi)?.Id.ToString();
+        return _StartProcessWithInfo(psi);
+    }
+
+    // name: start-json
+    // arg: {...}
+    // return: process id
+    private static string? _StartProcessWithInfo(ProcessStartInfo? info)
+    {
+        if (info == null) return OperationErrInvalidArgument;
+        var process = Process.Start(info);
+        if (process == null) return null;
+        var id = process.Id.ToString();
+        process.Exited += (_, _) => RunningProcesses.Remove(id);
+        RunningProcesses[id] = process;
+        return id;
     }
     
     public void Start()
@@ -205,6 +287,8 @@ public sealed class PromoteService : ILifecycleService
             IsCurrentProcessPromoted = true;
             // 预定义操作
             AddOperationFunction("start", _StartProcess);
+            AddJsonOperationFunction<ProcessStartInfo>("start-json", _StartProcessWithInfo);
+            AddOperationFunction("kill", _KillProcess);
             // 结束生命周期管理，启动提权操作线程
             Lifecycle.PendingLogFileName = "LastPending_Promote.log";
             new Thread(() => PerformAsPromoteProcess(args[2])) { Name = "Promote" }.Start();

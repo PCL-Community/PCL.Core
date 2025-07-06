@@ -1,4 +1,5 @@
 ﻿using System;
+using PCL.Core.Helper;
 using PCL.Core.ProgramSetup.FileManager;
 using PCL.Core.Service;
 
@@ -168,9 +169,9 @@ file static class Companion
 
     public static ISetupFileManager RegManager => SetupService.GlobalSetupReg;
 
-    public static string Encrypt(string value) => throw new NotImplementedException();
+    public static string Encrypt(string value) => EncryptHelper.SecretEncrypt(value);
 
-    public static string Decrypt(string value) => throw new NotImplementedException();
-    
-    public static string DecryptOld(string value) => throw new NotImplementedException();
+    public static string Decrypt(string value) => EncryptHelper.SecretDecrypt(value);
+
+    public static string DecryptOld(string value) => EncryptHelper.SecretDecryptOld(value);
 }

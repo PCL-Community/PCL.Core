@@ -11,7 +11,7 @@ public sealed class SetupModel
 {
     public const int SetupVersionNum = 1;
 
-    private readonly IReadOnlyDictionary<string, object> SetupPathMap;
+    private readonly IReadOnlyDictionary<string, object> _setupPathMap;
 
     public readonly Identifications Identification = new();
     public readonly Counters Counter = new();
@@ -25,7 +25,7 @@ public sealed class SetupModel
 
     public SetupModel()
     {
-        SetupPathMap = new Dictionary<string, object>
+        _setupPathMap = new Dictionary<string, object>
         {
             ["Identification"] = Identification,
             ["Counter"] = Counter,
@@ -52,7 +52,7 @@ public sealed class SetupModel
         try
         {
             var index = path.LastIndexOf('.');
-            var owner = SetupPathMap[path[..index]];
+            var owner = _setupPathMap[path[..index]];
             var result = owner.GetType().GetField(path[(index + 1)..]).GetValue(owner);
             return result as ISetupEntry;
         }
@@ -117,6 +117,9 @@ public sealed class SetupModel
         public readonly SetupEntry<string> AuthThirdPartyName = new("CacheAuthUsername", SystemGlobal, isEncrypted: true);
         public readonly SetupEntry<string> AuthPassword = new("CacheAuthPass", SystemGlobal, isEncrypted: true);
         public readonly SetupEntry<string> AuthServerUrl = new("CacheAuthServerServer", SystemGlobal, isEncrypted: true);
+        public readonly SetupEntry<string> LinkAnnounce = new("LinkAnnounceCache", SystemGlobal, isEncrypted: true);
+        public readonly SetupEntry<int> LinkAnnounceVersion = new("LinkAnnounceCacheVer", SystemGlobal);
+        public readonly SetupEntry<string> LinkLastTestDate = new("LinkLastTestDate", SystemGlobal, isEncrypted: true);
     }
 
     public sealed class UiSettings
@@ -128,6 +131,8 @@ public sealed class SetupModel
 
         public readonly SetupEntry<int> DarkMode = new("UiDarkMode", 2, SystemGlobal);
         public readonly SetupEntry<int> AnimationFpsLimit = new("UiAniFPS", 59, SystemGlobal);
+        public readonly SetupEntry<int> DarkModeColor = new("UiDarkColor", 1, SystemGlobal);
+        public readonly SetupEntry<int> LightModeColor = new("UiLightColor", 1, SystemGlobal);
 
         public readonly SetupEntry<int> WindowHeight = new("WindowHeight", 550, PathLocal);
         public readonly SetupEntry<int> WindowWidth = new("WindowWidth", 900, PathLocal);
@@ -231,7 +236,12 @@ public sealed class SetupModel
         public sealed class LinkSettings
         {
             public readonly SetupEntry<bool> EulaAgreed = new("LinkEula", SystemGlobal);
-            public readonly SetupEntry<string> UserName = new("LinkName", SystemGlobal);
+            public readonly SetupEntry<bool> IsAvailable = new("LinkAvailable", SystemGlobal, isEncrypted: true);
+            public readonly SetupEntry<int> RelayType = new("LinkRelayType", SystemGlobal);
+            public readonly SetupEntry<int> ServerType = new("LinkServerType", SystemGlobal);
+            public readonly SetupEntry<string> RelayServer = new("LinkRelayServer", SystemGlobal);
+            public readonly SetupEntry<string> NaidRefreshToken = new("LinkNaidRefreshToken", SystemGlobal, isEncrypted: true);
+            public readonly SetupEntry<string> NaidRefreshExpiresAt = new("LinkNaidRefreshExpiresAt", SystemGlobal, isEncrypted: true);
             public readonly SetupEntry<bool> DoFirstTimeNetTest = new("LinkFirstTimeNetTest", true, SystemGlobal);
         }
 
@@ -282,6 +292,8 @@ public sealed class SetupModel
         public readonly SetupEntry<int> LauncherVisibility = new("LaunchArgumentVisible", 5, SystemGlobal);
         public readonly SetupEntry<int> ProcessPriority = new("LaunchArgumentPriority", 1, SystemGlobal);
         public readonly SetupEntry<bool> UseHighPerfGraphicCard = new("LaunchAdvanceGraphicCard", true, SystemGlobal);
+        public readonly SetupEntry<int> PreferredIpStack = new("LaunchPreferredIpStack", SystemGlobal);
+        public readonly SetupEntry<string> Uuid = new("LaunchUuid", SystemGlobal);
 
         public readonly SetupEntry<string> SelectedVersion = new("LaunchVersionSelect", PathLocal);
         public readonly SetupEntry<string> SelectedFolder = new("LaunchFolderSelect", PathLocal);
@@ -310,34 +322,34 @@ public sealed class SetupModel
 
     public sealed class McInstanceSettings
     {
-        public SetupEntry<int> DisableAssetsVerificationV1 = new("VersionAdvanceAssets", MinecraftInstance);
-        public SetupEntry<bool> DisableAssetsVerificationV2 = new("VersionAdvanceAssetsV2", MinecraftInstance);
-        public SetupEntry<bool> DisableJavaVerification = new("VersionAdvanceJava", MinecraftInstance);
-        public SetupEntry<bool> UseProxy = new("VersionAdvanceUseProxyV2", MinecraftInstance);
-        public SetupEntry<string> ServerAddress = new("VersionServerEnter", MinecraftInstance);
-        public SetupEntry<int> AuthRequirementType = new("VersionServerLoginRequire", MinecraftInstance);
-        public SetupEntry<string> AuthServerAddress = new("VersionServerAuthServer", MinecraftInstance);
-        public SetupEntry<string> AuthRegisterUrl = new("VersionServerAuthRegister", MinecraftInstance);
-        public SetupEntry<string> AuthServerDisplayName = new("VersionServerAuthName", MinecraftInstance);
-        public SetupEntry<bool> AuthLocked = new("VersionServerLoginLock", MinecraftInstance);
+        public readonly SetupEntry<int> DisableAssetsVerificationV1 = new("VersionAdvanceAssets", MinecraftInstance);
+        public readonly SetupEntry<bool> DisableAssetsVerificationV2 = new("VersionAdvanceAssetsV2", MinecraftInstance);
+        public readonly SetupEntry<bool> DisableJavaVerification = new("VersionAdvanceJava", MinecraftInstance);
+        public readonly SetupEntry<bool> UseProxy = new("VersionAdvanceUseProxyV2", MinecraftInstance);
+        public readonly SetupEntry<string> ServerAddress = new("VersionServerEnter", MinecraftInstance);
+        public readonly SetupEntry<int> AuthRequirementType = new("VersionServerLoginRequire", MinecraftInstance);
+        public readonly SetupEntry<string> AuthServerAddress = new("VersionServerAuthServer", MinecraftInstance);
+        public readonly SetupEntry<string> AuthRegisterUrl = new("VersionServerAuthRegister", MinecraftInstance);
+        public readonly SetupEntry<string> AuthServerDisplayName = new("VersionServerAuthName", MinecraftInstance);
+        public readonly SetupEntry<bool> AuthLocked = new("VersionServerLoginLock", MinecraftInstance);
 
         // 启动设置中也有以下项
 
-        public SetupEntry<string> SelectedJava = new("VersionArgumentJavaSelect", "使用全局设置", MinecraftInstance);
-        public SetupEntry<int> OptimizeMemory = new("VersionRamOptimize", MinecraftInstance);
-        public SetupEntry<int> IndieV1 = new("VersionArgumentIndie", -1, MinecraftInstance);
-        public SetupEntry<bool> IndieV2 = new("VersionArgumentIndieV2", MinecraftInstance);
-        public SetupEntry<string> CustomJvmArgs = new("VersionAdvanceJvm", MinecraftInstance);
-        public SetupEntry<string> CustomGameArgs = new("VersionAdvanceGame", MinecraftInstance);
-        [Obsolete] public SetupEntry<bool> DisableJlwObsolete = new("VersionAdvanceDisableJlw", MinecraftInstance);
-        public SetupEntry<bool> DisableJlw = new("VersionAdvanceDisableJLW", MinecraftInstance);
-        public SetupEntry<bool> DisableRw = new("VersionAdvanceDisableRW", MinecraftInstance);
-        public SetupEntry<string> PreLaunchCommand = new("VersionAdvanceRun", MinecraftInstance);
-        public SetupEntry<bool> PreLaunchCommandWait = new("VersionAdvanceRunWait", true, MinecraftInstance);
-        public SetupEntry<int> MemoryAllocationResolution = new("VersionRamType", 2, MinecraftInstance);
-        public SetupEntry<int> CustomMemorySize = new("VersionRamCustom", 15, MinecraftInstance);
-        public SetupEntry<string> WindowTitle = new("VersionArgumentTitle", MinecraftInstance);
-        public SetupEntry<bool> UseNonGlobalWindowTitle = new("VersionArgumentTitleEmpty", MinecraftInstance);
-        public SetupEntry<string> VersionExtraInfo = new("VersionArgumentInfo", MinecraftInstance);
+        public readonly SetupEntry<string> SelectedJava = new("VersionArgumentJavaSelect", "使用全局设置", MinecraftInstance);
+        public readonly SetupEntry<int> OptimizeMemory = new("VersionRamOptimize", MinecraftInstance);
+        public readonly SetupEntry<int> IndieV1 = new("VersionArgumentIndie", -1, MinecraftInstance);
+        public readonly SetupEntry<bool> IndieV2 = new("VersionArgumentIndieV2", MinecraftInstance);
+        public readonly SetupEntry<string> CustomJvmArgs = new("VersionAdvanceJvm", MinecraftInstance);
+        public readonly SetupEntry<string> CustomGameArgs = new("VersionAdvanceGame", MinecraftInstance);
+        [Obsolete] public readonly SetupEntry<bool> DisableJlwObsolete = new("VersionAdvanceDisableJlw", MinecraftInstance);
+        public readonly SetupEntry<bool> DisableJlw = new("VersionAdvanceDisableJLW", MinecraftInstance);
+        public readonly SetupEntry<bool> DisableRw = new("VersionAdvanceDisableRW", MinecraftInstance);
+        public readonly SetupEntry<string> PreLaunchCommand = new("VersionAdvanceRun", MinecraftInstance);
+        public readonly SetupEntry<bool> PreLaunchCommandWait = new("VersionAdvanceRunWait", true, MinecraftInstance);
+        public readonly SetupEntry<int> MemoryAllocationResolution = new("VersionRamType", 2, MinecraftInstance);
+        public readonly SetupEntry<int> CustomMemorySize = new("VersionRamCustom", 15, MinecraftInstance);
+        public readonly SetupEntry<string> WindowTitle = new("VersionArgumentTitle", MinecraftInstance);
+        public readonly SetupEntry<bool> UseNonGlobalWindowTitle = new("VersionArgumentTitleEmpty", MinecraftInstance);
+        public readonly SetupEntry<string> VersionExtraInfo = new("VersionArgumentInfo", MinecraftInstance);
     }
 }

@@ -7,6 +7,8 @@ namespace PCL.Core.ProgramSetup;
 /// </summary>
 public interface ISetupEntry
 {
+    object DefaultValue { get; }
+    event Action<object> ValueChanged;
     object Get(string? mcPath = null);
     void Set(object value, string? mcPath = null);
     void Reset(string? mcPath = null);
@@ -16,6 +18,20 @@ public interface ISetupEntry
 
 public sealed partial class SetupEntry<T> : ISetupEntry
 {
+    object ISetupEntry.DefaultValue => DefaultValue;
+
+    event Action<object> ISetupEntry.ValueChanged
+    {
+        add
+        {
+            ValueChanged += (mcPath, oldValue, newValue) => value.Invoke(newValue is null ? DefaultValue : newValue.Item1);
+        }
+        remove
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     object ISetupEntry.Get(string? mcPath)
     {
         return Get(mcPath);
@@ -26,7 +42,7 @@ public sealed partial class SetupEntry<T> : ISetupEntry
         T typed;
         try
         {
-            typed = (T)value;
+            typed = (T)Convert.ChangeType(value, typeof(T));
         }
         catch
         {

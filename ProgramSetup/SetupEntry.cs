@@ -16,6 +16,8 @@ public sealed partial class SetupEntry<T>
     public SetupEntry(string keyName, SetupEntrySource source, bool isEncrypted = false)
         : this(keyName, Companion.GetDefaultDefaultValue<T>(), source, isEncrypted) { }
 
+    public T DefaultValue => defaultValue;
+
     /// <summary>
     /// 值改变时触发，参数分别是 mc 路径、旧值与新值，<br/>
     /// 若之前/现在配置文件中不存在该键将传入 <see langword="null"/>
@@ -112,6 +114,7 @@ file static class Companion
         if (type.IsEnum)
             type = Enum.GetUnderlyingType(type);
         if (type == typeof(int)) return (T)(object)0;
+        if (type == typeof(double)) return (T)(object)0.0;
         if (type == typeof(bool)) return (T)(object)false;
         if (type == typeof(string)) return (T)(object)string.Empty;
         throw new ArgumentException($"不支持为类型 {type} 提供默认值");
@@ -125,12 +128,14 @@ file static class Companion
         if (isEncrypted)
         {
             if (type == typeof(int)) return v => Encrypt(((int)(object)v!).ToString());
+            if (type == typeof(double)) return v => Encrypt(((double)(object)v!).ToString("R"));
             if (type == typeof(string)) return v => Encrypt((string)(object)v!);
             if (type == typeof(bool)) return v => Encrypt(((bool)(object)v!).ToString());
         }
         else
         {
             if (type == typeof(int)) return v => ((int)(object)v!).ToString();
+            if (type == typeof(double)) return v => ((double)(object)v!).ToString("R");
             if (type == typeof(string)) return v => (string)(object)v!;
             if (type == typeof(bool)) return v => ((bool)(object)v!).ToString();
         }
@@ -145,12 +150,14 @@ file static class Companion
         if (isEncrypted)
         {
             if (type == typeof(int)) return v => (T)(object)int.Parse(Decrypt(v));
+            if (type == typeof(double)) return v => (T)(object)double.Parse(Decrypt(v));
             if (type == typeof(string)) return v => (T)(object)Decrypt(v);
             if (type == typeof(bool)) return v => (T)(object)bool.Parse(Decrypt(v));
         }
         else
         {
             if (type == typeof(int)) return v => (T)(object)int.Parse(v);
+            if (type == typeof(double)) return v => (T)(object)double.Parse(v);
             if (type == typeof(string)) return v => (T)(object)v;
             if (type == typeof(bool)) return v => (T)(object)bool.Parse(v);
         }

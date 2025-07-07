@@ -1,0 +1,112 @@
+﻿using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Threading;
+using PCL.Core.Utils;
+
+namespace PCL.Core.ProgramSetup.FileManager;
+
+/// <summary>
+/// 用于托管某个位于游戏实例文件夹内的配置文件的类，同步地写入文件
+/// </summary>
+public sealed class InstanceSetupFileManager : ISetupFileManager
+{
+    private readonly CountingDictionary<string, ConcurrentDictionary<string, string>> _activeFilesDict;
+    private readonly ISetupFileSerializer _serializer;
+    private volatile int _disposed = 0;
+
+    public InstanceSetupFileManager(ISetupFileSerializer serializer)
+    {
+        _serializer = serializer;
+        _activeFilesDict = new CountingDictionary<string, ConcurrentDictionary<string, string>>(LoadFile, WriteFile);
+    }
+
+    public string? Get(string key, string? mcPath)
+    {
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
+        var filePath = GetSetupFilePath(mcPath);
+        var content = _activeFilesDict.Acquire(filePath);
+        var result = content.TryGetValue(key, out var value) ? value : null;
+        _activeFilesDict.Release(filePath);
+        return result;
+    }
+
+    public string? Set(string key, string value, string? mcPath)
+    {
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
+        var filePath = GetSetupFilePath(mcPath);
+        var content = _activeFilesDict.Acquire(filePath);
+        string? result = null;
+        content.AddOrUpdate(key, _ =>
+        {
+            result = null;
+            return value;
+        }, (_, existingValue) =>
+        {
+            result = existingValue;
+            return value;
+        });
+        _activeFilesDict.Release(filePath);
+        return result;
+    }
+
+    public string? Remove(string key, string? mcPath)
+    {
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
+        var filePath = GetSetupFilePath(mcPath);
+        var content = _activeFilesDict.Acquire(filePath);
+        content.TryRemove(key, out var result);
+        _activeFilesDict.Release(filePath);
+        return result;
+    }
+
+    public MultipleOperationHandle BeginMultipleOperation(string? mcPath)
+    {
+        if (mcPath is null)
+            throw new ArgumentNullException(nameof(mcPath));
+        if (_disposed != 0)
+            throw new ObjectDisposedException(nameof(InstanceSetupFileManager));
+
+        var filePath = GetSetupFilePath(mcPath);
+        _activeFilesDict.Acquire(filePath);
+        return new MultipleOperationHandle(() => _activeFilesDict.Release(filePath));
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+    }
+
+    private ConcurrentDictionary<string, string> LoadFile(string filePath)
+    {
+        if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
+            Directory.CreateDirectory(dir);
+        var result = new ConcurrentDictionary<string, string>();
+        using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
+        _serializer.Deserialize(fs, result);
+        return result;
+    }
+
+    private void WriteFile(string filePath, ConcurrentDictionary<string, string> content)
+    {
+        if (Path.GetDirectoryName(filePath) is { Length: > 0 } dir)
+            Directory.CreateDirectory(dir);
+        using var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+        _serializer.Serialize(content, fs);
+    }
+
+    private static string GetSetupFilePath(string mcPath) => Path.Combine(mcPath, "PCL", "Setup.ini");
+}

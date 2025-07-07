@@ -122,6 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controls\BlurBorder.cs" />
+    <Compile Include="Controls\SetupRefExtension.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
@@ -167,6 +168,15 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthLicense.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
+    <Compile Include="ProgramSetup\FileManager\InstanceSetupFileManager.cs" />
+    <Compile Include="ProgramSetup\FileManager\ISetupFileManager.cs" />
+    <Compile Include="ProgramSetup\FileManager\ISetupFileSerializer.cs" />
+    <Compile Include="ProgramSetup\FileManager\CommonSetupFileManager.cs" />
+    <Compile Include="ProgramSetup\FileManager\SetupRegManager.cs" />
+    <Compile Include="ProgramSetup\ISetupEntry.cs" />
+    <Compile Include="ProgramSetup\SetupModel.cs" />
+    <Compile Include="ProgramSetup\SetupEntry.cs" />
+    <Compile Include="ProgramSetup\SetupEntrySource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
     <Compile Include="Service\HttpClientService.cs" />
@@ -174,8 +184,10 @@
     <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
+    <Compile Include="Service\SetupService.cs" />
     <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
     <Compile Include="Utils\AtomicVariable.cs" />
+    <Compile Include="Utils\CountingDictionary.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />

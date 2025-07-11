@@ -19,7 +19,7 @@ namespace PCL.Core.Utils;
             this.RemoveDragHook();
             this.HwndIntPtrSource.AddHook(WndProc);
             IntPtr handle = this.HwndIntPtrSource.Handle;
-            if (IsRunAsAdmin()) RevokeDragDrop(handle);
+            if (IsUserAnAdmin) RevokeDragDrop(handle);
             DragAcceptFiles(handle, true);
             ChangeMessageFilter(handle);
         }
@@ -64,7 +64,7 @@ namespace PCL.Core.Utils;
         private static extern int RevokeDragDrop(IntPtr hWnd);
 
         [DllImport("shell32.dll")]
-        private static extern bool IsRunAsAdmin();
+        private static extern bool IsUserAnAdminn();
 
         [StructLayout(LayoutKind.Sequential)]
         public struct POINT

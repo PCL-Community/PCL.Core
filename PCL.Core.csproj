@@ -213,6 +213,7 @@
     <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
+    <Compile Include="Utils\FileDragHelper.cs" />
   </ItemGroup>
   <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
   <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">

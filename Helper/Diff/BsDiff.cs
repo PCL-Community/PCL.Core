@@ -49,8 +49,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
+using ICSharpCode.SharpZipLib.BZip2;
 
 namespace PCL.Core.Helper.Diff;
 
@@ -99,26 +99,26 @@ extra block; seek forwards in oldfile by z bytes".
 			if (HeaderSize + ctrlLen + diffLen + extraLen > diffData.Length)
 				throw new Exception("Diff file size info is not correct");
 
-			//Console.WriteLine(
-			//	$"Got diff-data-len = {diffData.Length}, ctrllen = {ctrlLen}, difflen = {diffLen}, extralen = {extraLen}, totallen = {newLen}");
+			Console.WriteLine(
+				$"Got diff-data-len = {diffData.Length}, ctrllen = {ctrlLen}, difflen = {diffLen}, extralen = {extraLen}, totallen = {newLen}");
 
 			var ctrlContent = new byte[ctrlLen];
 			// 获取 Control 数据
 			long curOffset = HeaderSize;
 			Array.Copy(diffData, curOffset, ctrlContent, 0, ctrlLen);
-			using var ctrlStream = new ICSharpCode.SharpZipLib.BZip2.BZip2InputStream(new MemoryStream(ctrlContent));
+			using var ctrlStream = new BZip2InputStream(new MemoryStream(ctrlContent));
 			using var ctrlReader = new BinaryReader(ctrlStream);
 			// 获取 Diff 数据
 			curOffset += ctrlLen;
 			var diffContent = new byte[diffLen];
 			Array.Copy(diffData, curOffset, diffContent, 0, diffLen);
-			using var diffStream = new ICSharpCode.SharpZipLib.BZip2.BZip2InputStream(new MemoryStream(diffContent));
+			using var diffStream = new BZip2InputStream(new MemoryStream(diffContent));
 			using var diffReader = new BinaryReader(diffStream);
 			// 获取 Extra 数据
 			curOffset += diffLen;
 			var extraContent = new byte[extraLen];
 			Array.Copy(diffData, curOffset, extraContent, 0, extraLen);
-			using var extraStream = new ICSharpCode.SharpZipLib.BZip2.BZip2InputStream(new MemoryStream(extraContent));
+			using var extraStream = new BZip2InputStream(new MemoryStream(extraContent));
 			using var extraReader = new BinaryReader(extraStream);
 			
 			var ret = new byte[newLen];
@@ -127,23 +127,24 @@ extra block; seek forwards in oldfile by z bytes".
 			long oldDataPos = 0;
 			while (newDataPos < newLen)
 			{
-				long addRange = ctrlReader.ReadInt64();
-				long copyRange = ctrlReader.ReadInt64();
-				long seekPos = ctrlReader.ReadInt64();
+				long addRange = ReadInt64(ctrlReader.ReadBytes(8));
+				long copyRange = ReadInt64(ctrlReader.ReadBytes(8));
+				long seekPos = ReadInt64(ctrlReader.ReadBytes(8));
 
-				//Console.WriteLine($"Round add-range = {addRange}, copy-range = {copyRange}, seek-pos = {seekPos}");
+				Console.WriteLine($"Round add-range = {addRange}, copy-range = {copyRange}, seek-pos = {seekPos}");
 				
 				// 新加入的
 				if (newDataPos + addRange > newLen)
 					throw new Exception(
 						$"Add range overflows, want add {addRange.ToString()}, but only have {newLen - newDataPos} left");
 
-				for (int i = 0; i < addRange; i++)
+				for (long i = 0; i < addRange; i++)
 				{
+					var readedByte = diffReader.ReadByte();
 					if (oldDataPos + i < originData.Length)
-						ret[newDataPos + i] = (byte)(diffReader.ReadByte() + originData[oldDataPos + i]);
+						ret[newDataPos + i] = (byte)(readedByte + originData[oldDataPos + i]);
 					else
-						ret[newDataPos + i] = diffReader.ReadByte();
+						ret[newDataPos + i] = readedByte;
 				}
 
 				newDataPos += addRange;
@@ -175,5 +176,19 @@ extra block; seek forwards in oldfile by z bytes".
 	public Task<byte[]> Make(byte[] originData, byte[] newData)
 	{
 		throw new NotImplementedException();
+	}
+
+	internal static long ReadInt64(byte[] buffer, int offset = 0)
+	{
+		// 手动组合小端序的 long 值
+		long value = ((long)buffer[offset] << 0)  | ((long)buffer[offset + 1] << 8) |
+		             ((long)buffer[offset + 2] << 16) | ((long)buffer[offset + 3] << 24) |
+		             ((long)buffer[offset + 4] << 32) | ((long)buffer[offset + 5] << 40) |
+		             ((long)buffer[offset + 6] << 48) | ((long)buffer[offset + 7] << 56);
+
+		// 原始位运算逻辑保持不变
+		long mask = value >> 63;
+		return (~mask & value) |
+		       (((value & unchecked((long)0x8000000000000000)) - value) & mask);
 	}
 }

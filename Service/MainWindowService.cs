@@ -12,9 +12,10 @@ public sealed class MainWindowService : ILifecycleService
     public string Identifier => "window";
     public string Name => "主窗体";
     public bool SupportAsyncStart => false;
-    
-    private readonly LifecycleContext Context;
-    private MainWindowService() { Context = Lifecycle.GetContext(this); }
+
+    private static LifecycleContext? _context;
+    private static LifecycleContext Context => _context!;
+    private MainWindowService() { _context = Lifecycle.GetContext(this); }
     
     public void Start()
     {

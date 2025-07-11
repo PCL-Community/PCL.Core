@@ -6,6 +6,8 @@ namespace PCL.Core.Helper.Hash;
 
 public class SHA512Provider : IHashProvider
 {
+    public static SHA512Provider Instance { get; } = new SHA512Provider();
+    
     public string ComputeHash(Stream input)
     {
         using var hash = SHA512.Create();

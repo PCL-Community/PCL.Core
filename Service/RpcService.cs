@@ -20,17 +20,17 @@ public class RpcException(string reason) : Exception
 
 public enum RpcResponseStatus
 {
-    SUCCESS,
-    FAILURE,
-    ERR
+    Success,
+    Failure,
+    Err
 }
 
 public enum RpcResponseType
 {
-    EMPTY,
-    TEXT,
-    JSON,
-    BASE64
+    Empty,
+    Text,
+    Json,
+    Base64
 }
 
 /// <summary>
@@ -46,9 +46,9 @@ public class RpcResponse
 
     public string? Content { get; }
 
-    public RpcResponse(RpcResponseStatus status, RpcResponseType type = RpcResponseType.EMPTY, string? content = null, string? name = null)
+    public RpcResponse(RpcResponseStatus status, RpcResponseType type = RpcResponseType.Empty, string? content = null, string? name = null)
     {
-        if (content != null && type == RpcResponseType.EMPTY)
+        if (content != null && type == RpcResponseType.Empty)
             throw new ArgumentException("Empty response with non-null content");
         Status = status;
         Type = type;
@@ -61,28 +61,28 @@ public class RpcResponse
     public void Response(StreamWriter writer)
     {
         var nameArea = Name == null ? "" : $" {Name}";
-        writer.WriteLine($"{Status} {Type.ToString().ToLowerInvariant()}{nameArea}");
+        writer.WriteLine($"{Status.ToString().ToUpperInvariant()} {Type.ToString().ToLowerInvariant()}{nameArea}");
         if (Content != null)
             writer.WriteLine(Content);
     }
 
-    public static readonly RpcResponse EmptySuccess = new RpcResponse(RpcResponseStatus.SUCCESS);
+    public static readonly RpcResponse EmptySuccess = new RpcResponse(RpcResponseStatus.Success);
 
-    public static readonly RpcResponse EmptyFailure = new RpcResponse(RpcResponseStatus.FAILURE);
+    public static readonly RpcResponse EmptyFailure = new RpcResponse(RpcResponseStatus.Failure);
 
     public static RpcResponse Err(string content, string? name = null)
     {
-        return new RpcResponse(RpcResponseStatus.ERR, RpcResponseType.TEXT, content, name);
+        return new RpcResponse(RpcResponseStatus.Err, RpcResponseType.Text, content, name);
     }
 
     public static RpcResponse Success(RpcResponseType type, string content, string? name = null)
     {
-        return new RpcResponse(RpcResponseStatus.SUCCESS, type, content, name);
+        return new RpcResponse(RpcResponseStatus.Success, type, content, name);
     }
 
     public static RpcResponse Failure(RpcResponseType type, string content, string? name = null)
     {
-        return new RpcResponse(RpcResponseStatus.FAILURE, type, content, name);
+        return new RpcResponse(RpcResponseStatus.Failure, type, content, name);
     }
 }
 
@@ -166,14 +166,15 @@ public sealed class RpcService : ILifecycleService
     public string Name => "远程执行服务";
     public bool SupportAsyncStart => true;
     
-    private readonly LifecycleContext Context;
-    private RpcService() { Context = Lifecycle.GetContext(this); }
+    private static LifecycleContext? _context;
+    private static LifecycleContext Context => _context!;
+    private RpcService() { _context = Lifecycle.GetContext(this); }
 
     private NamedPipeServerStream? _pipe;
     
     public void Start()
     {
-        _pipe = NativeInterop.StartPipeServer("Echo", EchoPipeName, EchoPipeCallback);
+        _pipe = NativeInterop.StartPipeServer("Echo", _EchoPipeName, _EchoPipeCallback);
     }
 
     public void Stop()
@@ -181,13 +182,13 @@ public sealed class RpcService : ILifecycleService
         _pipe?.Dispose();
     }
     
-    private static readonly string EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
-    private static readonly string[] RequestTypeArray = ["GET", "SET", "REQ"];
-    private static readonly HashSet<string> RequestType = [..RequestTypeArray];
+    private static readonly string _EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
+    private static readonly string[] _RequestTypeArray = ["GET", "SET", "REQ"];
+    private static readonly HashSet<string> _RequestType = [.._RequestTypeArray];
 
     #region Property
     
-    private static readonly Dictionary<string, RpcProperty> PropertyMap = new();
+    private static readonly Dictionary<string, RpcProperty> _PropertyMap = new();
 
     /// <summary>
     /// 添加一个新的 RPC 属性，若有多个使用 foreach 即可
@@ -197,9 +198,9 @@ public sealed class RpcService : ILifecycleService
     public static bool AddProperty(RpcProperty prop)
     {
         var key = prop.Name;
-        if (PropertyMap.ContainsKey(key))
+        if (_PropertyMap.ContainsKey(key))
             return false;
-        PropertyMap[key] = prop;
+        _PropertyMap[key] = prop;
         return true;
     }
 
@@ -210,7 +211,7 @@ public sealed class RpcService : ILifecycleService
     /// <returns>是否成功删除（若不存在该名称则无法删除）</returns>
     public static bool RemoveProperty(string name)
     {
-        return PropertyMap.Remove(name);
+        return _PropertyMap.Remove(name);
     }
 
     /// <summary>
@@ -221,9 +222,9 @@ public sealed class RpcService : ILifecycleService
     public static bool RemoveProperty(RpcProperty prop)
     {
         var key = prop.Name;
-        var result = PropertyMap.TryGetValue(key, out var value);
+        var result = _PropertyMap.TryGetValue(key, out var value);
         if (!result || value != prop) return false;
-        PropertyMap.Remove(key);
+        _PropertyMap.Remove(key);
         return true;
     }
 
@@ -231,7 +232,7 @@ public sealed class RpcService : ILifecycleService
 
     #region Function
 
-    private static readonly Dictionary<string, RpcFunction> FunctionMap = new() {
+    private static readonly Dictionary<string, RpcFunction> _FunctionMap = new() {
         ["ping"] = (_, _, _) => RpcResponse.EmptySuccess
     };
 
@@ -243,9 +244,9 @@ public sealed class RpcService : ILifecycleService
     /// <returns>是否成功添加（若已存在相同名称的函数则无法添加）</returns>
     public static bool AddFunction(string name, RpcFunction func)
     {
-        if (FunctionMap.ContainsKey(name))
+        if (_FunctionMap.ContainsKey(name))
             return false;
-        FunctionMap[name] = func;
+        _FunctionMap[name] = func;
         return true;
     }
 
@@ -256,12 +257,12 @@ public sealed class RpcService : ILifecycleService
     /// <returns>是否成功删除（若不存在该名称则无法删除）</returns>
     public static bool RemoveFunction(string name)
     {
-        return FunctionMap.Remove(name);
+        return _FunctionMap.Remove(name);
     }
     
     #endregion
 
-    private bool EchoPipeCallback(StreamReader reader, StreamWriter writer, Process? client)
+    private static bool _EchoPipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
         try
         {
@@ -273,7 +274,7 @@ public sealed class RpcService : ILifecycleService
             var args = header?.Split([' '], 2) ?? []; // 分离请求类型和参数
             if (args.Length < 2 || args[1].Length == 0) throw new RpcException("请求参数过少");
             var type = args[0].ToUpperInvariant();
-            if (!RequestType.Contains(type)) throw new RpcException($"请求类型必须为 {string.Join("/", RequestTypeArray)} 其中之一");
+            if (!_RequestType.Contains(type)) throw new RpcException($"请求类型必须为 {string.Join("/", _RequestTypeArray)} 其中之一");
             var target = args[1];
 
             // 读入请求内容（可能没有）
@@ -290,7 +291,7 @@ public sealed class RpcService : ILifecycleService
             {
                 case "GET": case "SET": {
                     target = target.ToLowerInvariant();
-                    var result = PropertyMap.TryGetValue(target, out var prop);
+                    var result = _PropertyMap.TryGetValue(target, out var prop);
                     if (!result) throw new RpcException($"不存在属性 {target}");
                     RpcResponse response;
                     if (type == "GET")
@@ -298,7 +299,7 @@ public sealed class RpcService : ILifecycleService
                         try
                         {
                             var value = prop!.Value;
-                            response = new RpcResponse(RpcResponseStatus.SUCCESS, RpcResponseType.TEXT, value, target);
+                            response = new RpcResponse(RpcResponseStatus.Success, RpcResponseType.Text, value, target);
                             Context.Trace($"返回值: {value}");
                         }
                         catch (RpcPropertyOperationFailedException)
@@ -337,9 +338,9 @@ public sealed class RpcService : ILifecycleService
                     if (name.EndsWith("$"))
                     {
                         indent = true;
-                        name = name.Substring(0, name.Length - 1);
+                        name = name[..^1];
                     }
-                    var result = FunctionMap.TryGetValue(name, out var func);
+                    var result = _FunctionMap.TryGetValue(name, out var func);
                     if (!result) throw new RpcException($"不存在函数 {name}");
                     string? argument = null;
                     if (targetArgs.Length > 1)

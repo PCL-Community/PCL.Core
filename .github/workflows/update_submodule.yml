@@ -1,0 +1,39 @@
+name: Update Submodule
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: 
+
+jobs:
+  update-main-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CE repository
+        uses: actions/checkout@v3
+        with:
+          repository: PCL-Community/PCL2-CE
+          token: ${{ secrets.UPDATE_PAT_TOKEN }}
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec
+        with:
+          gpg_private_key: ${{ secrets.UPDATE_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.UPDATE_GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Update submodule
+        run: |
+          git config user.name "ruattd"
+          git config user.email "61044187+ruattd@users.noreply.github.com"
+          git submodule update --init PCL.Core
+          git submodule update --remote PCL.Core
+          git add PCL.Core
+          if git diff --cached --quiet; then
+            echo "The submodule is already at the latest commit"
+          else
+            git commit -S -m "chore(submodule): update to ${{ github.sha }}"
+            git push origin dev
+          fi

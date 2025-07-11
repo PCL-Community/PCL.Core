@@ -6,6 +6,8 @@ namespace PCL.Core.Helper.Hash;
 
 public class MD5Provider : IHashProvider
 {
+    public static MD5Provider Instance { get; } = new MD5Provider();
+    
     public string ComputeHash(Stream input)
     {
         using var hash = System.Security.Cryptography.MD5.Create();

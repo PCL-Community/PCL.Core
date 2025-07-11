@@ -18,13 +18,13 @@ public class WebServer : IDisposable
 {
     private readonly HttpListener _listener = new();
 
-    private static readonly WebClientRequest DefaultRequestCallback = ctx => { ctx.Response.StatusCode = (int)HttpStatusCode.NoContent; };
+    private static readonly WebClientRequest _DefaultRequestCallback = ctx => { ctx.Response.StatusCode = (int)HttpStatusCode.NoContent; };
     private WebClientRequest? _requestCallback;
     
     private bool _started = false;
     private bool _running;
     
-    private WebClientRequest RequestCallback => _requestCallback ?? DefaultRequestCallback;
+    private WebClientRequest _RequestCallback => _requestCallback ?? _DefaultRequestCallback;
 
     /// <summary>
     /// 设置接收到客户端请求时触发的事件。
@@ -53,7 +53,7 @@ public class WebServer : IDisposable
         {
             try
             {
-                RequestCallback(context);
+                _RequestCallback(context);
             }
             catch (Exception ex)
             {

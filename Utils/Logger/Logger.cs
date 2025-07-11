@@ -14,16 +14,15 @@ public sealed class Logger : IDisposable
 {
     public Logger(LoggerConfiguration configuration)
     {
-        _configuration = configuration;
-        CreateNewFile();
-        _processingThread = new Thread(() => ProcessLogQueue(_cts.Token));
+        Configuration = configuration;
+        _CreateNewFile();
+        _processingThread = new Thread(() => _ProcessLogQueue(_cts.Token));
         _processingThread.Start();
     }
 
-    private readonly LoggerConfiguration _configuration;
     private StreamWriter? _currentStream;
     private FileStream? _currentFile;
-    private List<string> _files = [];
+    private readonly List<string> _files = [];
     
     private readonly Thread _processingThread;
     private readonly ConcurrentQueue<string> _logQueue = new();
@@ -31,16 +30,18 @@ public sealed class Logger : IDisposable
     private readonly CancellationTokenSource _cts = new();
 
     public List<string> LogFiles => [.._files];
-    
-    private void CreateNewFile()
+
+    public LoggerConfiguration Configuration { get; }
+
+    private void _CreateNewFile()
     {
-        var nameFormat = (_configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
+        var nameFormat = (Configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
         string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
-        string filePath = Path.Combine(_configuration.StoreFolder, filename);
+        string filePath = Path.Combine(Configuration.StoreFolder, filename);
         _files.Add(filePath);
         var lastWriter = _currentStream;
         var lastFile = _currentFile;
-        Directory.CreateDirectory(_configuration.StoreFolder);
+        Directory.CreateDirectory(Configuration.StoreFolder);
         _currentFile = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         _currentStream = new StreamWriter(_currentFile);
         Task.Run(() =>
@@ -49,26 +50,26 @@ public sealed class Logger : IDisposable
             lastWriter?.Dispose();
             lastFile?.Close();
             lastFile?.Dispose();
-            if (!_configuration.AutoDeleteOldFile)
+            if (!Configuration.AutoDeleteOldFile)
                 return;
-            var logFiles = Directory.GetFiles(_configuration.StoreFolder);
+            var logFiles = Directory.GetFiles(Configuration.StoreFolder);
             var needToDelete = logFiles.Select(x => new FileInfo(x))
                 .OrderBy(x => x.CreationTime)
-                .Take(logFiles.Length - _configuration.MaxKeepOldFile)
+                .Take(logFiles.Length - Configuration.MaxKeepOldFile)
                 .ToList();
             foreach (var logFile in needToDelete)
                 logFile.Delete();
         });
     }
 
-    public void Trace(string message) => Log($"[{GetTimeFormatted()}] [TRA] {message}");
-    public void Debug(string message) => Log($"[{GetTimeFormatted()}] [DBG] {message}");
-    public void Info(string message) => Log($"[{GetTimeFormatted()}] [INFO] {message}");
-    public void Warn(string message) => Log($"[{GetTimeFormatted()}] [WARN] {message}");
-    public void Error(string message) => Log($"[{GetTimeFormatted()}] [ERR!] {message}");
-    public void Fatal(string message) => Log($"[{GetTimeFormatted()}] [FTL!] {message}");
+    public void Trace(string message) => Log($"[{_GetTimeFormatted()}] [TRA] {message}");
+    public void Debug(string message) => Log($"[{_GetTimeFormatted()}] [DBG] {message}");
+    public void Info(string message) => Log($"[{_GetTimeFormatted()}] [INFO] {message}");
+    public void Warn(string message) => Log($"[{_GetTimeFormatted()}] [WARN] {message}");
+    public void Error(string message) => Log($"[{_GetTimeFormatted()}] [ERR!] {message}");
+    public void Fatal(string message) => Log($"[{_GetTimeFormatted()}] [FTL!] {message}");
     
-    private static string GetTimeFormatted() => $"{DateTime.Now:HH:mm:ss.fff}";
+    private static string _GetTimeFormatted() => $"{DateTime.Now:HH:mm:ss.fff}";
     
     public void Log(string message)
     {
@@ -77,9 +78,9 @@ public sealed class Logger : IDisposable
         _logEvent.Set();
     }
     
-    private static readonly Regex PatternNewLine = new(@"\r\n|\n|\r");
+    private static readonly Regex _PatternNewLine = new(@"\r\n|\n|\r");
 
-    private void ProcessLogQueue(CancellationToken token)
+    private void _ProcessLogQueue(CancellationToken token)
     {
         const int maxBatchCount = 100;
         try
@@ -102,14 +103,14 @@ public sealed class Logger : IDisposable
                         continue; // 否则 => 接着等待下一次 Log() 调用
                     }
 #if DEBUG
-                    message = PatternNewLine.Replace(message, "\r\n");
+                    message = _PatternNewLine.Replace(message, "\r\n");
                     Console.WriteLine(message);
 #endif
                     batch.AppendLine(message);
                     if (++currentBatchCount >= maxBatchCount) // 行数达到缓冲上限 => 写入一次
                         break;
                 }
-                DoWrite(batch.ToString());
+                _DoWrite(batch.ToString());
                 batch.Clear();
                 currentBatchCount = 0;
             }
@@ -118,25 +119,25 @@ public sealed class Logger : IDisposable
         catch (Exception e)
         {
             // 出错了先干到标准输出流中吧 Orz
-            Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
+            Console.WriteLine($"[{_GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
             throw;
         }
     }
 
-    private void DoWrite(string ctx)
+    private void _DoWrite(string ctx)
     {
         try
         {
-            if (_configuration.SegmentMode == LoggerSegmentMode.BySize && _currentFile?.Length >= _configuration.MaxFileSize)
+            if (Configuration.SegmentMode == LoggerSegmentMode.BySize && _currentFile?.Length >= Configuration.MaxFileSize)
             {
-                CreateNewFile();
+                _CreateNewFile();
             }
             _currentStream?.Write(ctx);
             _currentStream?.Flush();
         }
         catch (Exception e)
         {
-            Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while writing log file: {e.Message}");
+            Console.WriteLine($"[{_GetTimeFormatted()}] [ERROR] An error occured while writing log file: {e.Message}");
             throw;
         }
     }
@@ -145,10 +146,11 @@ public sealed class Logger : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        GC.SuppressFinalize(this);
         _disposed = true;
         _cts.Cancel();
         _logEvent.Set();
-        _processingThread.Join();
+        _processingThread.Join(5000);
         _logEvent.Dispose();
         _currentStream?.Dispose();
         _currentFile?.Dispose();

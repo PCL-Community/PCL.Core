@@ -12,7 +12,7 @@ public class SemVer(int major, int minor, int patch, string? prerelease = null, 
                                    @"(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?" +
                                    @"(?:\+(?<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$";
 
-    private static readonly Regex SemVerRegex = new(
+    private static readonly Regex _SemVerRegex = new(
         Pattern,
         RegexOptions.Compiled | RegexOptions.ExplicitCapture
     );
@@ -40,18 +40,18 @@ public class SemVer(int major, int minor, int patch, string? prerelease = null, 
             return false;
         }
 
-        var match = SemVerRegex.Match(version);
+        var match = _SemVerRegex.Match(version);
         if (!match.Success)
         {
             result = null;
             return false;
         }
 
-        result = CreateFromMatch(match);
+        result = _CreateFromMatch(match);
         return true;
     }
 
-    private static SemVer CreateFromMatch(Match match)
+    private static SemVer _CreateFromMatch(Match match)
     {
         var major = int.Parse(match.Groups["major"].Value);
         var minor = int.Parse(match.Groups["minor"].Value);
@@ -75,10 +75,10 @@ public class SemVer(int major, int minor, int patch, string? prerelease = null, 
         compare = Patch.CompareTo(other.Patch);
         if (compare != 0) return compare;
 
-        return ComparePrerelease(Prerelease, other.Prerelease);
+        return _ComparePrerelease(Prerelease, other.Prerelease);
     }
 
-    private static int ComparePrerelease(string a, string b)
+    private static int _ComparePrerelease(string a, string b)
     {
         if (string.Equals(a, b, StringComparison.Ordinal))
             return 0;

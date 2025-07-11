@@ -407,3 +407,6 @@ FodyWeavers.xsd
 
 # Generated Code
 LifecycleManagement/LifecycleServiceTypes.g.cs
+
+# Test files
+Service/TestService.cs

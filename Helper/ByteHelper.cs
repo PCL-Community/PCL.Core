@@ -5,9 +5,7 @@ namespace PCL.Core.Helper;
 
 public class ByteHelper(Stream stream)
 {
-    private Stream _byteStream = stream;
-    
-    public long Length => _byteStream.Length;
+    public long Length => stream.Length;
 
     public string GetReadableLength() => GetReadableLength(this.Length);
     

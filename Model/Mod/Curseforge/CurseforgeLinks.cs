@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Model.ResourceProject.Curseforge;
+namespace PCL.Core.Model.Mod.Curseforge;
 
 [Serializable]
 public record CurseforgeLinks(

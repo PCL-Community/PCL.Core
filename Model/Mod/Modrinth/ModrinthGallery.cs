@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Model.ResourceProject.Modrinth;
+namespace PCL.Core.Model.Mod.Modrinth;
 
 [Serializable]
 public record ModrinthGallery(

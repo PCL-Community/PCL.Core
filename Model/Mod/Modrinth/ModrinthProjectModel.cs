@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PCL.Core.Model.ResourceProject.Modrinth;
+namespace PCL.Core.Model.Mod.Modrinth;
 
 [Serializable]
-public record class ModrinthProject(
+public record class ModrinthProjectModel(
     string slug,
     string title,
     string description,

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PCL.Core.Model.ResourceProject.Curseforge;
+namespace PCL.Core.Model.Mod.Curseforge;
 
 [Serializable]
 public record class CurseforgeProjectResponse(CurseforgeProject data);

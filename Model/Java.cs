@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -22,6 +22,9 @@ public enum JavaBrandType
     Dragonwell,
     TencentKona,
     OpenJDK,
+    JetBrains,
+    Gluon,
+    Mandrel,
     Unknown
 }
 
@@ -152,6 +155,11 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["Tencent"] = JavaBrandType.TencentKona,
         ["OpenJDK"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
+        ["GraalVM Community"] = JavaBrandType.OpenJDK,
+        ["Oracle GraalVM"] = JavaBrandType.Oracle,
+        ["JetBrains"] = JavaBrandType.JetBrains,
+        ["Gluon GraalVM"] = JavaBrandType.Gluon,
+        ["Mandrel"] = JavaBrandType.Mandrel,
     };
 
     private static JavaBrandType DetermineBrand(string? output)

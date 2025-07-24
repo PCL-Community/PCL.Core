@@ -223,6 +223,7 @@
     <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
+    <Compile Include="Utils\FileDragHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="IWshRuntimeLibrary">

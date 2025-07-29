@@ -25,6 +25,7 @@ public enum JavaBrandType
     JetBrains,
     Gluon,
     Mandrel,
+    ElipseAdoptium,
     Unknown
 }
 
@@ -144,7 +145,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
     
     private static readonly Dictionary<string, JavaBrandType> _brandMap = new()
     {
-        ["Eclipse"] = JavaBrandType.EclipseTemurin,
+        ["Eclipse"] = JavaBrandType.ElipseAdoptium,
         ["Temurin"] = JavaBrandType.EclipseTemurin,
         ["Bellsoft"] = JavaBrandType.Bellsoft,
         ["Microsoft"] = JavaBrandType.Microsoft,

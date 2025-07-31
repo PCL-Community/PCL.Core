@@ -118,7 +118,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="System.Text.Json" Version="9.0.6" />
+    <PackageReference Include="System.Text.Json" Version="9.0.7" />
     <PackageReference Include="LiteDB" Version="5.0.21" />
   </ItemGroup>
   <ItemGroup>
@@ -126,7 +126,9 @@
     <Compile Include="Extension\StringExtension.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
+    <Compile Include="Helper\CmdLineHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
+    <Compile Include="Helper\Files.cs" />
     <Compile Include="Helper\Hash\IHashProvider.cs" />
     <Compile Include="Helper\Hash\MD5Provider.cs" />
     <Compile Include="Helper\Hash\SHA1Provider.cs" />
@@ -165,7 +167,10 @@
     <Compile Include="Model\Files\FileProcess.cs" />
     <Compile Include="Model\Files\FileTransfer.cs" />
     <Compile Include="Model\Files\IFileTask.cs" />
+    <Compile Include="Model\GrayProfile.cs" />
+    <Compile Include="Model\GrayProfileConfig.cs" />
     <Compile Include="Model\Java.cs" />
+    <Compile Include="Model\McPingResult.cs" />
     <Compile Include="Model\Net\HttpProxyManager.cs" />
     <Compile Include="Model\Net\HttpRequestOptions.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
@@ -190,9 +195,11 @@
     <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
+    <Compile Include="Service\SingleInstanceService.cs" />
     <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
     <Compile Include="Service\UpdateService.cs" />
     <Compile Include="Utils\AnyType.cs" />
+    <Compile Include="Utils\ArgumentsBuilder.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\Download\Downloader.cs" />
     <Compile Include="Utils\Download\DownloadItem.cs" />
@@ -210,6 +217,7 @@
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
     <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
+    <Compile Include="Utils\Minecraft\McPing.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
@@ -217,6 +225,17 @@
     <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="IWshRuntimeLibrary">
+      <Guid>{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
   </ItemGroup>
   <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
   <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">

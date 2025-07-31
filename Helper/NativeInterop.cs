@@ -22,19 +22,34 @@ public static class NativeInterop
     public static readonly Process CurrentProcess = Process.GetCurrentProcess();
     
     /// <summary>
-    /// 当前进程 ID
+    /// 当前进程 ID。
     /// </summary>
     public static readonly int CurrentProcessId = CurrentProcess.Id;
     
     /// <summary>
     /// 当前进程可执行文件的绝对路径。
     /// </summary>
-    public static readonly string ExecutablePath = Path.GetFullPath(CurrentProcess.MainModule!.FileName);
+    public static readonly string ExecutablePath = GetExecutablePath(CurrentProcess)!;
     
     /// <summary>
     /// 当前进程可执行文件所在的目录。若有需求，请使用 <see cref="Path.Combine(string[])"/> 而不是自行拼接路径。
     /// </summary>
     public static readonly string ExecutableDirectory = Path.GetDirectoryName(ExecutablePath) ?? Path.GetPathRoot(ExecutablePath);
+    
+    /// <summary>
+    /// 当前进程可执行文件的名称，含扩展名。
+    /// </summary>
+    public static readonly string ExecutableName = Path.GetFileName(ExecutablePath);
+    
+    /// <summary>
+    /// 当前进程可执行文件的名称，不含扩展名。
+    /// </summary>
+    public static readonly string ExecutableNameWithoutExtension = Path.GetFileNameWithoutExtension(ExecutablePath);
+    
+    /// <summary>
+    /// 当前进程不包括第一个参数（文件名）的命令行参数。
+    /// </summary>
+    public static readonly string[] CommandLineArguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
     
     /// <summary>
     /// 实时获取的当前目录。若要在可执行文件目录中存放文件等内容，请使用更准确的 <see cref="ExecutableDirectory"/> 而不是这个目录。
@@ -57,6 +72,21 @@ public static class NativeInterop
     /// </summary>
     /// <param name="statusCode">退出状态码 (返回值)</param>
     public static void Exit(int statusCode = -1) => ExitProcess((uint)statusCode);
+
+    /// <summary>
+    /// 获取指定进程的可执行文件路径
+    /// </summary>
+    /// <param name="process">进程实例</param>
+    /// <returns>可执行文件路径，若无法获取则为 <c>null</c></returns>
+    public static string? GetExecutablePath(Process process)
+    {
+        try
+        {
+            var path = process.MainModule?.FileName;
+            return (path == null) ? null : Path.GetFullPath(path);
+        }
+        catch { return null; }
+    }
 
     /// <summary>
     /// 从本地可执行文件启动新的进程。

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace PCL.Core.Model.Files;
 
@@ -24,5 +25,11 @@ public class TransferFailedException(string reason, FileItem item, Exception? in
 
 public static class FileTransfers
 {
-    public static readonly FileTransfer Empty = ((item, callback) => callback(item.TargetPath));
+    public static readonly FileTransfer DoNothing = ((item, callback) => callback(item.TargetPath));
+    
+    public static readonly FileTransfer CreateIfNotExist = ((item, callback) =>
+    {
+        if (!File.Exists(item.TargetPath)) File.Create(item.TargetPath).Close();
+        callback(item.TargetPath);
+    });
 }

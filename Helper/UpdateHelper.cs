@@ -14,6 +14,7 @@ public static class UpdateHelper
     public static Exception? Replace(string source, string target)
     {
         var backup = $"{target}.bak.{DateTime.Now:yyyyMMddHHmmss}";
+        Exception? lastEx = null;
         try
         {
             source = Path.GetFullPath(source);
@@ -33,17 +34,14 @@ public static class UpdateHelper
             // 复制到目标文件
             File.Copy(source, target);
             if (!File.Exists(target)) throw new FileNotFoundException("复制到目标文件失败", target);
-            return null;
         }
         catch (Exception ex)
         {
             // 出错：恢复原文件并返回异常
             if (File.Exists(backup) && !File.Exists(target)) File.Move(backup, target);
-            return ex;
+            lastEx = ex;
         }
-        finally
-        {
-            if (File.Exists(backup)) File.Delete(backup); // 删除备份文件
-        }
+        if (File.Exists(backup)) File.Delete(backup); // 删除备份文件
+        return lastEx;
     }
 }

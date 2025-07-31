@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Text;
+using System.Windows;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
 
@@ -181,8 +182,10 @@ public sealed class RpcService : ILifecycleService
     {
         _pipe?.Dispose();
     }
+
+    public const string PipePrefix = "PCLCE_RPC";
     
-    private static readonly string _EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
+    private static readonly string _EchoPipeName = $"{PipePrefix}@{NativeInterop.CurrentProcess.Id}";
     private static readonly string[] _RequestTypeArray = ["GET", "SET", "REQ"];
     private static readonly HashSet<string> _RequestType = [.._RequestTypeArray];
 
@@ -233,7 +236,29 @@ public sealed class RpcService : ILifecycleService
     #region Function
 
     private static readonly Dictionary<string, RpcFunction> _FunctionMap = new() {
-        ["ping"] = (_, _, _) => RpcResponse.EmptySuccess
+        ["ping"] = ((_, _, _) => RpcResponse.EmptySuccess),
+        ["activate"] = ((_, _, _) =>
+        {
+            if (Lifecycle.CurrentState >= LifecycleState.WindowCreated) ActivateMainWindow();
+            else Lifecycle.When(LifecycleState.WindowCreated, ActivateMainWindow);
+            return RpcResponse.EmptySuccess;
+
+            void ActivateMainWindow()
+            {
+                var app = Lifecycle.CurrentApplication;
+                app.Dispatcher.BeginInvoke(() =>
+                {
+                    var window = app.MainWindow!;
+                    if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                    if (!window.Topmost)
+                    {
+                        window.Topmost = true;
+                        window.Topmost = false;
+                    }
+                    window.Activate();
+                });
+            }
+        })
     };
 
     /// <summary>
@@ -369,25 +394,4 @@ public sealed class RpcService : ILifecycleService
         }
         return true;
     }
-}
-
-public static class Rpc
-{
-    [Obsolete("请使用 RpcService.AddProperty")]
-    public static void AddProperty(RpcProperty prop) => RpcService.AddProperty(prop);
-    
-    [Obsolete("请使用 RpcService.RemoveProperty")]
-    public static bool RemoveProperty(string name) => RpcService.RemoveProperty(name);
-    
-    [Obsolete("请使用 RpcService.RemoveProperty")]
-    public static bool RemoveProperty(RpcProperty prop) => RpcService.RemoveProperty(prop);
-    
-    [Obsolete("请使用 RpcService.AddFunction")]
-    public static bool AddFunction(string name, RpcFunction func) => RpcService.AddFunction(name, func);
-    
-    [Obsolete("请使用 RpcService.RemoveFunction")]
-    public static bool RemoveFunction(string name) => RpcService.RemoveFunction(name);
-    
-    [Obsolete]
-    public static void Start() { }
 }

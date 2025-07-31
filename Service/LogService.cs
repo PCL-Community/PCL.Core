@@ -12,31 +12,31 @@ public class LogService : ILifecycleLogService
 {
     public string Identifier => "log";
     public string Name => "日志服务";
-    public bool SupportAsyncStart => true;
+    public bool SupportAsyncStart => false;
 
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
     private LogService() { _context = Lifecycle.GetContext(this); }
     
     private static Logger? _logger;
-    public static Logger Logger { get => _logger!; private set => _logger = value; }
-    
+    public static Logger Logger => _logger!;
+
     public void Start()
     {
         Context.Trace("正在初始化 Logger 实例");
-        var config = new LoggerConfiguration(Path.Combine(Environment.CurrentDirectory, "PCL", "Log"));
-        Logger = new Logger(config);
+        var config = new LoggerConfiguration(Path.Combine(NativeInterop.ExecutableDirectory, "PCL", "Log"));
+        _logger = new Logger(config);
         Context.Trace("正在注册日志事件");
-        LogWrapper.OnLog += OnWrapperLog;
+        LogWrapper.OnLog += _OnWrapperLog;
     }
 
     public void Stop()
     {
-        LogWrapper.OnLog -= OnWrapperLog;
-        Logger.Dispose();
+        LogWrapper.OnLog -= _OnWrapperLog;
+        _logger?.Dispose();
     }
 
-    private void OnWrapperLog(LogLevel level, string msg, string? module, Exception? ex)
+    private static void _OnWrapperLog(LogLevel level, string msg, string? module, Exception? ex)
     {
         var thread = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
         if (module != null) module = $"[{module}] ";

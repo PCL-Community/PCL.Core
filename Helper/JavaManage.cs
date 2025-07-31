@@ -198,7 +198,8 @@ public class JavaManage
         var programFilesPaths = new List<string>
         {
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
         };
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
+using PCL.Core.Model;
 using PCL.Core.Model.Files;
 using PCL.Core.Utils;
 using PCL.Core.Utils.FileTask;
@@ -13,6 +14,22 @@ using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
 namespace PCL.Core.Service;
+
+public static class PredefinedFileItems
+{
+    public static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
+    public static readonly FileItem GrayProfile = FileItem.FromLocalFile("gray.json", FileType.Data);
+}
+
+public static class PredefinedFileTasks
+{
+    public static readonly IFileTask CacheInformation = FileTask.FromSingleFile(PredefinedFileItems.CacheInformation, FileTransfers.DoNothing);
+    public static readonly IFileTask GrayProfile = FileTask.FromSingleFile(PredefinedFileItems.GrayProfile, FileTransfers.DoNothing, FileProcesses.ParseJson<GrayProfileConfig>());
+    
+    internal static readonly IFileTask[] Preload = [
+        CacheInformation, GrayProfile
+    ];
+}
 
 /// <summary>
 /// Global file management service.
@@ -28,10 +45,10 @@ public sealed class FileService : GeneralService
     /// </summary>
     public static string DefaultDirectory => NativeInterop.ExecutableDirectory;
 
-    private static string _dataPath = @"PCL\CE";
-    private static string _sharedDataPath = @"PCL\CE\_Data";
-    private static string _localDataPath = @"PCL\CE\_Local";
-    private static string _tempPath = @"PCL\CE\_Temp";
+    private static string _dataPath;
+    private static string _sharedDataPath;
+    private static string _localDataPath;
+    private static string _tempPath;
     
     /// <summary>
     /// Per-instance data directory.
@@ -65,6 +82,32 @@ public sealed class FileService : GeneralService
         return Path.Combine(folderPath, relative);
     }
 
+    static FileService()
+    {
+#if DEBUG
+        const string name = "PCLCE_Debug";
+#else
+        const string name = "PCLCE";
+#endif
+        // correct paths
+        _dataPath = Path.Combine(DefaultDirectory, "PCL");
+        _sharedDataPath = GetSpecialPath(Special.ApplicationData, name);
+        _localDataPath = GetSpecialPath(Special.LocalApplicationData, name);
+        _tempPath = Path.Combine(Path.GetTempPath(), name);
+#if DEBUG
+        // read environment variables
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH", ref _dataPath);
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH_SHARED", ref _sharedDataPath);
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH_LOCAL", ref _localDataPath);
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
+#endif
+        // create directories
+        Directory.CreateDirectory(_dataPath);
+        Directory.CreateDirectory(_sharedDataPath);
+        Directory.CreateDirectory(_localDataPath);
+        Directory.CreateDirectory(_tempPath);
+    }
+
     #endregion
 
     #region Lifecycle
@@ -78,20 +121,6 @@ public sealed class FileService : GeneralService
     
     public override void Start()
     {
-        // correct paths
-        const string name = "PCLCE";
-        Context.Debug($"正在替换存储路径，目录名 {name}");
-        DataPath = Path.Combine(DefaultDirectory, "PCL");
-        SharedDataPath = GetSpecialPath(Special.ApplicationData, name);
-        LocalDataPath = GetSpecialPath(Special.LocalApplicationData, name);
-        TempPath = GetSpecialPath(Special.LocalApplicationData, $"Temp\\{name}");
-#if DEBUG
-        // read environment variables
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH", ref _dataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_SHARED", ref _sharedDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_LOCAL", ref _localDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
-#endif
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
         _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
@@ -183,6 +212,7 @@ public sealed class FileService : GeneralService
                             {
                                 Context.Warn($"文件传输出错: {item}", ex);
                                 OnProcessFinished(item, ex);
+                                break;
                             }
                         }
                         Context.Warn($"无支持的传输实现或全部失败: {item}");
@@ -205,8 +235,6 @@ public sealed class FileService : GeneralService
                                 Context.Warn($"文件处理出错: {item}", ex);
                                 result = ex;
                             }
-                            var atomicResult = new AtomicVariable<object>(result, true, true);
-                            _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
                         }
                         OnProcessFinished(item, result);
                     });
@@ -216,6 +244,10 @@ public sealed class FileService : GeneralService
                 {
                     threadPool.QueueCpu(() =>
                     {
+                        var atomicResult = new AtomicVariable<object>(result, true, true);
+                        _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
+                        // 触发等待事件
+                        if (_WaitForResultEvents.TryGetValue(finishedItem, out var waitEvent)) waitEvent.Set();
                         try
                         {
                             var handled = task.OnProcessFinished(finishedItem, result);
@@ -283,16 +315,17 @@ public sealed class FileService : GeneralService
 
     /// <param name="item">which file to wait for the result</param>
     /// <param name="timeout">the maximum waiting time</param>
+    /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
     /// <returns>
     /// a value, or <c>null</c> if the result is really <c>null</c>, or else, something is boom -
     /// I don't know what is wrong but in a word there is something wrong :D
     /// </returns>
-    public static AnyType? WaitForResult(FileItem item, TimeSpan? timeout = null)
+    public static AnyType? WaitForResult(FileItem item, TimeSpan? timeout = null, bool remove = true)
     {
-        var success = TryGetResult(item, out var result);
+        var success = TryGetResult(item, out var result, remove);
         if (success) return result;
         var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new ManualResetEventSlim(false));
-        bool waitResult = true;
+        var waitResult = true;
         if (timeout is { } t) waitResult = waitEvent.Wait(t);
         else waitEvent.Wait();
         if (!waitResult) return null;
@@ -311,16 +344,7 @@ public sealed class FileService : GeneralService
         // TODO
         
         // preload tasks
-        QueueTask(new MatchableFileTask([
-            PredefinedFileItems.CacheInformation
-        ], [
-            FileMatches.Any.Pair(FileTransfers.Empty)
-        ]));
+        QueueTask(PredefinedFileTasks.Preload);
     }
 
-}
-
-internal static class PredefinedFileItems
-{
-    internal static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
 }

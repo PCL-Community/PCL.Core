@@ -3,7 +3,8 @@
 
 // 不知道 o4-mini 到底从哪找来的这段源码，据它所说是 .NET 8 标准库里面的
 // 我找了半天没找到来源，但是这个 Converter 确实是能用的
-// .NET 标准库的源码以 MIT 许可证开源，所以先把它的许可丢在这里，等后面找到真的来源了再说
+// .NET 标准库的源码以 MIT 许可证开源，不论如何先把它的许可丢在这里
+// 注：这段源码有一小部分内容是经过修改的
 
 using System;
 using System.Collections.Generic;
@@ -19,6 +20,8 @@ namespace PCL.Core.Utils;
 public sealed class ExpandoObjectConverter : JsonConverter<ExpandoObject>
 {
     public ExpandoObjectConverter() { }
+    
+    public static readonly ExpandoObjectConverter Default = new ExpandoObjectConverter();
 
     public override ExpandoObject Read(
         ref Utf8JsonReader reader,

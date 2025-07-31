@@ -77,8 +77,10 @@ public sealed class Logger : IDisposable
         _logQueue.Enqueue(message);
         _logEvent.Set();
     }
-    
+
+#if DEBUG
     private static readonly Regex _PatternNewLine = new(@"\r\n|\n|\r");
+#endif
 
     private void _ProcessLogQueue(CancellationToken token)
     {

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PCL.Core.Helper;
 
-public class VarInt
+public static class VarInt
 {
     /// <summary>
     /// 将无符号长整数编码为VarInt字节序列
@@ -36,10 +38,11 @@ public class VarInt
     /// 从字节数组中解码无符号长整数
     /// </summary>
     /// <param name="bytes">包含VarInt编码的字节数组</param>
+    /// <param name="readLength">读取的字节长度</param>
     /// <returns>解码后的64位无符号整数</returns>
     /// <exception cref="ArgumentNullException">输入字节数组为空</exception>
     /// <exception cref="FormatException">VarInt格式无效或超过最大长度</exception>
-    public static ulong Decode(byte[] bytes)
+    public static ulong Decode(byte[] bytes, out int readLength)
     {
         if (bytes == null)
             throw new ArgumentNullException(nameof(bytes));
@@ -60,11 +63,14 @@ public class VarInt
             
             // 检查是否结束
             if ((b & 0x80) == 0)
+            {
+                readLength = bytesRead;
                 return result;
-            
+            }
+
             shift += 7;
         }
-        
+
         throw new FormatException("Incomplete VarInt encoding");
     }
 
@@ -72,36 +78,38 @@ public class VarInt
     /// 从字节数组中解码无符号整数
     /// </summary>
     /// <param name="bytes">包含VarInt编码的字节数组</param>
+    /// <param name="readLength">读取的字节长度</param>
     /// <returns>解码后的32位无符号整数</returns>
-    public static uint DecodeUInt(byte[] bytes)
+    public static uint DecodeUInt(byte[] bytes, out int readLength)
     {
-        ulong result = Decode(bytes);
+        ulong result = Decode(bytes, out readLength);
         if (result > uint.MaxValue)
             throw new OverflowException("Decoded value exceeds UInt32 range");
         return (uint)result;
     }
 
     /// <summary>
-    /// 从流中读取并解码无符号长整数
+    /// 从流中读取并解码无符号长整数，并将流前进所读取的字节数
     /// </summary>
     /// <param name="stream">输入流</param>
+    /// <param name="cancellationToken">要监视取消请求的标记</param>
     /// <returns>解码后的64位无符号整数</returns>
     /// <exception cref="EndOfStreamException">流提前结束</exception>
     /// <exception cref="FormatException">VarInt格式无效</exception>
-    public static ulong ReadFromStream(Stream stream)
+    public static async Task<ulong> ReadFromStream(Stream stream, CancellationToken cancellationToken = default)
     {
         ulong result = 0;
         int shift = 0;
         int bytesRead = 0;
         const int maxBytes = 10;
-        
+        var buffer = new byte[1];
         while (true)
         {
-            int byteValue = stream.ReadByte();
-            if (byteValue == -1)
+            int readLength = await stream.ReadAsync(buffer, 0, 1, cancellationToken);
+            if (readLength == 0)
                 throw new EndOfStreamException();
             
-            byte b = (byte)byteValue;
+            byte b = buffer[0];
             bytesRead++;
             
             if (bytesRead > maxBytes)
@@ -117,13 +125,14 @@ public class VarInt
     }
 
     /// <summary>
-    /// 从流中读取并解码无符号整数
+    /// 从流中读取并解码无符号整数，并将流前进所读取的字节数
     /// </summary>
     /// <param name="stream">输入流</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>解码后的32位无符号整数</returns>
-    public static uint ReadUIntFromStream(Stream stream)
+    public static async Task<uint> ReadUIntFromStream(Stream stream, CancellationToken cancellationToken = default)
     {
-        ulong result = ReadFromStream(stream);
+        ulong result = await ReadFromStream(stream, cancellationToken);
         if (result > uint.MaxValue)
             throw new OverflowException("Decoded value exceeds UInt32 range");
         return (uint)result;

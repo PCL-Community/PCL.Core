@@ -1,0 +1,46 @@
+﻿name: Build (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      configuration:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build ${{ inputs.configuration }}-${{ inputs.architecture }}
+    runs-on: windows-latest
+    env:
+      LANG: en_US.UTF-8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild.exe
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: ${{ inputs.architecture }}
+
+      - name: Restore NuGet packages
+        run: |
+          $calculatedSha = git rev-parse --short HEAD
+          echo "SHORT_SHA=$calculatedSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          msbuild "PCL.Core.csproj" /t:Restore
+
+      - name: Build
+        run: |
+          chcp 65001
+          $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          msbuild "PCL.Core.csproj" /p:Configuration=${{ inputs.configuration }} /p:Platform=${{ inputs.architecture }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PCL.Core_${{ inputs.configuration }}_${{ inputs.architecture }}_${{ env.SHORT_SHA }}
+          path: bin/${{ inputs.architecture }}/${{ inputs.configuration }}/**

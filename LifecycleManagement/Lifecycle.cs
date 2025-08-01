@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using PCL.Core.Helper;
 
 namespace PCL.Core.LifecycleManagement;
 
@@ -30,43 +31,48 @@ public sealed class Lifecycle : ILifecycleService
     // -- 日志管理 --
     
     private static ILifecycleLogService? _logService;
-    private static readonly List<LifecycleLogItem> PendingLogs = [];
+    private static readonly List<LifecycleLogItem> _PendingLogs = [];
 
     private static void _PushLog(LifecycleLogItem item, ILifecycleLogService service)
     {
         service.OnLog(item);
     }
 
+    public static string PendingLogDirectory { get; set; } = @"PCL\Log";
     public static string PendingLogFileName { get; set; } = "LastPending.log";
 
     private static void _SavePendingLogs()
     {
-        if (PendingLogs.Count == 0) return;
+        if (_PendingLogs.Count == 0)
+        {
+            Console.WriteLine("[Lifecycle] No pending logs");
+            return;
+        }
         try
         {
             // 直接写入剩余未输出日志到程序目录
-            var dir = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, "PCL", "Log");
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, PendingLogFileName);
+            var path = Path.Combine(PendingLogDirectory, PendingLogFileName);
+            if (!Path.IsPathRooted(path)) path = Path.Combine(NativeInterop.ExecutableDirectory, path);
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Path.GetPathRoot(path));
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
-            foreach (var item in PendingLogs) writer.WriteLine(item.ComposeMessage());
+            foreach (var item in _PendingLogs) writer.WriteLine(item.ComposeMessage());
             Console.WriteLine($"[Lifecycle] Pending logs saved to {path}");
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex);
             Console.WriteLine("[Lifecycle] Error saving pending logs, writing to stdout...");
-            foreach (var item in PendingLogs) Console.WriteLine(item.ComposeMessage());
+            foreach (var item in _PendingLogs) Console.WriteLine(item.ComposeMessage());
         }
     }
     
     // -- 服务管理 --
     
-    private static readonly Dictionary<string, LifecycleServiceInfo> RunningServiceInfoMap = [];
-    private static readonly LinkedList<ILifecycleService> RunningServiceList = [];
-    private static readonly Dictionary<string, ILifecycleService> ManualServiceMap = [];
-    private static readonly HashSet<ILifecycleService> DeclaredStoppedServices = [];
+    private static readonly Dictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
+    private static readonly LinkedList<ILifecycleService> _RunningServiceList = [];
+    private static readonly Dictionary<string, ILifecycleService> _ManualServiceMap = [];
+    private static readonly HashSet<ILifecycleService> _DeclaredStoppedServices = [];
 
     private static string _ServiceName(ILifecycleService service, LifecycleState? state = null)
     {
@@ -92,14 +98,14 @@ public sealed class Lifecycle : ILifecycleService
         var state = manual ? LifecycleState.Manual : CurrentState;
         var name = _ServiceName(service, state);
         // 确保不存在重复的标识符
-        lock (ManualServiceMap) {
-            if (ManualServiceMap.ContainsKey(service.Identifier) && IsServiceRunning(service.Identifier))
+        lock (_ManualServiceMap) {
+            if (_ManualServiceMap.ContainsKey(service.Identifier) && IsServiceRunning(service.Identifier))
             {
                 Context.Warn($"{name} 标识符重复，已跳过");
                 return;
             }
             // 先找个东西占着防止异步加载中检测逻辑失效
-            RunningServiceInfoMap[service.Identifier] = SystemServiceInfo;
+            _RunningServiceInfoMap[service.Identifier] = _SystemServiceInfo;
         }
         // 运行服务项并添加到正在运行列表
         try
@@ -107,16 +113,16 @@ public sealed class Lifecycle : ILifecycleService
             Context.Trace($"正在启动 {name}");
             var serviceInfo = new LifecycleServiceInfo(service, state);
             Context.Debug($"{name} 启动成功");
-            if (DeclaredStoppedServices.Contains(service))
+            if (_DeclaredStoppedServices.Contains(service))
             {
-                DeclaredStoppedServices.Remove(service);
+                _DeclaredStoppedServices.Remove(service);
                 Context.Trace($"{name} 主动停止");
             }
             else
             {
                 // 若该服务未声明自己已结束运行，将其添加到正在运行列表
-                RunningServiceList.AddFirst(service);
-                RunningServiceInfoMap[service.Identifier] = serviceInfo;
+                _RunningServiceList.AddFirst(service);
+                _RunningServiceInfoMap[service.Identifier] = serviceInfo;
             }
         }
         catch (Exception ex)
@@ -126,10 +132,10 @@ public sealed class Lifecycle : ILifecycleService
         }
         // 若日志服务已启动则清空日志缓冲
         if (logService == null) return;
-        lock (PendingLogs)
+        lock (_PendingLogs)
         {
-            foreach (var item in PendingLogs) _PushLog(item, logService);
-            PendingLogs.Clear();
+            foreach (var item in _PendingLogs) _PushLog(item, logService);
+            _PendingLogs.Clear();
             _logService = logService;
         }
     }
@@ -199,8 +205,8 @@ public sealed class Lifecycle : ILifecycleService
 
     private static void _RemoveRunningInstance(ILifecycleService service)
     {
-        RunningServiceInfoMap.Remove(service.Identifier);
-        RunningServiceList.Remove(service);
+        _RunningServiceInfoMap.Remove(service.Identifier);
+        _RunningServiceList.Remove(service);
     }
 
     private static void _StopService(ILifecycleService service, bool async, bool manual = false)
@@ -245,17 +251,17 @@ public sealed class Lifecycle : ILifecycleService
         HasShutdownStarted = true;
         // 结束 Running 计时
         if (_countRunningStart is { } start)
-        { 
+        {
             var countSpan = DateTime.Now - start; 
             _LogStateCount(countSpan, LifecycleState.Running);
         }
         // 开始 Exiting 状态
         _StartStateFlow(LifecycleState.Exiting, count: false);
-        // 停止服务并退出
+        // 停止服务
         Context.Debug("正在停止运行中的服务"); 
         ILifecycleLogService? logService = null; 
-        foreach (var service in RunningServiceList.ToArray()) 
-        { 
+        foreach (var service in _RunningServiceList.ToArray()) 
+        {
             if (service is ILifecycleLogService ls) 
             {
                 // 跳过日志服务
@@ -266,21 +272,49 @@ public sealed class Lifecycle : ILifecycleService
             _StopService(service, service.SupportAsyncStart);
         }
         if (logService != null)
-        { 
-            Context.Trace($"退出过程已结束，正在停止日志服务"); 
-            _StopService(logService, false);
+        {
+            Context.Trace($"退出过程已结束，正在停止日志服务");
+            // 直接调用 Stop() 不使用常规停止实现 以保证正常情况下不会向等待区输出日志
+            logService.Stop();
+            Console.WriteLine("[Lifecycle] Log service stopped");
         }
         _SavePendingLogs();
+#if DEBUG || DEBUGCI
+        // 输出仍在运行的线程
+        Console.WriteLine("[Lifecycle] Thread(s) still in working:");
+        var currentThreadId = NativeInterop.GetCurrentOsThreadId();
+        foreach (ProcessThread processThread in Process.GetCurrentProcess().Threads)
+        {
+            var threadId = processThread.Id;
+            if (threadId == currentThreadId) continue;
+            Console.WriteLine($" - {threadId}({processThread.ThreadState}) (Start from {processThread.StartTime})");
+        }
+#endif
         if (_hasRequestedRestart && _requestRestartService is { } s)
         { 
             Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program..."); 
             _RunCurrentExecutable(_requestRestartArguments);
         }
-        Environment.Exit(statusCode); 
+        // 退出程序
+        Console.WriteLine($"[Lifecycle] Exiting program with status: {statusCode}");
+        // 执行正常退出
+        Environment.Exit(statusCode);
         // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
+        Console.WriteLine("[Lifecycle] Warning! Abnormal behaviour, try to kill process 1s later.");
         Thread.Sleep(1000);
-        Console.WriteLine("[Lifecycle] Trying to force kill the process");
-        Process.Start("taskkill.exe", $"/PID {Process.GetCurrentProcess().Id} /F /T");
+        _KillCurrentProcess();
+    }
+
+    private static void _KillCurrentProcess()
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "taskkill.exe",
+            Arguments = $"/f /t /pid {Process.GetCurrentProcess().Id}",
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        Process.Start(psi);
     }
 
     private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
@@ -412,18 +446,18 @@ public sealed class Lifecycle : ILifecycleService
             e.SetObserved();
         };
         // 添加系统服务
-        RunningServiceInfoMap["system"] = SystemServiceInfo;
+        _RunningServiceInfoMap["system"] = _SystemServiceInfo;
         // 实例化并存储手动服务
         foreach (var service in _GetServiceTypes(LifecycleState.Manual))
         {
             var instance = _CreateService(service);
             var identifier = instance.Identifier;
-            if (ManualServiceMap.ContainsKey(identifier))
+            if (_ManualServiceMap.ContainsKey(identifier))
             {
                 Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
                 continue;
             }
-            ManualServiceMap[identifier] = instance;
+            _ManualServiceMap[identifier] = instance;
         }
         // 运行预加载服务
         _StartStateFlow(LifecycleState.BeforeLoading);
@@ -515,14 +549,14 @@ public sealed class Lifecycle : ILifecycleService
     /// <summary>
     /// 所有正在运行的服务项标识符（即 <see cref="ILifecycleService.Identifier"/> 属性）
     /// </summary>
-    public static ICollection<string> RunningServices => RunningServiceInfoMap.Keys;
+    public static ICollection<string> RunningServices => _RunningServiceInfoMap.Keys;
     
     /// <summary>
     /// 检查指定标识符的服务项是否正在运行
     /// </summary>
     /// <param name="identifier">服务项标识符（即 <see cref="ILifecycleService.Identifier"/> 属性）</param>
     /// <returns>服务项是否正在运行</returns>
-    public static bool IsServiceRunning(string identifier) => RunningServiceInfoMap.ContainsKey(identifier);
+    public static bool IsServiceRunning(string identifier) => _RunningServiceInfoMap.ContainsKey(identifier);
 
     /// <summary>
     /// 根据标识符获取正在运行的服务项的相关信息
@@ -532,7 +566,7 @@ public sealed class Lifecycle : ILifecycleService
     public static LifecycleServiceInfo? GetServiceInfo(string? identifier)
     {
         if (identifier == null) return null;
-        RunningServiceInfoMap.TryGetValue(identifier, out var info);
+        _RunningServiceInfoMap.TryGetValue(identifier, out var info);
         return info;
     }
 
@@ -544,7 +578,7 @@ public sealed class Lifecycle : ILifecycleService
     /// <returns>是否成功请求启动，若该服务项正在运行或周期不是 <see cref="LifecycleState.Manual"/> 则无法启动</returns>
     public static bool StartService(string identifier, bool? async = null)
     {
-        ManualServiceMap.TryGetValue(identifier, out var service);
+        _ManualServiceMap.TryGetValue(identifier, out var service);
         if (service == null || IsServiceRunning(identifier)) return false;
         async ??= service.SupportAsyncStart;
         if (async == true) Task.Run(() => _StartService(service, true));
@@ -560,7 +594,7 @@ public sealed class Lifecycle : ILifecycleService
     /// <returns>是否成功请求停止，若该服务项未运行或周期不是 <see cref="LifecycleState.Manual"/> 则无法停止</returns>
     public static bool StopService(string identifier, bool async = true)
     {
-        ManualServiceMap.TryGetValue(identifier, out var service);
+        _ManualServiceMap.TryGetValue(identifier, out var service);
         if (service == null || !IsServiceRunning(identifier)) return false;
         _StopService(service, async, true);
         return true;
@@ -573,19 +607,21 @@ public sealed class Lifecycle : ILifecycleService
     /// <returns>是否成功请求运行，若标识符与正在运行的服务或已注册的手动服务冲突则无法运行。</returns>
     public static bool StartCustomService(ILifecycleService service)
     {
-        if (IsServiceRunning(service.Identifier) || ManualServiceMap.ContainsKey(service.Identifier)) return false;
+        if (IsServiceRunning(service.Identifier) || _ManualServiceMap.ContainsKey(service.Identifier)) return false;
         _StartService(service);
         return true;
     }
 
     /// <summary>
-    /// 发起关闭程序流程。
+    /// 发起关闭程序流程。<br/>
+    /// <see cref="LifecycleState.BeforeLoading"/> 状态请使用 <see cref="LifecycleContext.RequestExit"/>。
     /// </summary>
     /// <param name="statusCode">退出状态码 (返回值)</param>
     /// <param name="force">指定是否强制关闭，即不执行 WPF 标准关闭流程</param>
-    /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
+    /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 状态调用</exception>
     public static void Shutdown(int statusCode = 0, bool force = false)
     {
+        if (CurrentState == LifecycleState.BeforeLoading) throw new InvalidOperationException();
         if (HasShutdownStarted) return;
         Context.Info(force ? "开始强制关闭程序" : "正在关闭程序");
         IsForceShutdown = force;
@@ -609,9 +645,9 @@ public sealed class Lifecycle : ILifecycleService
         service: self,
         onLog: item =>
         {
-            lock (PendingLogs)
+            lock (_PendingLogs)
             {
-                if (_logService == null) PendingLogs.Add(item);
+                if (_logService == null) _PendingLogs.Add(item);
                 else _PushLog(item, _logService);
             }
         },
@@ -633,7 +669,7 @@ public sealed class Lifecycle : ILifecycleService
             var identifier = self.Identifier;
             if (GetServiceInfo(identifier)?.Identifier == identifier)
                 throw new InvalidOperationException("只能在服务启动阶段调用");
-            DeclaredStoppedServices.Add(self);
+            _DeclaredStoppedServices.Add(self);
         },
         onRequestStopLoading: () =>
         {
@@ -653,11 +689,11 @@ public sealed class Lifecycle : ILifecycleService
         public void Stop() { }
     }
 
-    private static readonly ILifecycleService SystemService = new SystemLifecycleService();
-    private static readonly LifecycleServiceInfo SystemServiceInfo = new(SystemService, LifecycleState.BeforeLoading);
+    private static readonly ILifecycleService _SystemService = new SystemLifecycleService();
+    private static readonly LifecycleServiceInfo _SystemServiceInfo = new(_SystemService, LifecycleState.BeforeLoading);
 
     /// <summary>
     /// 系统默认上下文，无特殊需求请勿使用。
     /// </summary>
-    public static readonly LifecycleContext System = GetContext(SystemService);
+    public static readonly LifecycleContext System = GetContext(_SystemService);
 }

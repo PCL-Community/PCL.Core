@@ -14,9 +14,9 @@ public static class EncryptHelper
     public static string SecretDecryptOld(string data)
     {
         const string key = "00000000";
-        const string IV = "87160295";
+        const string iv = "87160295";
         var btKey = Encoding.UTF8.GetBytes(key);
-        var btIV = Encoding.UTF8.GetBytes(IV);
+        var btIV = Encoding.UTF8.GetBytes(iv);
         using var des = new DESCryptoServiceProvider();
         using var ms = new MemoryStream();
         using var cs = new CryptoStream(ms, des.CreateDecryptor(btKey, btIV), CryptoStreamMode.Write);

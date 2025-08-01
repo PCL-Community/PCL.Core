@@ -17,7 +17,7 @@ public enum LifecycleLogLevel
 
 public static class LifecycleLogLevelExtensions
 {
-    private static readonly Dictionary<LifecycleLogLevel, string> LevelNameMap = new()
+    private static readonly Dictionary<LifecycleLogLevel, string> _LevelNameMap = new()
     {
         [LifecycleLogLevel.Trace] = "TRA",
         [LifecycleLogLevel.Debug] = "DBG",
@@ -27,5 +27,5 @@ public static class LifecycleLogLevelExtensions
         [LifecycleLogLevel.Fatal] = "FTL!"
     };
 
-    public static string PrintName(this LifecycleLogLevel level) => LevelNameMap[level];
+    public static string PrintName(this LifecycleLogLevel level) => _LevelNameMap[level];
 }

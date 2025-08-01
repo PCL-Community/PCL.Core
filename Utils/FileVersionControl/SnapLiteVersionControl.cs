@@ -48,7 +48,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     }
 
-    private async Task<FileVersionObjects[]> GetAllTrackedFiles()
+    private async Task<FileVersionObjects[]> _GetAllTrackedFiles()
     {
         List<FileVersionObjects> scanedPaths = [];
         Queue<string> scanQueue = new();
@@ -106,14 +106,14 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             var nodeId = Guid.NewGuid().ToString("N");
 
             // 获取当前的文件信息
-            var allFiles = await GetAllTrackedFiles();
+            var allFiles = await _GetAllTrackedFiles();
             LogWrapper.Info($"[SnapLite] 已获取到全部文件，总数量为 {allFiles.Length}");
             var newAddFiles = allFiles
                 .Distinct(FileVersionObjectsComparer.Instance)
-                .Where(x => !HasFileObject(x.Hash));
+                .Where(x => !_HasFileObject(x.Hash));
             // 存入数据库中
             LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
-            var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
+            var nodeObjects = _database.GetCollection<FileVersionObjects>(_GetNodeTableNameById(nodeId));
             nodeObjects.InsertBulk(allFiles);
             LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始复制文件");
             // 复制到 objects 文件夹中
@@ -163,12 +163,12 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         }
     }
 
-    private static string GetNodeTableNameById(string nodeId)
+    private static string _GetNodeTableNameById(string nodeId)
     {
         return $"node_{nodeId}";
     }
 
-    private bool HasFileObject(string objectId)
+    private bool _HasFileObject(string objectId)
     {
         return File.Exists(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, objectId));
     }
@@ -187,7 +187,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     public List<FileVersionObjects>? GetNodeObjects(string nodeId)
     {
-        var objectList = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
+        var objectList = _database.GetCollection<FileVersionObjects>(_GetNodeTableNameById(nodeId));
         return objectList?.Query().ToList();
     }
 
@@ -197,7 +197,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
             nodeList.DeleteMany(x => x.NodeId == nodeId);
-            _database.DropCollection(GetNodeTableNameById(nodeId));
+            _database.DropCollection(_GetNodeTableNameById(nodeId));
         }
         catch (Exception e)
         {
@@ -211,7 +211,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         try
         {
             var filePath = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, objectId);
-            if (!HasFileObject(objectId))
+            if (!_HasFileObject(objectId))
             {
                 LogWrapper.Warn($"[SnapLite] 预获取的对象 {objectId} 不存在，{filePath} 不存在此文件");
                 return null;
@@ -230,7 +230,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     {
         LogWrapper.Info($"[SnapLite] 开始应用 {nodeId} 的快照数据");
         var applyObjects = GetNodeObjects(nodeId) ?? throw new NullReferenceException("无法获取记录");
-        var currentObjects = await GetAllTrackedFiles();
+        var currentObjects = await _GetAllTrackedFiles();
         LogWrapper.Info($"[SnapLite] 获取到 {nodeId} 的对象数为 {applyObjects.Count}，当前文件夹对象数为 {currentObjects.Length}");
         var curDict = currentObjects.ToDictionary(x => x.Path);
 
@@ -395,7 +395,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         List<string> objectsInRecord = [];
         foreach (var node in nodeList)
         {
-            var nodeTable = GetNodeTableNameById(node.NodeId);
+            var nodeTable = _GetNodeTableNameById(node.NodeId);
             objectsInRecord.AddRange(_database.GetCollection<FileVersionObjects>(nodeTable).Query().ToEnumerable().Select(x => x.Hash));
         }
         objectsInRecord = [..objectsInRecord.Distinct()];

@@ -15,8 +15,9 @@ public sealed class ApplicationService : ILifecycleService
     public string Name => "应用程序";
     public bool SupportAsyncStart => false;
 
-    private readonly LifecycleContext Context;
-    private ApplicationService() { Context = Lifecycle.GetContext(this); }
+    private static LifecycleContext? _context;
+    private static LifecycleContext Context => _context!;
+    private ApplicationService() { _context = Lifecycle.GetContext(this); }
     
     public void Start()
     {

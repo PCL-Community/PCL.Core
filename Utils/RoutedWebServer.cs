@@ -163,7 +163,7 @@ public class RoutedWebServer : WebServer
     private readonly LinkedList<string> _pathList = [];
     private readonly Dictionary<string, RoutedClientRequestWithContext> _pathCallbackMap = [];
     
-    private void RoutedCallback(HttpListenerContext context)
+    private void _RoutedCallback(HttpListenerContext context)
     {
         var path = context.Request.Url.AbsolutePath;
         var callbackPath = _pathList.FirstOrDefault(p => path.StartsWith(p));
@@ -182,7 +182,7 @@ public class RoutedWebServer : WebServer
     /// <param name="listen"></param>
     public RoutedWebServer(string listen = "127.0.0.1:8080") : base(listen)
     {
-        base.SetRequestCallback(RoutedCallback);
+        base.SetRequestCallback(_RoutedCallback);
     }
 
     /// <summary>
@@ -219,7 +219,7 @@ public class RoutedWebServer : WebServer
     /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
     public bool Route(string path, RoutedClientRequestWithNothing callback) => Route(path, (_, _) => callback());
 
-    private static readonly JsonSerializerOptions ParsingJsonOptions = new()
+    private static readonly JsonSerializerOptions _ParsingJsonOptions = new()
     {
         AllowTrailingCommas = true,
         Converters = { new ExpandoObjectConverter() }
@@ -235,7 +235,7 @@ public class RoutedWebServer : WebServer
     {
         try
         {
-            dynamic? obj = JsonSerializer.Deserialize<ExpandoObject>(request.InputStream, ParsingJsonOptions);
+            dynamic? obj = JsonSerializer.Deserialize<ExpandoObject>(request.InputStream, _ParsingJsonOptions);
             return callback(p, obj);
         }
         catch (JsonException)

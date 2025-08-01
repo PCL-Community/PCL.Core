@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using PCL.Core.Helper;
@@ -25,7 +25,7 @@ public sealed class PromoteService : ILifecycleService
     private static Process? _promoteProcess;
     private static NamedPipeServerStream? _promotePipeServer;
     
-    private static readonly LinkedList<PromoteOperation> PendingOperations = [];
+    private static readonly ConcurrentQueue<PromoteOperation> _PendingOperations = [];
     
     private record PromoteOperation(string Command, Action<string>? Callback, bool DetailLog);
     
@@ -39,9 +39,9 @@ public sealed class PromoteService : ILifecycleService
     /// </summary>
     public static bool IsCurrentProcessPromoted { get; private set; }
     
-    private static string GetPromotePipeName(int processId) => $"PCLCE_PM@{processId}";
+    private static string _GetPromotePipeName(int processId) => $"PCLCE_PM@{processId}";
 
-    private static readonly Dictionary<string, Func<string?, string?>> OperationFunctions = new();
+    private static readonly Dictionary<string, Func<string?, string?>> _OperationFunctions = new();
 
     /// <summary>
     /// 添加提权操作，仅在提权进程中有效。
@@ -51,8 +51,8 @@ public sealed class PromoteService : ILifecycleService
     /// <returns>是否添加成功，若在主进程中调用或已存在相同操作名，则为 <c>false</c></returns>
     public static bool AddOperationFunction(string name, Func<string?, string?> operation)
     {
-        if (!IsCurrentProcessPromoted || OperationFunctions.ContainsKey(name)) return false;
-        OperationFunctions[name] = operation;
+        if (!IsCurrentProcessPromoted || _OperationFunctions.ContainsKey(name)) return false;
+        _OperationFunctions[name] = operation;
         return true;
     }
 
@@ -85,7 +85,7 @@ public sealed class PromoteService : ILifecycleService
     public static Func<string, string?> Operate { private get; set; } = command =>
     {
         var split = command.Split([' '], 2);
-        OperationFunctions.TryGetValue(split[0], out var operation);
+        _OperationFunctions.TryGetValue(split[0], out var operation);
         if (operation == null) return OperationErrNotFound;
         try
         {
@@ -98,7 +98,7 @@ public sealed class PromoteService : ILifecycleService
         }
     };
     
-    private static string ShortenString(string str)
+    private static string _ShortenString(string str)
     {
 #if DEBUG || DEBUGCI
         const int maxLength = 40;
@@ -110,7 +110,7 @@ public sealed class PromoteService : ILifecycleService
     }
     
     // 提权进程: 连接管道开始通信
-    private static void PerformAsPromoteProcess(string pid)
+    private static void _PerformAsPromoteProcess(string pid)
     {
         Context.Info("正在连接提权通信管道");
         var process = Process.GetProcessById(int.Parse(pid));
@@ -122,7 +122,7 @@ public sealed class PromoteService : ILifecycleService
             return;
         }
         // 连接管道
-        var pipeName = GetPromotePipeName(process.Id);
+        var pipeName = _GetPromotePipeName(process.Id);
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
         pipe.Connect(10000);
         Context.Info("已连接，开始通信");
@@ -136,46 +136,47 @@ public sealed class PromoteService : ILifecycleService
                 Context.Info("管道已关闭，正在退出");
                 break;
             }
-            Context.Debug($"正在执行: {ShortenString(command)}");
+            Context.Debug($"正在执行: {_ShortenString(command)}");
             var result = Operate(command) ?? OperationErrEmpty;
-            Context.Trace($"返回结果: {ShortenString(result)}");
+            Context.Trace($"返回结果: {_ShortenString(result)}");
             writer.WriteLine(result.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' '));
             writer.Flush();
             Context.Trace("返回成功");
         }
     }
     
-    private static readonly AutoResetEvent ActivateEvent = new(false);
+    private static readonly AutoResetEvent _ActivateEvent = new(false);
 
     // 主进程: 管道连接回调
-    private static bool PromotePipeCallback(StreamReader reader, StreamWriter writer, Process? client)
+    private static bool _PromotePipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
-        while (IsPromoteProcessRunning) lock (PendingOperations)
+        while (IsPromoteProcessRunning)
         {
-            ActivateEvent.WaitOne();
-            foreach (var operation in PendingOperations.ToArray())
+            if (!_PendingOperations.TryDequeue(out var operation))
             {
-                var command = operation.Command.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-                var detail = operation.DetailLog ? command : ShortenString(command);
-                Context.Debug($"正在执行: {detail}");
-                writer.WriteLine(command);
-                writer.Flush();
-                var result = reader.ReadLine();
-                if (result == null)
-                {
-                    Context.Warn("管道输入流已结束");
-                    break;
-                }
-                Context.Trace($"执行结果: {result}");
-                operation.Callback?.Invoke(result);
-                PendingOperations.RemoveFirst();
+                _ActivateEvent.WaitOne();
+                continue;
             }
+            var command = operation.Command.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+            var commandLog = operation.DetailLog ? command : _ShortenString(command);
+            Context.Debug($"正在执行: {commandLog}");
+            writer.WriteLine(command);
+            writer.Flush();
+            var result = reader.ReadLine();
+            if (result == null)
+            {
+                Context.Warn("管道输入流已结束");
+                break;
+            }
+            var resultLog = operation.DetailLog ? result : _ShortenString(result);
+            Context.Trace($"执行结果: {resultLog}");
+            operation.Callback?.Invoke(result);
         }
         return false;
     }
 
     // 主进程: 初始化提权后台服务
-    private static bool StartPromoteProcess()
+    private static bool _StartPromoteProcess()
     {
         // 启动提权进程
         _promoteProcess = NativeInterop.Start(
@@ -188,7 +189,7 @@ public sealed class PromoteService : ILifecycleService
         _promoteProcess.Exited += (_, _) => _promoteProcess = null;
         // 启动提权通信管道服务端
         _promotePipeServer ??= NativeInterop.StartPipeServer(
-            "Promote", GetPromotePipeName(NativeInterop.CurrentProcessId), PromotePipeCallback,
+            "Promote", _GetPromotePipeName(NativeInterop.CurrentProcessId), _PromotePipeCallback,
             () => _promotePipeServer = null, true, [_promoteProcess.Id]);
         return true;
     }
@@ -199,26 +200,39 @@ public sealed class PromoteService : ILifecycleService
     /// <param name="command">操作命令</param>
     /// <param name="callback">结果返回后的回调</param>
     /// <param name="detailLog">指定是否打印详细日志，若为 <c>false</c>，则日志仅保留前 40 或 15 字符（取决于是否为调试构建）</param>
-    public static void AppendOperation(string command, Action<string>? callback = null, bool detailLog = true)
+    public static void Append(string command, Action<string>? callback = null, bool detailLog = true)
     {
-        lock (PendingOperations)
-        {
-            PendingOperations.AddLast(new PromoteOperation(command, callback, detailLog));
-        }
+        _PendingOperations.Enqueue(new PromoteOperation(command, callback, detailLog));
     }
+    
+    [Obsolete("请使用 Append()")]
+    public static void AppendOperation(string command, Action<string>? callback = null, bool detailLog = true) => Append(command, callback, detailLog);
 
     /// <summary>
-    /// 开始执行操作。
+    /// 尝试启动提权进程并开始执行操作。
     /// </summary>
-    /// <returns>是否成功开始执行</returns>
+    /// <returns>是否成功开始执行，若提权进程启动失败则为 <c>false</c></returns>
     public static bool Activate()
     {
-        if (!IsPromoteProcessRunning && !StartPromoteProcess()) return false;
-        ActivateEvent.Set();
+        if (!IsPromoteProcessRunning && !_StartPromoteProcess()) return false;
+        _ActivateEvent.Set();
         return true;
     }
 
-    private static readonly Dictionary<string, Process> RunningProcesses = new();
+    /// <summary>
+    /// 向等待区添加操作并开始执行。即使未成功开始执行，添加的操作也不会自动移除。
+    /// </summary>
+    /// <param name="command">操作命令</param>
+    /// <param name="callback">结果返回后的回调</param>
+    /// <param name="detailLog">指定是否打印详细日志，若为 <c>false</c>，则日志仅保留前 40 或 15 字符（取决于是否为调试构建）</param>
+    /// <returns>是否成功开始执行，若提权进程启动失败则为 <c>false</c></returns>
+    public static bool AppendAndActivate(string command, Action<string>? callback = null, bool detailLog = true)
+    {
+        Append(command, callback, detailLog);
+        return Activate();
+    }
+
+    private static readonly Dictionary<string, Process> _RunningProcesses = new();
     
     // name: kill
     // arg: process-id [timeout]
@@ -227,7 +241,7 @@ public sealed class PromoteService : ILifecycleService
     {
         if (arg == null) return OperationErrInvalidArgument;
         var split = arg.Split(' ');
-        if (!RunningProcesses.TryGetValue(split[0], out var process)) return null;
+        if (!_RunningProcesses.TryGetValue(split[0], out var process)) return null;
         process.Kill();
         if (split.Length > 1)
         {
@@ -273,8 +287,8 @@ public sealed class PromoteService : ILifecycleService
         var process = Process.Start(info);
         if (process == null) return null;
         var id = process.Id.ToString();
-        process.Exited += (_, _) => RunningProcesses.Remove(id);
-        RunningProcesses[id] = process;
+        process.Exited += (_, _) => _RunningProcesses.Remove(id);
+        _RunningProcesses[id] = process;
         return id;
     }
     
@@ -291,7 +305,7 @@ public sealed class PromoteService : ILifecycleService
             AddOperationFunction("kill", _KillProcess);
             // 结束生命周期管理，启动提权操作线程
             Lifecycle.PendingLogFileName = "LastPending_Promote.log";
-            new Thread(() => PerformAsPromoteProcess(args[2])) { Name = "Promote" }.Start();
+            new Thread(() => _PerformAsPromoteProcess(args[2])) { Name = "Promote" }.Start();
             Context.RequestStopLoading();
             Context.DeclareStopped();
         }

@@ -5,6 +5,8 @@ using System.Text;
 
 namespace PCL.Core.Utils.PE;
 
+// ReSharper disable InconsistentNaming
+
 /// <summary>
 /// 通用化 PE 文件头读取器
 /// </summary>
@@ -30,14 +32,14 @@ public static class PEHeaderReader
         {
             using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             // 验证 DOS 头
-            if (!IsValidDosHeader(fs))
+            if (!_IsValidDosHeader(fs))
             {
                 result.ErrorMessage = "无效的DOS头(MZ签名)";
                 return result;
             }
 
             // 获取 NT 头偏移量
-            var peHeaderOffset = GetPEOffset(fs);
+            var peHeaderOffset = _GetPEOffset(fs);
             if (peHeaderOffset <= 0 || peHeaderOffset >= fs.Length - 24)
             {
                 result.ErrorMessage = "无效的PE头偏移量";
@@ -46,14 +48,14 @@ public static class PEHeaderReader
 
             // 定位并验证 PE 签名
             fs.Seek(peHeaderOffset, SeekOrigin.Begin);
-            if (!IsValidPESignature(fs))
+            if (!_IsValidPESignature(fs))
             {
                 result.ErrorMessage = "无效的PE签名";
                 return result;
             }
 
             // 读取完整的 IMAGE_FILE_HEADER 结构
-            result = ParseImageFileHeader(fs);
+            result = _ParseImageFileHeader(fs);
             result.IsValid = true;
         }
         catch (Exception ex)
@@ -64,27 +66,27 @@ public static class PEHeaderReader
         return result;
     }
 
-    private static bool IsValidDosHeader(FileStream fs)
+    private static bool _IsValidDosHeader(FileStream fs)
     {
         if (fs.Length < 2) return false;
         fs.Seek(0, SeekOrigin.Begin);
         return fs.ReadByte() == 'M' && fs.ReadByte() == 'Z';
     }
 
-    private static long GetPEOffset(FileStream fs)
+    private static long _GetPEOffset(FileStream fs)
     {
         fs.Seek(PE_POINTER_OFFSET, SeekOrigin.Begin);
         using var reader = new BinaryReader(fs, Encoding.Default, true);
         return reader.ReadInt32();
     }
 
-    private static bool IsValidPESignature(FileStream fs)
+    private static bool _IsValidPESignature(FileStream fs)
     {
         using var reader = new BinaryReader(fs, Encoding.Default, true);
         return reader.ReadUInt32() == PE_SIGNATURE;
     }
 
-    private static PEStruct ParseImageFileHeader(FileStream fs)
+    private static PEStruct _ParseImageFileHeader(FileStream fs)
     {
         using var reader = new BinaryReader(fs, Encoding.Default, true);
         return new PEStruct

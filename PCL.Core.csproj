@@ -108,6 +108,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.74.1" />
+    <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.74.1" />
     <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.14.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -198,6 +200,16 @@
     <Compile Include="Service\SingleInstanceService.cs" />
     <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
     <Compile Include="Service\UpdateService.cs" />
+    <Compile Include="Utils\Account\AccountDataProvider.cs" />
+    <Compile Include="Utils\Account\AccountStatus.cs" />
+    <Compile Include="Utils\Account\AccountType.cs" />
+    <Compile Include="Utils\Account\IAccount.cs" />
+    <Compile Include="Utils\Account\IAccountAuthentication.cs" />
+    <Compile Include="Utils\Account\IMinecraftcAccount.cs" />
+    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAccount.cs" />
+    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAccountData.cs" />
+    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAuthentication.cs" />
+    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAuthenticationData.cs" />
     <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\ArgumentsBuilder.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
@@ -236,6 +248,9 @@
       <Isolated>False</Isolated>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Utils\Account\MinecraftOfflineAccount\" />
   </ItemGroup>
   <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
   <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">

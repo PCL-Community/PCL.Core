@@ -147,8 +147,13 @@
     <Compile Include="LifecycleManagement\LifecycleService.cs" />
     <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
     <Compile Include="LifecycleManagement\LifecycleState.cs" />
+    <Compile Include="Link\EasyTier\EasyTierController.cs" />
+    <Compile Include="Link\EasyTier\EasyTierRelay.cs" />
+    <Compile Include="Link\Lobby\LobbyHandler.cs" />
     <Compile Include="Link\McPing.cs" />
     <Compile Include="Link\McPingResult.cs" />
+    <Compile Include="Link\Lobby\ThirdpartyLobbyHandler.cs" />
+    <Compile Include="Link\Natayark\NatayarkProfileManager.cs" />
     <Compile Include="Logging\Logger.cs" />
     <Compile Include="Logging\LoggerConfiguration.cs" />
     <Compile Include="Logging\LoggerSegmentMode.cs" />

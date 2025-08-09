@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.App;
+using PCL.Core.ProgramSetup;
 using PCL.Core.UI;
 using PCL.Core.Utils;
 using PCL.Core.Utils.OS;
@@ -18,15 +19,20 @@ public static class PredefinedFileItems
 {
     public static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
     public static readonly FileItem GrayProfile = FileItem.FromLocalFile("gray.json", FileType.Data);
+    public static readonly FileItem GlobalSetup = new("config.json", FileType.SharedData,
+        Sources: [FileService.GetSpecialPath(Special.ApplicationData, Path.Combine("." + SetupService.GlobalSetupFolder, "Config.json"))]);
+    public static readonly FileItem LocalSetup = FileItem.FromLocalFile("setup.ini", FileType.Data);
 }
 
 public static class PredefinedFileTasks
 {
     public static readonly IFileTask CacheInformation = FileTask.FromSingleFile(PredefinedFileItems.CacheInformation, FileTransfers.DoNothing);
     public static readonly IFileTask GrayProfile = FileTask.FromSingleFile(PredefinedFileItems.GrayProfile, FileTransfers.DoNothing, FileProcesses.ParseJson<GrayProfileConfig>());
+    public static readonly IFileTask GlobalSetup = FileTask.FromSingleFile(PredefinedFileItems.GlobalSetup, SetupService.MigrateGlobalSetupFile, FileProcesses.Deserialize(SetupService.GlobalFileSerializer));
+    public static readonly IFileTask LocalSetup = FileTask.FromSingleFile(PredefinedFileItems.LocalSetup, FileTransfers.DoNothing, FileProcesses.Deserialize(SetupService.LocalFileSerializer));
     
     internal static readonly IFileTask[] Preload = [
-        CacheInformation, GrayProfile
+        CacheInformation, GrayProfile, GlobalSetup, LocalSetup
     ];
 }
 

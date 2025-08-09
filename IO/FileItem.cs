@@ -89,6 +89,13 @@ public record FileItem(
     }
 
     public FileInfo GetFileInfo() => new(TargetPath);
+
+    public void CreateDirectory()
+    {
+        var dir = Path.GetDirectoryName(TargetPath);
+        if (dir is not null && dir.Length > 0)
+            Directory.CreateDirectory(dir);
+    }
     
     public override int GetHashCode() => TargetPath.GetHashCode();
 

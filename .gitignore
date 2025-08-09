@@ -408,3 +408,6 @@ FodyWeavers.xsd
 
 # Generated Code
 App/LifecycleServiceTypes.g.cs
+ProgramSetup/SetupEntries.g.cs
+ProgramSetup/Setup.g.cs
+ProgramSetup/SetupListenerRegisterer.g.cs

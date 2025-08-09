@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <!-- 项目属性 -->
     <PropertyGroup>
         <AssemblyTitle>PCL.Core</AssemblyTitle>
@@ -96,5 +96,11 @@
         <ItemGroup>
             <Compile Include="App\LifecycleServiceTypes.g.cs" />
         </ItemGroup>
+    </Target>
+    <!-- 生成各种配置访问器的自定义任务 -->
+    <Target Name="GenerateSetupAccessor" BeforeTargets="CoreCompile">
+        <Message Text="Generating setup accessors..." Importance="normal" />
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
     </Target>
 </Project>

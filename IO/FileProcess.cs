@@ -54,4 +54,12 @@ public static class FileProcesses
         JsonSerializer.Serialize(fs, d, _ParseJsonCreateDefaultOptions);
         return d;
     });
+
+    public static FileProcess Deserialize<TValue>(IFileSerializer<TValue> serializer) => (_, path) =>
+    {
+        if (path is null)
+            return null;
+        using (var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Read))
+            return serializer.Deserialize(fs);
+    };
 }

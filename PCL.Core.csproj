@@ -88,9 +88,10 @@
     <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
     <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
         <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
         <ItemGroup>
-            <PowerShellScript Include="$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1" />
+            <Compile Update="App\LifecycleServiceTypes.g.cs" />
         </ItemGroup>
-        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
     </Target>
 </Project>

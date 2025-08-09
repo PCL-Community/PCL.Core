@@ -6,9 +6,7 @@ profile:
 
 # arguments
 ide: QDNET
-bootstrap: |
-  msbuild "PCL.Core.csproj" /t:Restore
-  msbuild "PCL.Core.csproj" /t:Build /p:Configuration=Debug
+bootstrap: msbuild ./PCL.Core.csproj /t:Restore /t:Build /p:Configuration=Debug
 include:
   - name: IncorrectFormatting
   - name: VulnerableLibrariesGlobal

@@ -50,6 +50,8 @@
     </PropertyGroup>
     <!-- 通用引用 -->
     <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
+        <PackageReference Include="Polly" Version="8.6.2" />
         <PackageReference Include="SharpZipLib" Version="1.4.2" />
         <PackageReference Include="System.Text.Json" Version="9.0.7" />
         <PackageReference Include="LiteDB" Version="5.0.21" />

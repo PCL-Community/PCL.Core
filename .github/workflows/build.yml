@@ -46,13 +46,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2
         with:
           msbuild-architecture: x64
-      - name: Prepare Project
-        run: |
-          msbuild "PCL.Core.csproj" /t:Restore
-          msbuild "PCL.Core.csproj" /t:Build /p:Configuration=Debug
       - name: Qodana Scan
         uses: JetBrains/qodana-action@v2025.1
-        with:
-          args: --ide,QDNET
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}

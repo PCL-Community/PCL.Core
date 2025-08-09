@@ -1,0 +1,14 @@
+﻿version: 1.0
+
+# default profile
+profile:
+  name: qodana.recommended
+
+# arguments
+ide: QDNET
+bootstrap: |
+  msbuild "PCL.Core.csproj" /t:Restore
+  msbuild "PCL.Core.csproj" /t:Build /p:Configuration=Debug
+include:
+  - name: IncorrectFormatting
+  - name: VulnerableLibrariesGlobal

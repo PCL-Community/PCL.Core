@@ -10,6 +10,7 @@ using PCL.Core.Link.EasyTier;
 using PCL.Core.Logging;
 using PCL.Core.ProgramSetup;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
+using static PCL.Core.Utils.Secret.Identify;
 
 namespace PCL.Core.Link.Lobby
 {
@@ -35,7 +36,7 @@ namespace PCL.Core.Link.Lobby
             JsonObject data = new()
             {
                 ["Tag"] = "Link",
-                ["Id"] = "", // TODO: 识别码
+                ["Id"] = RawCode, // TODO: 识别码
                 ["NaidId"] = NaidProfile.Id,
                 ["NaidEmail"] = NaidProfile.Email,
                 ["NaidLastIp"] = NaidProfile.LastIp,

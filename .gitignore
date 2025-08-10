@@ -403,10 +403,11 @@ FodyWeavers.xsd
 *.msp
 
 # JetBrains Rider
+.idea/
 *.sln.iml
 
 # Generated Code
-LifecycleManagement/LifecycleServiceTypes.g.cs
-
-# Test files
-Service/TestService.cs
+App/LifecycleServiceTypes.g.cs
+ProgramSetup/SetupEntries.g.cs
+ProgramSetup/Setup.g.cs
+ProgramSetup/SetupListenerRegisterer.g.cs

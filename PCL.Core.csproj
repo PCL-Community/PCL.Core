@@ -1,267 +1,116 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props" Condition="Exists('..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props')" />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A0C2209D-64FB-4C11-9459-8E86304B6F94}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PCL.Core</RootNamespace>
-    <AssemblyName>PCL.Core</AssemblyName>
-    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-    <LangVersion>12</LangVersion>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM64'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\ARM64\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>ARM64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM64'">
-    <OutputPath>bin\ARM64\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>ARM64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x64\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Beta|AnyCPU'">
-    <OutputPath>bin\Beta\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Beta|ARM64'">
-    <OutputPath>bin\ARM64\Beta\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>ARM64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Beta|x64'">
-    <OutputPath>bin\x64\Beta\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.IO.Compression" />
-    <Reference Include="System.Management" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-    <Reference Include="WindowsBase" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.74.1" />
-    <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.74.1" />
-    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.14.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
-    <PackageReference Include="PolySharp" Version="1.15.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="System.Text.Json" Version="9.0.7" />
-    <PackageReference Include="LiteDB" Version="5.0.21" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Controls\BlurBorder.cs" />
-    <Compile Include="Extension\StringExtension.cs" />
-    <Compile Include="Helper\BackgroundPresenter.cs" />
-    <Compile Include="Helper\ByteHelper.cs" />
-    <Compile Include="Helper\CmdLineHelper.cs" />
-    <Compile Include="Helper\EncryptHelper.cs" />
-    <Compile Include="Helper\Files.cs" />
-    <Compile Include="Helper\Hash\IHashProvider.cs" />
-    <Compile Include="Helper\Hash\MD5Provider.cs" />
-    <Compile Include="Helper\Hash\SHA1Provider.cs" />
-    <Compile Include="Helper\Hash\SHA256Provider.cs" />
-    <Compile Include="Helper\Hash\SHA512Provider.cs" />
-    <Compile Include="Helper\HttpRequest.cs" />
-    <Compile Include="Helper\Identify.cs" />
-    <Compile Include="Helper\JavaManage.cs" />
-    <Compile Include="Helper\MathHelper.cs" />
-    <Compile Include="Helper\Configure\IConfigure.cs" />
-    <Compile Include="Helper\Configure\IniConfigure.cs" />
-    <Compile Include="Helper\Configure\JsonConfigure.cs" />
-    <Compile Include="Helper\Diff\BsDiff.cs" />
-    <Compile Include="Helper\Diff\IBinaryDiff.cs" />
-    <Compile Include="Helper\LogWrapper.cs" />
-    <Compile Include="Helper\MsgBoxWrapper.cs" />
-    <Compile Include="Helper\NativeInterop.cs" />
-    <Compile Include="Helper\PortHelper.cs" />
-    <Compile Include="Helper\SemVer.cs" />
-    <Compile Include="Helper\ToastNotification.cs" />
-    <Compile Include="Helper\UpdateHelper.cs" />
-    <Compile Include="Helper\VarInt.cs" />
-    <Compile Include="LifecycleManagement\ILifecycleLogService.cs" />
-    <Compile Include="LifecycleManagement\ILifecycleService.cs" />
-    <Compile Include="LifecycleManagement\Lifecycle.cs" />
-    <Compile Include="LifecycleManagement\LifecycleActionLevel.cs" />
-    <Compile Include="LifecycleManagement\LifecycleContext.cs" />
-    <Compile Include="LifecycleManagement\LifecycleLogItem.cs" />
-    <Compile Include="LifecycleManagement\LifecycleLogLevel.cs" />
-    <Compile Include="LifecycleManagement\LifecycleService.cs" />
-    <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
-    <Compile Include="LifecycleManagement\LifecycleState.cs" />
-    <Compile Include="Model\Files\FileItem.cs" />
-    <Compile Include="Model\Files\FileMatchPair.cs" />
-    <Compile Include="Model\Files\FileMatch.cs" />
-    <Compile Include="Model\Files\FileProcess.cs" />
-    <Compile Include="Model\Files\FileTransfer.cs" />
-    <Compile Include="Model\Files\IFileTask.cs" />
-    <Compile Include="Model\GrayProfile.cs" />
-    <Compile Include="Model\GrayProfileConfig.cs" />
-    <Compile Include="Model\Java.cs" />
-    <Compile Include="Model\McPingResult.cs" />
-    <Compile Include="Model\Net\HttpProxyManager.cs" />
-    <Compile Include="Model\Net\HttpRequestOptions.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeFile.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeHashes.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeLinks.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgePictures.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeProject.cs" />
-    <Compile Include="Model\ResourceProject\Curseforge\CurseforgeResponseData.cs" />
-    <Compile Include="Model\ResourceProject\Modrinth\ModrinthDonationUrl.cs" />
-    <Compile Include="Model\ResourceProject\Modrinth\ModrinthGallery.cs" />
-    <Compile Include="Model\ResourceProject\Modrinth\ModrinthLicense.cs" />
-    <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
-    <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Service\ApplicationService.cs" />
-    <Compile Include="Service\FileCacheService.cs" />
-    <Compile Include="Service\FileService.cs" />
-    <Compile Include="Service\GeneralService.cs" />
-    <Compile Include="Service\LogService.cs" />
-    <Compile Include="Service\PromoteService.cs" />
-    <Compile Include="Service\RpcService.cs" />
-    <Compile Include="Service\MainWindowService.cs" />
-    <Compile Include="Service\SingleInstanceService.cs" />
-    <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
-    <Compile Include="Service\UpdateService.cs" />
-    <Compile Include="Utils\Account\AccountDataProvider.cs" />
-    <Compile Include="Utils\Account\AccountStatus.cs" />
-    <Compile Include="Utils\Account\AccountType.cs" />
-    <Compile Include="Utils\Account\IAccount.cs" />
-    <Compile Include="Utils\Account\IAccountAuthentication.cs" />
-    <Compile Include="Utils\Account\IMinecraftcAccount.cs" />
-    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAccount.cs" />
-    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAccountData.cs" />
-    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAuthentication.cs" />
-    <Compile Include="Utils\Account\MicrosoftAccount\MicrosoftAuthenticationData.cs" />
-    <Compile Include="Utils\AnyType.cs" />
-    <Compile Include="Utils\ArgumentsBuilder.cs" />
-    <Compile Include="Utils\AtomicVariable.cs" />
-    <Compile Include="Utils\Download\Downloader.cs" />
-    <Compile Include="Utils\Download\DownloadItem.cs" />
-    <Compile Include="Utils\Download\ParallelTask.cs" />
-    <Compile Include="Utils\ExpandoObjectConverter.cs" />
-    <Compile Include="Utils\FileTask\FileTask.cs" />
-    <Compile Include="Utils\FileTask\MatchableFileTask.cs" />
-    <Compile Include="Utils\FileTask\ZipFileTask.cs" />
-    <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
-    <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />
-    <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />
-    <Compile Include="Utils\FileVersionControl\ObjectType.cs" />
-    <Compile Include="Utils\FileVersionControl\SnapLiteVersionControl.cs" />
-    <Compile Include="Utils\FileVersionControl\VersionData.cs" />
-    <Compile Include="Utils\Logger\Logger.cs" />
-    <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
-    <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
-    <Compile Include="Utils\Minecraft\McPing.cs" />
-    <Compile Include="Utils\PEHeaderReader.cs" />
-    <Compile Include="Utils\RoutedWebServer.cs" />
-    <Compile Include="Utils\StringStream.cs" />
-    <Compile Include="Utils\Threading\DualThreadPool.cs" />
-    <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
-    <Compile Include="Utils\VersionRange.cs" />
-    <Compile Include="Utils\WebServer.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <COMReference Include="IWshRuntimeLibrary">
-      <Guid>{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Utils\Account\MinecraftOfflineAccount\" />
-  </ItemGroup>
-  <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
-  <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
-    <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
+<Project Sdk="Microsoft.NET.Sdk">
+    <!-- 项目属性 -->
+    <PropertyGroup>
+        <AssemblyTitle>PCL.Core</AssemblyTitle>
+        <AssemblyName>PCL.Core</AssemblyName>
+        <Description>PCL Community 为 PCL 开发的启动器核心库</Description>
+        <Company>PCL Community</Company>
+        <Product>PCL.Core</Product>
+        <Copyright>Copyright © PCL Community</Copyright>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
+    </PropertyGroup>
+    <PropertyGroup>
+        <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+        <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+        <ProjectGuid>{A0C2209D-64FB-4C11-9459-8E86304B6F94}</ProjectGuid>
+        <AppDesignerFolder>Properties</AppDesignerFolder>
+        <RootNamespace>PCL.Core</RootNamespace>
+        <TargetFrameworks>net481;net8.0-windows10.0.17763.0</TargetFrameworks>
+        <LangVersion>13.0</LangVersion>
+        <Nullable>enable</Nullable>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763.0'">
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+    <!-- 构建配置 -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug' ">
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>full</DebugType>
+        <Optimize>false</Optimize>
+        <OutputPath>bin\Debug-$(Platform)\</OutputPath>
+        <DefineConstants>DEBUG;TRACE</DefineConstants>
+        <PlatformTarget>$(Platform)</PlatformTarget>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Publish'">
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <OutputPath>bin\Publish-$(Platform)\</OutputPath>
+        <DefineConstants>PUBLISH</DefineConstants>
+        <PlatformTarget>$(Platform)</PlatformTarget>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'CI'">
+        <DebugType>pdbonly</DebugType>
+        <Optimize>false</Optimize>
+        <OutputPath>bin\CI-$(Platform)\</OutputPath>
+        <DefineConstants>CI;TRACE</DefineConstants>
+        <PlatformTarget>$(Platform)</PlatformTarget>
+    </PropertyGroup>
+    <!-- 通用引用 -->
     <ItemGroup>
-      <PowerShellScript Include="$(MSBuildProjectDirectory)\LifecycleManagement\LifecycleServiceTypesGenerator.ps1" />
+        <PackageReference Include="SharpZipLib" Version="1.4.2" />
+        <PackageReference Include="System.Text.Json" Version="9.0.7" />
+        <PackageReference Include="LiteDB" Version="5.0.21" />
+        <PackageReference Include="System.Net.Http" Version="4.3.4" />
+        <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+        <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
     </ItemGroup>
-    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+    <!-- 分平台引用 -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'net481'">
+        <Reference Include="Microsoft.CSharp" />
+        <Reference Include="System.Management" />
+        <Reference Include="PresentationFramework" />
+        <Reference Include="PresentationCore" />
+        <Reference Include="WindowsBase" />
+        <PackageReference Include="PolySharp" Version="1.15.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763.0'">
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="System.Management" Version="8.0.0" />
+    </ItemGroup>
+    <!-- COM 引用 -->
     <ItemGroup>
-      <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
+        <COMReference Include="IWshRuntimeLibrary">
+            <Guid>{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B}</Guid>
+            <VersionMajor>1</VersionMajor>
+            <VersionMinor>0</VersionMinor>
+            <Lcid>0</Lcid>
+            <WrapperTool>tlbimp</WrapperTool>
+            <Isolated>false</Isolated>
+            <EmbedInteropTypes>true</EmbedInteropTypes>
+        </COMReference>
     </ItemGroup>
-  </Target>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+    <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
+    <ItemGroup>
+        <Compile Remove="App\LifecycleServiceTypes.g.cs" />
+    </ItemGroup>
+    <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
+        <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
+        <ItemGroup>
+            <Compile Include="App\LifecycleServiceTypes.g.cs" />
+        </ItemGroup>
+    </Target>
+    <!-- 生成各种配置访问器的自定义任务 -->
+    <ItemGroup>
+        <Compile Remove="ProgramSetup\Setup.g.cs" />
+        <Compile Remove="ProgramSetup\SetupEntries.g.cs" />
+        <Compile Remove="ProgramSetup\SetupListenerRegisterer.g.cs" />
+    </ItemGroup>
+    <Target Name="GenerateSetupAccessor" BeforeTargets="CoreCompile">
+        <Message Text="Generating setup accessors..." Importance="normal" />
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
+        <ItemGroup>
+            <Compile Include="ProgramSetup\Setup.g.cs" />
+            <Compile Include="ProgramSetup\SetupEntries.g.cs" />
+            <Compile Include="ProgramSetup\SetupListenerRegisterer.g.cs" />
+        </ItemGroup>
+    </Target>
 </Project>

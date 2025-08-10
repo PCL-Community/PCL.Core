@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace PCL.Core.Utils.PE;
+namespace PCL.Core.Utils;
 
 // ReSharper disable InconsistentNaming
 

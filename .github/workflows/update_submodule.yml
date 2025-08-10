@@ -26,8 +26,8 @@ jobs:
 
       - name: Update submodule
         run: |
-          git config user.name "ruattd"
-          git config user.email "61044187+ruattd@users.noreply.github.com"
+          git config user.name "PCL-Community-Bot"
+          git config user.email "167983016+PCL-Community-Bot@users.noreply.github.com"
           git submodule update --init PCL.Core
           git submodule update --remote PCL.Core
           git add PCL.Core

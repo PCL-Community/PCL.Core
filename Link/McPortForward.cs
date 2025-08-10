@@ -135,9 +135,12 @@ namespace PCL.Core.Link
         {
             try
             {
-                try { _udpThread.Abort(); }
-                catch (Exception) { }
-                _udpThread.Start();
+                if (_udpThread != null)
+                {
+                    try { _udpThread.Interrupt(); }
+                    catch (Exception) { }
+                    _udpThread.Start();
+                }
             }
             catch (Exception ex)
             {
@@ -150,12 +153,12 @@ namespace PCL.Core.Link
             _isRunning = false;
             if (_udpThread != null)
             {
-                _udpThread.Abort();
+                _udpThread.Interrupt();
                 _udpThread = null;
             }
             if (_tcpThread != null)
             {
-                _tcpThread.Abort();
+                _tcpThread.Interrupt();
                 _tcpThread = null;
             }
             if (_boardcastClient != null)

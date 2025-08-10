@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+
 using PCL.Core.Utils.Exts;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Net;
+using PCL.Core.ProgramSetup;
 using static PCL.Core.Link.Lobby.LobbyHandler;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
-using PCL.Core.ProgramSetup;
 
 namespace PCL.Core.Link.EasyTier
 {
@@ -23,14 +20,15 @@ namespace PCL.Core.Link.EasyTier
         public const string ETVersion = "2.4.1";
         public string ETPath = Path.Combine(FileService.LocalDataPath, "EasyTier", ETVersion, "easytier-windows-" + "x86_64");
 
-        public Process ETProcess;
+        public Process? ETProcess;
         public bool IsETRunning = false;
         public bool IsETReady = false;
 
-        public int Launch(bool isHost, string name = null, string secret = null, bool isAfterDownload = false, int port = 25565)
+        public int Launch(bool isHost, string name, string secret, bool isAfterDownload = false, int port = 25565)
         {
             try
             {
+                if (TargetLobby == null) { return 1; }
                 var etFilePath = $"{ETPath}\\easytier-core.exe";
 
                 var existedET = Process.GetProcessesByName("easytier-core");

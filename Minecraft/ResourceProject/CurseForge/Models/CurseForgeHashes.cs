@@ -11,5 +11,5 @@ public record CurseForgeHashes
     /// <summary>
     /// 算法
     /// </summary>
-    [JsonPropertyName("algo")] public uint Algorithm;
+    [JsonPropertyName("algo")] public int Algorithm;
 }

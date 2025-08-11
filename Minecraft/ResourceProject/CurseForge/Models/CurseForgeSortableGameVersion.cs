@@ -8,5 +8,5 @@ public record CurseForgeSortableGameVersion
     [JsonPropertyName("gameVersionPadded")] public required string GameVersionPadded;
     [JsonPropertyName("gameVersion")] public required string GameVersion;
     [JsonPropertyName("gameVersionReleaseDate")] public required string GameVersionReleaseDate;
-    [JsonPropertyName("gameVersionTypeId")] public uint GameVersionTypeId;
+    [JsonPropertyName("gameVersionTypeId")] public int GameVersionTypeId;
 };

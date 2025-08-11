@@ -5,6 +5,6 @@ namespace PCL.Core.Minecraft.ResourceProject.CurseForge.Models;
 
 public record CurseForgeMatchFingerprint
 {
-    [JsonPropertyName("property1")] public required List<uint?> Property1;
-    [JsonPropertyName("property2")] public required List<uint?> Property2;
+    [JsonPropertyName("property1")] public required List<int?> Property1;
+    [JsonPropertyName("property2")] public required List<int?> Property2;
 };

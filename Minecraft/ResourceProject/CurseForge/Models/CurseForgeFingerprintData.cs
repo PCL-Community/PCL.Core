@@ -9,7 +9,7 @@ public record CurseForgeFingerprintData
     [JsonPropertyName("exactMatches")] public required CurseForgeMatches ExactMatches;
 
     [JsonPropertyName("exactFingerprints")]
-    public required List<uint> ExactFingerprints;
+    public required List<int> ExactFingerprints;
 
     [JsonPropertyName("partialMatches")] public required CurseForgeMatches PartialMatches;
     
@@ -17,8 +17,8 @@ public record CurseForgeFingerprintData
     public required CurseForgeMatchFingerprint PartialMatchFingerprints;
 
     [JsonPropertyName("installedFingerprints")]
-    public required List<uint?> InstalledFingerprints;
+    public required List<int?> InstalledFingerprints;
 
     [JsonPropertyName("unmatchedFingerprints")]
-    public required List<uint?> UnmatchedFingerprints;
+    public required List<int?> UnmatchedFingerprints;
 }

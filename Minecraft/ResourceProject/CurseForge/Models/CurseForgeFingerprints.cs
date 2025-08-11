@@ -4,5 +4,5 @@ namespace PCL.Core.Minecraft.ResourceProject.CurseForge.Models;
 
 public record CurseForgeFingerprints
 {
-    [JsonPropertyName("data")]public required CurseForgeFingerprintData FingerprintData;
+    [JsonPropertyName("data")] public required CurseForgeFingerprintData FingerprintData;
 };

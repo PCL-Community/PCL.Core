@@ -11,7 +11,7 @@ public class ProcessInterop
     /// </summary>
     /// <param name="processId">进程 ID</param>
     /// <returns>命令行参数文本</returns>
-    public static string GetCommandLine(int processId)
+    public static string? GetCommandLine(int processId)
     {
         var query = $"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {processId}";
         using var searcher = new ManagementObjectSearcher(query);

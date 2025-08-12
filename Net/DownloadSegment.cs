@@ -201,9 +201,10 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                     StartPosition = startPosition;
                     NextPosition = startPosition;
                 }
-                using var resp = await HttpRequest
+                using var resp = await NetworkService.GetClient()
                     .SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cToken);
-                RealUri = resp.RequestMessage.RequestUri;
+                var reqUri = resp.RequestMessage?.RequestUri;
+                if (reqUri != null) RealUri = reqUri;
                 var status = resp.StatusCode;
                 failedStatus = (int)status;
                 resp.EnsureSuccessStatusCode();
@@ -212,7 +213,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                 if (enableRange)
                 {
                     var range = headers.ContentRange;
-                    if (status == HttpStatusCode.PartialContent && range.HasRange)
+                    if (status == HttpStatusCode.PartialContent && range?.HasRange == true)
                     {
                         // 尝试设置内容结束位置
                         if (EndPosition == 0)

@@ -18,7 +18,7 @@ public abstract class GeneralService : ILifecycleService
     /// The context of the service instance,
     /// used for declaration, logging, lifecycle operation, etc.
     /// </summary>
-    protected LifecycleContext ServiceContext => Lifecycle.GetContext(this);
+    protected LifecycleContext ServiceContext { get; }
     
     /// <summary>
     /// Initialize a general service instance.
@@ -32,6 +32,7 @@ public abstract class GeneralService : ILifecycleService
         Identifier = identifier;
         Name = name;
         SupportAsyncStart = asyncStart;
+        ServiceContext = Lifecycle.GetContext(this);
     }
     
     /// <summary>

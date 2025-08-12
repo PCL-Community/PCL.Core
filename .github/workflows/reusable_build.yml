@@ -42,5 +42,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PCL.Core_${{ inputs.configuration }}_${{ inputs.architecture }}_${{ env.SHORT_SHA }}
-          path: bin/${{ inputs.architecture }}/${{ inputs.configuration }}/**
+          name: PCL.Core_${{ inputs.configuration }}-${{ inputs.architecture }}_${{ env.SHORT_SHA }}
+          path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**

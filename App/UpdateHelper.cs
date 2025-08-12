@@ -23,7 +23,7 @@ public static class UpdateHelper
             File.Copy(target, backup);
             if (!File.Exists(backup)) throw new FileNotFoundException("备份目标文件失败", backup);
             // 删除原文件并等待文件删除事件
-            var watcher = new FileSystemWatcher(Path.GetDirectoryName(target) ?? Path.GetPathRoot(target), Path.GetFileName(target));
+            var watcher = new FileSystemWatcher(Basics.GetParentPathOrEmpty(target), Path.GetFileName(target));
             var deletedEvent = new ManualResetEventSlim(false);
             watcher.Deleted += (_, _) => deletedEvent.Set();
             watcher.EnableRaisingEvents = true;

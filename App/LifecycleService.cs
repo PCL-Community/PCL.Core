@@ -93,7 +93,7 @@ public interface ILifecycleLogService : ILifecycleService
 
 /// <summary>
 /// 注册生命周期服务项，将由生命周期管理统一创建实例，然后在指定生命周期自动启动或加入等待手动启动列表。<br/>
-/// 使用此注解的类型必须实现 <see cref="ILifecycleService"/> 接口，否则将被忽略。<br/><br/>
+/// 使用此注解的类型必须直接或间接实现 <see cref="ILifecycleService"/> 接口，否则将被忽略。<br/><br/>
 /// <b>代码生成注意事项</b>：此注解的自动注册功能由 MSBuild 自定义任务运行 PowerShell
 /// 脚本生成代码实现，该脚本通过正则表达式匹配文本来确定注解属性，因此请尽可能遵循以下两种标准写法以确保注解被匹配到：<br/><br/>
 /// 1. <c>[LifecycleService(LifecycleState.Xxx), Priority = num]</c><br/>

@@ -166,7 +166,7 @@ public class RoutedWebServer : WebServer
     
     private void _RoutedCallback(HttpListenerContext context)
     {
-        var path = context.Request.Url.AbsolutePath;
+        var path = context.Request.Url?.AbsolutePath ?? string.Empty;
         var callbackPath = _pathList.FirstOrDefault(p => path.StartsWith(p));
         if (callbackPath == null)
         {

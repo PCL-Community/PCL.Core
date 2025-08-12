@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using PCL.Core.Utils;
 
 namespace PCL.Core.IO;
 
@@ -10,7 +11,7 @@ public interface IFileTask
     
     public FileProcess? GetProcess(FileItem item);
 
-    public bool OnProcessFinished(FileItem item, object? result);
+    public bool OnProcessFinished(FileItem item, AnyType? result);
     
     public void OnTaskFinished(object? result);
 }

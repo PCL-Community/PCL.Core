@@ -402,11 +402,12 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         
         // 获取目前存档的 objects
         var allObjects = Directory.EnumerateFiles(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName))
-            .Select(Path.GetFileName)
+            // ReSharper disable once ConvertClosureToMethodGroup // method group 写法会炸掉巨硬的史山 null check
+            .Select(path => Path.GetFileName(path))
             .Where(x => !string.IsNullOrEmpty(x));
 
         // 计算出不需要继续存储的 objects
-        string[] uselessObjects = allObjects.Except(objectsInRecord).ToArray();
+        var uselessObjects = allObjects.Except(objectsInRecord).ToArray();
         LogWrapper.Info($"[SnapLite] 寻找到 {uselessObjects.Length} 个可清理对象");
 
         var deleteTask = uselessObjects.Select(x => Task.Run(() =>
@@ -462,5 +463,6 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         if (_disposed) return;
         _disposed = true;
         _database.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace PCL.Core.Utils.Exts;
 
@@ -33,6 +34,7 @@ public static class StringExtension
 
         if (typeof(IConvertible).IsAssignableFrom(targetType))
         {
+            // ReSharper disable once RedundantSuppressNullableWarningExpression
             var changed = System.Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture)!;
             return changed;
         }
@@ -127,4 +129,10 @@ public static class StringExtension
             _ => throw new ArgumentOutOfRangeException(nameof(input), $"Character '{c}' out of Base32 range")
         };
     }
+
+    public static string EmptyIfNull(this string? input) => input ?? string.Empty;
+    
+    private static readonly Regex _PatternReplaceLineBreak = new("\r\n|\r|\n");
+    public static string ReplaceLineBreak(this string? input, string replacement = " ")
+        => string.IsNullOrEmpty(input) ? string.Empty : _PatternReplaceLineBreak.Replace(input, replacement);
 }

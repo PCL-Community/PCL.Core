@@ -6,19 +6,15 @@ using System.Windows.Threading;
 namespace PCL.Core.App;
 
 [LifecycleService(LifecycleState.BeforeLoading, Priority = int.MinValue)]
-public sealed class ApplicationService : ILifecycleService
+public sealed class ApplicationService : GeneralService
 {
     public static Func<Application>? Loading { private get; set; }
 
-    public string Identifier => "application";
-    public string Name => "应用程序";
-    public bool SupportAsyncStart => false;
-
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
-    private ApplicationService() { _context = Lifecycle.GetContext(this); }
+    private ApplicationService() : base("application", "应用程序", false) { _context = ServiceContext; }
     
-    public void Start()
+    public override void Start()
     {
         Context.Debug("正在初始化 WPF 应用程序容器");
         var app = Loading!.Invoke();
@@ -29,7 +25,7 @@ public sealed class ApplicationService : ILifecycleService
         Context.Trace("应用程序容器初始化完毕");
     }
 
-    public void Stop()
+    public override void Stop()
     {
         var app = Lifecycle.CurrentApplication;
         var dispatcher = app.Dispatcher;

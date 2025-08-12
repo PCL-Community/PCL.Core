@@ -103,6 +103,8 @@ public class Downloader(
 
     private Thread? _schedulerThread;
 
+    private readonly AutoResetEvent _taskEvent = new(false);
+
     /// <summary>
     /// 添加一个下载项。
     /// </summary>
@@ -111,22 +113,33 @@ public class Downloader(
     {
         LogWrapper.Trace(LogModule, $"#{SchedulerId} 新增项目: {item}");
         _downloadQueue.Enqueue(item);
+        _taskEvent.Set();
     }
+
+    /// <summary>
+    /// 手动激活自动暂停的调度器。<br/>
+    /// 当下载队列为空时，调度器将会自动暂停以节省性能，并在任务添加/结束时继续。<br/>
+    /// 这样会导致一些静态参数 (如最大并发数量) 的更改不会立即生效，此时应调用该方法以手动激活调度器使更改生效。
+    /// </summary>
+    public void ActivateScheduler() => _taskEvent.Set();
 
     private CancellationTokenSource? _cancelTokenSource;
 
     /// <summary>
+    /// 取消所有下载任务并停止调度器。
     /// </summary>
     /// <returns>若调度器未开始运行则返回 <c>false</c>，否则返回 <c>true</c></returns>
     public bool Cancel()
     {
         if (_cancelTokenSource == null) return false;
         _cancelTokenSource.Cancel();
+        _taskEvent.Set();
+        LogWrapper.Info(LogModule, $"#{SchedulerId} 已取消");
         return true;
     }
-    
+
     private int _currentParallelCount = 0;
-    
+
     private bool _CanStartNewParallel =>
         _currentParallelCount < MaxParallels && _currentParallelCount < ParallelTaskLimit;
 
@@ -159,6 +172,7 @@ public class Downloader(
                     dequeued.ForEach(i => _downloadQueue.Enqueue(i));
                     dequeued.Clear();
                 }
+                if (_downloadQueue.IsEmpty) _taskEvent.WaitOne();
             }
         }) {
             IsBackground = true,
@@ -175,7 +189,11 @@ public class Downloader(
         {
             try { await task; }
             catch (Exception ex) { LogWrapper.Error(ex, LogModule, "下载任务执行出错"); }
-            finally { _currentParallelCount--; }
+            finally
+            {
+                _currentParallelCount--;
+                _taskEvent.Set();
+            }
         });
     }
 

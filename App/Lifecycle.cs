@@ -53,7 +53,7 @@ public sealed class Lifecycle : ILifecycleService
             // 直接写入剩余未输出日志到程序目录
             var path = Path.Combine(PendingLogDirectory, PendingLogFileName);
             if (!Path.IsPathRooted(path)) path = Path.Combine(Basics.ExecutableDirectory, path);
-            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Path.GetPathRoot(path));
+            Directory.CreateDirectory(Basics.GetParentPathOrDefault(path));
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
             foreach (var item in _PendingLogs) writer.WriteLine(item.ComposeMessage());

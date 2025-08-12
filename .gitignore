@@ -403,7 +403,8 @@ FodyWeavers.xsd
 *.msp
 
 # JetBrains Rider
+.idea/
 *.sln.iml
 
 # Generated Code
-App/LifecycleServiceTypes.g.cs
+**/*.g.cs

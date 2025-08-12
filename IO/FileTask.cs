@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using PCL.Core.Utils;
 
 namespace PCL.Core.IO;
 
@@ -36,7 +37,7 @@ public class FileTask(IEnumerable<FileItem> items, bool ignoreResult = false) : 
     /// <summary>
     /// Event invoked with the finished item and the result after a process finished
     /// </summary>
-    public event Action<FileItem, object?>? ProcessFinished;
+    public event Action<FileItem, AnyType?>? ProcessFinished;
     
     /// <summary>
     /// Event invoked with the result after the task finished
@@ -49,7 +50,7 @@ public class FileTask(IEnumerable<FileItem> items, bool ignoreResult = false) : 
     
     public virtual FileProcess? GetProcess(FileItem item) => null;
     
-    public virtual bool OnProcessFinished(FileItem item, object? result)
+    public virtual bool OnProcessFinished(FileItem item, AnyType? result)
     {
         if (ProcessFinished == null) return IgnoreResult;
         ProcessFinished.Invoke(item, result);

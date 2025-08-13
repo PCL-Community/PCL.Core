@@ -173,6 +173,20 @@ $entryModelCode
     }
 
     /// <summary>
+    /// 注册一个配置项，用于动态配置项的初始化
+    /// </summary>
+    /// <param name="keyName">键名</param>
+    /// <param name="source">配置源</param>
+    /// <param name="defaultValue">默认值</param>
+    /// <param name="isEntrypted">是否加密</param>
+    /// <exception cref="global::System.ArgumentException">已存在该键名</exception>
+    public static void RegisterEntry(string keyName, SetupEntrySource source, object defaultValue, bool isEntrypted = false)
+    {
+        if (!EntryDictionary.TryAdd(keyName, new SetupEntry(source, keyName, defaultValue, isEntrypted)))
+            throw new global::System.ArgumentException($"键名 {keyName} 已存在于配置项字典中");
+    }
+
+    /// <summary>
     /// 存储了已记录的 SetupEntry，字典键为其 KeyName，用于 <see cref="ForKeyName"/>
     /// </summary>
     public static global::System.Collections.Concurrent.ConcurrentDictionary<string, SetupEntry> EntryDictionary = new()

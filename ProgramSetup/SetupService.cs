@@ -217,6 +217,8 @@ public sealed class SetupService : GeneralService
     {
         // 初始化源托管器
         SetupSourceDispatcher.Load();
+        // 初始化一些动态配置项
+        _RegisterDynamicEntries();
         // 初始化配置更改监听器
         SetupListener.Load();
     }
@@ -311,6 +313,18 @@ public sealed class SetupService : GeneralService
             SetupEntrySource.GameInstance => SetupSourceDispatcher.InstanceSourceManager,
             _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
+    }
+
+    /// <summary>
+    /// 用于在较早的时间初始化动态配置项
+    /// </summary>
+    private static void _RegisterDynamicEntries()
+    {
+#if BETA
+        SetupEntries.RegisterEntry("SystemSystemUpdateBranch", SetupEntrySource.PathLocal, 1);
+#else
+        SetupEntries.RegisterEntry("SystemSystemUpdateBranch", SetupEntrySource.PathLocal, 0);
+#endif
     }
 }
 

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
 
@@ -24,7 +23,11 @@ public static class Basics
     /// <summary>
     /// 当前进程可执行文件的绝对路径。
     /// </summary>
-    public static readonly string ExecutablePath = ProcessInterop.GetExecutablePath(CurrentProcess)!;
+#if NET8_0_OR_GREATER
+    public static readonly string ExecutablePath = Environment.ProcessPath!;
+#else
+    public static readonly string ExecutablePath = Utils.OS.ProcessInterop.GetExecutablePath(CurrentProcess)!;
+#endif
 
     /// <summary>
     /// 当前进程可执行文件所在的目录。若有需求，请使用 <see cref="Path.Combine(string[])"/> 而不是自行拼接路径。
@@ -93,4 +96,20 @@ public static class Basics
     /// <param name="path">路径文本</param>
     /// <returns>父路径文本，或默认 (<see cref="CurrentDirectory"/>)</returns>
     public static string GetParentPathOrDefault(string path) => GetParentPath(path) ?? CurrentDirectory;
+
+    /// <summary>
+    /// 以默认方式打开一个路径 (文件或目录)
+    /// </summary>
+    /// <param name="path">路径文本</param>
+    /// <param name="workingDirectory">执行工作目录</param>
+    public static void OpenPath(string path, string? workingDirectory = null)
+    {
+        var psi = new ProcessStartInfo(path)
+        {
+            WorkingDirectory = workingDirectory ?? CurrentDirectory,
+            UseShellExecute = true,
+            CreateNoWindow = true
+        };
+        Process.Start(psi);
+    }
 }

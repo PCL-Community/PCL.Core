@@ -17,7 +17,7 @@ public static class ApiLocation
             .TryGetValues("X-Authlib-Injector-Api-Location", out var apiAddresses);
         var currentApiAddr = new Uri(address);
         if (apiAddresses is null) return string.Empty;
-        var apiAddr = apiAddresses?.First() ?? "";
+        var apiAddr = apiAddresses.First() ?? "";
         if (string.IsNullOrEmpty(apiAddr)) return address;
         if (apiAddr.StartsWith(currentApiAddr.Scheme)) return apiAddr;
         // 不允许 HTTPS 降 HTTP

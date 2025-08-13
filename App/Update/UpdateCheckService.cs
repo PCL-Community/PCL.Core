@@ -31,6 +31,7 @@ public class UpdateCheckService : GeneralService
                     break;
                 default:
                     Setup.System.UpdateSolution = 0; // 乱改配置，改回去 😡
+                    break;
             }
         }
         catch (Exception e)

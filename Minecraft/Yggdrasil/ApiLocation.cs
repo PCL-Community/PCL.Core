@@ -11,7 +11,7 @@ public static class ApiLocation
     public static async Task<string> GetApiLocation(string address)
     {
         if (!address.StartsWith("http")) address = $"https://{address}";
-        using var response = (await HttpRequestBuilder.Create(address, HttpMethod.Head).Build()).GetResponse();
+        using var response = (await HttpRequestBuilder.Create(address, HttpMethod.Head).GetResponseAsync());
         response.Headers
             .TryGetValues("X-Authlib-Injector-Api-Location", out var apiAddresses);
         var currentApiAddr = new Uri(address);

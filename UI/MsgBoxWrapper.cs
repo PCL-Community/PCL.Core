@@ -22,6 +22,7 @@ public delegate void MsgBoxHandler(
     string caption,
     ICollection<MsgBoxButtonInfo> buttons,
     MsgBoxTheme theme,
+    bool block,
     ref int result
 );
 
@@ -33,11 +34,12 @@ public static class MsgBoxWrapper
         string message,
         string caption,
         MsgBoxTheme theme,
-        ICollection<MsgBoxButtonInfo> buttonCollection)
+        ICollection<MsgBoxButtonInfo> buttonCollection,
+        bool block = true)
     {
         var result = 0;
         if (buttonCollection.Count == 0) buttonCollection = [new MsgBoxButtonInfo("确定")];
-        OnShow?.Invoke(message, caption, buttonCollection, theme, ref result);
+        OnShow?.Invoke(message, caption, buttonCollection, theme, block, ref result);
         return result;
     }
 
@@ -45,19 +47,21 @@ public static class MsgBoxWrapper
         string message,
         string caption = "提示",
         MsgBoxTheme theme = MsgBoxTheme.Info,
+        bool block = true,
         params MsgBoxButtonInfo[] buttons)
     {
-        return Show(message, caption, theme, buttonCollection: buttons);
+        return Show(message, caption, theme, buttonCollection: buttons, block);
     }
 
     public static int Show(
         string message,
         string caption = "提示",
         MsgBoxTheme theme = MsgBoxTheme.Info,
+        bool block = true,
         params string[] buttons)
     {
         var index = 0;
         var list = buttons.Select(button => new MsgBoxButtonInfo(button, ++index)).ToList();
-        return Show(message, caption, theme, buttonCollection: list);
+        return Show(message, caption, theme, buttonCollection: list, block);
     }
 }

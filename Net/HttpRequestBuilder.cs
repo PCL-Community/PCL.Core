@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -52,7 +51,7 @@ public class HttpRequestBuilder
     /// </summary>
     /// <param name="headers">实现了 IDictionary 的 对象</param>
     /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder SetHeaders(IDictionary<string, string> headers)
+    public HttpRequestBuilder WithHeaders(IDictionary<string, string> headers)
     {
         foreach (var kvp in headers)
         {
@@ -67,7 +66,7 @@ public class HttpRequestBuilder
     /// <param name="key">Header Name</param>
     /// <param name="value">Header Value</param>
     /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder SetHeader(string key, string value)
+    public HttpRequestBuilder WithHeader(string key, string value)
     {
         if (key.StartsWith("Content", StringComparison.OrdinalIgnoreCase) && _request.Content is not null)
         {
@@ -81,70 +80,32 @@ public class HttpRequestBuilder
         return this;
     }
     /// <summary>
-    /// 启动网络请求
-    /// </summary>
-    /// <returns>HttpRequestBuilder</returns>
-    public async Task<HttpRequestBuilder> Build(int? retry = null,Func<int,TimeSpan>? retryPolicy =null)
-    {
-        using var client = NetworkService.GetClient(_useCookie);
-        _response = await NetworkService.GetRetryPolicy(retry,retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(_request));
-        return this;
-    }
-    /// <summary>
     /// 获取响应的 HttpResponseMessage 对象，如果请求尚未完成，则返回 null
     /// </summary>
     /// <returns>HttpResponseMessage</returns>
-    public HttpResponseMessage GetResponse()
+    public HttpResponseMessage GetResponse(
+        HttpCompletionOption whenComplete = HttpCompletionOption.ResponseContentRead,
+        int retry = 3,
+        Func<int, TimeSpan>? retryPolicy = null)
     {
-        return _response ?? throw new InvalidOperationException("在请求完成前的意外调用");
+        return _getResponseAsync(whenComplete, retry, retryPolicy).GetAwaiter().GetResult();
     }
-    /// <summary>
-    /// 读取响应载荷
-    /// </summary>
-    /// <returns>string</returns>
-    public string ReadResponseAsString()
+
+    public async Task<HttpResponseMessage> GetResponseAsync(
+        HttpCompletionOption whenComplete = HttpCompletionOption.ResponseContentRead,
+        int retry = 3,
+        Func<int, TimeSpan>? retryPolicy = null)
     {
-        return ReadResponseAsStringAsync().GetAwaiter().GetResult();
+        return await _getResponseAsync(whenComplete, retry, retryPolicy).ConfigureAwait(false);
     }
-    /// <summary>
-    /// 读取响应载荷 （异步）
-    /// </summary>
-    /// <returns>string</returns>
-    public async Task<string> ReadResponseAsStringAsync()
+
+    private async Task<HttpResponseMessage> _getResponseAsync(
+        HttpCompletionOption whenComplete,
+        int retry,
+        Func<int, TimeSpan>? retryPolicy = null)
     {
-        return await GetResponse().Content.ReadAsStringAsync();
-    }
-    /// <summary>
-    /// 读取响应载荷
-    /// </summary>
-    /// <returns>byte[]</returns>
-    public byte[] ReadResponseAsByteArray()
-    {
-        return ReadResponseAsByteArrayAsync().GetAwaiter().GetResult();
-    }
-    /// <summary>
-    /// 读取响应载荷（异步）
-    /// </summary>
-    /// <returns>byte[]</returns>
-    public async Task<byte[]> ReadResponseAsByteArrayAsync()
-    { 
-        return await GetResponse().Content.ReadAsByteArrayAsync();
-    }
-    /// <summary>
-    /// 读取响应流
-    /// </summary>
-    /// <returns>Stream</returns>
-    public Stream ReadResponseAsStream()
-    {
-        return ReadResponseAsStreamAsync().GetAwaiter().GetResult();
-    }
-    /// <summary>
-    /// 读取响应流（异步）
-    /// </summary>
-    /// <returns>tream</returns>
-    public async Task<Stream> ReadResponseAsStreamAsync()
-    {
-        return await GetResponse().Content.ReadAsStreamAsync();
+        using var client = NetworkService.GetClient(_useCookie);
+        return await NetworkService.GetRetryPolicy(retry, retryPolicy)
+            .ExecuteAsync(async () => await client.SendAsync(_request, whenComplete));
     }
 }

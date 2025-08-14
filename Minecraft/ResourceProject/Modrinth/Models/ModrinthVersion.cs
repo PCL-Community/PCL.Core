@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace PCL.Core.Minecraft.ResourceProject.Modrinth.Model;
+namespace PCL.Core.Minecraft.ResourceProject.Modrinth.Models;
 
 public record ModrinthVersion
 {

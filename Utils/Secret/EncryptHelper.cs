@@ -17,7 +17,11 @@ public static class EncryptHelper
         const string iv = "87160295";
         var btKey = Encoding.UTF8.GetBytes(key);
         var btIV = Encoding.UTF8.GetBytes(iv);
+#if NET6_0_OR_GREATER
+        using var des = DES.Create();
+#else
         using var des = new DESCryptoServiceProvider();
+#endif
         using var ms = new MemoryStream();
         using var cs = new CryptoStream(ms, des.CreateDecryptor(btKey, btIV), CryptoStreamMode.Write);
         var inData = Convert.FromBase64String(data);
@@ -46,17 +50,23 @@ public static class EncryptHelper
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
 
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
+#if NET6_0_OR_GREATER
+        using (var rng = RandomNumberGenerator.Create())
+#else
         using (var rng = new RNGCryptoServiceProvider())
+#endif
         {
             rng.GetBytes(salt);
         }
 
+#pragma warning disable SYSLIB0041
         using (var deriveBytes = new Rfc2898DeriveBytes(key, salt, 1000))
         {
             aes.Key = deriveBytes.GetBytes(aes.KeySize / 8);
             aes.GenerateIV();
         }
+#pragma warning restore SYSLIB0041
 
         using (var ms = new MemoryStream())
         {
@@ -109,10 +119,12 @@ public static class EncryptHelper
             throw new ArgumentException("加密数据格式无效或已损坏");
         }
 
+#pragma warning disable SYSLIB0041
         using (var deriveBytes = new Rfc2898DeriveBytes(key, salt, 1000))
         {
             aes.Key = deriveBytes.GetBytes(aes.KeySize / 8);
         }
+#pragma warning restore SYSLIB0041
 
         int cipherTextLength = encryptedData.Length - salt.Length - iv.Length;
         using (var ms = new MemoryStream(encryptedData, salt.Length + iv.Length, cipherTextLength))

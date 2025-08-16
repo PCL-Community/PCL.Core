@@ -1,5 +1,3 @@
-using Microsoft.Toolkit.Uwp.Notifications;
-
 namespace PCL.Core.UI;
 
 public static class ToastNotification
@@ -11,13 +9,14 @@ public static class ToastNotification
     /// <param name="title">Notification title</param>
     public static void SendToast(string message, string title = "Notice")
     {
-        var toast = new ToastContentBuilder();
-        toast
-            .AddArgument("action", "viewConversation")
-            .AddText(title)
-            .AddText(message);
-        
-        toast.Show();
+        // var toast = new ToastContentBuilder();
+        // toast
+        //     .AddArgument("action", "viewConversation")
+        //     .AddText(title)
+        //     .AddText(message);
+        //
+        // toast.Show();
+        // TODO
     }
 
     /// <summary>
@@ -25,7 +24,8 @@ public static class ToastNotification
     /// </summary>
     public static void UninstallToasts()
     {
-        ToastNotificationManagerCompat.Uninstall();
+        // ToastNotificationManagerCompat.Uninstall();
+        // TODO
     }
     
     

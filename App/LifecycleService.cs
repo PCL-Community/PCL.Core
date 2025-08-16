@@ -50,9 +50,9 @@ public interface ILifecycleService
 public record LifecycleLogItem(
     ILifecycleService? Source,
     string Message,
-    Exception? Exception = null,
-    LogLevel Level = LogLevel.Trace,
-    ActionLevel? ActionLevel = null)
+    Exception? Exception,
+    LogLevel Level,
+    ActionLevel ActionLevel)
 {
     /// <summary>
     /// 创建该日志项的时间
@@ -74,7 +74,7 @@ public record LifecycleLogItem(
     public string ComposeMessage()
     {
         var source = (Source == null) ? "" : $" [{Source.Name}|{Source.Identifier}]";
-        var result = $"[{Time:HH:mm:ss.fff}] [{Level.PrintName()}] [{ThreadName}]{source} {Message}";
+        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}]{source} {Message}";
         if (Exception != null) result += $"\n{Exception}";
         return result;
     }
@@ -114,7 +114,7 @@ public sealed class LifecycleServiceAttribute(LifecycleState startState) : Attri
     /// 虽然这个值可以为任意 32 位整数，但是<b>非核心服务请勿使用较为极端的值，尤其是
     /// <c>int.MaxValue</c> <c>int.MinValue</c></b>，这可能导致一些核心服务的启动时机出现问题。
     /// </summary>
-    public int Priority { get; set; } = 0;
+    public int Priority { get; init; } = 0;
 }
 
 /// <summary>

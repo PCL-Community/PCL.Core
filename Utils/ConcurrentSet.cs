@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace PCL.Core.Utils;
 
-public sealed class ConcurrentSet<T> : IProducerConsumerCollection<T>, ICollection<T>
+public sealed class ConcurrentSet<T> : IProducerConsumerCollection<T>, ICollection<T> where T: notnull
 {
     private readonly ConcurrentDictionary<T, object?> _dictionary = new();
 

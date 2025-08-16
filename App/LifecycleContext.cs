@@ -19,7 +19,7 @@ public class LifecycleContext(
         Exception? ex = null,
         LogLevel level = LogLevel.Trace,
         ActionLevel? actionLevel = null
-    ) => onLog(new LifecycleLogItem(service, message, ex, level, actionLevel));
+    ) => onLog(new LifecycleLogItem(service, message, ex, level, actionLevel ?? level.DefaultActionLevel()));
     
     public void Trace(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Trace, actionLevel);
     public void Debug(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Debug, actionLevel);

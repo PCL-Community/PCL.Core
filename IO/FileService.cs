@@ -29,7 +29,7 @@ public static class PredefinedFileTasks
     public static readonly IFileTask CacheInformation = FileTask.FromSingleFile(PredefinedFileItems.CacheInformation, FileTransfers.DoNothing);
     public static readonly IFileTask GrayProfile = FileTask.FromSingleFile(PredefinedFileItems.GrayProfile, FileTransfers.DoNothing, FileProcesses.ParseJson<GrayProfileConfig>());
     public static readonly IFileTask GlobalSetup = FileTask.FromSingleFile(PredefinedFileItems.GlobalSetup, SetupService.MigrateGlobalSetupFile, FileProcesses.Deserialize(SetupService.GlobalFileSerializer));
-    public static readonly IFileTask LocalSetup = FileTask.FromSingleFile(PredefinedFileItems.LocalSetup, FileTransfers.DoNothing, FileProcesses.Deserialize(SetupService.LocalFileSerializer));
+    public static readonly IFileTask LocalSetup = FileTask.FromSingleFile(PredefinedFileItems.LocalSetup, FileTransfers.CreateIfNotExist, FileProcesses.Deserialize(SetupService.LocalFileSerializer));
     
     internal static readonly IFileTask[] Preload = [
         CacheInformation, GrayProfile, GlobalSetup, LocalSetup
@@ -203,24 +203,27 @@ public sealed class FileService : GeneralService
                     var transfers = task.GetTransfer(item).Concat(_DefaultTransfers.MatchAll(item));
                     threadPool.QueueIo(() =>
                     {
-                        foreach (var transfer in transfers)
-                        {
-                            try
+                        if (
+                            transfers.Any(transfer =>
                             {
-                                transfer(item, PushProcess);
-                                break;
-                            }
-                            catch (TransferFailedException ex)
-                            {
-                                Context.Info($"文件传输失败 ({ex.Reason}), 尝试另一实现", ex.InnerException);
-                            }
-                            catch (Exception ex)
-                            {
-                                Context.Warn($"文件传输出错: {item}", ex);
-                                OnProcessFinished(item, new AnyType(ex, true));
-                                break;
-                            }
-                        }
+                                try
+                                {
+                                    transfer(item, PushProcess);
+                                    return true;
+                                }
+                                catch (TransferFailedException ex)
+                                {
+                                    Context.Info($"文件传输失败 ({ex.Reason}), 尝试另一实现", ex.InnerException);
+                                    return false;
+                                }
+                                catch (Exception ex)
+                                {
+                                    Context.Warn($"文件传输出错: {item}", ex);
+                                    OnProcessFinished(item, new AnyType(ex, true));
+                                    return true;
+                                }
+                            })
+                        ) return;
                         Context.Warn($"无支持的传输实现或全部失败: {item}");
                         OnProcessFinished(item, null);
                     });

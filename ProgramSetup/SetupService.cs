@@ -4,10 +4,13 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using PCL.Core.IO;
 using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.ProgramSetup.SourceManage;
+using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Secret;
 
 namespace PCL.Core.ProgramSetup;
@@ -205,12 +208,6 @@ public sealed class SetupService : GeneralService
     public static IFileSerializer<ConcurrentDictionary<string, string>> LocalFileSerializer => _IniSerializer;
     public static IFileSerializer<ConcurrentDictionary<string, string>> InstanceFileSerializer => _IniSerializer;
     private static LifecycleContext _context = null!;
-    private static Lazy<FileSetupSourceManager> _lazyGlobalSetupSource = null!;
-    private static Lazy<FileSetupSourceManager> _lazyLocalSetupSource = null!;
-    private static RegisterSetupSourceManager _globalOldSetupSource = null!;
-    private static InstanceSetupSourceManager _instanceSetupSource = null!;
-    private static CombinedMigrationSetupSourceManager _migrationSetupSource = null!;
-    private static CombinedMigrationSetupSourceManager _migrationSetupSourceEncrypted = null!;
 
     #region ILifecycleService
 
@@ -218,30 +215,18 @@ public sealed class SetupService : GeneralService
 
     public override void Start()
     {
-        // 全局配置源托管器
-        _lazyGlobalSetupSource = new Lazy<FileSetupSourceManager>(_CreateGlobalSetupSource);
-        // 局部配置源托管器
-        _lazyLocalSetupSource = new Lazy<FileSetupSourceManager>(_CreateLocalSetupSource);
-        // 来自注册表的旧全局源托管器、游戏实例源托管器、用来支持配置迁移的托管器
-        _globalOldSetupSource = new RegisterSetupSourceManager(@$"Software\{GlobalSetupFolder}");
-        _instanceSetupSource = new InstanceSetupSourceManager(InstanceFileSerializer);
-        _migrationSetupSource =
-            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _lazyGlobalSetupSource.Value)
-                { ProcessValueAsEncrypted = false };
-        _migrationSetupSourceEncrypted =
-            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _lazyGlobalSetupSource.Value)
-                { ProcessValueAsEncrypted = true };
+        // 初始化源托管器
+        SetupSourceDispatcher.Load();
+        // 初始化一些动态配置项
+        _RegisterDynamicEntries();
+        // 初始化配置更改监听器
         SetupListener.Load();
     }
 
     public override void Stop()
     {
         // 销毁源托管器
-        if (_lazyGlobalSetupSource.IsValueCreated)
-            _lazyGlobalSetupSource.Value.Dispose();
-        if (_lazyLocalSetupSource.IsValueCreated)
-            _lazyLocalSetupSource.Value.Dispose();
-        _instanceSetupSource.Dispose();
+        SetupSourceDispatcher.Unload();
         // 删除 SetupChanged 事件处理器
         SetupListener.Unload();
         SetupChanged = null;
@@ -249,9 +234,12 @@ public sealed class SetupService : GeneralService
 
     #endregion
 
+    #region 全局配置文件迁移
+
     public static FileTransfer MigrateGlobalSetupFile => (file, resultCallback) =>
     {
         var source = file.Sources!.First();
+        file.CreateDirectory();
         if (!File.Exists(source))
         {
             LogWrapper.Info("Setup", "无需处理全局配置文件迁移");
@@ -269,7 +257,6 @@ public sealed class SetupService : GeneralService
             else
             {
                 LogWrapper.Info("Setup", "将迁移全局配置文件");
-                file.CreateDirectory();
                 File.Move(source, file.TargetPath);
             }
         }
@@ -283,58 +270,61 @@ public sealed class SetupService : GeneralService
         resultCallback.Invoke(file.TargetPath);
     };
 
-    private static FileSetupSourceManager _CreateGlobalSetupSource()
+    public static void MigrateGlobalSetupRegister(ISetupSourceManager globalSource)
     {
         try
         {
-            return new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, GlobalFileSerializer, true);
+            using var regKey = Registry.CurrentUser.OpenSubKey(@$"Software\{GlobalSetupFolder}", writable: true);
+            if (regKey == null)
+                return;
+            foreach (var valueName in regKey.GetValueNames())
+            {
+                var setupEntry = SetupEntries.ForKeyName(valueName);
+                if (setupEntry is null || setupEntry.SourceType != SetupEntrySource.SystemGlobal)
+                    continue;
+                var rawValue = regKey.GetValue(valueName);
+                if (rawValue is null)
+                    continue;
+                if (globalSource.Get(valueName) is null)
+                {
+                    var value = rawValue.ToString().ReplaceLineBreak("");
+                    globalSource.Set(valueName,
+                        !setupEntry.IsEncrypted
+                            ? value
+                            : EncryptHelper.SecretEncrypt(EncryptHelper.SecretDecryptOld(value)));
+                }
+                regKey.DeleteValue(valueName, throwOnMissingValue: false);
+            }
         }
         catch (Exception ex)
         {
-            LogWrapper.Fatal(ex, "Setup", "全局配置源托管器初始化失败");
-            _BackupFile(PredefinedFileItems.GlobalSetup);
-            throw new IOException("全局配置源托管器初始化失败");
+            LogWrapper.Error(ex, "Setup", "从注册表迁移全局配置时出错");
         }
     }
 
-    private FileSetupSourceManager _CreateLocalSetupSource()
-    {
-        try
-        {
-            return new FileSetupSourceManager(PredefinedFileItems.LocalSetup, LocalFileSerializer, true);
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Fatal(ex, "Setup", "局部配置源托管器初始化失败");
-            _BackupFile(PredefinedFileItems.LocalSetup);
-            throw new IOException("局部配置源托管器初始化失败");
-        }
-    }
-
-    private static void _BackupFile(FileItem file)
-    {
-        var filePath = file.TargetPath;
-        var bakPath = filePath + ".bak";
-        if (File.Exists(bakPath))
-            File.Replace(filePath, bakPath, filePath + ".tmp");
-        else
-            File.Move(filePath, bakPath);
-        LogWrapper.Fatal(
-            "Setup", 
-            $"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
-            $"请删除 {filePath}{Environment.NewLine}" +
-            $"并使用备份配置文件 {bakPath}");
-    }
+    #endregion
 
     private static ISetupSourceManager _GetSourceManager(SetupEntry entry)
     {
         return entry.SourceType switch
         {
-            SetupEntrySource.PathLocal => _lazyLocalSetupSource.Value,
-            SetupEntrySource.SystemGlobal => entry.IsEncrypted ? _migrationSetupSourceEncrypted : _migrationSetupSource,
-            SetupEntrySource.GameInstance => _instanceSetupSource,
+            SetupEntrySource.PathLocal => SetupSourceDispatcher.LocalSourceManager,
+            SetupEntrySource.SystemGlobal => SetupSourceDispatcher.GlobalSourceManager,
+            SetupEntrySource.GameInstance => SetupSourceDispatcher.InstanceSourceManager,
             _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
+    }
+
+    /// <summary>
+    /// 用于在较早的时间初始化动态配置项
+    /// </summary>
+    private static void _RegisterDynamicEntries()
+    {
+#if BETA
+        SetupEntries.RegisterEntry("SystemSystemUpdateBranch", SetupEntrySource.PathLocal, 1);
+#else
+        SetupEntries.RegisterEntry("SystemSystemUpdateBranch", SetupEntrySource.PathLocal, 0);
+#endif
     }
 }
 
@@ -368,8 +358,12 @@ file class JsonDictSerializer : IFileSerializer<ConcurrentDictionary<string, str
 {
     private static readonly JsonSerializerOptions _SerializerOptions = new() { WriteIndented = true };
 
-    public ConcurrentDictionary<string, string> Deserialize(Stream source) =>
-        JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? new();
+    public ConcurrentDictionary<string, string> Deserialize(Stream source)
+    {
+        if (source.Length == 0)
+            return new ConcurrentDictionary<string, string>();
+        return JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? new();
+    }
 
     public void Serialize(ConcurrentDictionary<string, string> input, Stream destination) =>
         JsonSerializer.Serialize(destination, input, _SerializerOptions);

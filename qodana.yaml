@@ -1,12 +1,27 @@
-﻿version: 1.0
-
+version: 1.0
 # default profile
 profile:
   name: qodana.recommended
-
 # arguments
 ide: QDNET
-bootstrap: msbuild ./PCL.Core.csproj /t:Restore /t:Build /p:Configuration=Debug
+bootstrap: 'msbuild ./PCL.Core.csproj /t:Restore /t:Build /p:Configuration=Debug'
 include:
-  - name: IncorrectFormatting
   - name: VulnerableLibrariesGlobal
+exclude:
+  - name: NotAccessedPositionalProperty.Global
+  - name: UnusedMember.Global
+  - name: UnusedType.Global
+  - name: MemberCanBePrivate.Global
+  - name: RedundantDefaultMemberInitializer
+  - name: UnusedAutoPropertyAccessor.Global
+  - name: UnusedMember.Local
+  - name: UnusedMethodReturnValue.Global
+  - name: UseAwaitUsing
+  - name: ConvertIfStatementToSwitchStatement
+  - name: ArrangeTrailingCommaInMultilineLists
+  - name: InvertIf
+  - name: ArrangeRedundantParentheses
+  - name: AutoPropertyCanBeMadeGetOnly.Global
+  - name: MemberCanBeProtected.Global
+  - name: EventNeverSubscribedTo.Global
+  - name: ClassNeverInstantiated.Global

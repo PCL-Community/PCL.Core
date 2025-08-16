@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Windows;
 using PCL.Core.App;
+using PCL.Core.UI;
 
 namespace PCL.Core.Logging;
 
@@ -15,10 +17,10 @@ public class LogService : ILifecycleLogService
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
     private LogService() { _context = Lifecycle.GetContext(this); }
-    
+
     private static Logger? _logger;
     public static Logger Logger => _logger!;
-    
+
     private static bool _wrapperRegistered = false;
 
     public void Start()
@@ -37,16 +39,54 @@ public class LogService : ILifecycleLogService
         _logger?.Dispose();
     }
 
+    private static void _LogAction(ActionLevel level, string formatted, string plain, Exception? ex)
+    {
+        // log
+#if !TRACE
+        if (level != ActionLevel.TraceLog)
+#endif
+        Logger.Log(formatted);
+
+        if (level <= ActionLevel.NormalLog) return;
+
+        // hint
+        if (level is ActionLevel.Hint or ActionLevel.HintErr)
+        {
+            HintWrapper.Show(plain, (level == ActionLevel.Hint) ? HintTheme.Normal : HintTheme.Error);
+        }
+
+        // message box
+        else if (level is ActionLevel.MsgBox or ActionLevel.MsgBoxErr)
+        {
+            var caption = (ex == null) ? "提示" : "出现异常";
+            var theme = (level == ActionLevel.MsgBoxErr) ? MsgBoxTheme.Info : MsgBoxTheme.Error;
+            var message = plain;
+            if (ex != null)
+                message += $"\n\n详细信息:\n{ex}";
+            if (level == ActionLevel.MsgBoxErr)
+                message += "\n\n若要寻求他人帮助，请立即导出日志 (更多 → 日志浏览 → 导出日志) " +
+                           "并上传或发送，只发送这个窗口的截图通常无助于解决问题。";
+            MsgBoxWrapper.Show(message, caption, theme, false);
+        }
+
+        // fatal message box
+        else if (level == ActionLevel.MsgBoxFatal)
+        {
+            var message = plain;
+            if (ex != null) message += $"\n\n相关异常信息:\n{ex}";
+            message += "\n\n请立即反馈这个问题，否则它可能永远都不会被解决！\n导出日志: 更多 → 日志浏览 → 导出全部日志)";
+            MessageBox.Show(message, "锟斤拷烫烫烫", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private static void _OnWrapperLog(LogLevel level, string msg, string? module, Exception? ex)
     {
         var thread = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
         if (module != null) module = $"[{module}] ";
-        msg = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}{msg}";
-        Logger.Log((ex == null) ? msg : $"{msg}\n{ex}");
+        var result = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}{msg}";
+        _LogAction(level.DefaultActionLevel(), (ex == null) ? result : $"{result}\n{ex}", msg, ex);
     }
 
-    public void OnLog(LifecycleLogItem item)
-    {
-        Logger.Log(item.ComposeMessage());
-    }
+    public void OnLog(LifecycleLogItem item) =>
+        _LogAction(item.ActionLevel, item.ComposeMessage(), item.Message, item.Exception);
 }

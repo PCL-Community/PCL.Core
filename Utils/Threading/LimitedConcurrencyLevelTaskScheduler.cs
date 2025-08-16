@@ -72,7 +72,7 @@ public sealed class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
                         _delegatesQueuedOrRunning--;
                         break;
                     }
-                    item = _tasks.First.Value;
+                    item = _tasks.First!.Value;
                     _tasks.RemoveFirst();
                 }
                 TryExecuteTask(item);

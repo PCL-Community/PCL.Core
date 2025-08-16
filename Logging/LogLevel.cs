@@ -7,12 +7,17 @@ namespace PCL.Core.Logging;
 /// </summary>
 public enum LogLevel
 {
-    Trace = 000 + ActionLevel.DebugLog,
-    Debug = 100 + ActionLevel.DebugLog,
+    Trace = 000 + ActionLevel.TraceLog,
+    Debug = 100 + ActionLevel.NormalLog,
     Info = 200 + ActionLevel.NormalLog,
-    Warning = 300 + ActionLevel.HintRed,
-    Error = 400 + ActionLevel.MsgBoxRed,
-    Fatal = 500 + ActionLevel.MsgBoxExit,
+#if TRACE
+    Warning = 300 + ActionLevel.HintErr,
+    Error = 400 + ActionLevel.MsgBoxErr,
+#else
+    Warning = 300 + ActionLevel.NormalLog,
+    Error = 400 + ActionLevel.HintErr,
+#endif
+    Fatal = 500 + ActionLevel.MsgBoxFatal,
 }
 
 public static class LogLevelExtensions
@@ -28,4 +33,18 @@ public static class LogLevelExtensions
     };
 
     public static string PrintName(this LogLevel level) => _LevelNameMap[level];
+
+    public static ActionLevel DefaultActionLevel(this LogLevel level) => (ActionLevel)((int)level % 100);
+
+    public static LogLevel RealLevel(this LogLevel level) => (int)level switch
+    {
+        < 100 => LogLevel.Trace,
+        < 200 => LogLevel.Debug,
+        < 300 => LogLevel.Info,
+        < 400 => LogLevel.Warning,
+        < 500 => LogLevel.Error,
+        _ => LogLevel.Fatal,
+    };
+
+    public static int Header(this LogLevel level) => (int)level / 100;
 }

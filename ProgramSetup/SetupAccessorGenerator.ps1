@@ -19,32 +19,62 @@ $setupJson = Get-Content -Path $setupModelFilePath -Raw | ConvertFrom-Json
 $entryModelCode = [System.Text.StringBuilder]::new()
 $propertyModelCode = [System.Text.StringBuilder]::new()
 $allSetupEntries = [System.Collections.Generic.Dictionary[string, string]]::new()
+$entryDictionaryCode = [System.Text.StringBuilder]::new()
 
 function Format-Value($value)
 {
+    if ($null -eq $value) {
+        throw "SetupModel.json 中某个默认值为 null，不受支持。"
+    }
+
     if ($value -is [string]) {
         return [PSCustomObject]@{
             FormattedValue = "`"$value`""
-            Type = 'string'
-            GetMethod = 'GetString'
-            SetMethod = 'SetString'
+            Type          = 'string'
+            GetMethod     = 'GetString'
+            SetMethod     = 'SetString'
         }
     }
+
     if ($value -is [bool]) {
         return [PSCustomObject]@{
-            FormattedValue = $value.ToString().ToLower()
-            Type = 'bool'
-            GetMethod = 'GetBool'
-            SetMethod = 'SetBool'
+            FormattedValue = $value.ToString().ToLowerInvariant()
+            Type          = 'bool'
+            GetMethod     = 'GetBool'
+            SetMethod     = 'SetBool'
         }
     }
+
+    # 仅支持 C# 侧的 Int32：在 PowerShell 7+/非 Windows 下，JSON 数字常为 [long]/[double]/[decimal]
+    $i = $null
     if ($value -is [int]) {
-        return [PSCustomObject]@{
-            FormattedValue = $value.ToString()
-            Type = 'int'
-            GetMethod = 'GetInt32'
-            SetMethod = 'SetInt32'
+        $i = [int]$value
+    }
+    elseif ($value -is [long]) {
+        if ($value -lt [int]::MinValue -or $value -gt [int]::MaxValue) {
+            throw "SetupModel.json 中存在超出 Int32 范围的整数值：$value"
         }
+        $i = [int]$value
+    }
+    elseif ($value -is [double] -or $value -is [decimal]) {
+        $d = [double]$value
+        if ($d -ne [math]::Truncate($d)) {
+            throw "SetupModel.json 中存在非整数数值：$value"
+        }
+        if ($d -lt [double][int]::MinValue -or $d -gt [double][int]::MaxValue) {
+            throw "SetupModel.json 中存在超出 Int32 范围的整数值：$value"
+        }
+        $i = [int][math]::Truncate($d)
+    }
+    else {
+        throw "不支持的默认值类型：$($value.GetType().FullName)"
+    }
+
+    return [PSCustomObject]@{
+        FormattedValue = $i.ToString()
+        Type          = 'int'
+        GetMethod     = 'GetInt32'
+        SetMethod     = 'SetInt32'
     }
 }
 
@@ -73,7 +103,8 @@ function Process-Namespace($namespaceStore, $currentJson) {
             [void] $propertyModelCode.Append($indent).AppendLine('}')
         } else { # 子条目
             # 获取子条目的信息
-            $entryName = $childPSProp.Name
+            $isEntryDynamic = $childPSProp.Name -like 'dyn:*'
+            $entryName = $childPSProp.Name -replace '^dyn:'
             $childEntry = $childPSProp.Value
             $entrySource = $childEntry.source
             $formattedEntrySource = Format-EntrySource $entrySource
@@ -82,8 +113,13 @@ function Process-Namespace($namespaceStore, $currentJson) {
             $namespaceStr = $namespaceStore -join '.'
             $formattedEntrypted = $childEntry.encrypted.ToString().ToLower()
             # 输出 EntryModel 代码
-            [void] $entryModelCode.Append($indent).AppendLine(
-                    "public static readonly SetupEntry $entryName = new SetupEntry($formattedEntrySource, `"$entryKey`", $($entryValue.FormattedValue), $formattedEntrypted);")
+            if ($isEntryDynamic) {
+                [void] $entryModelCode.Append($indent).AppendLine(
+                        "public static SetupEntry $entryName => global::PCL.Core.ProgramSetup.SetupEntries.ForKeyName(`"$entryKey`")!;")
+            } else {
+                [void] $entryModelCode.Append($indent).AppendLine(
+                        "public static readonly SetupEntry $entryName = new SetupEntry($formattedEntrySource, `"$entryKey`", $($entryValue.FormattedValue), $formattedEntrypted);")
+            }
             # 输出 PropertyModel 代码
             if ($entrySource -ne 'instance') {
                 [void] $propertyModelCode.Append($indent).AppendLine("public static $($entryValue.Type) $entryName")
@@ -98,23 +134,15 @@ function Process-Namespace($namespaceStore, $currentJson) {
                 [void] $propertyModelCode.Append($indent).AppendLine("    SetValue = (gamePath, value) => SetupService.$($entryValue.SetMethod)(SetupEntries.$namespaceStr.$entryName, value, gamePath)")
                 [void] $propertyModelCode.Append($indent).AppendLine('};')
             }
-            # 记录 SetupEntry 的旧名和新名的键值对
-            $allSetupEntries.Add($entryKey, $namespaceStr + '.' + $entryName)
+            # 输出 EntryDictionary 字典初始化代码
+            if (-not $isEntryDynamic) {
+                [void] $entryDictionaryCode.AppendLine("        [`"$entryKey`"] = $namespaceStr.$entryName,")
+            }
         }
     }
 }
 
 Process-Namespace @() $setupJson
-
-# EntryDictionary 字典
-
-$entryDictionaryCode = [System.Text.StringBuilder]::new()
-
-$allSetupEntries.GetEnumerator() | ForEach-Object {
-    $keyName = $_.Key
-    $entryPath = $_.Value
-    [void] $entryDictionaryCode.AppendLine("        [`"$keyName`"] = $entryPath,")
-}
 
 # 输出 SetupEntries.g.cs & Setup.g.cs
 
@@ -142,6 +170,20 @@ $entryModelCode
         if (keyName is null)
             return null;
         return EntryDictionary.TryGetValue(keyName, out var value) ? value : null;
+    }
+
+    /// <summary>
+    /// 注册一个配置项，用于动态配置项的初始化
+    /// </summary>
+    /// <param name="keyName">键名</param>
+    /// <param name="source">配置源</param>
+    /// <param name="defaultValue">默认值</param>
+    /// <param name="isEntrypted">是否加密</param>
+    /// <exception cref="global::System.ArgumentException">已存在该键名</exception>
+    public static void RegisterEntry(string keyName, SetupEntrySource source, object defaultValue, bool isEntrypted = false)
+    {
+        if (!EntryDictionary.TryAdd(keyName, new SetupEntry(source, keyName, defaultValue, isEntrypted)))
+            throw new global::System.ArgumentException($"键名 {keyName} 已存在于配置项字典中");
     }
 
     /// <summary>

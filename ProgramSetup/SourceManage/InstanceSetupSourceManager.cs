@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
@@ -96,7 +97,6 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                 }
                 // 保存缓存
                 cache = _fileCache[filePath] = new CacheEntry(filePath, content);
-                LogWrapper.Debug("Setup", "从硬盘加载游戏实例配置文件：" + cache.FilePath);
             }
             action.Invoke(cache);
         }
@@ -112,14 +112,20 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                 try { _saveEvent.Wait(_saveJobCts.Token); }
                 catch (OperationCanceledException) { }
                 _saveEvent.Reset();
-                if (_cachesToSave.TryTake(out cache))
-                    _saveEvent.Set();
-                else
+                if (_cachesToSave.Count == 0) // 活干完了
                 {
                     if (_saveJobCts.IsCancellationRequested)
-                        break; // 完事，收工
+                        break; // 收工
                     continue; // 接着等……
                 }
+                if (_cachesToSave.Count < 3)
+                {
+                    try { Task.Delay(500, _saveJobCts.Token).Wait(); } // 磨洋工
+                    catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
+                }
+                _saveEvent.Set();
+                if (!_cachesToSave.TryTake(out cache))
+                    throw new InvalidOperationException("预料外的集合修改");
             }
             catch (Exception ex)
             {
@@ -154,7 +160,6 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                     else
                         cache.UpdateLastWriteTime();
                 }
-                LogWrapper.Debug("Setup", "向硬盘同步游戏实例配置文件：" + cache.FilePath);
             }
             catch (Exception ex)
             {

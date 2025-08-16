@@ -43,16 +43,20 @@ public static class FileProcesses
     {
         if (path == null) return null;
         var exist = File.Exists(path);
-        using var fs = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
         if (exist)
         {
+            using var fs = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             var result = JsonSerializer.Deserialize<TValue>(fs);
             return result;
         }
-        if (!createDefault) return null;
-        var d = Activator.CreateInstance(typeof(TValue));
-        JsonSerializer.Serialize(fs, d, _ParseJsonCreateDefaultOptions);
-        return d;
+        else
+        {
+            if (!createDefault) return null;
+            var d = Activator.CreateInstance(typeof(TValue));
+            using var fs = File.Open(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
+            JsonSerializer.Serialize(fs, d, _ParseJsonCreateDefaultOptions);
+            return d;
+        }
     });
 
     public static FileProcess Deserialize<TValue>(IFileSerializer<TValue> serializer) => (_, path) =>

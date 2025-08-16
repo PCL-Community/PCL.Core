@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using ICSharpCode.SharpZipLib.Zip;
+using PCL.Core.Utils;
 
 namespace PCL.Core.IO;
 
@@ -41,7 +42,7 @@ public class ZipFileTask(string zipPath, IEnumerable<FileItem> items) : FileTask
     
     private readonly List<FileItem> _filesToArchive = [];
     
-    public override bool OnProcessFinished(FileItem item, object? result)
+    public override bool OnProcessFinished(FileItem item, AnyType? result)
     {
         _filesToArchive.Add(item);
         return base.OnProcessFinished(item, result);

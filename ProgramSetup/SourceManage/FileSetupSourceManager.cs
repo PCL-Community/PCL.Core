@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
@@ -98,6 +99,8 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
             try
             {
                 // 收到保存请求！
+                try { Task.Delay(2000, _saveJobCts.Token).Wait(); } // 磨洋工
+                catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) {  }
                 _saveEvent.Reset();
                 // 写入临时文件
                 var targetPath = _baseFile.TargetPath;
@@ -107,7 +110,6 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
                     _serializer.Serialize(_content, fs);
                 // 替换文件
                 File.Replace(tmpPath, targetPath, null);
-                LogWrapper.Debug("Setup", "向硬盘同步配置文件：" + _baseFile.TargetPath);
             }
             catch (Exception ex)
             {

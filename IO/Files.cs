@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using IWshRuntimeLibrary;
 
 namespace PCL.Core.IO;
 
@@ -34,8 +33,9 @@ public static class Files
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
         // 与 WshShell 交互
-        var shell = new WshShell();
-        var link = (IWshShortcut)shell.CreateShortcut(shortcut)!;
+        var shellType = Type.GetTypeFromProgID("WScript.Shell", throwOnError: true)!;
+        dynamic shell = Activator.CreateInstance(shellType)!;
+        var link = shell.CreateShortcut(shortcut)!;
 
         // 设置属性
         link.TargetPath = target;

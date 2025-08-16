@@ -290,7 +290,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                         if (!Directory.Exists(fileFolder)) Directory.CreateDirectory(fileFolder);
                         var curFile = new FileInfo(curFilePath);
                         if (curFile.Exists) curFile.Delete();
-                        using var ctx = _storage.Get(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
+                        using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
                         using (var fs = curFile.Create()) {
                             await ctx.CopyToAsync(fs);
                         }
@@ -441,7 +441,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                         var entry = targetZip.CreateEntry(fileObject.Path);
                         entry.LastWriteTime = fileObject.LastWriteTime;
                         using var writer = entry.Open();
-                        using var reader = _storage.Get(fileObject.Hash) ?? throw new Exception("无法找到存储的文件");
+                        using var reader = GetObjectContent(fileObject.Hash) ?? throw new Exception("无法找到存储的文件");
                         await reader.CopyToAsync(writer);
                         break;
                     }

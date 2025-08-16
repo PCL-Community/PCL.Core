@@ -1,12 +1,11 @@
-﻿using System;
+﻿using PCL.Core.Logging;
+using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-using PCL.Core.Logging;
-using static PCL.Core.App.Basics;
 
 namespace PCL.Core.Link
 {
@@ -74,26 +73,14 @@ namespace PCL.Core.Link
                 {
                     while (_isRunning)
                     {
-                        c = _serverSocket.Accept();
+                        LogWrapper.Info("Link", "开始等待 MC 客户端连接");
+                        c = await _serverSocket.AcceptAsync();
                         s = new Socket(SocketType.Stream, ProtocolType.Tcp);
-
+                        LogWrapper.Info("Link", $"接受来自 {c.RemoteEndPoint} 的连接");
                         s.Connect(sip);
-                        int count = 0;
-                        while (!s.Connected)
-                        {
-                            if (count <= 5)
-                            {
-                                count += 1;
-                                await Task.Delay(1000);
-                            }
-                            else
-                            {
-                                LogWrapper.Warn("Link", "连接到目标 MC 服务器失败");
-                                return;
-                            }
-                            RunInNewThread(() => _Forward(c, s));
-                            RunInNewThread(() => _Forward(s,c));
-                        }
+                        _fw_s = s;
+                        _fw_c = c;
+                        await _Forward(s,c);
                     }
                 }
                 catch (SocketException)
@@ -186,32 +173,53 @@ namespace PCL.Core.Link
         }
 
         private Socket? _fw_s, _fw_c;
-        private void _Forward(Socket s, Socket c)
+        private async Task _Forward(Socket localSocket, Socket remoteSocket)
         {
-            _fw_s = s;
-            _fw_c = c;
+            LogWrapper.Info("Link", $"开始端口转发 {localSocket.RemoteEndPoint} -> {remoteSocket.RemoteEndPoint}");
             try
             {
-                byte[] buffer = new byte[8192];
-                while (_isRunning)
-                {
-                    int count = s.Receive(buffer, 0, buffer.Length, SocketFlags.None);
-                    if (count > 0)
-                    {
-                        c.Send(buffer, 0, count, SocketFlags.None);
-                    }
-                    else
-                    {
-                        _fw_s = null;
-                        _fw_c = null;
-                        break;
-                    }
-                }
+                Task forwardToRemote, forwardToLocal;
+                using var localStream = new NetworkStream(localSocket, false);
+                using var remoteStream = new NetworkStream(remoteSocket, false);
+                forwardToRemote = localStream.CopyToAsync(remoteStream);
+                forwardToLocal = remoteStream.CopyToAsync(localStream);
+                await Task.WhenAny(forwardToLocal, forwardToRemote);
+                await Task.Delay(500);
+                LogWrapper.Info("Link", $"端口转发任务 {localSocket.RemoteEndPoint} -> {remoteSocket.RemoteEndPoint} 已结束");
+            }
+            catch (ObjectDisposedException)
+            {
+                LogWrapper.Info("Link", "端口转发流已释放，正常结束");
+            }
+            catch (IOException)
+            {
+                LogWrapper.Warn("Link", "端口转发流 IO 异常，网络可能中断");
+            }
+            catch (SocketException ex)
+            {
+                LogWrapper.Warn("Link", "端口转发 Socket 异常: " + ex.Message);
             }
             catch (Exception)
             {
-                try { c.Disconnect(false); } catch (Exception) { }
-                try { c.Disconnect(false); } catch (Exception) { }
+                LogWrapper.Error("Link", "端口转发过程中发生意外异常");
+                throw;
+            }
+            finally
+            {
+                try
+                {
+                    if (remoteSocket.Connected) { remoteSocket.Shutdown(SocketShutdown.Both); }
+                    remoteSocket.Close();
+                }
+                catch (Exception) { } // 忽略
+                try
+                {
+                    if (localSocket.Connected) { localSocket.Shutdown(SocketShutdown.Both); }
+                    localSocket.Close();
+                }
+                catch (Exception) { } // 忽略
+                _fw_s = null;
+                _fw_c = null;
             }
         }
     }

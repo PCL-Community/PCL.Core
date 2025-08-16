@@ -6,18 +6,22 @@ using System.Numerics;
 
 namespace PCL.Core.Link.Lobby
 {
-    public static class LobbyHandler
+    public static class LobbyInfoProvider
     {
         public class LobbyInfo
         {
             public required string OriginalCode { get; set; }
+            public required LobbyType Type { get; set; }
             public required string NetworkName { get; set; }
             public required string NetworkSecret { get; set; }
             /// <summary>
+            /// 远程 IP 地址，需要先解析大厅类型再填充
+            /// </summary>
+            public string? Ip { get; set; }
+            /// <summary>
             /// 远程端口
             /// </summary>
-            public required int Port { get; set; }
-            public required LobbyType Type { get; set; }
+            public int Port { get; set; }
         }
 
         public enum LobbyType
@@ -64,7 +68,7 @@ namespace PCL.Core.Link.Lobby
             else // 陶瓦
             {
                 code = code.ToUpper();
-                List<string> matches = []; // TODO: 正则
+                List<string> matches = StringExtension.RegexSearch(code, "([0-9A-Z]{5}-){4}[0-9A-Z]{5}");
                 if (matches.Count == 0)
                 {
                     LogWrapper.Error("Link", "大厅编号解析失败，可能是无效的陶瓦大厅编号: " + code);

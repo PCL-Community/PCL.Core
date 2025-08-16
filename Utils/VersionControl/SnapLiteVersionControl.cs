@@ -53,7 +53,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     private async Task<FileVersionObjects[]> _GetAllTrackedObjects()
     {
-        List<FileVersionObjects> scanedPaths = [];
+        List<FileVersionObjects> scannedPaths = [];
         Queue<string> scanQueue = new();
         scanQueue.Enqueue(_rootPath);
         string[] excludePath = [Path.Combine(_rootPath, ConfigFolderName)];
@@ -64,7 +64,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             var dirsInCurDir = curDir.EnumerateDirectories().ToArray();
             if (!filesInCurDir.Any() && !dirsInCurDir.Any()) // 空文件夹直接加入
             {
-                scanedPaths.Add(new FileVersionObjects()
+                scannedPaths.Add(new FileVersionObjects()
                 {
                     CreationTime = curDir.CreationTime,
                     Hash = string.Empty,
@@ -91,15 +91,15 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 };
             })).ToArray();
             await Task.WhenAll(fileCheckerTasks);
-            
-            scanedPaths.AddRange(fileCheckerTasks.Select(x => x.Result));
-            
+
+            scannedPaths.AddRange(fileCheckerTasks.Select(x => x.Result));
+
             // 剩余文件夹加入搜索队列中
-            foreach (var directory in dirsInCurDir) 
+            foreach (var directory in dirsInCurDir)
                 if (!excludePath.Contains(directory.FullName))
                     scanQueue.Enqueue(directory.FullName);
         }
-        return scanedPaths.ToArray();
+        return scannedPaths.ToArray();
     }
 
     public async Task<string> CreateNewVersion(string? name = null, string? desc = null)
@@ -117,7 +117,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                             (x.ObjectType.Equals(ObjectType.File) && !_storage.Exists(x.Hash)))
                 .ToList();
             // 存入数据库中
-            LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
+            LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count}");
             var nodeObjects = _database.GetCollection<FileVersionObjects>(_GetNodeTableNameById(nodeId));
             nodeObjects.InsertBulk(allFiles);
             LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始存储文件");
@@ -306,6 +306,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                         curDir.LastWriteTime = addFile.LastWriteTime;
                         break;
                     }
+                    default:
+                    {
+                        throw new NotSupportedException();
+                    }
                 }
             }
             catch (Exception e)
@@ -348,6 +352,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                         curDir.LastWriteTime = updateObject.LastWriteTime;
                         curDir.CreationTime = updateObject.CreationTime;
                         break;
+                    }
+                    default:
+                    {
+                        throw new NotSupportedException();
                     }
                 }
             }
@@ -450,6 +458,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                         var entry = targetZip.CreateEntry($"{fileObject.Path}{Path.DirectorySeparatorChar}");
                         entry.LastWriteTime = fileObject.LastWriteTime;
                         break;
+                    }
+                    default:
+                    {
+                        throw new NotSupportedException();
                     }
                 }
             });

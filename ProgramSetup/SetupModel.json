@@ -203,6 +203,7 @@
   "ns:Instance": {
     "JvmArgs": {"key": "VersionAdvanceJvm", "source": "instance", "value": "", "encrypted": false},
     "GameArgs": {"key": "VersionAdvanceGame", "source": "instance", "value": "", "encrypted": false},
+    "GameArgs": {"key": "VersionAdvanceRenderer", "source": "instance", "value": 0, "encrypted": false},
     "AssetVerifySolutionV1": {"key": "VersionAdvanceAssets", "source": "instance", "value": 0, "encrypted": false},
     "DisableAssetVerifyV2": {"key": "VersionAdvanceAssetsV2", "source": "instance", "value": false, "encrypted": false},
     "IgnoreJavaCompatibility": {"key": "VersionAdvanceJava", "source": "instance", "value": false, "encrypted": false},

@@ -56,7 +56,7 @@ public static class Basics
     /// <summary>
     /// 设备的架构
     /// </summary>
-    public static readonly Architecture DeviceArchitecture = RuntimeInformation.OSArchitecture;
+    public static Architecture DeviceArchitecture => RuntimeInformation.OSArchitecture;
 
     /// <summary>
     /// 实时获取的当前目录。若要在可执行文件目录中存放文件等内容，请使用更准确的 <see cref="ExecutableDirectory"/> 而不是这个目录。

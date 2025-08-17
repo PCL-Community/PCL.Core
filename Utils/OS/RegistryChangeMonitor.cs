@@ -2,16 +2,21 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Microsoft.Win32;
 
 namespace PCL.Core.Utils.OS;
 
 public class RegistryChangeMonitor : IDisposable
 {
+    // ReSharper disable once InconsistentNaming
     private const int REG_NOTIFY_CHANGE_LAST_SET = 0x00000004;
+    // ReSharper disable once InconsistentNaming
     private const int KEY_NOTIFY = 0x0010;
+    // ReSharper disable once InconsistentNaming
     private const int KEY_QUERY_VALUE = 0x0001;
+    // ReSharper disable once InconsistentNaming
     private const int KEY_READ = (KEY_QUERY_VALUE | KEY_NOTIFY);
+    // ReSharper disable once InconsistentNaming
+    private static readonly UIntPtr HKEY_CURRENT_USER = (UIntPtr)0x80000001;
 
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern int RegOpenKeyEx(UIntPtr hKey, string subKey, uint options, int samDesired, out IntPtr phkResult);
@@ -32,21 +37,20 @@ public class RegistryChangeMonitor : IDisposable
     public RegistryChangeMonitor(string keyPath)
     {
         // Open registry key with proper access rights
-        var HKEY_CURRENT_USER = (UIntPtr)0x80000001;
         var result = RegOpenKeyEx(HKEY_CURRENT_USER, keyPath, 0, KEY_READ, out _hKey);
         if (result != 0) throw new Win32Exception(result);
 
         // Start monitoring thread
-        _monitorThread = new Thread(MonitorThread) { IsBackground = true };
+        _monitorThread = new Thread(_MonitorThread) { IsBackground = true };
         _monitorThread.Start();
     }
 
-    private void MonitorThread()
+    private void _MonitorThread()
     {
         try
         {
             // Initial registration
-            RegisterForNotification();
+            _RegisterForNotification();
 
             while (!_stopEvent.WaitOne(0))
             {
@@ -61,7 +65,7 @@ public class RegistryChangeMonitor : IDisposable
                 {
                     _registryEvent.Reset();
                     Changed?.Invoke(this, EventArgs.Empty);
-                    RegisterForNotification(); // Re-register for next change
+                    _RegisterForNotification(); // Re-register for next change
                 }
             }
         }
@@ -71,7 +75,7 @@ public class RegistryChangeMonitor : IDisposable
         }
     }
 
-    private void RegisterForNotification()
+    private void _RegisterForNotification()
     {
         var result = RegNotifyChangeKeyValue(
             _hKey,
@@ -97,7 +101,7 @@ public class RegistryChangeMonitor : IDisposable
             _monitorThread.Join(1000);
 
         if (_hKey != IntPtr.Zero)
-            RegCloseKey(_hKey);
+            _ = RegCloseKey(_hKey);
 
         _stopEvent.Dispose();
         GC.SuppressFinalize(this);

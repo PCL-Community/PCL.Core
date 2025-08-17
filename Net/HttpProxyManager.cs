@@ -20,7 +20,7 @@ public class HttpProxyManager : IWebProxy, IDisposable
     private readonly object _lock = new();
     private ProxyMode _mode = ProxyMode.SystemProxy;
     private readonly WebProxy _customWebProxy = new();
-    private WebProxy _systemWebProxy = null!;
+    private readonly WebProxy _systemWebProxy = new();
     private bool _bypassOnLocal = true;
     private const string ProxyRegPathFull = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
     private const string ProxyRegPath = @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
@@ -32,7 +32,7 @@ public class HttpProxyManager : IWebProxy, IDisposable
         _proxyMonitor.Changed += _onSystemProxyChanged;
     }
 
-    private void _onSystemProxyChanged(object sender, EventArgs e)
+    private void _onSystemProxyChanged(object? sender, EventArgs e)
     {
         RefreshSystemProxy();
     }
@@ -42,8 +42,7 @@ public class HttpProxyManager : IWebProxy, IDisposable
     {
         lock (_lock)
         {
-            _systemWebProxy ??= new WebProxy();
-            var isSystemProxyEnabled = (int)Registry.GetValue(ProxyRegPathFull, "ProxyEnable", 0);
+            var isSystemProxyEnabled = (int)(Registry.GetValue(ProxyRegPathFull, "ProxyEnable", 0) ?? 0);
             var systemProxyAddress = Registry.GetValue(ProxyRegPathFull, "ProxyServer", string.Empty) as string ?? string.Empty;
             if (!systemProxyAddress.StartsWith("http")) systemProxyAddress = $"http://{systemProxyAddress}/";
             var systemProxyOverride = Registry.GetValue(ProxyRegPathFull, "ProxyOverride", string.Empty) as string ?? string.Empty;
@@ -61,13 +60,13 @@ public class HttpProxyManager : IWebProxy, IDisposable
         set { lock (_lock) _mode = value; }
     }
 
-    public Uri CustomProxyAddress
+    public Uri? CustomProxyAddress
     {
         get { lock (_lock) return _customWebProxy.Address; }
         set { lock (_lock) _customWebProxy.Address = value; }
     }
 
-    public ICredentials CustomProxyCredentials
+    public ICredentials? CustomProxyCredentials
     {
         get { lock (_lock) return _customWebProxy.Credentials; }
         set { lock (_lock) _customWebProxy.Credentials = value; }

@@ -21,7 +21,7 @@
     "MaxGameLog": {"key": "HintMaxLog", "source": "global", "value": false, "encrypted": false},
     "NonAsciiGamePath": {"key": "HintDisableGamePathCheckTip", "source": "global", "value": false, "encrypted": false},
     "CommunityEdition": {"key": "UiLauncherCEHint", "source": "global", "value": false, "encrypted": false},
-    "CommunityEditionCount": {"key": "UiLauncherCEHintCount", "source": "global", "value": false, "encrypted": false},
+    "CommunityEditionCount": {"key": "UiLauncherCEHintCount", "source": "global", "value": 0, "encrypted": false},
     "SchematicFirstTime": {"key": "UiSchematicFirstTimeHintShown", "source": "global", "value": false, "encrypted": false}
   },
   "ns:System": {
@@ -129,7 +129,7 @@
     "WallpaperSuitMode": {"key": "UiBackgroundSuit", "source": "local", "value": 0, "encrypted": false},
     "HomepageType": {"key": "UiCustomType", "source": "local", "value": 0, "encrypted": false},
     "HomepageSelectedPreset": {"key": "UiCustomPreset", "source": "local", "value": 0, "encrypted": false},
-    "HomepageCustomUrl": {"key": "UiCustomNet", "source": "local", "value": 0, "encrypted": false},
+    "HomepageCustomUrl": {"key": "UiCustomNet", "source": "local", "value": "", "encrypted": false},
     "DarkModeSolution": {"key": "UiDarkMode", "source": "global", "value": 2, "encrypted": false},
     "DarkColor": {"key": "UiDarkColor", "source": "global", "value": 1, "encrypted": false},
     "LightColor": {"key": "UiLightColor", "source": "global", "value": 1, "encrypted": false},

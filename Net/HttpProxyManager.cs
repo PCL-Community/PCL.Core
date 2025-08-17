@@ -47,9 +47,8 @@ public class HttpProxyManager : IWebProxy, IDisposable
             if (!systemProxyAddress.StartsWith("http")) systemProxyAddress = $"http://{systemProxyAddress}/";
             var systemProxyOverride = Registry.GetValue(ProxyRegPathFull, "ProxyOverride", string.Empty) as string ?? string.Empty;
             var systemProxyBypassList = systemProxyOverride.Split(";".ToCharArray());
-            _systemWebProxy.Address = string.IsNullOrEmpty(systemProxyAddress) ? null : new Uri(systemProxyAddress);
+            _systemWebProxy.Address = (string.IsNullOrEmpty(systemProxyAddress) || isSystemProxyEnabled == 0) ? null : new Uri(systemProxyAddress);
             _systemWebProxy.BypassList = systemProxyBypassList;
-            if (isSystemProxyEnabled == 0 && _mode.Equals(ProxyMode.SystemProxy)) _mode = ProxyMode.NoProxy;
             LogWrapper.Info("Proxy", $"已从操作系统更新代理设置，系统代理状态：{isSystemProxyEnabled}|{systemProxyAddress}|{systemProxyOverride}");
         }
     }

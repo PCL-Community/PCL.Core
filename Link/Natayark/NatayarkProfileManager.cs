@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Text.Json.Nodes;
 
 using PCL.Core.Utils.OS;
@@ -15,7 +12,7 @@ using PCL.Core.Logging;
 
 namespace PCL.Core.Link.Natayark
 {
-    public class NatayarkProfileManager
+    public static class NatayarkProfileManager
     {
         public class NaidUser
         {
@@ -36,23 +33,23 @@ namespace PCL.Core.Link.Natayark
         public static NaidUser NaidProfile = new();
         public static Exception? Exception { get; set; }
 
-        private bool _isGettingData = false;
-        public void GetNaidData(string token, bool isRefresh = false, bool isRetry = false)
+        private static bool _isGettingData = false;
+        public static void GetNaidData(string token, bool isRefresh = false, bool isRetry = false)
         {
             Basics.RunInNewThread(() => GetNaidDataSync(token, isRefresh, isRetry));
         }
-        public bool GetNaidDataSync(string token, bool isRefresh = false, bool isRetry = false)
+        public static bool GetNaidDataSync(string token, bool isRefresh = false, bool isRetry = false)
         {
             if (_isGettingData) { return false; }
             _isGettingData = true;
             try
             {
                 // 获取 AccessToken 和 RefreshToken
-                string requestData = $"grant_type={(isRefresh, "refresh_token", "authorization_code")}&client_id={EnvironmentInterop.GetSecret("NatayarkClientId")}&client_secret={EnvironmentInterop.GetSecret("NatayarkClientSecret")}&{(isRefresh, "refresh_token", "code")}={token}&redirect_uri=http://localhost:29992/callback";
+                string requestData = $"grant_type={(isRefresh ? "refresh_token" : "authorization_code")}&client_id={EnvironmentInterop.GetSecret("NatayarkClientId")}&client_secret={EnvironmentInterop.GetSecret("NatayarkClientSecret")}&{(isRefresh ? "refresh_token" : "code")}={token}&redirect_uri=http://localhost:29992/callback";
                 Thread.Sleep(500);
                 HttpContent httpContent = new StringContent(requestData, Encoding.UTF8, "application/x-www-form-urlencoded");
                 string? result = HttpRequestBuilder.Create("https://account.naids.com/api/oauth2/token", HttpMethod.Post)
-                    .WithContent(httpContent).Build().Result.GetResponse().Content.ToString();
+                    .WithContent(httpContent).Build().Result.GetResponse().Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (result == null)
                 {
                     throw new Exception("获取 AccessToken 与 RefreshToken 失败，返回内容为空");
@@ -68,7 +65,7 @@ namespace PCL.Core.Link.Natayark
 
                 // 获取用户信息
                 string? receivedUserData = HttpRequestBuilder.Create("https://account.naids.com/api/api/user/data", HttpMethod.Get)
-                    .SetHeader("Authorization", $"Bearer {NaidProfile.AccessToken}").Build().Result.GetResponse().Content.ToString();
+                    .SetHeader("Authorization", $"Bearer {NaidProfile.AccessToken}").Build().Result.GetResponse().Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (receivedUserData == null)
                 {
                     throw new Exception("获取 Natayark 用户信息失败，返回内容为空");
@@ -122,7 +119,7 @@ namespace PCL.Core.Link.Natayark
                     {
                         NaidProfile = new NaidUser();
                         Setup.Link.NaidRefreshToken = string.Empty;
-                        throw new Exception("Naid 登录失败，请尝试前往设置重新登录");
+                        throw new Exception("Naid 登录失败，请尝试前往设置重新登录", ex);
                     }
                 }
                 return false;

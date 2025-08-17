@@ -159,4 +159,9 @@ public static class StringExtension
             return new List<string>();
         }
     }
+
+    public static bool IsASCII(this string str)
+    {
+        return str.All(c => c < 128);
+    }
 }

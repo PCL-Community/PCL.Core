@@ -1,5 +1,4 @@
-﻿using PCL.Core.Logging;
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -7,17 +6,20 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using PCL.Core.Logging;
+
 namespace PCL.Core.Link
 {
-    public class McPortForward
+    public static class McPortForward
     {
-        private Thread? _udpThread, _tcpThread;
-        private Socket? _serverSocket, _boardcastClient;
+        private static Thread? _udpThread, _tcpThread;
+        private static Socket? _serverSocket, _boardcastClient;
 
-        private bool _isRunning = false;
-        private int _retryTimes = 0;
+        private static bool _isRunning = false;
+        private static int _retryTimes = 0;
+        public static int? LocalPort;
 
-        public async void StartAsync(string remoteIp, int remotePort, string desc = "§ePCL CE 局域网广播", bool isRetry = false)
+        public static async void StartAsync(string remoteIp, int remotePort, string desc = "§ePCL CE 局域网广播", bool isRetry = false)
         {
             if (_isRunning) { return; }
             if (isRetry) { _retryTimes += 1; }
@@ -29,18 +31,20 @@ namespace PCL.Core.Link
             _serverSocket.Bind(new IPEndPoint(IPAddress.Any, 0));
             _serverSocket.Listen(-1);
 
-            int localPort = ((IPEndPoint)_serverSocket.LocalEndPoint).Port;
+            IPEndPoint? endPoint = (IPEndPoint?)_serverSocket.LocalEndPoint;
+            if (endPoint == null) { return; }
+            LocalPort = endPoint.Port;
 
             _udpThread = new Thread(async () =>
             {
                 try
                 {
-                    LogWrapper.Info("Link", $"开始进行 MC 局域网广播, 广播的本地端口: {localPort}");
+                    LogWrapper.Info("Link", $"开始进行 MC 局域网广播, 广播的本地端口: {LocalPort}");
                     _boardcastClient = new Socket(SocketType.Dgram, ProtocolType.Udp);
                     _boardcastClient.DualMode = true;
-                    byte[] buffer = Encoding.UTF8.GetBytes($"[MOTD]{desc}[/MOTD][AD]{localPort}[/AD]");
+                    byte[] buffer = Encoding.UTF8.GetBytes($"[MOTD]{desc}[/MOTD][AD]{LocalPort}[/AD]");
                     var boardcastEndpoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4445);
-                    LogWrapper.Info("Link", $"端口转发: {remoteIp}:{remotePort} -> 本地 {localPort}");
+                    LogWrapper.Info("Link", $"端口转发: {remoteIp}:{remotePort} -> 本地 {LocalPort}");
                     while (_isRunning)
                     {
                         if (_boardcastClient != null)
@@ -118,7 +122,7 @@ namespace PCL.Core.Link
             }
         }
 
-        private void _StartUdpBoardcast()
+        private static void _StartUdpBoardcast()
         {
             try
             {
@@ -135,8 +139,9 @@ namespace PCL.Core.Link
             }
         }
 
-        public void Stop()
+        public static void Stop()
         {
+            LocalPort = null;
             _isRunning = false;
             if (_udpThread != null)
             {
@@ -172,8 +177,8 @@ namespace PCL.Core.Link
             }
         }
 
-        private Socket? _fw_s, _fw_c;
-        private async Task _Forward(Socket localSocket, Socket remoteSocket)
+        private static Socket? _fw_s, _fw_c;
+        private static async Task _Forward(Socket localSocket, Socket remoteSocket)
         {
             LogWrapper.Info("Link", $"开始端口转发 {localSocket.RemoteEndPoint} -> {remoteSocket.RemoteEndPoint}");
             try

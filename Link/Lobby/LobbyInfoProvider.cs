@@ -1,13 +1,20 @@
-﻿using PCL.Core.Logging;
-using PCL.Core.Utils.Exts;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using PCL.Core.Link.Natayark;
+using PCL.Core.Logging;
+using PCL.Core.ProgramSetup;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Link.Lobby
 {
     public static class LobbyInfoProvider
     {
+        public static bool IsLobbyAvailable = false;
+        public static bool AllowCustomName = false;
+        public static bool RequiresLogin = true;
+        public static bool RequiresRealname = true;
+
         public class LobbyInfo
         {
             public required string OriginalCode { get; set; }
@@ -19,9 +26,9 @@ namespace PCL.Core.Link.Lobby
             /// </summary>
             public string? Ip { get; set; }
             /// <summary>
-            /// 远程端口
+            /// 目标游戏端口
             /// </summary>
-            public int Port { get; set; }
+            public required int Port { get; set; }
         }
 
         public enum LobbyType
@@ -36,10 +43,13 @@ namespace PCL.Core.Link.Lobby
         public static LobbyInfo? TargetLobby;
         public static int JoinerLocalPort;
 
+        /// <summary>
+        /// 解析大厅编号，并返回 LobbyInfo 对象。若解析失败则返回 null。
+        /// </summary>
         public static LobbyInfo? ParseCode(string code)
         {
             code = code.Trim();
-            if (string.IsNullOrEmpty(code) || code.Length < 9) // 判断 ASCII
+            if (string.IsNullOrWhiteSpace(code) || code.Length < 9 || !code.IsASCII())
             {
                 LogWrapper.Error("Link", "无效的大厅编号: " + code);
                 return null;
@@ -49,14 +59,15 @@ namespace PCL.Core.Link.Lobby
             {
                 try
                 {
-                    code.FromB32ToB10();
+                    string info = code.FromB32ToB10();
                     return new LobbyInfo
                     {
                         OriginalCode = code,
-                        NetworkName = code.Substring(0, 8),
-                        NetworkSecret = code.Substring(8, 2),
-                        Port = int.Parse(code.Substring(10)),
-                        Type = LobbyType.PCLCE
+                        NetworkName = info.Substring(0, 8),
+                        NetworkSecret = info.Substring(8, 2),
+                        Port = int.Parse(info.Substring(10)),
+                        Type = LobbyType.PCLCE,
+                        Ip = "10.114.51.41"
                     };
                 }
                 catch (Exception ex)
@@ -97,10 +108,26 @@ namespace PCL.Core.Link.Lobby
                         NetworkName = codeString.Substring(0, 15).ToLower(),
                         NetworkSecret = codeString.Substring(15, 10).ToLower(),
                         Port = port,
-                        Type = LobbyType.Terracotta
+                        Type = LobbyType.Terracotta,
+                        Ip = "10.144.144.1"
                     };
                 }
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取用于联机显示的用户名
+        /// </summary>
+        public static string? GetUsername()
+        {
+            if (AllowCustomName)
+            {
+                return Setup.Link.Username ?? NatayarkProfileManager.NaidProfile.Username;
+            }
+            else
+            {
+                return NatayarkProfileManager.NaidProfile.Username;
             }
         }
     }

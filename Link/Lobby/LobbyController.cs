@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 using PCL.Core.Link.EasyTier;
 using PCL.Core.Logging;
@@ -13,16 +10,16 @@ using PCL.Core.Utils.Secret;
 using PCL.Core.Net;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
-using System.Net.Http;
+using static PCL.Core.Link.EasyTier.EasyTierInfoProvider;
+using System.Threading.Tasks;
+using PCL.Core.Utils.OS;
+
 
 namespace PCL.Core.Link.Lobby
 {
-    public class LobbyController
+    public static class LobbyController
     {
-        private readonly EasyTierController _easyTierController = new();
-        private McPortForward _mcPortForward = new();
-
-        public int Launch(bool isHost, LobbyInfo lobbyInfo, string? boardcastDesc = null)
+        public static int Launch(bool isHost, LobbyInfo lobbyInfo, string? playerName = null)
         {
             LogWrapper.Info("Link", "开始发送联机数据");
             string? servers = Setup.Link.RelayServer;
@@ -44,6 +41,7 @@ namespace PCL.Core.Link.Lobby
                 ["NaidId"] = NaidProfile.Id,
                 ["NaidEmail"] = NaidProfile.Email,
                 ["NaidLastIp"] = NaidProfile.LastIp,
+                ["CustomName"] = Setup.Link.Username,
                 ["NetworkName"] = lobbyInfo.NetworkName,
                 ["Servers"] = servers,
                 ["IsHost"] = isHost
@@ -52,50 +50,131 @@ namespace PCL.Core.Link.Lobby
             try
             {
                 HttpContent httpContent = new StringContent(sendData.ToJsonString(), Encoding.UTF8, "application/json");
-                string? result = HttpRequestBuilder.Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
-                    .WithContent(httpContent).Build().Result.GetResponse().Content.ToString();
-                if (result == null)
+                var key = EnvironmentInterop.GetSecret("TelemetryKey");
+                if (key == null)
                 {
-                    throw new Exception("联机数据发送失败，返回内容为空");
-                }
-                else
-                {
-                    if (result.Contains("数据已成功保存"))
+                    if (RequiresLogin)
                     {
-                        LogWrapper.Info("Link", "联机数据已发送");
+                        LogWrapper.Error("Link", "联机数据发送失败，未设置 TelemetryKey");
+                        return 1;
                     }
                     else
                     {
-                        throw new Exception("联机数据发送失败，原始返回内容: " + result);
+                        LogWrapper.Warn("Link", "联机数据发送失败，未设置 TelemetryKey，跳过发送");
+                        
+                    }
+                }
+                else
+                {
+                    string? result = HttpRequestBuilder.Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
+                    .WithContent(httpContent).SetHeader("Authorization", key).Build().Result.GetResponse().Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    if (result == null)
+                    {
+                        if (RequiresLogin)
+                        {
+                            LogWrapper.Error("Link", "联机数据发送失败，响应内容为空");
+                            return 1;
+                        }
+                        else
+                        {
+                            LogWrapper.Warn("Link", "联机数据发送失败，响应内容为空，跳过发送");
+                        }
+                    }
+                    else
+                    {
+                        if (result.Contains("数据已成功保存"))
+                        {
+                            LogWrapper.Info("Link", "联机数据已发送");
+                        }
+                        else
+                        {
+                            if (RequiresLogin)
+                            {
+                                LogWrapper.Error("Link", "联机数据发送失败，响应内容: " + result);
+                                return 1;
+                            }
+                            else
+                            {
+                                LogWrapper.Warn("Link", "联机数据发送失败，跳过发送，响应内容: " + result);
+                            }
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("429"))
+                if (RequiresLogin)
                 {
-                    throw new Exception("联机数据发送失败，请求过于频繁", ex);
+                    if (ex.Message.Contains("429"))
+                    {
+                        LogWrapper.Error(ex, "Link", "联机数据发送失败，请求过于频繁");
+                        return 1;
+                    }
+                    else
+                    {
+                        LogWrapper.Error(ex, "Link", "联机数据发送失败");
+                        return 1;
+                    }
                 }
                 else
                 {
-                    throw new Exception("联机数据发送失败", ex);
+                    LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
                 }
             }
 
-            _easyTierController.Launch(isHost, lobbyInfo.NetworkName, lobbyInfo.NetworkSecret, port: lobbyInfo.Port);
-            // if (!isHost && lobbyInfo.Ip != null) { _mcPortForward.StartAsync(lobbyInfo.Ip, lobbyInfo.Port, "§ePCL CE 大厅" + (boardcastDesc != null, " - " + boardcastDesc)); }
+            int etResult = EasyTierController.Launch(isHost, lobbyInfo.NetworkName, lobbyInfo.NetworkSecret, port: lobbyInfo.Port, hostname: playerName);
+            if (etResult == 1)
+            {
+                return 1;
+            }
+            
+            while (CheckETStatus().GetAwaiter().GetResult() != 0)
+            {
+                Task.Delay(800).GetAwaiter().GetResult();
+            }
+            if (!isHost && lobbyInfo.Ip != null) 
+            {
+                string desc;
+                ETPlayerInfo? hostInfo = GetPlayerList().Item1?[0];
+                if (hostInfo == null) 
+                { 
+                    desc = string.Empty;
+                }
+                else
+                {
+                    desc = " - " + hostInfo.Username ?? hostInfo.Hostname;
+                } 
+                McPortForward.StartAsync(lobbyInfo.Ip, lobbyInfo.Port, "§ePCL CE 大厅" + desc);
+            }
 
             return 0;
         }
 
         /// <summary>
+        /// 检查主机的 MC 实例是否可用。
+        /// </summary>
+        public static bool IsHostInstanceAvailable(int port)
+        {
+            McPing ping = new McPing("127.0.0.1", port);
+            var info = ping.PingAsync().GetAwaiter().GetResult();
+            if (info == null)
+            {
+                LogWrapper.Warn("Link", $"本地 MC 局域网实例 ({port}) 疑似已关闭");
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        /// <summary>
         /// 关闭 EasyTier 和 MC 端口转发，需要自行清理 UI。
         /// </summary>
-        /// <returns></returns>
-        public int Close()
+        public static int Close()
         {
-            _easyTierController.Exit();
-            _mcPortForward.Stop();
+            EasyTierController.Exit();
+            McPortForward.Stop();
             return 0;
         }
     }

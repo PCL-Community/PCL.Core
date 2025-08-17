@@ -6,8 +6,8 @@ namespace PCL.Core.Link.EasyTier
     {
         public class ETRelay
         {
-            public string Url { get; set; }
-            public string Name { get; set; }
+            public required string Url { get; set; }
+            public required string Name { get; set; }
             public ETRelayType Type { get; set; }
         }
         public enum ETRelayType
@@ -17,6 +17,6 @@ namespace PCL.Core.Link.EasyTier
             Custom
         }
 
-        public static List<ETRelay> RelayList;
+        public static List<ETRelay> RelayList = [];
     }
 }

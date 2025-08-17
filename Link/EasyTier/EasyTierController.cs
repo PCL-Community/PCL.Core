@@ -2,29 +2,23 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 
 using PCL.Core.Utils.Exts;
-using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.ProgramSetup;
+using static PCL.Core.Link.EasyTier.EasyTierInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
+using PCL.Core.Utils.Secret;
 
 namespace PCL.Core.Link.EasyTier
 {
-    public class EasyTierController
+    public static class EasyTierController
     {
-        public const string ETNetworkNamePrefix = "PCLCELobby";
-        public const string ETNetworkSecretPrefix = "PCLCEETLOBBY2025";
-        public const string ETVersion = "2.4.2";
-        public string ETPath = Path.Combine(FileService.LocalDataPath, "EasyTier", ETVersion, "easytier-windows-" + (RuntimeInformation.OSArchitecture == Architecture.Arm64, "arm64", "x86_64"));
-
-        public Process? ETProcess;
-        public int ETRpcPort;
-
-        public EasyTierState EasyTierStatus;
+        public static Process? ETProcess;
+        public static int ETRpcPort;
+        public static EasyTierState EasyTierStatus;
         public enum EasyTierState
         {
             Stopped,
@@ -32,7 +26,7 @@ namespace PCL.Core.Link.EasyTier
             Ready
         }
 
-        private int _Precheck()
+        public static int Precheck()
         {
             var existedET = Process.GetProcessesByName("easytier-core");
             foreach (var p in existedET)
@@ -41,21 +35,21 @@ namespace PCL.Core.Link.EasyTier
             }
 
             // 检查文件
+            LogWrapper.Info("Link", "EasyTier 路径: " + ETPath);
             if (!File.Exists(ETPath + "\\easytier-core.exe") || !File.Exists(ETPath + "\\easytier-cli.exe") || !File.Exists(ETPath + "\\wintun.dll"))
             {
                 LogWrapper.Error("Link", "EasyTier 不存在或不完整");
                 return 1;
             }
-            LogWrapper.Info("Link", "EasyTier 路径: " + ETPath);
 
             return 0;
         }
 
-        public int Launch(bool isHost, string name, string secret, string? hostname = null, int port = 25565)
+        public static int Launch(bool isHost, string name, string secret, string? hostname = null, int port = 25565)
         {
             try
             {
-                if (TargetLobby == null || _Precheck() != 0) { return 1; }
+                if (TargetLobby == null || Precheck() != 0) { return 1; }
                 ETProcess = new Process { EnableRaisingEvents = true, StartInfo = new ProcessStartInfo { FileName = $"{ETPath}\\easytier-core.exe", WorkingDirectory = ETPath, WindowStyle = ProcessWindowStyle.Hidden } };
 
                 string arguments;
@@ -150,11 +144,20 @@ namespace PCL.Core.Link.EasyTier
                 // 用户名与其他参数
                 arguments += " --latency-first --compression=zstd --multi-thread";
                 // TODO: 等待玩家档案迁移以获取正在使用的档案名称
-                arguments += $" --hostname \"{(isHost ? "H|" : "J|") + NaidProfile.Username + (hostname != null, hostname)}\"";
+                string? showName = "default";
+                if (AllowCustomName && !string.IsNullOrWhiteSpace(Setup.Link.Username))
+                {
+                    showName = Setup.Link.Username;
+                }
+                else if (NaidProfile != null && !string.IsNullOrWhiteSpace(NaidProfile.Username))
+                {
+                    showName = NaidProfile.Username;
+                }
+                arguments += $" --hostname \"{(isHost ? "H|" : "J|") + showName + (!string.IsNullOrWhiteSpace(hostname) ? "|" + hostname : "")}\"";
 
                 // 指定 RPC 端口以避免与其他 ET 实例冲突
                 ETRpcPort = NetworkHelper.NewTcpPort();
-                arguments += $"--rpc-portal 127.0.0.1:{ETRpcPort}";
+                arguments += $" --rpc-portal 127.0.0.1:{ETRpcPort}";
 
                 // 启动
                 ETProcess.StartInfo.Arguments = arguments;
@@ -173,7 +176,7 @@ namespace PCL.Core.Link.EasyTier
             }
         }
 
-        public void Exit()
+        public static void Exit()
         {
             if (!(EasyTierStatus == EasyTierState.Stopped) && ETProcess != null)
             {

@@ -131,8 +131,9 @@ public static class StringExtension
         };
     }
 
-    public static string EmptyIfNull(this string? input) => input ?? string.Empty;
-    
+    public static string ReplaceNullOrEmpty(this string? input, string? replacement = null)
+        => string.IsNullOrEmpty(input) ? (replacement ?? string.Empty) : input!;
+
     private static readonly Regex _PatternReplaceLineBreak = new("\r\n|\r|\n");
     public static string ReplaceLineBreak(this string? input, string replacement = " ")
         => string.IsNullOrEmpty(input) ? string.Empty : _PatternReplaceLineBreak.Replace(input, replacement);
@@ -140,26 +141,24 @@ public static class StringExtension
     /// <summary>
     /// 搜索字符串中的所有正则匹配项。
     /// </summary>
-    public static List<string> RegexSearch(string str, string regex, RegexOptions options = RegexOptions.None)
+    public static List<string> RegexSearch(this string str, Regex regex)
     {
         try
         {
             var result = new List<string>();
-            var regexSearchRes = new Regex(regex, options).Matches(str);
-            if (regexSearchRes == null || regexSearchRes.Count == 0) { return result; }
-            foreach (Match item in regexSearchRes)
-            {
-                result.Add(item.Value);
-            }
+            var regexSearchRes = regex.Matches(str);
+            if (regexSearchRes.Count == 0) return result;
+            result.AddRange(from Match item in regexSearchRes select item.Value);
             return result;
         }
         catch (Exception ex)
         {
             LogWrapper.Error(ex, "Utils", "正则匹配全部项搜索失败: " + regex);
-            return new List<string>();
+            return [];
         }
     }
 
+    // ReSharper disable once InconsistentNaming
     public static bool IsASCII(this string str)
     {
         return str.All(c => c < 128);

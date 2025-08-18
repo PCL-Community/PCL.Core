@@ -1,104 +1,141 @@
 ﻿using System;
 using System.Net;
+using Microsoft.Win32;
+using PCL.Core.Logging;
+using PCL.Core.Utils.OS;
 
 namespace PCL.Core.Net;
 
-public class HttpProxyManager : IWebProxy
+public class HttpProxyManager : IWebProxy, IDisposable
 {
-    private readonly object _operationLock = new();
-    private ICredentials? _credentials;
-
-    private string? _proxyAddress;
     public static readonly HttpProxyManager Instance = new();
+
+    public enum ProxyMode
+    {
+        NoProxy,
+        SystemProxy,
+        CustomProxy
+    }
+
+    private readonly object _lock = new();
+    private ProxyMode _mode = ProxyMode.SystemProxy;
+    private readonly WebProxy _customWebProxy = new();
+    private readonly WebProxy _systemWebProxy = new();
+    private bool _bypassOnLocal = true;
+    private const string ProxyRegPathFull = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+    private const string ProxyRegPath = @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+    private readonly RegistryChangeMonitor _proxyMonitor = new(ProxyRegPath);
+
+    private HttpProxyManager()
+    {
+        RefreshSystemProxy(); // 初始化系统代理
+        _proxyMonitor.Changed += _onSystemProxyChanged;
+    }
+
+    private void _onSystemProxyChanged(object? sender, EventArgs e)
+    {
+        RefreshSystemProxy();
+    }
+
+    /// <summary>刷新系统代理设置</summary>
+    public void RefreshSystemProxy()
+    {
+        lock (_lock)
+        {
+            var isSystemProxyEnabled = (int)(Registry.GetValue(ProxyRegPathFull, "ProxyEnable", 0) ?? 0);
+            var systemProxyAddress = Registry.GetValue(ProxyRegPathFull, "ProxyServer", string.Empty) as string ?? string.Empty;
+            if (!systemProxyAddress.StartsWith("http")) systemProxyAddress = $"http://{systemProxyAddress}/";
+            var systemProxyOverride = Registry.GetValue(ProxyRegPathFull, "ProxyOverride", string.Empty) as string ?? string.Empty;
+            var systemProxyBypassList = systemProxyOverride.Split(";".ToCharArray());
+            _systemWebProxy.Address = (string.IsNullOrEmpty(systemProxyAddress) || isSystemProxyEnabled == 0) ? null : new Uri(systemProxyAddress);
+            _systemWebProxy.BypassList = systemProxyBypassList;
+            LogWrapper.Info("Proxy", $"已从操作系统更新代理设置，系统代理状态：{isSystemProxyEnabled}|{systemProxyAddress}|{systemProxyOverride}");
+        }
+    }
+
+    public ProxyMode Mode
+    {
+        get { lock (_lock) return _mode; }
+        set { lock (_lock) _mode = value; }
+    }
+
+    public Uri? CustomProxyAddress
+    {
+        get { lock (_lock) return _customWebProxy.Address; }
+        set { lock (_lock) _customWebProxy.Address = value; }
+    }
+
+    public ICredentials? CustomProxyCredentials
+    {
+        get { lock (_lock) return _customWebProxy.Credentials; }
+        set { lock (_lock) _customWebProxy.Credentials = value; }
+    }
+
+    public bool BypassOnLocal
+    {
+        get { lock (_lock) return _bypassOnLocal; }
+        set
+        {
+            lock (_lock)
+            {
+                _bypassOnLocal = value;
+                _systemWebProxy.BypassProxyOnLocal = value;
+            }
+        }
+    }
+
+    public Uri? GetProxy(Uri destination)
+    {
+        lock (_lock)
+        {
+            return _mode switch
+            {
+                ProxyMode.NoProxy => null, // 返回 null 表明没有代理
+                ProxyMode.SystemProxy => _systemWebProxy.GetProxy(destination),
+                ProxyMode.CustomProxy => _customWebProxy.GetProxy(destination),
+                _ => null
+            };
+        }
+    }
+
+    public bool IsBypassed(Uri host)
+    {
+        lock (_lock)
+        {
+            return _mode switch
+            {
+                ProxyMode.NoProxy => true,
+                ProxyMode.SystemProxy => _systemWebProxy.IsBypassed(host),
+                ProxyMode.CustomProxy => _customWebProxy.IsBypassed(host),
+                _ => true
+            };
+        }
+    }
 
     public ICredentials? Credentials
     {
         get
         {
-            lock (_operationLock)
+            lock (_lock)
             {
-                return _credentials;
+                // 仅 CustomProxy 模式返回凭据
+                return _mode == ProxyMode.CustomProxy
+                    ? _customWebProxy.Credentials
+                    : null;
             }
         }
         set
         {
-            lock (_operationLock)
+            lock (_lock)
             {
-                _credentials = value ??
-                               throw new ArgumentNullException(nameof(Credentials), $"{nameof(Credentials)} 不能为 Null");
+                _customWebProxy.Credentials = value;
             }
         }
     }
 
-    public string? ProxyAddress
+    public void Dispose()
     {
-        get
-        {
-            lock (_operationLock)
-            {
-                return _proxyAddress;
-            }
-        }
-        set
-        {
-            lock (_operationLock)
-            {
-                _proxyAddress = value ?? "";
-            }
-        }
-    }
-
-    private WebProxy? _proxy;
-
-    private WebProxy? _CurrentProxy
-    {
-        get
-        {
-            lock (_operationLock)
-            {
-                return _proxy;
-            }
-        }
-        set
-        {
-            lock (_operationLock)
-            {
-                _proxy = value;
-            }
-        }
-    }
-
-    public bool DisableProxy { get; set; }
-
-    private readonly WebProxy _systemProxy = new()
-    {
-        BypassProxyOnLocal = true
-    };
-
-    public bool RequireRefresh;
-
-    public Uri? GetProxy(Uri? uri)
-    {
-        return GetWebProxy(uri)?.Address ?? uri;
-    }
-
-    public WebProxy? GetWebProxy(Uri? uri)
-    {
-        if (_CurrentProxy is not null && !RequireRefresh) return _CurrentProxy;
-        RequireRefresh = false;
-        if (!string.IsNullOrWhiteSpace(_proxyAddress))
-        {
-            _CurrentProxy = new WebProxy(_proxyAddress, true);
-            return _CurrentProxy;
-        }
-
-        _CurrentProxy = _systemProxy;
-        return _CurrentProxy;
-    }
-
-    public bool IsBypassed(Uri? uri)
-    {
-        if (DisableProxy) return true;
-        return _CurrentProxy?.IsBypassed(uri ?? new Uri("http://127.0.0.1")) ?? true;
+        _proxyMonitor.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -11,7 +11,6 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Link;
@@ -21,7 +20,7 @@ public class McPing : IDisposable
     private readonly IPEndPoint _endpoint;
     private readonly string _host;
     private const int DefaultTimeout = 10000;
-    private int _timeout;
+    private readonly int _timeout;
 
     public McPing(IPEndPoint endpoint, int timeout = DefaultTimeout)
     {
@@ -32,10 +31,9 @@ public class McPing : IDisposable
 
     public McPing(string ip, int port = 25565, int timeout = DefaultTimeout)
     {
-        if (IPAddress.TryParse(ip, out var ipAddress))
-            _endpoint = new IPEndPoint(ipAddress, port);
-        else
-            _endpoint = new IPEndPoint(Dns.GetHostAddresses(ip).First(), port);
+        _endpoint = IPAddress.TryParse(ip, out var ipAddress)
+            ? new IPEndPoint(ipAddress, port)
+            : new IPEndPoint(Dns.GetHostAddresses(ip).First(), port);
         _host = ip;
         _timeout = timeout;
     }
@@ -55,7 +53,9 @@ public class McPing : IDisposable
         {
             try
             {
+                // ReSharper disable AccessToDisposedClosure
                 if (so.Connected) so.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
+                // ReSharper restore AccessToDisposedClosure
             }
             catch (ObjectDisposedException) { /* 忽略已释放的异常 */ }
         });
@@ -145,7 +145,9 @@ public class McPing : IDisposable
         {
             try
             {
+                // ReSharper disable AccessToDisposedClosure
                 if (so.Connected) so.Close();
+                // ReSharper restore AccessToDisposedClosure
             }
             catch (ObjectDisposedException) { /* Ignore */ }
         });
@@ -168,7 +170,7 @@ public class McPing : IDisposable
         {
                 var retPart = retRep.Split(["\0\0\0"], StringSplitOptions.None);
                 retPart = retPart.Select(s => new string(s
-                        .Where((c, index) => index % 2 == 0)
+                        .Where((_, index) => index % 2 == 0)
                         .ToArray()))
                         .ToArray();
                 if (retPart.Length < 6)
@@ -242,7 +244,7 @@ public class McPing : IDisposable
                     // 检查并处理 text 属性
                     if (obj.TryGetPropertyValue("text", out _))
                     {
-                        var formatCode = _getTextStyleString(
+                        var formatCode = _GetTextStyleString(
                             obj["color"]?.ToString() ?? string.Empty,
                             Convert.ToBoolean(obj["bold"]?.ToString() ?? "false"),
                             Convert.ToBoolean(obj["obfuscated"]?.ToString() ?? "false"),
@@ -303,7 +305,7 @@ public class McPing : IDisposable
         ["white"] = "f"
     };
 
-    private static string _getTextStyleString(
+    private static string _GetTextStyleString(
         string color,
         bool bold = false,
         bool obfuscated = false,

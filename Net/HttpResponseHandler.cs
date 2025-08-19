@@ -109,10 +109,7 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
 
     public string[] GetHeader(string name)
     {
-        if (_responseMessage.Headers.TryGetValues(name, out var values))
-            return values.ToArray();
-
-        if (_responseMessage.Content.Headers.TryGetValues(name, out values))
+        if (_responseMessage.Headers.TryGetValues(name, out var values) || _responseMessage.Content.Headers.TryGetValues(name, out values))
             return values.ToArray();
 
         return [];

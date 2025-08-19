@@ -9,12 +9,18 @@ using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
 
-public class HttpRequestBuilder(string url, HttpMethod method)
+public class HttpRequestBuilder
 {
-    private readonly HttpRequestMessage _request = new HttpRequestMessage(method, url);
+    private readonly HttpRequestMessage _request;
     private readonly Dictionary<string, string> _cookies = [];
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
     private bool _doLog = true;
+
+    public HttpRequestBuilder(string url, HttpMethod method)
+    {
+        var uriData = new Uri(url);
+        _request = new HttpRequestMessage(method, uriData);
+    }
 
     /// <summary>
     /// 创建一个 HttpRequestBuilder 对象
@@ -72,9 +78,9 @@ public class HttpRequestBuilder(string url, HttpMethod method)
     /// <returns>HttpRequestBuilder</returns>
     public HttpRequestBuilder WithHeader(IDictionary<string, string> headers)
     {
-        foreach (var kvp in headers)
+        foreach (var header in headers)
         {
-            _request.Headers.TryAddWithoutValidation(kvp.Key,kvp.Value);
+            _request.Headers.TryAddWithoutValidation(header.Key,header.Value);
         }
 
         return this;
@@ -88,7 +94,7 @@ public class HttpRequestBuilder(string url, HttpMethod method)
     /// <returns>HttpRequestBuilder</returns>
     public HttpRequestBuilder WithHeader(string key, string value)
     {
-        if (key.StartsWith("Content", StringComparison.OrdinalIgnoreCase) && _request.Content is not null)
+        if (key.StartsWith("Content-", StringComparison.OrdinalIgnoreCase) && _request.Content is not null)
         {
             _request.Content.Headers.TryAddWithoutValidation(key, value);
         }
@@ -153,6 +159,7 @@ public class HttpRequestBuilder(string url, HttpMethod method)
         // 处理 Cookies
         if (_cookies.Count != 0)
         {
+            if (_request.Headers.Contains("Cookie")) _request.Headers.Remove("Cookie"); //去掉野生的饼干
             var cookiesCtx = new StringBuilder(_cookies.Count * 30); //后期需要根据实际使用调整预分配的容量大小以提高文本构建性能
             foreach (var cookie in _cookies)
             {
@@ -160,17 +167,20 @@ public class HttpRequestBuilder(string url, HttpMethod method)
                     cookiesCtx.Append("; ");
                 cookiesCtx
                     .Append(Uri.EscapeDataString(cookie.Key))
-                    .Append("=")
+                    .Append('=')
                     .Append(_getSafeCookieValue(cookie.Value));
             }
             _request.Headers.TryAddWithoutValidation("Cookie", cookiesCtx.ToString());
         }
 
         var client = NetworkService.GetClient();
-        _makeLog($"向 {url} 发起 {method.Method} 请求");
+        _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
             .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
-        _makeLog($"已获取 {url} 的请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
+        if (responseMessage.RequestMessage?.RequestUri is not null &&
+            !_request.RequestUri.Equals(responseMessage.RequestMessage.RequestUri))
+            _makeLog($"已重定向至 {responseMessage.RequestMessage.RequestUri}");
+        _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
         if (throwIfNotSuccess) responseMessage.EnsureSuccessStatusCode();
         return new HttpResponseHandler(responseMessage);
     }

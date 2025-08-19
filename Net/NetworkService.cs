@@ -56,7 +56,7 @@ public sealed class NetworkService : GeneralService {
 
     private static TimeSpan _DefaultPolicy(int retry)
     {
-        return TimeSpan.FromMilliseconds(retry * 5_000 + 3_000);
+        return TimeSpan.FromMilliseconds(retry * 6_000 + 10_000);
     }
     /// <summary>
     /// 获取重试策略

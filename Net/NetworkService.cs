@@ -25,7 +25,7 @@ public sealed class NetworkService : GeneralService {
             {
                 UseProxy = true,
                 AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip, //在这里添加 None 的给我重学二进制去 😡
-                SslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13, //默认支持的协议太少
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13, //默认支持的协议太少
                 Proxy = HttpProxyManager.Instance,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 25,

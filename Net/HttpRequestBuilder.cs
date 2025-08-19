@@ -177,9 +177,8 @@ public class HttpRequestBuilder
         _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
             .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
-        if (responseMessage.RequestMessage?.RequestUri is not null &&
-            !_request.RequestUri.Equals(responseMessage.RequestMessage.RequestUri))
-            _makeLog($"已重定向至 {responseMessage.RequestMessage.RequestUri}");
+        var responseUri = responseMessage.RequestMessage?.RequestUri;
+        if (responseUri != null && _request.RequestUri != responseUri) _makeLog($"已重定向至 {responseUri}");
         _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
         if (throwIfNotSuccess) responseMessage.EnsureSuccessStatusCode();
         return new HttpResponseHandler(responseMessage);

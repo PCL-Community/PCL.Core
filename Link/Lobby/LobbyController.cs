@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -65,9 +66,12 @@ public static class LobbyController
             }
             else
             {
-                var result = HttpRequestBuilder.Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
-                    .WithContent(httpContent).SetHeader("Authorization", key).Build().Result.GetResponse().Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                if (result == null)
+                using var response = HttpRequestBuilder
+                    .Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
+                    .WithContent(httpContent)
+                    .WithAuthentication(key)
+                    .SendAsync().Result;
+                if (!response.IsSuccess)
                 {
                     if (RequiresLogin)
                     {
@@ -81,6 +85,7 @@ public static class LobbyController
                 }
                 else
                 {
+                    var result = response.AsStringAsync().Result;
                     if (result.Contains("数据已成功保存"))
                     {
                         LogWrapper.Info("Link", "联机数据已发送");
@@ -131,21 +136,26 @@ public static class LobbyController
         {
             Task.Delay(800).GetAwaiter().GetResult();
         }
-        if (!isHost && lobbyInfo.Ip != null) 
+
+        if (isHost || lobbyInfo.Ip is null) return 0;
+        string desc;
+        var hostInfo = GetPlayerList().Item1?[0];
+        if (hostInfo == null)
         {
-            string desc;
-            var hostInfo = GetPlayerList().Item1?[0];
-            if (hostInfo == null) 
-            { 
-                desc = string.Empty;
-            }
-            else
-            {
-                desc = " - " + (hostInfo.Username ?? hostInfo.Hostname);
-            } 
-            Task.Run(() => McPortForward.StartAsync(lobbyInfo.Ip, lobbyInfo.Port, "§ePCL CE 大厅" + desc));
+            desc = string.Empty;
+        }
+        else
+        {
+            desc = " - " + (hostInfo.Username ?? hostInfo.Hostname);
         }
 
+        var tcpPortForForward = NetworkHelper.NewTcpPort();
+        McForward = new TcpForward(IPAddress.Loopback, tcpPortForForward, IPAddress.Loopback,
+            JoinerLocalPort);
+        McBroadcast = new Broadcast($"§ePCL CE 大厅{desc}", tcpPortForForward);
+        McForward.Start();
+        McBroadcast.Start();
+        
         return 0;
     }
 
@@ -173,7 +183,8 @@ public static class LobbyController
     public static int Close()
     {
         ETController.Exit();
-        McPortForward.Stop();
+        McForward?.Stop();
+        McBroadcast?.Stop();
         return 0;
     }
 }

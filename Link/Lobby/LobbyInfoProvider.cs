@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.RegularExpressions;
 using PCL.Core.Link.Natayark;
 using PCL.Core.Logging;
+using PCL.Core.Net;
 using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Exts;
 
@@ -14,6 +15,9 @@ public static class LobbyInfoProvider
     public static bool AllowCustomName = false;
     public static bool RequiresLogin = true;
     public static bool RequiresRealName = true;
+
+    public static Broadcast? McBroadcast;
+    public static TcpForward? McForward;
 
     public class LobbyInfo
     {

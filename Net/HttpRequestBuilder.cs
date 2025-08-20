@@ -125,6 +125,15 @@ public class HttpRequestBuilder
         return this;
     }
 
+    public HttpRequestBuilder WithAuthentication(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            throw new ArgumentNullException(nameof(token));
+
+        _request.Headers.Authorization = new AuthenticationHeaderValue(token);
+        return this;
+    }
+
     // 快捷方法
     public HttpRequestBuilder WithBearerToken(string token) => WithAuthentication("Bearer", token);
 

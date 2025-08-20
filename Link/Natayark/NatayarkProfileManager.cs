@@ -53,10 +53,11 @@ public static class NatayarkProfileManager
                 $"&redirect_uri=http://localhost:29992/callback";
             Thread.Sleep(50); // 搁这让电脑休息半秒吗
             var httpContent = new StringContent(requestData, Encoding.UTF8, "application/x-www-form-urlencoded");
-            var httpRequest = await HttpRequestBuilder
+            using var oauthResponse = await HttpRequestBuilder
                 .Create("https://account.naids.com/api/oauth2/token", HttpMethod.Post)
-                .WithContent(httpContent).Build();
-            var result = await httpRequest.GetResponse().Content.ReadAsStringAsync();
+                .WithContent(httpContent)
+                .SendAsync(true);
+            var result = await oauthResponse.AsStringAsync();
             if (result == null) throw new Exception("获取 AccessToken 与 RefreshToken 失败，返回内容为空");
 
             var data = JsonNode.Parse(result);
@@ -69,9 +70,11 @@ public static class NatayarkProfileManager
             var expiresAt = data["refresh_token_expires_at"]!.ToString();
 
             // 获取用户信息
-            httpRequest = await HttpRequestBuilder.Create("https://account.naids.com/api/api/user/data", HttpMethod.Get)
-                .SetHeader("Authorization", $"Bearer {NaidProfile.AccessToken}").Build();
-            var receivedUserData = await httpRequest.GetResponse().Content.ReadAsStringAsync();
+            using var userDataResponse = await HttpRequestBuilder
+                .Create("https://account.naids.com/api/api/user/data", HttpMethod.Get)
+                .WithBearerToken(NaidProfile.AccessToken)
+                .SendAsync(true);
+            var receivedUserData = await userDataResponse.AsStringAsync();
             if (receivedUserData == null) throw new Exception("获取 Natayark 用户信息失败，返回内容为空");
             var userData = JsonNode.Parse(receivedUserData)?["data"];
             if (userData == null) throw new Exception("获取 Natayark 用户信息失败，解析返回内容失败");

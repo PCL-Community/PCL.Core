@@ -123,9 +123,8 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
             var isJavaUsable = (!isJavaJre && File.Exists(Path.Combine(javaLibDir, "jvm.lib"))) ||
                                (isJavaJre && File.Exists(Path.Combine(javaLibDir, "rt.jar")));
             var shouldDisableByDefault =
-                (isJavaJre && javaVersion.Major >= 16)
-                || (!isJava64Bit && Environment.Is64BitOperatingSystem)
-                || (isJava64Bit && !Environment.Is64BitOperatingSystem)
+                (isJavaJre && javaVersion.Major > 8)
+                || (isJava64Bit ^ Environment.Is64BitOperatingSystem)
                 || !isJavaUsable;
 
             return new Java(

@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Security.Authentication;
 using PCL.Core.App;
 using PCL.Core.Logging;
 using Polly;
@@ -13,29 +14,23 @@ namespace PCL.Core.Net;
 public sealed class NetworkService : GeneralService {
 
     private static ServiceProvider? _provider;
-    private static IHttpClientFactory? _factory = null;
+    private static IHttpClientFactory? _factory;
 
-
-    private NetworkService() : base("netowork", "网络服务") {}
+    private NetworkService() : base("network", "网络服务") {}
 
     public override void Start()
     {
         var services = new ServiceCollection();
-        services.AddHttpClient("NetworkServices").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        services.AddHttpClient("default").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 UseProxy = true,
-                AutomaticDecompression =
-                    DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None,
-                Proxy = HttpProxyManager.Instance
-            }
-        );
-        services.AddHttpClient("CookieClient").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                UseProxy = true,
-                AutomaticDecompression =
-                    DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None,
+                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip, //在这里添加 None 的给我重学二进制去 😡
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13, //默认支持的协议太少
                 Proxy = HttpProxyManager.Instance,
-                UseCookies = false
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 25,
+                UseCookies = false, //禁止自动 Cookie 管理
+                MaxConnectionsPerServer = 64,
             }
         );
         _provider = services.BuildServiceProvider();
@@ -50,17 +45,18 @@ public sealed class NetworkService : GeneralService {
     /// <summary>
     /// 获取 HttpClient
     /// </summary>
+    /// <param name="wantClientType">指定要求的 HttpClient 来源</param>
     /// <returns>HttpClient 实例</returns>
-    public static HttpClient GetClient(bool useCookie = false)
+    public static HttpClient GetClient(string wantClientType = "default")
     {
-        return _factory?.CreateClient(useCookie ? "CookieClient":"NetworkServices") ??
-         throw new InvalidOperationException("在初始化完成前的意外调用");
+        return _factory?.CreateClient(wantClientType) ??
+               throw new InvalidOperationException("在初始化完成前的意外调用");
     }
     
 
     private static TimeSpan _DefaultPolicy(int retry)
     {
-        return TimeSpan.FromMilliseconds(retry * 150 + 150);
+        return TimeSpan.FromMilliseconds(retry * 6_000 + 10_000);
     }
     /// <summary>
     /// 获取重试策略
@@ -68,12 +64,12 @@ public sealed class NetworkService : GeneralService {
     /// <param name="retry">最大重试次数</param>
     /// <param name="retryPolicy">定义重试器行为</param>
     /// <returns>AsyncPolicy</returns>
-    public static AsyncPolicy GetRetryPolicy(int? retry = null,Func<int,TimeSpan>? retryPolicy = null)
+    public static AsyncPolicy GetRetryPolicy(int retry = 3, Func<int,TimeSpan>? retryPolicy = null)
     {
         return Policy
             .Handle<HttpRequestException>()
             .WaitAndRetryAsync(
-                retry ?? 3,
+                retry,
                 attempt => retryPolicy?.Invoke(attempt) ?? _DefaultPolicy(attempt),
                 onRetryAsync: async (exception, _, _, _) =>
                 {

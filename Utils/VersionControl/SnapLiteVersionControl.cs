@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using LiteDB;
+using PCL.Core.IO.Storage;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Hash;
 
@@ -20,7 +21,8 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 {
     private readonly string _rootPath;
     private readonly LiteDatabase _database;
-    private readonly IHashProvider _hash;
+    private readonly IHashProvider _hashProvider;
+    private readonly HashStorage _storage;
 
     private const string ConfigFolderName = ".litesnap";
     private const string DatabaseName = "index.db";
@@ -33,11 +35,12 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         try
         {
             _rootPath = rootPath;
-            _hash = new SHA512Provider();
             var dbFile = Path.Combine(_rootPath, ConfigFolderName, DatabaseName);
             var objFolder = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName);
             if (!Directory.Exists(objFolder))
                 Directory.CreateDirectory(objFolder);
+            _storage = new HashStorage(objFolder, SHA512Provider.Instance, true);
+            _hashProvider = SHA512Provider.Instance;
             _database = new LiteDatabase($"Filename={dbFile}");
         }
         catch (Exception e)
@@ -48,9 +51,9 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     }
 
-    private async Task<FileVersionObjects[]> _GetAllTrackedFiles()
+    private async Task<FileVersionObjects[]> _GetAllTrackedObjects()
     {
-        List<FileVersionObjects> scanedPaths = [];
+        List<FileVersionObjects> scannedPaths = [];
         Queue<string> scanQueue = new();
         scanQueue.Enqueue(_rootPath);
         string[] excludePath = [Path.Combine(_rootPath, ConfigFolderName)];
@@ -61,10 +64,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             var dirsInCurDir = curDir.EnumerateDirectories().ToArray();
             if (!filesInCurDir.Any() && !dirsInCurDir.Any()) // 空文件夹直接加入
             {
-                scanedPaths.Add(new FileVersionObjects()
+                scannedPaths.Add(new FileVersionObjects()
                 {
                     CreationTime = curDir.CreationTime,
-                    Hash =string.Empty,
+                    Hash = string.Empty,
                     LastWriteTime = curDir.LastWriteTime,
                     Length = 0,
                     ObjectType = ObjectType.Directory,
@@ -80,7 +83,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 return new FileVersionObjects()
                 {
                     CreationTime = file.CreationTime,
-                    Hash = _hash.ComputeHash(fs),
+                    Hash = _hashProvider.ComputeHash(fs),
                     LastWriteTime = file.LastWriteTime,
                     Length = fs.Length,
                     Path = file.FullName.Replace(_rootPath, string.Empty).TrimStart(Path.DirectorySeparatorChar),
@@ -88,15 +91,15 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 };
             })).ToArray();
             await Task.WhenAll(fileCheckerTasks);
-            
-            scanedPaths.AddRange(fileCheckerTasks.Select(x => x.Result));
-            
+
+            scannedPaths.AddRange(fileCheckerTasks.Select(x => x.Result));
+
             // 剩余文件夹加入搜索队列中
-            foreach (var directory in dirsInCurDir) 
+            foreach (var directory in dirsInCurDir)
                 if (!excludePath.Contains(directory.FullName))
                     scanQueue.Enqueue(directory.FullName);
         }
-        return scanedPaths.ToArray();
+        return scannedPaths.ToArray();
     }
 
     public async Task<string> CreateNewVersion(string? name = null, string? desc = null)
@@ -106,16 +109,18 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             var nodeId = Guid.NewGuid().ToString("N");
 
             // 获取当前的文件信息
-            var allFiles = await _GetAllTrackedFiles();
+            var allFiles = await _GetAllTrackedObjects();
             LogWrapper.Info($"[SnapLite] 已获取到全部文件，总数量为 {allFiles.Length}");
             var newAddFiles = allFiles
                 .Distinct(FileVersionObjectsComparer.Instance)
-                .Where(x => !_HasFileObject(x.Hash));
+                .Where(x => x.ObjectType.Equals(ObjectType.Directory) ||
+                            (x.ObjectType.Equals(ObjectType.File) && !_storage.Exists(x.Hash)))
+                .ToList();
             // 存入数据库中
-            LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
+            LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count}");
             var nodeObjects = _database.GetCollection<FileVersionObjects>(_GetNodeTableNameById(nodeId));
             nodeObjects.InsertBulk(allFiles);
-            LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始复制文件");
+            LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始存储文件");
             // 复制到 objects 文件夹中
             var copyNewFilesTasks = newAddFiles
                 .Where(x => x.ObjectType == ObjectType.File)
@@ -124,24 +129,19 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                     var filePath = Path.Combine(_rootPath, x.Path);
                     try
                     {
-                        using var sourceFile = new FileStream(filePath, FileMode.Open);
-                        using var targetFile =
-                            new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash),
-                                FileMode.Create,
-                                FileAccess.ReadWrite, FileShare.Read);
-                        using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
-                        LogWrapper.Info($"[SnapLite] 开始复制 {filePath}");
-                        await sourceFile.CopyToAsync(compressedTarget);
-                        LogWrapper.Info($"[SnapLite] 已完成 {filePath} 的复制");
+                        LogWrapper.Info($"[SnapLite] 将 {filePath} 放入哈希仓库");
+                        await _storage.Put(filePath, x.Hash);
+                        LogWrapper.Info($"[SnapLite] 已完成 {filePath} 的存储");
                     }
                     catch (Exception e)
                     {
-                        LogWrapper.Error(e, $"[SnapLite] 复制 {filePath} 文件过程中出现错误");
+                        LogWrapper.Error(e, $"[SnapLite] 存储 {filePath} 文件过程中出现错误");
                         throw;
                     }
-                }));
+                }))
+                .ToArray();
             await Task.WhenAll(copyNewFilesTasks);
-            LogWrapper.Info($"[SnapLite] 文件复制任务完成");
+            LogWrapper.Info($"[SnapLite] 文件存储任务完成");
             // 创建最终记录
             var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
             var currentNodeInfo = new VersionData()
@@ -166,11 +166,6 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     private static string _GetNodeTableNameById(string nodeId)
     {
         return $"node_{nodeId}";
-    }
-
-    private bool _HasFileObject(string objectId)
-    {
-        return File.Exists(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, objectId));
     }
 
     public VersionData? GetVersion(string nodeId)
@@ -210,14 +205,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     {
         try
         {
-            var filePath = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, objectId);
-            if (!_HasFileObject(objectId))
-            {
-                LogWrapper.Warn($"[SnapLite] 预获取的对象 {objectId} 不存在，{filePath} 不存在此文件");
-                return null;
-            }
-            var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return new DeflateStream(fs, CompressionMode.Decompress);
+            return _storage.Get(objectId);
         }
         catch (Exception e)
         {
@@ -230,7 +218,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     {
         LogWrapper.Info($"[SnapLite] 开始应用 {nodeId} 的快照数据");
         var applyObjects = GetNodeObjects(nodeId) ?? throw new NullReferenceException("无法获取记录");
-        var currentObjects = await _GetAllTrackedFiles();
+        var currentObjects = await _GetAllTrackedObjects();
         LogWrapper.Info($"[SnapLite] 获取到 {nodeId} 的对象数为 {applyObjects.Count}，当前文件夹对象数为 {currentObjects.Length}");
         var curDict = currentObjects.ToDictionary(x => x.Path);
 
@@ -292,27 +280,36 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             try
             {
-                if (addFile.ObjectType == ObjectType.File)
+                switch (addFile.ObjectType)
                 {
-                    var curFilePath = Path.Combine(_rootPath, addFile.Path);
-                    var fileFolder = Path.GetDirectoryName(curFilePath);
-                    if (fileFolder == null) throw new NullReferenceException($"无法获取 {curFilePath} 的目录信息");
-                    if (!Directory.Exists(fileFolder)) Directory.CreateDirectory(fileFolder);
-                    var curFile = new FileInfo(curFilePath);
-                    if (curFile.Exists) curFile.Delete();
-                    using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
-                    using (var fs = curFile.Create()) {
-                        await ctx.CopyToAsync(fs);
+                    case ObjectType.File:
+                    {
+                        var curFilePath = Path.Combine(_rootPath, addFile.Path);
+                        var fileFolder = Path.GetDirectoryName(curFilePath);
+                        if (fileFolder == null) throw new NullReferenceException($"无法获取 {curFilePath} 的目录信息");
+                        if (!Directory.Exists(fileFolder)) Directory.CreateDirectory(fileFolder);
+                        var curFile = new FileInfo(curFilePath);
+                        if (curFile.Exists) curFile.Delete();
+                        using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
+                        using (var fs = curFile.Create()) {
+                            await ctx.CopyToAsync(fs);
+                        }
+                        curFile.CreationTime = addFile.CreationTime;
+                        curFile.LastWriteTime = addFile.LastWriteTime;
+                        break;
                     }
-                    curFile.CreationTime = addFile.CreationTime;
-                    curFile.LastWriteTime = addFile.LastWriteTime;
-                }
-                else if (addFile.ObjectType == ObjectType.Directory)
-                {
-                    var curDir = new DirectoryInfo(Path.Combine(_rootPath, addFile.Path));
-                    if (!curDir.Exists) curDir.Create();
-                    curDir.CreationTime = addFile.CreationTime;
-                    curDir.LastWriteTime = addFile.LastWriteTime;
+                    case ObjectType.Directory:
+                    {
+                        var curDir = new DirectoryInfo(Path.Combine(_rootPath, addFile.Path));
+                        if (!curDir.Exists) curDir.Create();
+                        curDir.CreationTime = addFile.CreationTime;
+                        curDir.LastWriteTime = addFile.LastWriteTime;
+                        break;
+                    }
+                    default:
+                    {
+                        throw new NotSupportedException();
+                    }
                 }
             }
             catch (Exception e)
@@ -330,27 +327,36 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             try
             {
-                if (updateObject.ObjectType == ObjectType.File)
+                switch (updateObject.ObjectType)
                 {
-                    var curFile = new FileInfo(Path.Combine(_rootPath, updateObject.Path));
-                    if (!curFile.Exists)
+                    case ObjectType.File:
                     {
-                        LogWrapper.Warn($"[SnapLite] 欲修改的文件不存在 {updateObject.Path}");
-                        return;
+                        var curFile = new FileInfo(Path.Combine(_rootPath, updateObject.Path));
+                        if (!curFile.Exists)
+                        {
+                            LogWrapper.Warn($"[SnapLite] 欲修改的文件不存在 {updateObject.Path}");
+                            return;
+                        }
+                        curFile.LastWriteTime = updateObject.LastWriteTime;
+                        curFile.CreationTime = updateObject.CreationTime;
+                        break;
                     }
-                    curFile.LastWriteTime = updateObject.LastWriteTime;
-                    curFile.CreationTime = updateObject.CreationTime;
-                }
-                else if (updateObject.ObjectType == ObjectType.Directory)
-                {
-                    var curDir = new DirectoryInfo(Path.Combine(_rootPath, updateObject.Path));
-                    if (!curDir.Exists)
+                    case ObjectType.Directory:
                     {
-                        LogWrapper.Warn($"[SnapLite] 欲修改的文件夹不存在 {updateObject.Path}");
-                        return;
+                        var curDir = new DirectoryInfo(Path.Combine(_rootPath, updateObject.Path));
+                        if (!curDir.Exists)
+                        {
+                            LogWrapper.Warn($"[SnapLite] 欲修改的文件夹不存在 {updateObject.Path}");
+                            return;
+                        }
+                        curDir.LastWriteTime = updateObject.LastWriteTime;
+                        curDir.CreationTime = updateObject.CreationTime;
+                        break;
                     }
-                    curDir.LastWriteTime = updateObject.LastWriteTime;
-                    curDir.CreationTime = updateObject.CreationTime;
+                    default:
+                    {
+                        throw new NotSupportedException();
+                    }
                 }
             }
             catch (Exception e)
@@ -374,7 +380,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             {
                 if (!File.Exists(filePath)) return false;
                 using var ctx = GetObjectContent(x.Hash);
-                if (ctx != null) return _hash.ComputeHash(ctx) == x.Hash;
+                if (ctx != null) return _hashProvider.ComputeHash(ctx) == x.Hash;
                 LogWrapper.Warn($"[SnapLite] 无法打开指定对象的文件流：{x.Hash}");
                 return false;
             }
@@ -410,11 +416,11 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         var uselessObjects = allObjects.Except(objectsInRecord).ToArray();
         LogWrapper.Info($"[SnapLite] 寻找到 {uselessObjects.Length} 个可清理对象");
 
-        var deleteTask = uselessObjects.Select(x => Task.Run(() =>
+        var deleteTask = uselessObjects.Select(x => Task.Run(async () =>
         {
             try
             {
-                File.Delete(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x));
+                await _storage.Delete(x);
             }
             catch (Exception e)
             {
@@ -436,22 +442,27 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             await Task.Run(async () =>
             {
-                if (fileObject.ObjectType == ObjectType.File)
+                switch (fileObject.ObjectType)
                 {
-                    var entry = targetZip.CreateEntry(fileObject.Path);
-                    entry.LastWriteTime = fileObject.LastWriteTime;
-                    using var writer = entry.Open();
-                    using var objectReader =
-                        new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, fileObject.Hash),
-                            FileMode.Open,
-                            FileAccess.Read, FileShare.Read);
-                    using var reader = new DeflateStream(objectReader, CompressionMode.Decompress);
-                    await reader.CopyToAsync(writer);
-                }
-                else if (fileObject.ObjectType == ObjectType.Directory)
-                {
-                    var entry = targetZip.CreateEntry($"{fileObject.Path}{Path.DirectorySeparatorChar}");
-                    entry.LastWriteTime = fileObject.LastWriteTime;
+                    case ObjectType.File:
+                    {
+                        var entry = targetZip.CreateEntry(fileObject.Path);
+                        entry.LastWriteTime = fileObject.LastWriteTime;
+                        using var writer = entry.Open();
+                        using var reader = GetObjectContent(fileObject.Hash) ?? throw new Exception("无法找到存储的文件");
+                        await reader.CopyToAsync(writer);
+                        break;
+                    }
+                    case ObjectType.Directory:
+                    {
+                        var entry = targetZip.CreateEntry($"{fileObject.Path}{Path.DirectorySeparatorChar}");
+                        entry.LastWriteTime = fileObject.LastWriteTime;
+                        break;
+                    }
+                    default:
+                    {
+                        throw new NotSupportedException();
+                    }
                 }
             });
         }

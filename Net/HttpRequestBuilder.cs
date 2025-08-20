@@ -1,31 +1,38 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
+using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
 
 public class HttpRequestBuilder
 {
     private readonly HttpRequestMessage _request;
-    private HttpResponseMessage? _response;
-    private bool _useCookie;
-    
-    private HttpRequestBuilder(string url,HttpMethod method)
+    private readonly Dictionary<string, string> _cookies = [];
+    private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
+    private bool _doLog = true;
+
+    public HttpRequestBuilder(string url, HttpMethod method)
     {
-        _request = new HttpRequestMessage(method,url);
+        var uriData = new Uri(url);
+        _request = new HttpRequestMessage(method, uriData);
     }
+
     /// <summary>
     /// 创建一个 HttpRequestBuilder 对象
     /// </summary>
     /// <param name="url">url</param>
     /// <param name="method">HTTP 方法</param>
     /// <returns>HttpRequestBuilder</returns>
-    public static HttpRequestBuilder Create(string url,HttpMethod method)
+    public static HttpRequestBuilder Create(string url, HttpMethod method)
     {
-        return new HttpRequestBuilder(url,method);
+        return new HttpRequestBuilder(url, method);
     }
+
     /// <summary>
     /// 设置请求载荷
     /// </summary>
@@ -36,40 +43,58 @@ public class HttpRequestBuilder
         _request.Content = content;
         return this;
     }
+
     /// <summary>
-    /// 设置请求使用的 Cookie
+    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
     /// </summary>
-    /// <param name="cookie">Cookie</param>
+    /// <param name="key"></param>
+    /// <param name="value"></param>
     /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder WithCookie(string cookie)
+    public HttpRequestBuilder WithCookie(string key, string value)
     {
-        _useCookie = true;
-        _request.Headers.TryAddWithoutValidation("Cookie",cookie);
+        _cookies[key] = value;
         return this;
     }
+
     /// <summary>
-    /// 批量设置 Headers
+    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
     /// </summary>
-    /// <param name="headers">实现了 IDictionary 的 对象</param>
-    /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder SetHeaders(IDictionary<string, string> headers)
+    /// <param name="cookies"></param>
+    /// <returns></returns>
+    public HttpRequestBuilder WithCookie(IDictionary<string, string> cookies)
     {
-        foreach (var kvp in headers)
+        foreach (var cookie in cookies)
         {
-            _request.Headers.Add(kvp.Key,kvp.Value);
+            _cookies[cookie.Key] = cookie.Value;
         }
 
         return this;
     }
+
     /// <summary>
-    /// 设置单个 Header
+    /// 设置多个 Header
+    /// </summary>
+    /// <param name="headers"></param>
+    /// <returns>HttpRequestBuilder</returns>
+    public HttpRequestBuilder WithHeader(IDictionary<string, string> headers)
+    {
+        foreach (var header in headers)
+        {
+            _request.Headers.TryAddWithoutValidation(header.Key,header.Value);
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// 设置一个 Header
     /// </summary>
     /// <param name="key">Header Name</param>
     /// <param name="value">Header Value</param>
     /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder SetHeader(string key, string value)
+    public HttpRequestBuilder WithHeader(string key, string value)
     {
-        if (key.StartsWith("Content", StringComparison.OrdinalIgnoreCase) && _request.Content is not null)
+        if (key.StartsWith("Content-", StringComparison.OrdinalIgnoreCase) && _request.Content is not null)
         {
             _request.Content.Headers.TryAddWithoutValidation(key, value);
         }
@@ -80,71 +105,101 @@ public class HttpRequestBuilder
 
         return this;
     }
+
     /// <summary>
-    /// 启动网络请求
+    /// 设置一个 Header
     /// </summary>
-    /// <returns>HttpRequestBuilder</returns>
-    public async Task<HttpRequestBuilder> Build(int? retry = null,Func<int,TimeSpan>? retryPolicy =null)
+    /// <param name="header"></param>
+    /// <returns></returns>
+    public HttpRequestBuilder WithHeader(KeyValuePair<string, string> header) => WithHeader(header.Key, header.Value);
+
+    public HttpRequestBuilder WithAuthentication(string scheme, string token)
     {
-        using var client = NetworkService.GetClient(_useCookie);
-        _response = await NetworkService.GetRetryPolicy(retry,retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(_request));
+        if (string.IsNullOrEmpty(scheme))
+            throw new ArgumentNullException(nameof(scheme));
+
+        if (string.IsNullOrEmpty(token))
+            throw new ArgumentNullException(nameof(token));
+
+        _request.Headers.Authorization = new AuthenticationHeaderValue(scheme, token);
         return this;
     }
-    /// <summary>
-    /// 获取响应的 HttpResponseMessage 对象，如果请求尚未完成，则返回 null
-    /// </summary>
-    /// <returns>HttpResponseMessage</returns>
-    public HttpResponseMessage GetResponse()
+
+    // 快捷方法
+    public HttpRequestBuilder WithBearerToken(string token) => WithAuthentication("Bearer", token);
+
+    public HttpRequestBuilder WithHttpVersion(Version version)
     {
-        return _response ?? throw new InvalidOperationException("在请求完成前的意外调用");
+        _request.Version = version;
+        return this;
     }
-    /// <summary>
-    /// 读取响应载荷
-    /// </summary>
-    /// <returns>string</returns>
-    public string ReadResponseAsString()
+
+    public HttpRequestBuilder WithLoggingOptions(bool doLog)
     {
-        return ReadResponseAsStringAsync().GetAwaiter().GetResult();
+        _doLog = doLog;
+        return this;
     }
-    /// <summary>
-    /// 读取响应载荷 （异步）
-    /// </summary>
-    /// <returns>string</returns>
-    public async Task<string> ReadResponseAsStringAsync()
+
+    public HttpRequestBuilder WithCompletionOption(HttpCompletionOption option)
     {
-        return await GetResponse().Content.ReadAsStringAsync();
+        _completionOption = option;
+        return this;
     }
+
     /// <summary>
-    /// 读取响应载荷
+    ///
     /// </summary>
-    /// <returns>byte[]</returns>
-    public byte[] ReadResponseAsByteArray()
+    /// <param name="throwIfNotSuccess">请求失败时是否抛出异常</param>
+    /// <param name="retryTimes">请求重试次数</param>
+    /// <param name="retryPolicy">依据请求当前尝试的次数给出的重试时长控制方法</param>
+    /// <exception cref="HttpRequestException">要求 <paramref name="throwIfNotSuccess"/> 时并且 HTTP 请求失败</exception>
+    /// <returns></returns>
+    public async Task<HttpResponseHandler> SendAsync(bool throwIfNotSuccess = false, int retryTimes = 3, Func<int,TimeSpan>? retryPolicy = null)
     {
-        return ReadResponseAsByteArrayAsync().GetAwaiter().GetResult();
+        // 处理 Cookies
+        if (_cookies.Count != 0)
+        {
+            if (_request.Headers.Contains("Cookie")) _request.Headers.Remove("Cookie"); //去掉野生的饼干
+            var cookiesCtx = new StringBuilder(_cookies.Count * 30); //后期需要根据实际使用调整预分配的容量大小以提高文本构建性能
+            foreach (var cookie in _cookies)
+            {
+                if (cookiesCtx.Length > 0)
+                    cookiesCtx.Append("; ");
+                cookiesCtx
+                    .Append(Uri.EscapeDataString(cookie.Key))
+                    .Append('=')
+                    .Append(_getSafeCookieValue(cookie.Value));
+            }
+            _request.Headers.TryAddWithoutValidation("Cookie", cookiesCtx.ToString());
+        }
+
+        var client = NetworkService.GetClient();
+        _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
+        var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
+            .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
+        var responseUri = responseMessage.RequestMessage?.RequestUri;
+        if (responseUri != null && _request.RequestUri != responseUri) _makeLog($"已重定向至 {responseUri}");
+        _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
+        if (throwIfNotSuccess) responseMessage.EnsureSuccessStatusCode();
+        return new HttpResponseHandler(responseMessage);
     }
-    /// <summary>
-    /// 读取响应载荷（异步）
-    /// </summary>
-    /// <returns>byte[]</returns>
-    public async Task<byte[]> ReadResponseAsByteArrayAsync()
-    { 
-        return await GetResponse().Content.ReadAsByteArrayAsync();
-    }
-    /// <summary>
-    /// 读取响应流
-    /// </summary>
-    /// <returns>Stream</returns>
-    public Stream ReadResponseAsStream()
+
+    private void _makeLog(string msg)
     {
-        return ReadResponseAsStreamAsync().GetAwaiter().GetResult();
+        if (!_doLog) return;
+        LogWrapper.Info("Network", msg);
     }
-    /// <summary>
-    /// 读取响应流（异步）
-    /// </summary>
-    /// <returns>tream</returns>
-    public async Task<Stream> ReadResponseAsStreamAsync()
+
+    private static string _getSafeCookieValue(string value)
     {
-        return await GetResponse().Content.ReadAsStreamAsync();
+        if (string.IsNullOrEmpty(value)) return value;
+        var needsEncoding = value.Any(c => _ForbiddenCookieValueChar.Contains(c) || char.IsControl(c));
+        return needsEncoding ? Uri.EscapeDataString(value) : value;
     }
+
+    private static readonly char[] _ForbiddenCookieValueChar =
+    [
+        ';', ',', ' ', '\r', '\n', '\t', '\0',
+        '=', '"', '\'', '\\', '<', '>'
+    ];
 }

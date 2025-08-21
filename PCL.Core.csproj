@@ -159,7 +159,7 @@
     <Compile Include="Logging\LogWrapper.cs" />
     <Compile Include="Minecraft\InstanceExport\ExportNode.cs" />
     <Compile Include="Minecraft\InstanceExport\InstanceExportHelper.cs" />
-    <Compile Include="Minecraft\InstanceExport\InstanceExportRulesConfig.cs" />
+    <Compile Include="Minecraft\InstanceExport\InstanceExportRules.cs" />
     <Compile Include="Minecraft\Java.cs" />
     <Compile Include="Minecraft\JavaManager.cs" />
     <Compile Include="Minecraft\ResourceProject\Curseforge\CurseforgeAuthors.cs" />

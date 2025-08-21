@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using PCL.Core.LifecycleManagement;
+using PCL.Core.Minecraft.InstanceExport;
 using PCL.Core.Native;
 using PCL.Core.UI;
 using PCL.Core.Utils;
@@ -16,13 +17,15 @@ public static class PredefinedFileItems
 {
     public static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
     public static readonly FileItem GrayProfile = FileItem.FromLocalFile("gray.json", FileType.Data);
+    public static readonly FileItem InstanceExportRules = FileItem.FromLocalFile("instanceExportRules.json", FileType.LocalData);
 }
 
 public static class PredefinedFileTasks
 {
     public static readonly IFileTask CacheInformation = FileTask.FromSingleFile(PredefinedFileItems.CacheInformation, FileTransfers.DoNothing);
     public static readonly IFileTask GrayProfile = FileTask.FromSingleFile(PredefinedFileItems.GrayProfile, FileTransfers.DoNothing, FileProcesses.ParseJson<GrayProfileConfig>());
-    
+    public static readonly IFileTask InstanceExportRules = FileTask.FromSingleFile(PredefinedFileItems.InstanceExportRules, FileTransfers.DoNothing, FileProcesses.ParseJson<InstanceExportRules>());
+
     internal static readonly IFileTask[] Preload = [
         CacheInformation, GrayProfile
     ];

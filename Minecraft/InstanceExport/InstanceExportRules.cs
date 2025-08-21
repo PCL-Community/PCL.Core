@@ -3,13 +3,13 @@ using System.Text.Json.Serialization;
 
 namespace PCL.Core.Minecraft.InstanceExport
 {
-    public class InstanceExportRulesConfig
+    public record InstanceExportRules
     {
         public List<string> DisabledFiles { get; set; }
         public List<RuleNode> Rules { get; set; }
     }
 
-    public class RuleNode
+    public record RuleNode
     {
         public string Title { get; set; }
         public string Description { get; set; }
@@ -31,7 +31,7 @@ namespace PCL.Core.Minecraft.InstanceExport
         public List<string> EnumDirectories { get; set; }
     }
 
-    public class RequireRule
+    public record RequireRule
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public RequireOperator Operator { get; set; }

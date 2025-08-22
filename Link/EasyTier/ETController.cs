@@ -134,12 +134,7 @@ public static class ETController
             }
 
             // 数据流代理设置
-            arguments += Setup.Link.ProxyType switch
-            {
-                0 => " --enable-quic-proxy",
-                1 => " --enable-kcp-proxy",
-                _ => " --enable-quic-proxy --enable-kcp-proxy",
-            };
+            arguments += " --enable-quic-proxy --enable-kcp-proxy";
 
             // 用户名与其他参数
             arguments += " --latency-first --compression=zstd --multi-thread";

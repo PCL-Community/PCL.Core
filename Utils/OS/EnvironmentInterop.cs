@@ -34,11 +34,13 @@ public static partial class EnvironmentInterop
 
     public static string? GetSecret(string key, bool readEnv = true, bool readEnvDebugOnly = false)
     {
-        SecretDictionary.TryGetValue(key, out var result);
+        if (!SecretDictionary.TryGetValue(key, out var value) &&
+            readEnv &&
 #if !DEBUG
-        if (readEnvDebugOnly) return result;
+            !readEnvDebugOnly &&
 #endif
-        if (readEnv) ReadVariable($"PCL_{key}", ref result, false);
-        return result;
+            ReadVariable($"PCL_{key}", ref value, false)
+        ) SecretDictionary[key] = value;
+        return value;
     }
 }

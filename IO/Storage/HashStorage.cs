@@ -19,17 +19,17 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
     public async Task<string?> Put(string fromPath, string? hash = null)
     {
         //参数检查
-        if (fromPath is null) throw new ArgumentNullException(nameof(fromPath));
+        ArgumentNullException.ThrowIfNull(fromPath);
         var filePath = Path.GetFullPath(fromPath);
         if (!File.Exists(filePath)) return null;
         //必要数据准备
-        using var originalFs = File.Open(fromPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var originalFs = File.Open(fromPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         return await Put(originalFs, hash);
     }
 
     public async Task<string?> Put(Stream input, string? hash = null)
     {
-        if (input is null) throw new ArgumentNullException(nameof(input));
+        ArgumentNullException.ThrowIfNull(input);
         if (hash is not null && hash.Length != hashProvider.Length) throw new ArgumentException("Provide hash is not correct", nameof(hash));
         var fileHash = hash ?? hashProvider.ComputeHash(input);
         var destPath = _getDestPath(fileHash);
@@ -37,14 +37,14 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
         if (correctMisplacedFile && _correctMisplacedFile(fileHash)) LogWrapper.Info("HashStorage", "Move misplaced file into correct folder");
         //检查是否已存在保存的文件
         if (File.Exists(destPath)) return fileHash;
-        using var destinationFs = _getSaveStream(destPath);
+        await using var destinationFs = _getSaveStream(destPath);
         await input.CopyToAsync(destinationFs);
         return fileHash;
     }
 
     public async Task<bool> Delete(string hash)
     {
-        if (hash is null) throw new ArgumentNullException(nameof(hash));
+        ArgumentNullException.ThrowIfNull(hash);
         var filePath = _getDestPath(hash);
         if (!File.Exists(filePath) && correctMisplacedFile) filePath = _getMisplacedFilePath(hash);
         if (!File.Exists(hash)) return false;
@@ -54,7 +54,7 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
 
     public Stream? Get(string hash)
     {
-        if (hash is null) throw new ArgumentNullException(nameof(hash));
+        ArgumentNullException.ThrowIfNull(hash);
         var destPath = _getDestPath(hash);
         if (correctMisplacedFile && _correctMisplacedFile(hash)) LogWrapper.Info("HashStorage", $"Move misplaced file into correct folder: {hash}");
         return File.Exists(destPath) ? _getReadStream(destPath) : null;
@@ -62,7 +62,7 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
 
     public bool Exists(string hash)
     {
-        if (hash is null) throw new ArgumentNullException(nameof(hash));
+        ArgumentNullException.ThrowIfNull(hash);
         return File.Exists(_getDestPath(hash)) || (correctMisplacedFile && File.Exists(_getMisplacedFilePath(hash)));
     }
 

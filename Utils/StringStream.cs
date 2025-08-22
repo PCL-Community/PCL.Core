@@ -13,7 +13,7 @@ public class StringStream : Stream
     /// </summary>
     public StringStream(string source, Encoding? encoding = null)
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
+        ArgumentNullException.ThrowIfNull(source);
         encoding ??= Encoding.UTF8;
 
         var buffer = encoding.GetBytes(source);

@@ -31,7 +31,7 @@ public sealed class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
 
     protected override IEnumerable<Task> GetScheduledTasks()
     {
-        bool lockTaken = false;
+        var lockTaken = false;
         try
         {
             Monitor.TryEnter(_tasks, ref lockTaken);

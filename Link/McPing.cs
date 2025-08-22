@@ -238,7 +238,7 @@ public class McPing : IDisposable
                     // 检查并处理 extra 数组
                     if (obj.TryGetPropertyValue("extra", out var extraNode) && extraNode is JsonArray extraArray)
                         // 逆序压栈保证原始顺序
-                        for (int i = extraArray.Count - 1; i >= 0; i--)
+                        for (var i = extraArray.Count - 1; i >= 0; i--)
                             if (extraArray[i] != null)
                                 stack.Push(extraArray[i]!);
                     // 检查并处理 text 属性
@@ -269,7 +269,7 @@ public class McPing : IDisposable
                 {
                     var jArr = current.AsArray();
                     // LogWrapper.Debug("McPing",$"Treat {array} as JArray");
-                    for (int i = jArr.Count - 1; i >= 0; i--)
+                    for (var i = jArr.Count - 1; i >= 0; i--)
                         if (jArr[i] != null)
                             stack.Push(jArr[i]!);
                     break;

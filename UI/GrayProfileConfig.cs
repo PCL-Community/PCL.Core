@@ -1,9 +1,8 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace PCL.Core.UI;
 
-[Serializable]
+[JsonSerializable(typeof(GrayProfileConfig))]
 public record GrayProfileConfig
 {
     [JsonPropertyName("enabled")]

@@ -229,11 +229,11 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             if (curDict.TryGetValue(applyObject.Path, out var existingObject))
             {
-                bool isSameContent = existingObject.ObjectType == applyObject.ObjectType
-                              && existingObject.Length == applyObject.Length
-                              && existingObject.Hash == applyObject.Hash;
-                bool isSameMetadata = existingObject.CreationTime == applyObject.CreationTime
-                                      && existingObject.LastWriteTime == applyObject.LastWriteTime;
+                var isSameContent = existingObject.ObjectType == applyObject.ObjectType
+                                    && existingObject.Length == applyObject.Length
+                                    && existingObject.Hash == applyObject.Hash;
+                var isSameMetadata = existingObject.CreationTime == applyObject.CreationTime
+                                     && existingObject.LastWriteTime == applyObject.LastWriteTime;
                 if (!isSameContent && !isSameMetadata) toAdd.Add(applyObject);
                 if (isSameContent && !isSameMetadata) toUpdate.Add(applyObject);
             }

@@ -1,9 +1,8 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace PCL.Core.UI;
 
-[Serializable]
+[JsonSerializable(typeof(GrayProfile))]
 public record GrayProfile
 {
     [JsonPropertyName("light_c1")] public int L1 { get; init; }

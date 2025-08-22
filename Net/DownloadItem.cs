@@ -64,7 +64,7 @@ public class DownloadItem(
     
     public long CalculateRemainingLength() => (ContentLength == 0) ? 0 : ContentLength - CalculateTransferredLength();
     
-    private CancellationTokenSource _cancelTokenSource = new();
+    private readonly CancellationTokenSource _cancelTokenSource = new();
 
     public bool Cancel(bool markAsFailed = false)
     {
@@ -80,10 +80,10 @@ public class DownloadItem(
         long startPosition,
         long? endPosition,
         Action<DownloadSegment>? endCallback,
-        CancellationToken cancelToken,
         int retry,
         out Task task,
-        out DownloadSegment segment)
+        out DownloadSegment segment,
+        CancellationToken cancelToken)
     {
         var seg = new DownloadSegment(RealUri, TargetPath, ChunkSize) { RetryCount = retry };
         if (endPosition is { } end) seg.EndPosition = end;
@@ -131,8 +131,7 @@ public class DownloadItem(
                     {
                         errorCallback(seg.Status, seg.LastException);
                     }
-                }),
-                cToken, Retry, out task, out var segment);
+                }), Retry, out task, out var segment, cToken);
             if (afterNode != null)
             {
                 Segments.AddAfter(afterNode, segment);
@@ -154,7 +153,7 @@ public class DownloadItem(
             segment.Cancel();
             _ConstructDownloadSegment(
                 segment.StartPosition, segment.EndPosition, segment.EndCallback,
-                _cancelTokenSource.Token, segment.RetryCount, out task, out segment);
+                segment.RetryCount, out task, out segment, _cancelTokenSource.Token);
             node.Value = segment;
         }
         await task;

@@ -167,12 +167,11 @@ public sealed class SetupService : GeneralService
     {
         try
         {
-            if (value is null)
-                throw new ArgumentNullException(nameof(value));
+            ArgumentNullException.ThrowIfNull(value);
             var rawValue = value;
             if (entry.IsEncrypted)
                 rawValue = EncryptHelper.SecretEncrypt(rawValue);
-            string? oldRawValue = _GetSourceManager(entry).Set(entry.KeyName, rawValue, gamePath);
+            var oldRawValue = _GetSourceManager(entry).Set(entry.KeyName, rawValue, gamePath);
             if (entry.IsEncrypted && oldRawValue is not null)
                 oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
             SetupChanged?.Invoke(entry, oldRawValue, value, gamePath);

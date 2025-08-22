@@ -14,8 +14,7 @@ public static class StringExtension
 {
     public static object? Convert(string? value, Type targetType)
     {
-        if (targetType is null)
-            throw new ArgumentNullException(nameof(targetType));
+        ArgumentNullException.ThrowIfNull(targetType);
 
         if (targetType == typeof(string)) return value;
 

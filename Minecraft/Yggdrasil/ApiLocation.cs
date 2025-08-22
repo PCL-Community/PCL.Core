@@ -8,13 +8,13 @@ namespace PCL.Core.Minecraft.Yggdrasil;
 
 public static class ApiLocation
 {
-    public static async Task<string?> TryRequest(string address)
+    public static async Task<string> TryRequest(string address)
     {
         var originAddr = address.StartsWith("http") ? address : $"https://{address}";
         var originUri = new Uri(originAddr);
         using var response = await HttpRequestBuilder.Create(originAddr, HttpMethod.Head).SendAsync();
         response.TryGetHeader("X-Authlib-Injector-Api-Location", out var responses);
-        if (responses.Length == 0) return null;
+        if (responses.Length == 0) return originAddr;
         var resultAddr = responses.First();
         if (string.IsNullOrEmpty(resultAddr)) return originAddr;
         if (resultAddr!.StartsWith(originUri.Scheme)) return resultAddr;
@@ -23,3 +23,4 @@ public static class ApiLocation
         return new Uri(originUri, resultAddr).ToString();   
     }
 }
+

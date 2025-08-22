@@ -78,7 +78,7 @@
     "AnnounceCacheVer": {"key": "LinkAnnounceCacheVer", "source": "global", "value": 0, "encrypted": false},
     "RelayType": {"key": "LinkRelayType", "source": "global", "value": 0, "encrypted": false},
     "ServerType": {"key": "LinkServerType", "source": "global", "value": 1, "encrypted": false},
-    "ProxyType": {"key": "LinkProxyType", "source": "global", "value": 1, "encrypted": false},
+	"LatencyFirstMode": {"key": "LinkLatencyFirstMode", "source": "global", "value": false, "encrypted": false},
     "RelayServer": {"key": "LinkRelayServer", "source": "global", "value": "", "encrypted": false},
     "NaidRefreshToken": {"key": "LinkNaidRefreshToken", "source": "global", "value": "", "encrypted": true},
     "NaidRefreshExpireTime": {"key": "LinkNaidRefreshExpiresAt", "source": "global", "value": "", "encrypted": true},

@@ -46,5 +46,5 @@ public static class LogLevelExtensions
         _ => LogLevel.Fatal,
     };
 
-    public static int Header(this LogLevel level) => (int)level / 100;
+    public static int Header(this LogLevel level) => (int)level / 100 * 100;
 }

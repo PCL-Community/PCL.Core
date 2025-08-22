@@ -84,7 +84,7 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
     {
         try
         {
-            using var stream = await AsStreamAsync().ConfigureAwait(false);
+            await using var stream = await AsStreamAsync().ConfigureAwait(false);
             return await JsonSerializer.DeserializeAsync<T>(stream, options, cancellationToken)
                 .ConfigureAwait(false);
         }

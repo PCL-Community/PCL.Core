@@ -5,6 +5,7 @@ using System.IO;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.ProgramSetup;
+using PCL.Core.Utils;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
@@ -52,7 +53,7 @@ public static class ETController
             if (TargetLobby == null || Precheck() != 0) { return 1; }
             ETProcess = new Process { EnableRaisingEvents = true, StartInfo = new ProcessStartInfo { FileName = $"{ETPath}\\easytier-core.exe", WorkingDirectory = ETPath, WindowStyle = ProcessWindowStyle.Hidden } };
 
-            string arguments;
+            var arguments = new ArgumentsBuilder();
 
             // 大厅信息
             switch (TargetLobby.Type)
@@ -68,16 +69,25 @@ public static class ETController
                     throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type);
             }
 
+            arguments.AddFlag("no-tun");
+            arguments.Add("network-name", name);
+            arguments.Add("network-secret", secret);
+            arguments.Add("relay-network-whitelist", name);
+            arguments.Add("private-mode", "true");
             // 网络参数
             if (isHost)
             {
                 LogWrapper.Info("Link", $"本机作为创建者创建大厅，EasyTier 网络名称: {name}");
-                arguments = $"-i 10.114.51.41 --network-name {name} --network-secret {secret} --no-tun --relay-network-whitelist \"{name}\" --private-mode true --tcp-whitelist {port} --udp-whitelist {port}";
+                arguments.Add("i", "10.114.51.41");
+                arguments.Add("tcp-whitelist", port.ToString());
+                arguments.Add("udp-whitelist", port.ToString());
             }
             else
             {
                 LogWrapper.Info("Link", $"本机作为加入者加入大厅，EasyTier 网络名称: {name}");
-                arguments = $"-d --network-name {name} --network-secret {secret} --no-tun --relay-network-whitelist \"{name}\" --private-mode true --tcp-whitelist 0 --udp-whitelist 0";
+                arguments.AddFlag("d");
+                arguments.Add("tcp-whitelist", "0");
+                arguments.Add("udp-whitelist", "0");
                 string? ip;
                 switch (TargetLobby.Type)
                 {
@@ -92,8 +102,8 @@ public static class ETController
                 }
                 JoinerLocalPort = NetworkHelper.NewTcpPort();
                 LogWrapper.Info("Link", $"ET 端口转发: 远程 {port} -> 本地 {JoinerLocalPort}");
-                arguments += $" --port-forward=tcp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}"; // TCP
-                arguments += $" --port-forward=udp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}"; // UDP
+                arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
+                arguments.Add("port-forward", $"udp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
             }
 
             // 节点设置
@@ -120,21 +130,26 @@ public static class ETController
                 var serverType = Setup.Link.ServerType;
                 if ((relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom)
                 {
-                    arguments += $" -p {relay.Url}";
+                    arguments.Add("p", relay.Url);
                 }
             }
 
             // 中继行为设置
             if (Setup.Link.RelayType == 1)
             {
-                arguments += " --disable-p2p";
+                arguments.AddFlag("disable-p2p");
             }
 
             // 数据流代理设置
-            arguments += " --enable-quic-proxy --enable-kcp-proxy";
+            arguments.AddFlag("enable-quic-proxy");
+            arguments.AddFlag("enable-kcp-proxy");
+            arguments.AddFlag("use-smoltcp");
+            arguments.Add("encryption-algorithm", "chacha20");
 
             // 用户名与其他参数
-            arguments += " --latency-first --compression=zstd --multi-thread";
+            arguments.AddFlagIf(Setup.Link.LatencyFirstMode, "latency-first");
+            arguments.Add("compression", "zstd");
+            arguments.AddFlag("multi-thread");
             // TODO: 等待玩家档案迁移以获取正在使用的档案名称
             var showName = "default";
             if (AllowCustomName && !string.IsNullOrWhiteSpace(Setup.Link.Username))
@@ -145,14 +160,16 @@ public static class ETController
             {
                 showName = NaidProfile.Username;
             }
-            arguments += $" --hostname \"{(isHost ? "H|" : "J|") + showName + (!string.IsNullOrWhiteSpace(hostname) ? "|" + hostname : "")}\"";
+
+            arguments.Add("hostname",
+                (isHost ? "H|" : "J|") + showName + (!string.IsNullOrWhiteSpace(hostname) ? "|" + hostname : ""));
 
             // 指定 RPC 端口以避免与其他 ET 实例冲突
             ETRpcPort = NetworkHelper.NewTcpPort();
-            arguments += $" --rpc-portal 127.0.0.1:{ETRpcPort}";
+            arguments.Add("rpc-portal", $"127.0.0.1:{ETRpcPort}");
 
             // 启动
-            ETProcess.StartInfo.Arguments = arguments;
+            ETProcess.StartInfo.Arguments = arguments.GetResult();
             LogWrapper.Info("Link", "启动 EasyTier");
             // 操作 UI 显示大厅编号（可能写到 XAML 下面 UI 控制那部分去？）
             ETProcess.Start();

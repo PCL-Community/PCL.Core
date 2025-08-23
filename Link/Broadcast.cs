@@ -80,5 +80,6 @@ public class Broadcast(string description, int localPort) : IDisposable
     {
         Stop();
         _cts?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

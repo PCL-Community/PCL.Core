@@ -5,10 +5,11 @@ namespace PCL.Core.Link.EasyTier;
 
 public class ETRelay
 {
-    public static List<ETRelay> RelayList = [];
-    public required string Url { get; set; }
-    public required string Name { get; set; }
-    public ETRelayType Type { get; set; }
+    public static List<ETRelay> RelayList { get; set; } = [];
+
+    public required string Url { get; init; }
+    public required string Name { get; init; }
+    public ETRelayType Type { get; init; }
 }
 
 public enum ETRelayType

@@ -3,23 +3,22 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
-public class TcpForward : IDisposable
+public class TcpForward(
+    IPAddress listenAddress,
+    int listenPort,
+    IPAddress targetAddress,
+    int targetPort,
+    int maxConnections = 10)
+    : IDisposable
 {
-    private readonly IPAddress _listenAddress;
-    private readonly int _listenPort;
-    private readonly IPAddress _targetAddress;
-    private readonly int _targetPort;
-    private readonly int _maxConnections;
-
     private Socket? _listenerSocket;
     private CancellationTokenSource? _cts;
-    private readonly SemaphoreSlim _connectionSemaphore;
+    private readonly SemaphoreSlim _connectionSemaphore = new(maxConnections, maxConnections);
     private readonly ConcurrentDictionary<Guid, ConnectionPair> _activeConnections = new();
 
     private bool _isRunning;
@@ -27,19 +26,6 @@ public class TcpForward : IDisposable
     public int LocalPort { get; private set; }
 
     public int ActiveConnections => _activeConnections.Count;
-
-    public TcpForward(IPAddress listenAddress, int listenPort,
-                       IPAddress targetAddress, int targetPort,
-                       int maxConnections = 10)
-    {
-        _listenAddress = listenAddress;
-        _listenPort = listenPort;
-        _targetAddress = targetAddress;
-        _targetPort = targetPort;
-        _maxConnections = maxConnections;
-
-        _connectionSemaphore = new SemaphoreSlim(maxConnections, maxConnections);
-    }
 
     public void Start()
     {
@@ -58,7 +44,7 @@ public class TcpForward : IDisposable
                 SendBufferSize = 8192
             };
 
-            _listenerSocket.Bind(new IPEndPoint(_listenAddress, _listenPort));
+            _listenerSocket.Bind(new IPEndPoint(listenAddress, listenPort));
             _listenerSocket.Listen(100); // 设置挂起连接队列的最大长度
 
             if (_listenerSocket.LocalEndPoint is not IPEndPoint endPoint) throw new InvalidCastException("出现了意外的转换操作");
@@ -67,7 +53,7 @@ public class TcpForward : IDisposable
             // 启动 TCP 接受连接任务
             _ = Task.Run(() => _AcceptConnections(_cts.Token), _cts.Token);
 
-            LogWrapper.Info("TcpForward", $"MC 端口转发已启动，监听 {_listenAddress}:{LocalPort}，目标 {_targetAddress}:{_targetPort}");
+            LogWrapper.Info("TcpForward", $"MC 端口转发已启动，监听 {listenAddress}:{LocalPort}，目标 {targetAddress}:{targetPort}");
         }
         catch (Exception ex)
         {
@@ -108,13 +94,13 @@ public class TcpForward : IDisposable
             try
             {
                 if (_listenerSocket == null) break;
-                var clientSocket = await _listenerSocket.AcceptAsync();
+                var clientSocket = await _listenerSocket.AcceptAsync(cancellationToken);
 
                 // 检查是否达到最大连接限制
-                if (_activeConnections.Count >= _maxConnections)
+                if (_activeConnections.Count >= maxConnections)
                 {
                     clientSocket.SafeClose();
-                    LogWrapper.Warn("TcpForward", $"已达到最大连接数限制({_maxConnections})，拒绝新连接");
+                    LogWrapper.Warn("TcpForward", $"已达到最大连接数限制({maxConnections})，拒绝新连接");
                     continue;
                 }
 
@@ -153,7 +139,7 @@ public class TcpForward : IDisposable
                 SendBufferSize = 8192
             };
 
-            await targetSocket.ConnectAsync(_targetAddress, _targetPort);
+            await targetSocket.ConnectAsync(targetAddress, targetPort, cancellationToken);
 
             // 保存连接对
             var connectionPair = new ConnectionPair(clientSocket, targetSocket);
@@ -214,6 +200,7 @@ public class TcpForward : IDisposable
     public void Dispose()
     {
         Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -231,16 +218,10 @@ public class TcpForward : IDisposable
         Dispose(false);
     }
 
-    private class ConnectionPair
+    private class ConnectionPair(Socket clientSocket, Socket targetSocket)
     {
-        public Socket ClientSocket { get; }
-        public Socket TargetSocket { get; }
-
-        public ConnectionPair(Socket clientSocket, Socket targetSocket)
-        {
-            ClientSocket = clientSocket;
-            TargetSocket = targetSocket;
-        }
+        public Socket ClientSocket { get; } = clientSocket;
+        public Socket TargetSocket { get; } = targetSocket;
     }
 }
 

@@ -10,7 +10,6 @@ using System.Text.Json.Nodes;
 
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using PCL.Core.Link.EasyTier.Models;
 
 namespace PCL.Core.Link.EasyTier;
 // ReSharper disable InconsistentNaming, CompareOfFloatsByEqualityOperator
@@ -34,7 +33,7 @@ public class ETPlayerInfo
     /// 显示的用户名，依次可能为自定义用户名、NAID 用户名
     /// </summary>
     public string? Username { get; init; }
-    public string? McName { get; set; }
+    public string? McName { get; init; }
     /// <summary>
     /// 连接方式
     /// </summary>
@@ -46,12 +45,12 @@ public class ETPlayerInfo
     /// <summary>
     /// 丢包率 (%)
     /// </summary>
-    public double Loss { get; set; }
-    public string? NatType { get; set; }
+    public double Loss { get; init; }
+    public string? NatType { get; init; }
     /// <summary>
     /// 节点的 EasyTier 版本
     /// </summary>
-    public string? ETVersion { get; set; }
+    public string? ETVersion { get; init; }
 }
 
 public static class ETInfoProvider
@@ -64,25 +63,14 @@ public static class ETInfoProvider
 
     private static ETConnectionType _GetConnectionType(string cost)
     {
-        if (cost.Contains("2p"))
-        {
-            return ETConnectionType.P2P;
-        }
-        else if (cost.Contains("elay"))
-        {
-            return ETConnectionType.Relay;
-        }
-        else if (cost.Contains("ocal"))
-        {
-            return ETConnectionType.Local;
-        }
-        else
-        {
-            return ETConnectionType.Unknown;
-        }
+        if (IsContains("p2p")) return ETConnectionType.P2P;
+        if (IsContains("relay")) return ETConnectionType.Relay;
+        if (IsContains("local")) return ETConnectionType.Local;
+        return ETConnectionType.Unknown;
+        bool IsContains(string str) => cost.Contains(str, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    private static Process _cliProcess = new() { 
+    private static readonly Process _cliProcess = new() { 
         StartInfo = new ProcessStartInfo
         {
             FileName = $"{ETPath}\\easytier-cli.exe",

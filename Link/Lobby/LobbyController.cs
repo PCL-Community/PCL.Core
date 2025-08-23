@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -25,14 +26,12 @@ public static class LobbyController
         var servers = Setup.Link.RelayServer;
         if (Setup.Link.ServerType != 2)
         {
-            foreach (var relay in ETRelay.RelayList)
-            {
-                var serverType = Setup.Link.ServerType;
-                if ((relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1))
-                {
-                    servers += $"{relay.Url};";
-                }
-            }
+            servers = (
+                from relay in ETRelay.RelayList
+                let serverType = Setup.Link.ServerType
+                where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1)
+                select relay
+            ).Aggregate(servers, (current, relay) => current + $"{relay.Url};");
         }
         JsonObject data = new()
         {
@@ -58,11 +57,7 @@ public static class LobbyController
                     LogWrapper.Error("Link", "联机数据发送失败，未设置 TelemetryKey");
                     return 1;
                 }
-                else
-                {
-                    LogWrapper.Warn("Link", "联机数据发送失败，未设置 TelemetryKey，跳过发送");
-                        
-                }
+                LogWrapper.Warn("Link", "联机数据发送失败，未设置 TelemetryKey，跳过发送");
             }
             else
             {
@@ -78,10 +73,7 @@ public static class LobbyController
                         LogWrapper.Error("Link", "联机数据发送失败，响应内容为空");
                         return 1;
                     }
-                    else
-                    {
-                        LogWrapper.Warn("Link", "联机数据发送失败，响应内容为空，跳过发送");
-                    }
+                    LogWrapper.Warn("Link", "联机数据发送失败，响应内容为空，跳过发送");
                 }
                 else
                 {
@@ -97,10 +89,7 @@ public static class LobbyController
                             LogWrapper.Error("Link", "联机数据发送失败，响应内容: " + result);
                             return 1;
                         }
-                        else
-                        {
-                            LogWrapper.Warn("Link", "联机数据发送失败，跳过发送，响应内容: " + result);
-                        }
+                        LogWrapper.Warn("Link", "联机数据发送失败，跳过发送，响应内容: " + result);
                     }
                 }
             }
@@ -109,20 +98,11 @@ public static class LobbyController
         {
             if (RequiresLogin)
             {
-                if (ex.Message.Contains("429"))
-                {
-                    LogWrapper.Error(ex, "Link", "联机数据发送失败，请求过于频繁");
-                }
-                else
-                {
-                    LogWrapper.Error(ex, "Link", "联机数据发送失败");
-                }
+                LogWrapper.Error(ex, "Link",
+                    ex.Message.Contains("429") ? "联机数据发送失败，请求过于频繁" : "联机数据发送失败");
                 return 1;
             }
-            else
-            {
-                LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
-            }
+            LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
         }
 
         var etResult = ETController.Launch(isHost, lobbyInfo.NetworkName, lobbyInfo.NetworkSecret, port: lobbyInfo.Port, hostname: playerName);
@@ -165,15 +145,9 @@ public static class LobbyController
     {
         var ping = new McPing("127.0.0.1", port);
         var info = ping.PingAsync().GetAwaiter().GetResult();
-        if (info == null)
-        {
-            LogWrapper.Warn("Link", $"本地 MC 局域网实例 ({port}) 疑似已关闭");
-            return false;
-        }
-        else
-        {
-            return true;
-        }
+        if (info != null) return true;
+        LogWrapper.Warn("Link", $"本地 MC 局域网实例 ({port}) 疑似已关闭");
+        return false;
     }
 
     /// <summary>

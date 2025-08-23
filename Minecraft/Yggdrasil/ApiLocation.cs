@@ -17,7 +17,7 @@ public static class ApiLocation
         if (responses.Length == 0) return originAddr;
         var resultAddr = responses.First();
         if (string.IsNullOrEmpty(resultAddr)) return originAddr;
-        if (resultAddr!.StartsWith(originUri.Scheme)) return resultAddr;
+        if (resultAddr.StartsWith(originUri.Scheme)) return resultAddr;
         // 不允许 HTTPS 降 HTTP
         if (resultAddr.StartsWith("http:") && originUri.Scheme == "https") return resultAddr.Replace("http","https");
         return new Uri(originUri, resultAddr).ToString();   

@@ -9,15 +9,15 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Link.Lobby;
 
-public static class LobbyInfoProvider
+public static partial class LobbyInfoProvider
 {
-    public static bool IsLobbyAvailable = false;
-    public static bool AllowCustomName = false;
-    public static bool RequiresLogin = true;
-    public static bool RequiresRealName = true;
+    public static bool IsLobbyAvailable { get; set; } = false;
+    public static bool AllowCustomName { get; set; } = false;
+    public static bool RequiresLogin { get; set; } = true;
+    public static bool RequiresRealName { get; set; } = true;
 
-    public static Broadcast? McBroadcast;
-    public static TcpForward? McForward;
+    public static Broadcast? McBroadcast { get; internal set; }
+    public static TcpForward? McForward { get; internal set; }
 
     public class LobbyInfo
     {
@@ -45,10 +45,12 @@ public static class LobbyInfoProvider
     /// <summary>
     /// 目标大厅
     /// </summary>
-    public static LobbyInfo? TargetLobby;
-    public static int JoinerLocalPort;
+    public static LobbyInfo? TargetLobby { get; set; }
+    public static int JoinerLocalPort { get; set; }
 
-    private static readonly Regex _PatternTerracottaId = new("([0-9A-Z]{5}-){4}[0-9A-Z]{5}");
+    [GeneratedRegex("([0-9A-Z]{5}-){4}[0-9A-Z]{5}")]
+    private static partial Regex _PatternTerracottaIdGen();
+    private static readonly Regex _PatternTerracottaId = _PatternTerracottaIdGen();
 
     /// <summary>
     /// 解析大厅编号，并返回 LobbyInfo 对象。若解析失败则返回 null。
@@ -70,9 +72,9 @@ public static class LobbyInfoProvider
                 return new LobbyInfo
                 {
                     OriginalCode = code,
-                    NetworkName = info.Substring(0, 8),
-                    NetworkSecret = info.Substring(8, 2),
-                    Port = int.Parse(info.Substring(10)),
+                    NetworkName = info[..8],
+                    NetworkSecret = info[8..10],
+                    Port = int.Parse(info[10..]),
                     Type = LobbyType.PCLCE,
                     Ip = "10.114.51.41"
                 };

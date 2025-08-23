@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-
+using System.Linq;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.ProgramSetup;
@@ -88,18 +88,12 @@ public static class ETController
                 arguments.AddFlag("d");
                 arguments.Add("tcp-whitelist", "0");
                 arguments.Add("udp-whitelist", "0");
-                string? ip;
-                switch (TargetLobby.Type)
+                var ip = TargetLobby.Type switch
                 {
-                    case LobbyType.PCLCE:
-                        ip = "10.114.51.41";
-                        break;
-                    case LobbyType.Terracotta:
-                        ip = "10.144.144.1";
-                        break;
-                    default:
-                        throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type);
-                }
+                    LobbyType.PCLCE => "10.114.51.41",
+                    LobbyType.Terracotta => "10.144.144.1",
+                    _ => throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type)
+                };
                 JoinerLocalPort = NetworkHelper.NewTcpPort();
                 LogWrapper.Info("Link", $"ET 端口转发: 远程 {port} -> 本地 {JoinerLocalPort}");
                 arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
@@ -125,13 +119,13 @@ public static class ETController
                     LogWrapper.Warn("Link", $"无效的自定义节点 URL: {node}");
                 }
             }
-            foreach (var relay in relays)
+            foreach (var relay in
+                from relay in relays
+                let serverType = Setup.Link.ServerType
+                where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
+                select relay)
             {
-                var serverType = Setup.Link.ServerType;
-                if ((relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom)
-                {
-                    arguments.Add("p", relay.Url);
-                }
+                arguments.Add("p", relay.Url);
             }
 
             // 中继行为设置

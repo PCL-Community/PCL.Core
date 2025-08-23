@@ -131,7 +131,7 @@ public static class StringExtension
     }
 
     public static string ReplaceNullOrEmpty(this string? input, string? replacement = null)
-        => string.IsNullOrEmpty(input) ? (replacement ?? string.Empty) : input!;
+        => string.IsNullOrEmpty(input) ? (replacement ?? string.Empty) : input;
 
     private static readonly Regex _PatternReplaceLineBreak = new("\r\n|\r|\n");
     public static string ReplaceLineBreak(this string? input, string replacement = " ")

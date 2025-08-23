@@ -32,7 +32,7 @@ public static class NatayarkProfileManager
 {
     private const string LogModule = "Link";
 
-    public static NaidUser NaidProfile = new();
+    public static NaidUser NaidProfile { get; private set; } = new();
 
     private static bool _isGettingData = false;
     public static void GetNaidData(string token, bool isRefresh = false, bool isRetry = false)

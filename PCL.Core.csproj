@@ -69,11 +69,14 @@
     <!-- 自定义代码生成目标 -->
     <Target Name="GenerateTypes" BeforeTargets="CoreCompile">
         <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
         <Message Text="Generating setup accessors..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
         <Message Text="Generating environment secrets..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Utils\OS\EnvironmentInteropGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Utils\OS\EnvironmentInteropGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
         <ItemGroup>
             <Compile Include="**\*.g.cs" Exclude="bin\**;obj\**;publish\**" />
         </ItemGroup>

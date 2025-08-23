@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace PCL.Core.Link.EasyTier.Models;
+namespace PCL.Core.Link.EasyTier;
 
 // ReSharper disable InconsistentNaming
 public record ETPeerInfo

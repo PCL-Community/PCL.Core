@@ -44,6 +44,7 @@
     </PropertyGroup>
     <!-- 通用引用 -->
     <ItemGroup>
+        <PackageReference Include="fNbt" Version="1.0.0" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
         <PackageReference Include="System.Management" Version="8.0.0" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />

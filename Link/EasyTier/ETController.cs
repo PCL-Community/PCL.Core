@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 
-using PCL.Core.Utils.Exts;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.ProgramSetup;
@@ -36,7 +35,8 @@ public static class ETController
 
         // 检查文件
         LogWrapper.Info("Link", "EasyTier 路径: " + ETPath);
-        if (!File.Exists(ETPath + "\\easytier-core.exe") || !File.Exists(ETPath + "\\easytier-cli.exe") || !File.Exists(ETPath + "\\wintun.dll"))
+        if (!(File.Exists(ETPath + "\\easytier-core.exe") && File.Exists(ETPath + "\\easytier-cli.exe") &&
+              File.Exists(ETPath + "\\wintun.dll")))
         {
             LogWrapper.Error("Link", "EasyTier 不存在或不完整");
             return 1;
@@ -55,16 +55,13 @@ public static class ETController
             string arguments;
 
             // 大厅信息
-            string lobbyId;
             switch (TargetLobby.Type)
             {
                 case LobbyType.PCLCE:
-                    lobbyId = (name + secret + port).FromB10ToB32();
                     name = ETNetworkNamePrefix + name;
                     secret = ETNetworkSecretPrefix + secret;
                     break;
                 case LobbyType.Terracotta:
-                    lobbyId = TargetLobby.OriginalCode;
                     name = "terracotta-mc-" + name;
                     break;
                 default:
@@ -72,7 +69,6 @@ public static class ETController
             }
 
             // 网络参数
-            string? ip = null;
             if (isHost)
             {
                 LogWrapper.Info("Link", $"本机作为创建者创建大厅，EasyTier 网络名称: {name}");
@@ -82,6 +78,7 @@ public static class ETController
             {
                 LogWrapper.Info("Link", $"本机作为加入者加入大厅，EasyTier 网络名称: {name}");
                 arguments = $"-d --network-name {name} --network-secret {secret} --no-tun --relay-network-whitelist \"{name}\" --private-mode true --tcp-whitelist 0 --udp-whitelist 0";
+                string? ip;
                 switch (TargetLobby.Type)
                 {
                     case LobbyType.PCLCE:
@@ -196,7 +193,6 @@ public static class ETController
         {
             Status = ETState.Stopped;
             ETProcess = null;
-            TargetLobby = null;
         }
     }
 }

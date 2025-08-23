@@ -21,10 +21,10 @@ public class Broadcast(string description, int localPort) : IDisposable
         _cts = new CancellationTokenSource();
         _isRunning = true;
 
-        // 启动UDP广播任务
+        // 启动 UDP 广播任务
         _ = Task.Run(() => _RunUdpBroadcast(_cts.Token), _cts.Token);
 
-        Console.WriteLine($"开始向本地Minecraft客户端广播，端口: {localPort}");
+        Console.WriteLine($"开始向本地 Minecraft 客户端广播，端口: {localPort}");
     }
 
     public void Stop()
@@ -36,7 +36,7 @@ public class Broadcast(string description, int localPort) : IDisposable
 
         _broadcastSocket?.SafeClose();
 
-        Console.WriteLine("停止向本地Minecraft客户端广播");
+        Console.WriteLine("停止向本地 Minecraft 客户端广播");
     }
 
     private async Task _RunUdpBroadcast(CancellationToken cancellationToken)
@@ -65,14 +65,14 @@ public class Broadcast(string description, int localPort) : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"UDP本地广播错误: {ex.Message}");
-                    await Task.Delay(5000, cancellationToken); // 出错后等待5秒再重试
+                    Console.WriteLine($"UDP 本地广播错误: {ex.Message}");
+                    await Task.Delay(5000, cancellationToken); // 出错后等待 5 秒再重试
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"UDP本地广播任务发生错误: {ex.Message}");
+            Console.WriteLine($"UDP 本地广播任务发生错误: {ex.Message}");
         }
     }
 

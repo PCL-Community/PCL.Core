@@ -50,10 +50,10 @@ public class TcpForward : IDisposable
 
         try
         {
-            // 创建并启动监听Socket
+            // 创建并启动监听 Socket
             _listenerSocket = new Socket(SocketType.Stream, ProtocolType.Tcp)
             {
-                NoDelay = true, // 禁用Nagle算法以提高响应速度
+                NoDelay = true, // 禁用 Nagle 算法以提高响应速度
                 ReceiveBufferSize = 8192,
                 SendBufferSize = 8192
             };
@@ -64,15 +64,15 @@ public class TcpForward : IDisposable
             if (_listenerSocket.LocalEndPoint is not IPEndPoint endPoint) throw new InvalidCastException("出现了意外的转换操作");
             LocalPort = endPoint.Port;
 
-            // 启动TCP接受连接任务
+            // 启动 TCP 接受连接任务
             _ = Task.Run(() => _AcceptConnections(_cts.Token), _cts.Token);
 
-            LogWrapper.Info("TcpForward", $"MC端口转发已启动，监听 {_listenAddress}:{LocalPort}，目标 {_targetAddress}:{_targetPort}");
+            LogWrapper.Info("TcpForward", $"MC 端口转发已启动，监听 {_listenAddress}:{LocalPort}，目标 {_targetAddress}:{_targetPort}");
         }
         catch (Exception ex)
         {
             _isRunning = false;
-            LogWrapper.Error(ex, "TcpForward",  $"启动MC端口转发时发生错误: {ex.Message}");
+            LogWrapper.Error(ex, "TcpForward",  $"启动 MC 端口转发时发生错误: {ex.Message}");
             throw;
         }
     }
@@ -94,7 +94,7 @@ public class TcpForward : IDisposable
 
         _listenerSocket?.SafeClose();
 
-        LogWrapper.Info("TcpForward", "MC端口转发已停止");
+        LogWrapper.Info("TcpForward", "MC 端口转发已停止");
     }
 
     private async Task _AcceptConnections(CancellationToken cancellationToken)
@@ -132,7 +132,7 @@ public class TcpForward : IDisposable
             catch (Exception ex)
             {
                 LogWrapper.Error(ex, "TcpForward", $"接受连接时发生错误");
-                await Task.Delay(1000, cancellationToken); // 出错后等待1秒再继续
+                await Task.Delay(1000, cancellationToken); // 出错后等待 1 秒再继续
             }
         }
     }
@@ -161,7 +161,7 @@ public class TcpForward : IDisposable
 
             LogWrapper.Info("TcpForward", $"开始端口转发 {clientSocket.RemoteEndPoint} <-> {targetSocket.RemoteEndPoint}({connectionId})");
 
-            // 使用高性能的SocketAsyncEventArgs进行双向转发
+            // 使用高性能的 SocketAsyncEventArgs 进行双向转发
             var forwardTask1 = _ForwardDataAsync(clientSocket, targetSocket, cancellationToken);
             var forwardTask2 = _ForwardDataAsync(targetSocket, clientSocket, cancellationToken);
 
@@ -190,7 +190,7 @@ public class TcpForward : IDisposable
 
     private static async Task _ForwardDataAsync(Socket source, Socket destination, CancellationToken cancellationToken)
     {
-        // 使用ArrayPool共享缓冲区以减少内存分配
+        // 使用 ArrayPool 共享缓冲区以减少内存分配
         var buffer = new byte[8192];
 
         try
@@ -263,7 +263,7 @@ public static class SocketExtensions
 
     public static async Task<int> ReceiveAsync(this Socket socket, byte[] buffer, SocketFlags socketFlags, CancellationToken cancellationToken = default)
     {
-        // 使用TaskCompletionSource和SocketAsyncEventArgs实现高性能异步接收
+        // 使用 TaskCompletionSource和SocketAsyncEventArgs 实现高性能异步接收
         var tcs = new TaskCompletionSource<int>();
         var args = new SocketAsyncEventArgs();
         args.SetBuffer(buffer, 0, buffer.Length);
@@ -298,7 +298,7 @@ public static class SocketExtensions
 
     public static async Task<int> SendAsync(this Socket socket, byte[] buffer, int length, SocketFlags socketFlags, CancellationToken cancellationToken = default)
     {
-        // 使用TaskCompletionSource和SocketAsyncEventArgs实现高性能异步发送
+        // 使用 TaskCompletionSource 和 SocketAsyncEventArgs 实现高性能异步发送
         var tcs = new TaskCompletionSource<int>();
         var args = new SocketAsyncEventArgs();
         args.SetBuffer(buffer, 0, length);

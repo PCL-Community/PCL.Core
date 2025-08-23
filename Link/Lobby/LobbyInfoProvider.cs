@@ -55,7 +55,7 @@ public static class LobbyInfoProvider
     /// </summary>
     public static LobbyInfo? ParseCode(string code)
     {
-        code = code.Trim();
+        code = code.Trim().ToUpper();
         if (string.IsNullOrWhiteSpace(code) || code.Length < 9 || !code.IsASCII())
         {
             LogWrapper.Error("Link", "无效的大厅编号: " + code);
@@ -84,7 +84,6 @@ public static class LobbyInfoProvider
         }
         else // 陶瓦
         {
-            code = code.ToUpper();
             var matches = code.RegexSearch(_PatternTerracottaId);
             if (matches.Count == 0)
             {

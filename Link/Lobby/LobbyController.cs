@@ -112,13 +112,12 @@ public static class LobbyController
                 if (ex.Message.Contains("429"))
                 {
                     LogWrapper.Error(ex, "Link", "联机数据发送失败，请求过于频繁");
-                    return 1;
                 }
                 else
                 {
                     LogWrapper.Error(ex, "Link", "联机数据发送失败");
-                    return 1;
                 }
+                return 1;
             }
             else
             {
@@ -178,10 +177,11 @@ public static class LobbyController
     }
 
     /// <summary>
-    /// 关闭 EasyTier 和 MC 端口转发，需要自行清理 UI。
+    /// 退出大厅。这将同时关闭 EasyTier 和 MC 端口转发，需要自行清理 UI。
     /// </summary>
     public static int Close()
     {
+        TargetLobby = null;
         ETController.Exit();
         McForward?.Stop();
         McBroadcast?.Stop();

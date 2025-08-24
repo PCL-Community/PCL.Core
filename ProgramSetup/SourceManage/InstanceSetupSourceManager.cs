@@ -19,10 +19,10 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     {
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
-        string? result = default;
+        string? result = null;
         _UseCache(_GetFilePath(gamePath), cache =>
         {
-            result = cache.Content.TryGetValue(key, out var value) ? value : null;
+            result = cache.Content.GetValueOrDefault(key);
         });
         return result;
     }
@@ -31,7 +31,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     {
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
-        string? result = default;
+        string? result = null;
         _UseCache(_GetFilePath(gamePath), cache =>
         {
             result = cache.Content.UpdateAndGetPrevious(key, value);
@@ -45,7 +45,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     {
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
-        string? result = default;
+        string? result = null;
         _UseCache(_GetFilePath(gamePath), cache =>
         {
             result = cache.Content.TryRemove(key, out var value) ? value : null;

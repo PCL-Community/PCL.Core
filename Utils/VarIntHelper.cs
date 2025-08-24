@@ -44,9 +44,8 @@ public static class VarIntHelper
     /// <exception cref="FormatException">VarInt格式无效或超过最大长度</exception>
     public static ulong Decode(byte[] bytes, out int readLength)
     {
-        if (bytes == null)
-            throw new ArgumentNullException(nameof(bytes));
-        
+        ArgumentNullException.ThrowIfNull(bytes);
+
         ulong result = 0;
         var shift = 0;
         var bytesRead = 0;

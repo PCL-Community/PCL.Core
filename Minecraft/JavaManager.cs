@@ -56,9 +56,7 @@ public class JavaManager
 
                 var ret = newJavaList
                     .Where(x => !x.Split(Path.DirectorySeparatorChar).Any(part => _ExcludeFolderName.Contains(part, StringComparer.OrdinalIgnoreCase)))
-                    .Select(x => Java.Parse(x)!)
-                    .Where(x => x != null)
-                    .ToList();
+                    .Select(Java.Parse).Where(x => x != null).Select(x => x!).ToList();
                 foreach (var item in ret)
                 {
                     if (oldJavaList.TryGetValue(item.JavaExePath, out var existing))
@@ -73,8 +71,7 @@ public class JavaManager
 
     public void Add(Java j)
     {
-        if (j == null)
-            throw new ArgumentNullException(nameof(j));
+        ArgumentNullException.ThrowIfNull(j);
         if (HasJava(j.JavaExePath))
             return;
         _javas.Add(j);
@@ -83,8 +80,7 @@ public class JavaManager
 
     public void Add(string javaExe)
     {
-        if (javaExe == null)
-            throw new ArgumentNullException(nameof(javaExe));
+        ArgumentNullException.ThrowIfNull(javaExe);
         if (HasJava(javaExe))
             return;
         var temp = Java.Parse(javaExe);
@@ -96,8 +92,7 @@ public class JavaManager
 
     public bool HasJava(string javaExe)
     {
-        if (javaExe == null)
-            throw new ArgumentNullException(nameof(javaExe));
+        ArgumentNullException.ThrowIfNull(javaExe);
         if (!File.Exists(javaExe))
             throw new ArgumentException("Not a valid java file");
         return _javas.Any(x => x.JavaExePath == javaExe);
@@ -227,7 +222,7 @@ public class JavaManager
             {
                 try{
                     programFilesPaths.AddRange(from dir in Directory.EnumerateDirectories(dri)
-                                            where _MostPossibleKeyWords.Any(x => dir.IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0)
+                                            where _MostPossibleKeyWords.Any(x => dir.Contains(x, StringComparison.OrdinalIgnoreCase))
                                             select dir);
                 }catch(UnauthorizedAccessException){/* 忽略无权限访问的根目录 */}
             }
@@ -255,7 +250,7 @@ public class JavaManager
                 {
                     // 只遍历包含关键字的目录
                     var subDirs = Directory.EnumerateDirectories(currentPath)
-                        .Where(x => _TotalKeyWords.Any(k => x.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0));
+                        .Where(x => _TotalKeyWords.Any(k => x.Contains(k, StringComparison.OrdinalIgnoreCase)));
                     foreach (var dir in subDirs)
                     {
                         // 准备可能的 Java 路径

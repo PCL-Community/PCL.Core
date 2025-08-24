@@ -73,6 +73,7 @@
   },
   "ns:Link": {
     "EulaAgreed": {"key": "LinkEula", "source": "global", "value": false, "encrypted": false},
+    "Username": {"key": "LinkUsername", "source": "global", "value": "", "encrypted": false},
     "AnnounceCache": {"key": "LinkAnnounceCache", "source": "global", "value": "", "encrypted": true},
     "AnnounceCacheVer": {"key": "LinkAnnounceCacheVer", "source": "global", "value": 0, "encrypted": false},
     "RelayType": {"key": "LinkRelayType", "source": "global", "value": 0, "encrypted": false},

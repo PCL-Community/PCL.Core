@@ -235,7 +235,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                 }
                 // 开始传输
                 Status = DownloadSegmentStatus.Running;
-                using var httpContentStream = await resp.Content.ReadAsStreamAsync();
+                using var httpContentStream = await resp.Content.ReadAsStreamAsync(cancelToken);
                 stream.Position = StartPosition;
                 if (EndPosition == 0)
                 {

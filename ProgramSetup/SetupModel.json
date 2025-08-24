@@ -141,6 +141,7 @@
     "TopBarLeftAlign": {"key": "UiLogoLeft", "source": "local", "value": false, "encrypted": false},
     "AnimationFpsLimit": {"key": "UiAniFPS", "source": "global", "value": 59, "encrypted": false},
     "Font": {"key": "UiFont", "source": "local", "value": "", "encrypted": false},
+	"AutoPauseVideo": {"key": "UiAutoPauseVideo", "source":"local", "value":true, "encrypted":false},
     "ns:Music": {
       "Volume": {"key": "UiMusicVolume", "source": "local", "value": 500, "encrypted": false},
       "StopInGame": {"key": "UiMusicStop", "source": "local", "value": false, "encrypted": false},

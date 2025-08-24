@@ -93,15 +93,14 @@ public sealed class Logger : IDisposable
             {
                 while (true) // 循环一次从队列里拿一条待打印的日志
                 {
-                    _logEvent.Wait(millisecondsTimeout: 600);
+                    _logEvent.Wait(millisecondsTimeout: 600, cancellationToken: token);
                     if (!_logQueue.TryDequeue(out var message))
                     {
                         // 日志队列为空时
                         if (currentBatchCount != 0) // 有待写入的日志 => 写入一次
                             break;
                         _logEvent.Reset();
-                        if (token.IsCancellationRequested) // 已被 Dispose => 结束运行
-                            throw new OperationCanceledException();
+                        token.ThrowIfCancellationRequested(); // 已被 Dispose => 结束运行
                         continue; // 否则 => 接着等待下一次 Log() 调用
                     }
 #if DEBUG

@@ -162,8 +162,9 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
     private static JavaBrandType DetermineBrand(string? output)
     {
         if (output == null) return JavaBrandType.Unknown;
-        var result = _brandMap.Keys.Where(item => output.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0);
-        return result.Any()
+        var result = _brandMap.Keys
+            .Where(item => output.Contains(item, StringComparison.OrdinalIgnoreCase)).ToList();
+        return result.Count != 0
             ? _brandMap[result.First()]
             : JavaBrandType.Unknown;
     }

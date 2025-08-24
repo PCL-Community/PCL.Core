@@ -167,8 +167,7 @@ public sealed class SetupService : GeneralService
     {
         try
         {
-            if (value is null)
-                throw new ArgumentNullException(nameof(value));
+            ArgumentNullException.ThrowIfNull(value);
             var rawValue = value;
             if (entry.IsEncrypted)
                 rawValue = EncryptHelper.SecretEncrypt(rawValue);

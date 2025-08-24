@@ -11,7 +11,7 @@ namespace PCL.Core.IO;
 public delegate void FileTransfer(FileItem item, Action<string?> resultCallback);
 
 /// <summary>
-/// Mark a transfer as failed. The file service will try next transfer automatically.
+/// Mark a transfer as failed. File service will try the next transfer automatically.
 /// </summary>
 /// <param name="reason">failed reason</param>
 /// <param name="item">the failed file item</param>

@@ -1,10 +1,9 @@
 using System;
-
-namespace PCL.Core.Utils;
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
+namespace PCL.Core.Utils;
 
 public class ArgumentsBuilder
 {
@@ -19,7 +18,7 @@ public class ArgumentsBuilder
     {
         if (key is null) throw new NullReferenceException(nameof(key));
         if (value is null) throw new NullReferenceException(nameof(value));
-        _args.Add(new KeyValuePair<string, string?>(key, _handleEscapeValue(value)));
+        _args.Add(new KeyValuePair<string, string?>(key, _handleValue(value)));
         return this;
     }
 
@@ -115,13 +114,14 @@ public class ArgumentsBuilder
     /// </summary>
     public void Clear() => _args.Clear();
 
-    // 转义包含空格的值（用双引号包裹）
-    private static string _handleEscapeValue(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return "\"\"";
+    private static readonly char[] _CharNeedToQute = [' ', '=', '|', '"'];
 
-        return value.Contains(' ') || value.Contains('"')
-            ? $"\"{value.Replace("\"", "\\\"")}\""  // 处理双引号转义
-            : value;
+    // 转义包含空格的值（用双引号包裹）
+    private static string _handleValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return $"\"{value}\"";
+        return value.All(x => !_CharNeedToQute.Contains(x))
+            ? value
+            : $"\"{value.Replace("\"", "\\\"")}\""; // 处理双引号转义
     }
 }

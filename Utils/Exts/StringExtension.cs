@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PCL.Core.Logging;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -13,8 +14,7 @@ public static class StringExtension
 {
     public static object? Convert(string? value, Type targetType)
     {
-        if (targetType is null)
-            throw new ArgumentNullException(nameof(targetType));
+        ArgumentNullException.ThrowIfNull(targetType);
 
         if (targetType == typeof(string)) return value;
 
@@ -130,9 +130,36 @@ public static class StringExtension
         };
     }
 
-    public static string EmptyIfNull(this string? input) => input ?? string.Empty;
-    
+    public static string ReplaceNullOrEmpty(this string? input, string? replacement = null)
+        => string.IsNullOrEmpty(input) ? (replacement ?? string.Empty) : input;
+
     private static readonly Regex _PatternReplaceLineBreak = new("\r\n|\r|\n");
     public static string ReplaceLineBreak(this string? input, string replacement = " ")
         => string.IsNullOrEmpty(input) ? string.Empty : _PatternReplaceLineBreak.Replace(input, replacement);
+
+    /// <summary>
+    /// 搜索字符串中的所有正则匹配项。
+    /// </summary>
+    public static List<string> RegexSearch(this string str, Regex regex)
+    {
+        try
+        {
+            var result = new List<string>();
+            var regexSearchRes = regex.Matches(str);
+            if (regexSearchRes.Count == 0) return result;
+            result.AddRange(from Match item in regexSearchRes select item.Value);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "Utils", "正则匹配全部项搜索失败: " + regex);
+            return [];
+        }
+    }
+
+    // ReSharper disable once InconsistentNaming
+    public static bool IsASCII(this string str)
+    {
+        return str.All(c => c < 128);
+    }
 }

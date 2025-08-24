@@ -17,7 +17,7 @@
         <Platforms>AnyCPU;x64;ARM64</Platforms>
         <ProjectGuid>{A0C2209D-64FB-4C11-9459-8E86304B6F94}</ProjectGuid>
         <RootNamespace>PCL.Core</RootNamespace>
-        <TargetFrameworks>net481;net8.0-windows</TargetFrameworks>
+        <TargetFrameworks>net8.0-windows</TargetFrameworks>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
         <LangVersion>13.0</LangVersion>
         <Nullable>enable</Nullable>
@@ -86,14 +86,11 @@
     <!-- 自定义代码生成目标 -->
     <Target Name="GenerateTypes" BeforeTargets="CoreCompile">
         <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
-              ContinueOnError="false" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
         <Message Text="Generating setup accessors..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
-              ContinueOnError="false" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
         <Message Text="Generating environment secrets..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Utils\OS\EnvironmentInteropGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
-              ContinueOnError="false" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Utils\OS\EnvironmentInteropGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
         <ItemGroup>
             <Compile Include="**\*.g.cs" Exclude="bin\**;obj\**;publish\**" />
         </ItemGroup>

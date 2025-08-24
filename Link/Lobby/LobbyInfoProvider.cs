@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Numerics;
-using System.Text.RegularExpressions;
 using PCL.Core.Link.Natayark;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.ProgramSetup;
+using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Link.Lobby;
 
-public static partial class LobbyInfoProvider
+public static class LobbyInfoProvider
 {
     public static bool IsLobbyAvailable { get; set; } = false;
     public static bool AllowCustomName { get; set; } = false;
@@ -48,10 +48,6 @@ public static partial class LobbyInfoProvider
     public static LobbyInfo? TargetLobby { get; set; }
     public static int JoinerLocalPort { get; set; }
 
-    [GeneratedRegex("([0-9A-Z]{5}-){4}[0-9A-Z]{5}")]
-    private static partial Regex _PatternTerracottaIdGen();
-    private static readonly Regex _PatternTerracottaId = _PatternTerracottaIdGen();
-
     /// <summary>
     /// 解析大厅编号，并返回 LobbyInfo 对象。若解析失败则返回 null。
     /// </summary>
@@ -86,7 +82,7 @@ public static partial class LobbyInfoProvider
         }
         else // 陶瓦
         {
-            var matches = code.RegexSearch(_PatternTerracottaId);
+            var matches = code.RegexSearch(RegexPatterns.TerracottaId);
             if (matches.Count == 0)
             {
                 LogWrapper.Error("Link", "大厅编号解析失败，可能是无效的陶瓦大厅编号: " + code);

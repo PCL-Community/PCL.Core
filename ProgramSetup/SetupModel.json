@@ -252,6 +252,9 @@
     "SortCode": {"key": "VersionApiCode", "source": "instance", "value": -1, "encrypted": false},
     "McVersion": {"key": "VersionOriginal", "source": "instance", "value": "Unknown", "encrypted": false},
     "VersionMajor": {"key": "VersionOriginalMain", "source": "instance", "value": -1, "encrypted": false},
-    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false}
+    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false},
+    "ModpackVersion": {"key": "VersionModpackVersion", "source": "instance", "value": "", "encrypted": false},
+    "ModpackSource": {"key": "VersionModpackSource", "source": "instance", "value": "", "encrypted": false},
+    "ModpackId": {"key": "VersionModpackId", "source": "instance", "value": "", "encrypted": false}
   }
 }

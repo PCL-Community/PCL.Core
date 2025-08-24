@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace PCL.Core.Utils;
 
-public static class Random
+public static class RandomHelper
 {
     private static readonly System.Random _Random = new();
 

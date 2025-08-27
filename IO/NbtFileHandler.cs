@@ -31,7 +31,7 @@ public static class NbtFileHandler {
             return nbtFile.RootTag.Get<NbtList>(tagName);
         } catch (Exception ex) {
             // 处理读取异常，例如文件损坏或格式错误
-            LogWrapper.Warn($"Error reading NBT file: {ex.Message}");
+            LogWrapper.Warn($"读取 NBT 文件错误: {ex.Message}");
             return null;
         }
     }
@@ -42,7 +42,7 @@ public static class NbtFileHandler {
     /// <param name="nbtList">要写入文件的 NbtList 对象。</param>
     /// <param name="filePath">目标文件路径。</param>
     /// <param name="compression">NBT 文件的压缩类型，默认为 NbtCompression.None。</param>
-    public static void WriteNbtFile(NbtList nbtList, string filePath,
+    public static bool WriteNbtFile(NbtList nbtList, string filePath,
         NbtCompression compression = NbtCompression.None) {
         // 创建一个根节点（TAG_Compound）
         var rootTag = new NbtCompound { Name = "" };
@@ -59,9 +59,11 @@ public static class NbtFileHandler {
                 nbtFile.SaveToStream(fs, compression);
             }
 
-            LogWrapper.Info($"NBT file saved successfully at: {filePath}");
+            LogWrapper.Info($"NBT 文件成功保存于: {filePath}");
+            return true;
         } catch (Exception ex) {
-            LogWrapper.Warn($"Error writing NBT file: {ex.Message}");
+            LogWrapper.Warn($"读取 NBT 文件错误: {ex.Message}");
+            return false;
         }
     }
 }

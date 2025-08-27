@@ -19,8 +19,8 @@ public class HttpProxyManager : IWebProxy, IDisposable
 
     private readonly object _lock = new();
     private ProxyMode _mode = ProxyMode.SystemProxy;
-    private readonly WebProxy _customWebProxy = new();
-    private readonly WebProxy _systemWebProxy = new();
+    private readonly WebProxy _customWebProxy = new() {BypassProxyOnLocal = true};
+    private readonly WebProxy _systemWebProxy = new() {BypassProxyOnLocal = true};
     private bool _bypassOnLocal = true;
     private const string ProxyRegPathFull = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
     private const string ProxyRegPath = @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
@@ -47,15 +47,11 @@ public class HttpProxyManager : IWebProxy, IDisposable
                 var isSystemProxyEnabled = (int)(Registry.GetValue(ProxyRegPathFull, "ProxyEnable", 0) ?? 0);
                 var systemProxyAddress = Registry.GetValue(ProxyRegPathFull, "ProxyServer", string.Empty) as string;
                 if (systemProxyAddress is not null && !systemProxyAddress.StartsWith("http")) systemProxyAddress = $"http://{systemProxyAddress}/";
-                var systemProxyOverride =
-                    Registry.GetValue(ProxyRegPathFull, "ProxyOverride", string.Empty) as string ?? string.Empty;
-                var systemProxyBypassList = systemProxyOverride.Split(";".ToCharArray());
                 _systemWebProxy.Address = (string.IsNullOrEmpty(systemProxyAddress) || isSystemProxyEnabled == 0)
                     ? null
                     : new Uri(systemProxyAddress);
-                _systemWebProxy.BypassList = systemProxyBypassList;
                 LogWrapper.Info("Proxy",
-                    $"已从操作系统更新代理设置，系统代理状态：{isSystemProxyEnabled}|{systemProxyAddress}|{systemProxyOverride}");
+                    $"已从操作系统更新代理设置，系统代理状态：{isSystemProxyEnabled}|{systemProxyAddress}");
             }
             catch (Exception ex)
             {

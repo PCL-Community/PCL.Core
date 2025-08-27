@@ -306,12 +306,17 @@ public sealed class Lifecycle : ILifecycleService
         _KillCurrentProcess();
     }
 
+    private static void _FatalExit()
+    {
+        _Exit(-1);
+    }
+
     private static void _KillCurrentProcess()
     {
         var psi = new ProcessStartInfo
         {
             FileName = "taskkill.exe",
-            Arguments = $"/f /t /pid {Process.GetCurrentProcess().Id}",
+            Arguments = $"/f /t /pid {Environment.ProcessId}",
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -646,7 +651,7 @@ public sealed class Lifecycle : ILifecycleService
                 if (_logService == null) _PendingLogs.Add(item);
                 else _PushLog(item, _logService);
             }
-            if (item.ActionLevel == ActionLevel.MsgBoxFatal) _Exit(1);
+            if (item.ActionLevel == ActionLevel.MsgBoxFatal) _FatalExit();
         },
         onRequestExit: statusCode =>
         {

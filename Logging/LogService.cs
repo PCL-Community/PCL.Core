@@ -64,8 +64,8 @@ public class LogService : ILifecycleLogService
             if (ex != null)
                 message += $"\n\n详细信息:\n{ex}";
             if (level == ActionLevel.MsgBoxErr)
-                message += "\n\n若要寻求他人帮助，请立即导出日志 (更多 → 日志浏览 → 导出日志) " +
-                           "并上传或发送，只发送这个窗口的截图通常无助于解决问题。";
+                message += "\n\n若要寻求他人帮助，请勿关闭启动器并立即导出日志 (更多 → 日志浏览 → 导出日志)，" +
+                           "然后发送导出的日志压缩包，只发送这个窗口的截图通常无助于解决问题。";
             MsgBoxWrapper.Show(message, caption, theme, false);
         }
 
@@ -74,14 +74,14 @@ public class LogService : ILifecycleLogService
         {
             var message = plain;
             if (ex != null) message += $"\n\n相关异常信息:\n{ex}";
-            message += "\n\n请立即反馈这个问题，否则它可能永远都不会被解决！\n导出日志: 更多 → 日志浏览 → 导出全部日志)";
+            message += "\n\n如果你认为这是启动器的问题，请提交反馈，否则它可能永远都不会被解决！\n导出日志: 更多 → 日志浏览 → 导出全部日志";
             MessageBox.Show(message, "锟斤拷烫烫烫", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private static void _OnWrapperLog(LogLevel level, string msg, string? module, Exception? ex)
     {
-        var thread = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
+        var thread = Thread.CurrentThread.Name ?? $"#{Environment.CurrentManagedThreadId}";
         if (module != null) module = $"[{module}] ";
         var result = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}{msg}";
         _LogAction(level.DefaultActionLevel(), (ex == null) ? result : $"{result}\n{ex}", msg, ex);

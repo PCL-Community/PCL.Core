@@ -73,11 +73,12 @@
   },
   "ns:Link": {
     "EulaAgreed": {"key": "LinkEula", "source": "global", "value": false, "encrypted": false},
+    "Username": {"key": "LinkUsername", "source": "global", "value": "", "encrypted": false},
     "AnnounceCache": {"key": "LinkAnnounceCache", "source": "global", "value": "", "encrypted": true},
     "AnnounceCacheVer": {"key": "LinkAnnounceCacheVer", "source": "global", "value": 0, "encrypted": false},
     "RelayType": {"key": "LinkRelayType", "source": "global", "value": 0, "encrypted": false},
     "ServerType": {"key": "LinkServerType", "source": "global", "value": 1, "encrypted": false},
-	"LatencyFirstMode": {"key": "LinkLatencyFirstMode", "source": "global", "value": false, "encrypted": false},
+	"LatencyFirstMode": {"key": "LinkLatencyFirstMode", "source": "global", "value": true, "encrypted": false},
     "RelayServer": {"key": "LinkRelayServer", "source": "global", "value": "", "encrypted": false},
     "NaidRefreshToken": {"key": "LinkNaidRefreshToken", "source": "global", "value": "", "encrypted": true},
     "NaidRefreshExpireTime": {"key": "LinkNaidRefreshExpiresAt", "source": "global", "value": "", "encrypted": true},
@@ -140,6 +141,7 @@
     "TopBarLeftAlign": {"key": "UiLogoLeft", "source": "local", "value": false, "encrypted": false},
     "AnimationFpsLimit": {"key": "UiAniFPS", "source": "global", "value": 59, "encrypted": false},
     "Font": {"key": "UiFont", "source": "local", "value": "", "encrypted": false},
+	"AutoPauseVideo": {"key": "UiAutoPauseVideo", "source":"local", "value":true, "encrypted":false},
     "ns:Music": {
       "Volume": {"key": "UiMusicVolume", "source": "local", "value": 500, "encrypted": false},
       "StopInGame": {"key": "UiMusicStop", "source": "local", "value": false, "encrypted": false},
@@ -251,6 +253,9 @@
     "SortCode": {"key": "VersionApiCode", "source": "instance", "value": -1, "encrypted": false},
     "McVersion": {"key": "VersionOriginal", "source": "instance", "value": "Unknown", "encrypted": false},
     "VersionMajor": {"key": "VersionOriginalMain", "source": "instance", "value": -1, "encrypted": false},
-    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false}
+    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false},
+    "ModpackVersion": {"key": "VersionModpackVersion", "source": "instance", "value": "", "encrypted": false},
+    "ModpackSource": {"key": "VersionModpackSource", "source": "instance", "value": "", "encrypted": false},
+    "ModpackId": {"key": "VersionModpackId", "source": "instance", "value": "", "encrypted": false}
   }
 }

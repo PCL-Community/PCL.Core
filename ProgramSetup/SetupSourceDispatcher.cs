@@ -10,49 +10,42 @@ namespace PCL.Core.ProgramSetup;
 
 public static class SetupSourceDispatcher
 {
-    private static volatile Lazy<FileSetupSourceManager>? _lazyGlobalSourceManager = null;
-    private static volatile Lazy<FileSetupSourceManager>? _lazyLocalSourceManager = null;
+    private static volatile FileSetupSourceManager? _globalSourceManager = null;
+    private static volatile FileSetupSourceManager? _localSourceManager = null;
     private static volatile InstanceSetupSourceManager? _instanceSourceManager = null;
 
     public static ISetupSourceManager GlobalSourceManager =>
-        _lazyGlobalSourceManager?.Value ?? throw new InvalidOperationException("全局配置源托管器尚未加载或已被销毁");
+        _globalSourceManager ?? throw new InvalidOperationException("全局配置源托管器尚未加载或已被销毁");
 
     public static ISetupSourceManager LocalSourceManager =>
-        _lazyLocalSourceManager?.Value ?? throw new InvalidOperationException("局部配置源托管器尚未加载或已被销毁");
+        _localSourceManager ?? throw new InvalidOperationException("局部配置源托管器尚未加载或已被销毁");
 
     public static ISetupSourceManager InstanceSourceManager =>
         _instanceSourceManager ?? throw new InvalidOperationException("实例配置源托管器尚未加载或已被销毁");
 
     public static void Load()
     {
-        _lazyGlobalSourceManager = new Lazy<FileSetupSourceManager>(() =>
+        try
         {
-            try
-            {
-                var result = new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, SetupService.GlobalFileSerializer, true);
-                SetupService.MigrateGlobalSetupRegister(result);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                LogWrapper.Fatal(ex, "Setup", "全局配置源托管器初始化失败");
-                _BackupFile(PredefinedFileItems.GlobalSetup);
-                throw new IOException("全局配置源托管器初始化失败", ex);
-            }
-        });
-        _lazyLocalSourceManager = new Lazy<FileSetupSourceManager>(() =>
+            var result = new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, SetupService.GlobalFileSerializer, true);
+            SetupService.MigrateGlobalSetupRegister(result, true);
+            _globalSourceManager = result;
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                return new FileSetupSourceManager(PredefinedFileItems.LocalSetup, SetupService.LocalFileSerializer, true);
-            }
-            catch (Exception ex)
-            {
-                LogWrapper.Fatal(ex, "Setup", "局部配置源托管器初始化失败");
-                _BackupFile(PredefinedFileItems.LocalSetup);
-                throw new IOException("局部配置源托管器初始化失败");
-            }
-        });
+            LogWrapper.Error(ex, "Setup", "全局配置源托管器初始化失败");
+            _FatalBackup(PredefinedFileItems.GlobalSetup);
+        }
+        try
+        {
+            var result = new FileSetupSourceManager(PredefinedFileItems.LocalSetup, SetupService.LocalFileSerializer, true);
+            _localSourceManager = result;
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "Setup", "局部配置源托管器初始化失败");
+            _FatalBackup(PredefinedFileItems.LocalSetup);
+        }
         _instanceSourceManager = new InstanceSetupSourceManager(SetupService.InstanceFileSerializer);
     }
 
@@ -60,23 +53,9 @@ public static class SetupSourceDispatcher
     {
         Task[] tasks =
         [
-            Task.Run(() =>
-            {
-                if (Interlocked.Exchange(ref _lazyGlobalSourceManager, null) is
-                    { IsValueCreated: true } lazyGlobalSourceManager)
-                    lazyGlobalSourceManager.Value.Dispose();
-            }),
-            Task.Run(() =>
-            {
-                if (Interlocked.Exchange(ref _lazyLocalSourceManager, null) is
-                    { IsValueCreated: true } lazyLocalSourceManager)
-                    lazyLocalSourceManager.Value.Dispose();
-            }),
-            Task.Run(() =>
-            {
-                if (Interlocked.Exchange(ref _instanceSourceManager, null) is { } instanceSourceManager)
-                    instanceSourceManager.Dispose();
-            })
+            Task.Run(() => Interlocked.Exchange(ref _globalSourceManager, null)?.Dispose()),
+            Task.Run(() => Interlocked.Exchange(ref _localSourceManager, null)?.Dispose()),
+            Task.Run(() => Interlocked.Exchange(ref _instanceSourceManager, null)?.Dispose())
         ];
         try
         {
@@ -88,7 +67,7 @@ public static class SetupSourceDispatcher
         }
     }
 
-    private static void _BackupFile(FileItem file)
+    private static void _FatalBackup(FileItem file)
     {
         try
         {
@@ -99,13 +78,13 @@ public static class SetupSourceDispatcher
             else
                 File.Move(filePath, bakPath);
             LogWrapper.Fatal("Setup",
-                $"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
-                $"文件已删除并备份至 {bakPath}{Environment.NewLine}" +
-                $"可以修正其内容并重命名为 {filePath}");
+                $"发生了什么：配置文件 {filePath} 解析失败，这通常是人为修改文件内容或系统环境/硬盘故障导致的。\n" +
+                $"应该如何做：文件已备份至 {bakPath}，如果你曾经修改过这个文件，请修正其内容并改回原文件名；" +
+                $"如果你不知道如何修正，或是根本不知道发生了什么，无视这个提示即可，相关配置会自动重置到默认值。");
         }
         catch (Exception ex)
         {
-            LogWrapper.Fatal(ex, "Setup", "配置文件无法解析，且移动文件失败！" + file.TargetDirectory);
+            LogWrapper.Fatal(ex, "Setup", "配置文件无法解析，且备份文件失败！" + file.TargetDirectory);
         }
     }
 }

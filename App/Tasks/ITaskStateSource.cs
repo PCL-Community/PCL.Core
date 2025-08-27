@@ -4,7 +4,7 @@ namespace PCL.Core.App.Tasks;
 
 /// <summary>
 /// 任务状态模型。<br/>
-/// 实现 <see cref="IPropertyChangedSource{TaskState}"/> 或直接实现
+/// 实现 <see cref="IStateChangedSource{TProperty}"/> 或直接实现
 /// <see cref="IObservableTaskStateSource"/> 以动态响应状态改变。
 /// </summary>
 public interface ITaskStateSource
@@ -28,7 +28,7 @@ public interface ITaskStateSource
 /// <summary>
 /// 可动态响应状态改变的任务状态模型。
 /// </summary>
-public interface IObservableTaskStateSource : ITaskStateSource, IPropertyChangedSource<TaskState>;
+public interface IObservableTaskStateSource : ITaskStateSource, IStateChangedSource<TaskState>;
 
 /// <summary>
 /// 任务状态组模型。

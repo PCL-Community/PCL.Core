@@ -299,7 +299,7 @@ public class McPing : IDisposable {
         ["white"] = "f"
     };
 
-    private static string _getTextStyleString(
+    private static string _GetTextStyleString(
         string color,
         bool bold = false,
         bool obfuscated = false,

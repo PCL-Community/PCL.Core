@@ -15,19 +15,22 @@ using PCL.Core.Utils;
 
 namespace PCL.Core.Link;
 
-public class McPing : IDisposable {
+public class McPing : IDisposable
+{
     private readonly IPEndPoint _endpoint;
     private readonly string _host;
     private const int DefaultTimeout = 10000;
     private readonly int _timeout;
 
-    public McPing(IPEndPoint endpoint, int timeout = DefaultTimeout) {
+    public McPing(IPEndPoint endpoint, int timeout = DefaultTimeout)
+    {
         _endpoint = endpoint;
         _host = _endpoint.Address.ToString();
         _timeout = timeout;
     }
 
-    public McPing(string ip, int port = 25565, int timeout = DefaultTimeout) {
+    public McPing(string ip, int port = 25565, int timeout = DefaultTimeout)
+    {
         _endpoint = IPAddress.TryParse(ip, out var ipAddress)
             ? new IPEndPoint(ipAddress, port)
             : new IPEndPoint(Dns.GetHostAddresses(ip).First(), port);
@@ -40,19 +43,25 @@ public class McPing : IDisposable {
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NullReferenceException">获取的结果出现字段缺失时</exception>
-    public async Task<McPingResult?> PingAsync() {
+    public async Task<McPingResult?> PingAsync()
+    {
         using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(_timeout);
 
         // 从这里开始，所有异步操作都使用 cts.Token
-        try {
+        try
+        {
             LogWrapper.Debug("McPing", $"Connecting to {_endpoint}");
             await so.ConnectAsync(_endpoint.Address, _endpoint.Port, cts.Token);
-        } catch (OperationCanceledException) {
+        }
+        catch (OperationCanceledException)
+        {
             LogWrapper.Error(new TimeoutException("连接超时"), "McPing", $"Failed to connect to the {_endpoint}");
             return null;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             LogWrapper.Error(e, "McPing", $"Failed to connect to the {_endpoint}");
             return null;
         }
@@ -64,13 +73,14 @@ public class McPing : IDisposable {
 
         using var res = new MemoryStream();
         var watcher = new Stopwatch();
-        try {
+        try
+        {
             await stream.WriteAsync(handshakePacket, cts.Token);
             LogWrapper.Debug("McPing", $"Handshake sent, packet length: {handshakePacket.Length}");
 
             await stream.WriteAsync(statusPacket, cts.Token);
             LogWrapper.Debug("McPing", $"Status sent, packet length: {statusPacket.Length}");
-            
+
             var buffer = new byte[4096];
             watcher.Start();
 
@@ -79,18 +89,25 @@ public class McPing : IDisposable {
             LogWrapper.Debug("McPing", $"Total length: {totalLength}");
 
             long readLength = 0;
-            while (readLength < totalLength) {
+            while (readLength < totalLength)
+            {
                 var curReaded = await stream.ReadAsync(buffer, cts.Token);
                 readLength += curReaded;
                 await res.WriteAsync(buffer, 0, curReaded, cts.Token);
             }
-        } catch (OperationCanceledException) {
+        }
+        catch (OperationCanceledException)
+        {
             LogWrapper.Error(new TimeoutException("数据读写超时"), "McPing", $"Operation timed out on {_endpoint}");
             return null;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             LogWrapper.Error(e, "McPing", $"Failed to communicate with {_endpoint}: {e.Message}");
             return null;
-        } finally {
+        }
+        finally
+        {
             // 确保 socket 在所有情况下都被关闭
             if (so.Connected) so.Shutdown(SocketShutdown.Both);
         }
@@ -109,11 +126,12 @@ public class McPing : IDisposable {
 #if DEBUG
         var resJsonDebug = retJson.DeepClone();
         // 检查根节点是否为 JSON 对象，并且包含 "favicon" 属性
-        if (resJsonDebug is JsonObject jsonObject && jsonObject.ContainsKey("favicon")) {
+        if (resJsonDebug is JsonObject jsonObject && jsonObject.ContainsKey("favicon"))
+        {
             // 将 "favicon" 属性的值替换为省略号
             jsonObject["favicon"] = "...";
         }
-        
+
         LogWrapper.Debug("McPing", resJsonDebug.ToJsonString());
 #endif
         var versionNode = retJson["version"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失: version");
@@ -133,27 +151,32 @@ public class McPing : IDisposable {
             retJson["favicon"]?.ToString() ?? string.Empty,
             watcher.ElapsedMilliseconds,
             modInfoNode is null
-                ?null
-                :new McPingModInfoResult(
+                ? null
+                : new McPingModInfoResult(
                     modInfoNode["type"]?.ToString() ?? "未知服务端类型",
                     (modInfoNode["modList"]?.AsArray() ?? [])
-                        .Where(x => x!.AsObject().TryGetPropertyValue("modid", out _))
-                        .Select(x => new McPingModInfoModResult(
-                            x!["modid"]?.ToString() ?? string.Empty,
-                            x["version"]?.ToString() ?? string.Empty))
-                        .ToList())
+                    .Where(x => x!.AsObject().TryGetPropertyValue("modid", out _))
+                    .Select(x => new McPingModInfoModResult(
+                        x!["modid"]?.ToString() ?? string.Empty,
+                        x["version"]?.ToString() ?? string.Empty))
+                    .ToList())
             );
         return ret;
     }
 
-    public async Task<McPingResult?> PingOldAsync() {
+    public async Task<McPingResult?> PingOldAsync()
+    {
         using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(_timeout);
-        cts.Token.Register(() => {
-            try {
+        cts.Token.Register(() =>
+        {
+            try
+            {
                 if (so.Connected) so.Close();
-            } catch (ObjectDisposedException) {
+            }
+            catch (ObjectDisposedException)
+            {
                 /* Ignore */
             }
         });
@@ -166,13 +189,15 @@ public class McPing : IDisposable {
         await stream.CopyToAsync(ms, cts.Token);
         so.Close();
         var retData = ms.ToArray();
-        if (retData.Length < 21 || (retData.Length >= 21 && retData[0] != 0xff)) {
+        if (retData.Length < 21 || (retData.Length >= 21 && retData[0] != 0xff))
+        {
             LogWrapper.Info("McPing", $"Unknown response from {_endpoint}, ignore");
             return null;
         }
 
         var retRep = Encoding.UTF8.GetString(retData);
-        try {
+        try
+        {
             var retPart = retRep.Split(["\0\0\0"], StringSplitOptions.None);
             retPart = retPart.Select(s => new string(s
                     .Where((_, index) => index % 2 == 0)
@@ -183,7 +208,9 @@ public class McPing : IDisposable {
             return new McPingResult(new McPingVersionResult(retPart[2], int.Parse(retPart[1])),
                 new McPingPlayerResult(int.Parse(retPart[5]), int.Parse(retPart[4]), []), retPart[3], string.Empty, 0,
                 new McPingModInfoResult(string.Empty, []));
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             LogWrapper.Error(e, "McPing", $"Unable to serialize response from {_endpoint}");
             return null;
         }
@@ -195,7 +222,8 @@ public class McPing : IDisposable {
     /// <param name="serverIp">服务器的地址</param>
     /// <param name="serverPort">服务器的端口</param>
     /// <returns>返回握手包的字节数组</returns>
-    private byte[] _BuildHandshakePacket(string serverIp, int serverPort) {
+    private byte[] _BuildHandshakePacket(string serverIp, int serverPort)
+    {
         List<byte> handshake = [];
         handshake.AddRange(VarIntHelper.Encode(0)); //状态头 表明这是一个握手包
         handshake.AddRange(VarIntHelper.Encode(772)); //协议头 表明请求客户端的版本
@@ -210,26 +238,31 @@ public class McPing : IDisposable {
         return handshake.ToArray();
     }
 
-    private byte[] _BuildStatusRequestPacket() {
+    private byte[] _BuildStatusRequestPacket()
+    {
         List<byte> statusRequest = [];
         statusRequest.AddRange(VarIntHelper.Encode(1)); //包长度
         statusRequest.AddRange(VarIntHelper.Encode(0)); //包 ID
         return statusRequest.ToArray();
     }
 
-    private static string _convertJNodeToMcString(JsonNode? jsonNode) {
+    private static string _convertJNodeToMcString(JsonNode? jsonNode)
+    {
         if (jsonNode == null) return string.Empty;
         StringBuilder result = new();
         Stack<JsonNode> stack = new();
         stack.Push(jsonNode);
 
-        while (stack.Count > 0) {
+        while (stack.Count > 0)
+        {
             var current = stack.Pop();
             LogWrapper.Debug("McPing", $"Current element: {current.GetValueKind()}");
 
-            switch (current.GetValueKind()) {
+            switch (current.GetValueKind())
+            {
                 // 处理对象
-                case JsonValueKind.Object: {
+                case JsonValueKind.Object:
+                {
                     var obj = current.AsObject();
                     // LogWrapper.Debug("McPing",$"Treat {obj} as JObject");
                     // 检查并处理 extra 数组
@@ -239,7 +272,8 @@ public class McPing : IDisposable {
                             if (extraArray[i] != null)
                                 stack.Push(extraArray[i]!);
                     // 检查并处理 text 属性
-                    if (obj.TryGetPropertyValue("text", out _)) {
+                    if (obj.TryGetPropertyValue("text", out _))
+                    {
                         var formatCode = _GetTextStyleString(
                             obj["color"]?.ToString() ?? string.Empty,
                             Convert.ToBoolean(obj["bold"]?.ToString() ?? "false"),
@@ -247,21 +281,23 @@ public class McPing : IDisposable {
                             Convert.ToBoolean(obj["strikethrough"]?.ToString() ?? "false"),
                             Convert.ToBoolean(obj["underline"]?.ToString() ?? "false"),
                             Convert.ToBoolean(obj["italic"]?.ToString() ?? "false")
-                        );
+                            );
                         result.Append($"{formatCode}{obj["text"] ?? string.Empty}");
                     }
 
                     break;
                 }
                 // 处理字符串值
-                case JsonValueKind.String: {
+                case JsonValueKind.String:
+                {
                     // LogWrapper.Debug("McPing",$"Treat {value} as JValue");
                     result.Append(current);
                     break;
                 }
                 // 处理数组
                 // 逆序压栈保证原始顺序
-                case JsonValueKind.Array: {
+                case JsonValueKind.Array:
+                {
                     var jArr = current.AsArray();
                     // LogWrapper.Debug("McPing",$"Treat {array} as JArray");
                     for (var i = jArr.Count - 1; i >= 0; i--)
@@ -269,7 +305,8 @@ public class McPing : IDisposable {
                             stack.Push(jArr[i]!);
                     break;
                 }
-                default: {
+                default:
+                {
                     LogWrapper.Warn("McPing", $"解析到无法处理的 Motd 内容({current.GetValueKind()})：{current}");
                     break;
                 }
@@ -280,7 +317,8 @@ public class McPing : IDisposable {
         return result.ToString();
     }
 
-    private static readonly Dictionary<string, string> _ColorMap = new() {
+    private static readonly Dictionary<string, string> _ColorMap = new()
+    {
         ["black"] = "0",
         ["dark_blue"] = "1",
         ["dark_green"] = "2",
@@ -305,7 +343,8 @@ public class McPing : IDisposable {
         bool obfuscated = false,
         bool strikethrough = false,
         bool underline = false,
-        bool italic = false) {
+        bool italic = false)
+    {
         var sb = new StringBuilder();
         if (_ColorMap.TryGetValue(color, out var colorCode)) sb.Append($"§{colorCode}");
         if (bold) sb.Append("§l");
@@ -319,7 +358,8 @@ public class McPing : IDisposable {
 
     private bool _disposed;
 
-    public void Dispose() {
+    public void Dispose()
+    {
         if (_disposed) return;
         _disposed = true;
         GC.SuppressFinalize(this);

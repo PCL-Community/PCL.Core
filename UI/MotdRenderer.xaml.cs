@@ -1,4 +1,5 @@
 ﻿using PCL.Core.ProgramSetup;
+using PCL.Core.Utils;
 
 namespace PCL.Core.UI;
 
@@ -70,14 +71,6 @@ public partial class MotdRenderer {
     private readonly Random _random = new();
     private const string RandomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
     private readonly Color _backgroundColor = Color.FromRgb(243, 246, 250); // #f3f6fa
-    
-    // 编译器将在编译时生成这个方法的实现
-    [GeneratedRegex("^#[0-9A-Fa-f]{6}$", RegexOptions.Compiled)]
-    private static partial Regex _HexColorRegex();
-    
-    // Regex to match § codes and RGB colors
-    [GeneratedRegex("(§[0-9a-fk-oAr]|#[0-9A-Fa-f]{6})", RegexOptions.Compiled)]
-    private static partial Regex _MotdCodeRegex();
 
     public MotdRenderer() {
         InitializeComponent(); // 初始化 XAML 定义的控件
@@ -202,7 +195,7 @@ public partial class MotdRenderer {
 
         for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++) {
             var line = lines[lineIndex].Trim();
-            var parts = _MotdCodeRegex().Split(line);
+            var parts = RegexPatterns.MotdCode.Split(line);
 
             // Calculate line width
             double lineWidth = 0;
@@ -256,7 +249,7 @@ public partial class MotdRenderer {
                 }
 
                 // Handle RGB color codes
-                if (_HexColorRegex().IsMatch(part)) {
+                if (RegexPatterns.HexColor.IsMatch(part)) {
                     try {
                         var hex = part[1..];
                         var r = Convert.ToByte(hex[..2], 16);

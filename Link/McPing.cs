@@ -240,7 +240,7 @@ public class McPing : IDisposable {
                                 stack.Push(extraArray[i]!);
                     // 检查并处理 text 属性
                     if (obj.TryGetPropertyValue("text", out _)) {
-                        var formatCode = _getTextStyleString(
+                        var formatCode = _GetTextStyleString(
                             obj["color"]?.ToString() ?? string.Empty,
                             Convert.ToBoolean(obj["bold"]?.ToString() ?? "false"),
                             Convert.ToBoolean(obj["obfuscated"]?.ToString() ?? "false"),

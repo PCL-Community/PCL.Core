@@ -10,7 +10,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Windows.Media.Imaging;
 
 public partial class MotdRenderer {

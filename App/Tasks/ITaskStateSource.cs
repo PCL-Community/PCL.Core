@@ -28,10 +28,7 @@ public interface ITaskStateSource
 /// <summary>
 /// 可动态响应状态改变的任务状态模型。
 /// </summary>
-public interface IObservableTaskStateSource : ITaskStateSource
-{
-    event PropertyChangedHandler<TaskState>? StateChanged;
-}
+public interface IObservableTaskStateSource : ITaskStateSource, IStateChangedSource<TaskState>;
 
 /// <summary>
 /// 任务状态组模型。

@@ -31,6 +31,20 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
             ((CancellationToken)CancellationToken).Register(() => { State = TaskState.Canceled; });
     }
 
+    event StateChangedHandler<double>? IStateChangedSource<double>.StateChanged
+    {
+        add => ProgressChanged += value;
+        remove => ProgressChanged -= value;
+    }
+    event StateChangedHandler<TaskState>? IStateChangedSource<TaskState>.StateChanged
+    {
+        add => StateChanged += value;
+        remove => StateChanged -= value;
+    }
+
+    public event StateChangedHandler<double>? ProgressChanged;
+    public event StateChangedHandler<TaskState>? StateChanged;
+
     private double _progress = 0;
     public double Progress {
         get => _progress; 
@@ -69,9 +83,6 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         }
     }
 
-    public event PropertyChangedHandler<double>? ProgressChanged;
-    public event PropertyChangedHandler<TaskState>? StateChanged;
-
     private readonly Delegate _delegate;
     protected readonly CancellationToken? CancellationToken;
 
@@ -104,6 +115,7 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
     }
 
     protected Task<TResult>? BackgroundTask;
+
     public virtual void RunBackground(params object[] objects)
     {
         (BackgroundTask = (Task<TResult>)(typeof(TaskBase<TResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new())).Start();

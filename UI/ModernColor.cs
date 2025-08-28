@@ -124,7 +124,7 @@ public readonly record struct ModernColor {
     }
 
     /// <summary>
-    /// 安全地从对象创建颜色
+    /// 从对象创建颜色
     /// </summary>
     public static ModernColor FromObject(object? obj) => obj switch {
         null => White,
@@ -134,6 +134,18 @@ public readonly record struct ModernColor {
         string str => new ModernColor(str),
         _ => throw new ArgumentException($"不支持的颜色类型: {obj.GetType()}")
     };
+    
+    /// <summary>
+    /// 安全地从对象创建颜色
+    /// </summary>
+    public static ModernColor TryFromObject(object? obj) => obj switch {
+        null => White,
+        Color color => new ModernColor(color),
+        SolidColorBrush brush => new ModernColor(brush),
+        ModernColor modernColor => modernColor,
+        string str => new ModernColor(str),
+        _ => new ModernColor()
+};
 
     #endregion
 
@@ -383,3 +395,17 @@ public static class ColorUtils {
     }
 }
 
+/// <summary>
+/// 扩展方法
+/// </summary>
+public static class ColorExtensions {
+    /// <summary>
+    /// 为WPF Color添加现代化操作
+    /// </summary>
+    public static ModernColor ToModern(this Color color) => new(color);
+
+    /// <summary>
+    /// 为字符串添加颜色解析
+    /// </summary>
+    public static ModernColor AsColor(this string hexString) => new(hexString);
+}

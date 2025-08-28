@@ -44,6 +44,7 @@
     </PropertyGroup>
     <!-- 通用引用 -->
     <ItemGroup>
+        <PackageReference Include="fNbt" Version="1.0.0" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
         <PackageReference Include="System.Management" Version="8.0.0" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
@@ -70,9 +71,7 @@
     <ItemGroup>
         <AdditionalFiles Include="ProgramSetup\SetupModel.json" />
         <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" 
-                          OutputItemType="Analyzer" 
-                          ReferenceOutputAssembly="false"
-                          Properties="Platform=AnyCPU" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false" Properties="Platform=AnyCPU" />
     </ItemGroup>
 </Project>

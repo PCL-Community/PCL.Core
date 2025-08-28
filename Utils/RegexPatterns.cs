@@ -66,4 +66,19 @@ public static partial class RegexPatterns
     public static readonly Regex IncompatibleModLoaderErrorHint = _IncompatibleModLoaderErrorHint();
     [GeneratedRegex(@"(incompatible[\s\S]+'Fabric Loader' \(fabricloader\)|Mod ID: '(?:neo)?forge', Requested by '([^']+)')")]
     private static partial Regex _IncompatibleModLoaderErrorHint();
+
+    /// <summary>
+    /// Minecraft 颜色代码，为 Hex 颜色代码，格式为 <c>#RRGGBB</c>。
+    /// </summary>
+    public static readonly Regex HexColor = _HexColor();
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}$", RegexOptions.Compiled)]
+    private static partial Regex _HexColor();
+    
+    /// <summary>
+    /// A compiled regular expression for matching Minecraft MOTD formatting codes.
+    /// Matches legacy color/format codes (e.g., §a, §b, §k) and hexadecimal color codes (e.g., #FF0000).
+    /// </summary>
+    public static readonly Regex MotdCode = _MotdCode();
+    [GeneratedRegex("(§[0-9a-fk-oAr]|#[0-9A-Fa-f]{6})", RegexOptions.Compiled)]
+    private static partial Regex _MotdCode();
 }

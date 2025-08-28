@@ -5,27 +5,26 @@ using System.Threading;
 
 namespace PCL.Core.Utils.OS;
 
-public class RegistryChangeMonitor : IDisposable
+public partial class RegistryChangeMonitor : IDisposable
 {
-    // ReSharper disable once InconsistentNaming
+    // ReSharper disable InconsistentNaming
+
     private const int REG_NOTIFY_CHANGE_LAST_SET = 0x00000004;
-    // ReSharper disable once InconsistentNaming
     private const int KEY_NOTIFY = 0x0010;
-    // ReSharper disable once InconsistentNaming
     private const int KEY_QUERY_VALUE = 0x0001;
-    // ReSharper disable once InconsistentNaming
     private const int KEY_READ = (KEY_QUERY_VALUE | KEY_NOTIFY);
-    // ReSharper disable once InconsistentNaming
-    private static readonly UIntPtr HKEY_CURRENT_USER = (UIntPtr)0x80000001;
+    private const UIntPtr HKEY_CURRENT_USER = 0x80000001;
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern int RegOpenKeyEx(UIntPtr hKey, string subKey, uint options, int samDesired, out IntPtr phkResult);
+    [LibraryImport("advapi32.dll", EntryPoint = "RegOpenKeyExW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int _RegOpenKeyEx(UIntPtr hKey, string subKey, uint options, int samDesired, out IntPtr phkResult);
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern int RegNotifyChangeKeyValue(IntPtr hKey, bool bWatchSubtree, int dwNotifyFilter, IntPtr hEvent, bool fAsynchronous);
+    [LibraryImport("advapi32.dll", EntryPoint = "RegNotifyChangeKeyValue", SetLastError = true)]
+    private static partial int _RegNotifyChangeKeyValue(IntPtr hKey, [MarshalAs(UnmanagedType.Bool)] bool bWatchSubtree, int dwNotifyFilter, IntPtr hEvent, [MarshalAs(UnmanagedType.Bool)] bool fAsynchronous);
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern int RegCloseKey(IntPtr hKey);
+    [LibraryImport("advapi32.dll", EntryPoint = "RegCloseKey", SetLastError = true)]
+    private static partial int _RegCloseKey(IntPtr hKey);
+
+    // ReSharper restore InconsistentNaming
 
     private readonly IntPtr _hKey;
     private readonly ManualResetEvent _stopEvent = new(false);
@@ -37,7 +36,7 @@ public class RegistryChangeMonitor : IDisposable
     public RegistryChangeMonitor(string keyPath)
     {
         // Open registry key with proper access rights
-        var result = RegOpenKeyEx(HKEY_CURRENT_USER, keyPath, 0, KEY_READ, out _hKey);
+        var result = _RegOpenKeyEx(HKEY_CURRENT_USER, keyPath, 0, KEY_READ, out _hKey);
         if (result != 0) throw new Win32Exception(result);
 
         // Start monitoring thread
@@ -77,7 +76,7 @@ public class RegistryChangeMonitor : IDisposable
 
     private void _RegisterForNotification()
     {
-        var result = RegNotifyChangeKeyValue(
+        var result = _RegNotifyChangeKeyValue(
             _hKey,
             true,
             REG_NOTIFY_CHANGE_LAST_SET,
@@ -101,7 +100,7 @@ public class RegistryChangeMonitor : IDisposable
             _monitorThread.Join(1000);
 
         if (_hKey != IntPtr.Zero)
-            _ = RegCloseKey(_hKey);
+            _ = _RegCloseKey(_hKey);
 
         _stopEvent.Dispose();
         GC.SuppressFinalize(this);

@@ -5,7 +5,6 @@ profile:
 # arguments
 ide: QDNET
 bootstrap: 'dotnet build ./PCL.Core.csproj -t:Restore'
-fixesStrategy: apply
 include:
   - name: VulnerableLibrariesGlobal
 exclude:

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
-public class TcpForward(
+public sealed class TcpForward(
     IPAddress listenAddress,
     int listenPort,
     IPAddress targetAddress,
@@ -176,23 +176,19 @@ public class TcpForward(
 
     private static async Task _ForwardDataAsync(Socket source, Socket destination, CancellationToken cancellationToken)
     {
-        // 使用 ArrayPool 共享缓冲区以减少内存分配
-        var buffer = new byte[8192];
-
+        using var bufferOwner = MemoryPool<byte>.Shared.Rent(8192);
         try
         {
+            var buffer = bufferOwner.Memory;
             while (!cancellationToken.IsCancellationRequested)
             {
                 var bytesRead = await source.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
                 if (bytesRead == 0) break; // 连接已关闭
 
-                await destination.SendAsync(buffer, bytesRead, SocketFlags.None, cancellationToken);
+                await destination.SendAsync(buffer[..bytesRead], SocketFlags.None, cancellationToken);
             }
         }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(buffer);
-        }
+        catch {/* 忽略错误 */}
     }
 
     private bool _disposed;
@@ -203,7 +199,7 @@ public class TcpForward(
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!disposing) return;
         if (_disposed) return;
@@ -222,85 +218,5 @@ public class TcpForward(
     {
         public Socket ClientSocket { get; } = clientSocket;
         public Socket TargetSocket { get; } = targetSocket;
-    }
-}
-
-public static class SocketExtensions
-{
-    public static void SafeClose(this Socket? socket)
-    {
-        if (socket is null) return;
-
-        try
-        {
-            if (socket.Connected)
-            {
-                socket.Shutdown(SocketShutdown.Both);
-            }
-            socket.Close();
-        }
-        catch { /* 忽略关闭时的任何错误 */ }
-    }
-
-    public static async Task<int> ReceiveAsync(this Socket socket, byte[] buffer, SocketFlags socketFlags, CancellationToken cancellationToken = default)
-    {
-        // 使用 TaskCompletionSource和SocketAsyncEventArgs 实现高性能异步接收
-        var tcs = new TaskCompletionSource<int>();
-        var args = new SocketAsyncEventArgs();
-        args.SetBuffer(buffer, 0, buffer.Length);
-        args.SocketFlags = socketFlags;
-        args.Completed += (_, e) =>
-        {
-            switch (e.LastOperation)
-            {
-                case SocketAsyncOperation.Receive:
-                    tcs.TrySetResult(e.BytesTransferred);
-                    break;
-                case SocketAsyncOperation.Disconnect:
-                    tcs.TrySetResult(0); // 连接关闭
-                    break;
-                default:
-                    tcs.TrySetException(new SocketException((int)e.SocketError));
-                    break;
-            }
-        };
-
-        // 注册取消令牌
-        cancellationToken.Register(() => tcs.TrySetCanceled());
-
-        if (!socket.ReceiveAsync(args))
-        {
-            // 操作同步完成
-            return args.BytesTransferred;
-        }
-
-        return await tcs.Task;
-    }
-
-    public static async Task<int> SendAsync(this Socket socket, byte[] buffer, int length, SocketFlags socketFlags, CancellationToken cancellationToken = default)
-    {
-        // 使用 TaskCompletionSource 和 SocketAsyncEventArgs 实现高性能异步发送
-        var tcs = new TaskCompletionSource<int>();
-        var args = new SocketAsyncEventArgs();
-        args.SetBuffer(buffer, 0, length);
-        args.SocketFlags = socketFlags;
-        args.Completed += (_, e) =>
-        {
-            if (e.SocketError == SocketError.Success)
-                tcs.TrySetResult(e.BytesTransferred);
-            else
-                tcs.TrySetException(new SocketException((int)e.SocketError));
-        };
-
-        // 注册取消令牌
-        cancellationToken.Register(() => tcs.TrySetCanceled());
-
-        if (!socket.SendAsync(args))
-        {
-            // 操作同步完成
-            return args.BytesTransferred;
-        }
-
-        return await tcs.Task;
     }
 }

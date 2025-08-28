@@ -1,7 +1,7 @@
-﻿using PCL.Core.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
@@ -48,7 +48,7 @@ public static class StringExtension
 
         throw new NotSupportedException($"无法将字符串转换为类型 {targetType.FullName}");
     }
-    
+
     public static T? Convert<T>(this string? value)
     {
         var obj = Convert(value, typeof(T));
@@ -74,7 +74,7 @@ public static class StringExtension
     }
 
     public static string? ConvertToString<T>(this T? value) => ConvertToString((object?)value);
-    
+
     private static readonly char[] _B36Map = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
     public static string FromB10ToB36(this string input)
@@ -97,9 +97,12 @@ public static class StringExtension
         var nb = ns.Aggregate(new BigInteger(0), (n, i) => n * 36 + i);
         return nb.ToString();
     }
-    
+
     private static readonly char[] _B32Map = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ".ToCharArray();
 
+    /// <summary>
+    /// 将 Base10 文本重新编码为 Base32 文本。
+    /// </summary>
     public static string FromB10ToB32(this string input)
     {
         var n = BigInteger.Parse(input);
@@ -113,7 +116,10 @@ public static class StringExtension
         s.Reverse();
         return string.Join("", s);
     }
-    
+
+    /// <summary>
+    /// 将 Base32 文本重新编码为 Base10 文本。
+    /// </summary>
     public static string FromB32ToB10(this string input)
     {
         var ns = input.Select(Parse).ToArray();
@@ -130,33 +136,68 @@ public static class StringExtension
         };
     }
 
+    /// <summary>
+    /// <see cref="string.IsNullOrEmpty"/> 的扩展方法。
+    /// </summary>
+    public static bool IsNullOrEmpty(this string? value) => string.IsNullOrEmpty(value);
+
+    /// <summary>
+    /// <see cref="string.IsNullOrWhiteSpace"/> 的扩展方法。
+    /// </summary>
+    public static bool IsNullOrWhiteSpace(this string? value) => string.IsNullOrWhiteSpace(value);
+
+    /// <summary>
+    /// 当文本为空时返回替代文本，否则返回原来的文本。
+    /// </summary>
+    /// <param name="input">文本</param>
+    /// <param name="replacement">替代文本</param>
     public static string ReplaceNullOrEmpty(this string? input, string? replacement = null)
         => string.IsNullOrEmpty(input) ? (replacement ?? string.Empty) : input;
 
-    private static readonly Regex _PatternReplaceLineBreak = new("\r\n|\r|\n");
+    /// <summary>
+    /// 替换指定文本中的所有换行符。
+    /// </summary>
+    /// <param name="input">指定文本</param>
+    /// <param name="replacement">用于替换的文本</param>
+    /// <returns>替换后的文本</returns>
     public static string ReplaceLineBreak(this string? input, string replacement = " ")
-        => string.IsNullOrEmpty(input) ? string.Empty : _PatternReplaceLineBreak.Replace(input, replacement);
+        => input?.Replace(RegexPatterns.NewLine, replacement) ?? string.Empty;
 
     /// <summary>
-    /// 搜索字符串中的所有正则匹配项。
+    /// 替换指定文本中所有匹配正则表达式的部分。
+    /// </summary>
+    /// <param name="input">指定文本</param>
+    /// <param name="regex">正则表达式</param>
+    /// <param name="replacement">用于替换的文本</param>
+    /// <returns>替换后的文本</returns>
+    [return: NotNullIfNotNull(nameof(input))]
+    public static string? Replace(this string? input, Regex regex, string replacement)
+        => input == null ? null : regex.Replace(input, replacement);
+
+    /// <summary>
+    /// 判断指定文本是否能成功匹配正则表达式。
+    /// </summary>
+    /// <param name="input">指定文本</param>
+    /// <param name="regex">正则表达式</param>
+    /// <returns>若匹配成功则为 <c>true</c>，若文本为 <c>null</c> 或匹配不成功则为 <c>false</c></returns>
+    public static bool IsMatch(this string? input, Regex regex)
+        => input != null && regex.IsMatch(input);
+
+    /// <summary>
+    /// 查找并返回指定文本中所有与正则表达式匹配的部分。
     /// </summary>
     public static List<string> RegexSearch(this string str, Regex regex)
     {
-        try
-        {
-            var result = new List<string>();
-            var regexSearchRes = regex.Matches(str);
-            if (regexSearchRes.Count == 0) return result;
-            result.AddRange(from Match item in regexSearchRes select item.Value);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Error(ex, "Utils", "正则匹配全部项搜索失败: " + regex);
-            return [];
-        }
+        var result = new List<string>();
+        var regexSearchRes = regex.Matches(str);
+        if (regexSearchRes.Count == 0) return result;
+        result.AddRange(from Match item in regexSearchRes select item.Value);
+        return result;
     }
 
+    /// <summary>
+    /// 判断指定文本是否在 ASCII 范围内。
+    /// </summary>
     // ReSharper disable once InconsistentNaming
     public static bool IsASCII(this string str)
     {

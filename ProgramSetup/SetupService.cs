@@ -15,7 +15,7 @@ using PCL.Core.Utils.Secret;
 namespace PCL.Core.ProgramSetup;
 
 [LifecycleService(LifecycleState.Loading, Priority = 1111)]
-public sealed class SetupService : GeneralService
+public sealed class SetupService() : GeneralService("setup", "程序配置")
 {
     #region 对外接口
 
@@ -282,14 +282,14 @@ public sealed class SetupService : GeneralService
 #endif
     private static readonly IFileSerializer<ConcurrentDictionary<string, string>> _JsonSerializer = new JsonDictSerializer();
     private static readonly IFileSerializer<ConcurrentDictionary<string, string>> _IniSerializer = new IniDictSerializer();
+
+    // ReSharper disable ConvertToAutoProperty, ConvertToAutoPropertyWhenPossible
     public static IFileSerializer<ConcurrentDictionary<string, string>> GlobalFileSerializer => _JsonSerializer;
     public static IFileSerializer<ConcurrentDictionary<string, string>> LocalFileSerializer => _IniSerializer;
     public static IFileSerializer<ConcurrentDictionary<string, string>> InstanceFileSerializer => _IniSerializer;
-    private static LifecycleContext _context = null!;
+    // ReSharper restore ConvertToAutoProperty, ConvertToAutoPropertyWhenPossible
 
-    #region ILifecycleService
-
-    public SetupService() : base("program-setup", "程序配置") { _context = ServiceContext; }
+    #region 生命周期
 
     public override void Start()
     {
@@ -316,6 +316,7 @@ public sealed class SetupService : GeneralService
 
     public static FileTransfer MigrateGlobalSetupFile => (file, resultCallback) =>
     {
+        _bypassRegisterMigration = false;
         var source = file.Sources!.First();
         file.CreateDirectory();
         if (!File.Exists(source))
@@ -348,8 +349,12 @@ public sealed class SetupService : GeneralService
         resultCallback.Invoke(file.TargetPath);
     };
 
-    public static void MigrateGlobalSetupRegister(ISetupSourceManager globalSource)
+    private static bool _bypassRegisterMigration = true;
+
+    public static void MigrateGlobalSetupRegister(ISetupSourceManager globalSource, bool allowBypass = false)
     {
+        if (_bypassRegisterMigration) { if (allowBypass) return; }
+        else _bypassRegisterMigration = true;
         try
         {
             using var regKey = Registry.CurrentUser.OpenSubKey(@$"Software\{GlobalSetupFolder}", writable: true);
@@ -366,17 +371,15 @@ public sealed class SetupService : GeneralService
                 if (globalSource.Get(valueName) is null)
                 {
                     var value = rawValue.ToString().ReplaceLineBreak("");
-                    globalSource.Set(valueName,
-                        !setupEntry.IsEncrypted
-                            ? value
-                            : EncryptHelper.SecretEncrypt(EncryptHelper.SecretDecryptOld(value)));
+                    globalSource.Set(valueName, setupEntry.IsEncrypted
+                        ? EncryptHelper.SecretEncrypt(EncryptHelper.SecretDecryptOld(value)) : value);
                 }
                 regKey.DeleteValue(valueName, throwOnMissingValue: false);
             }
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, "Setup", "从注册表迁移全局配置时出错");
+            LogWrapper.Warn(ex, "Setup", "从注册表迁移全局配置时出错");
         }
     }
 
@@ -389,7 +392,7 @@ public sealed class SetupService : GeneralService
             SetupEntrySource.PathLocal => SetupSourceDispatcher.LocalSourceManager,
             SetupEntrySource.SystemGlobal => SetupSourceDispatcher.GlobalSourceManager,
             SetupEntrySource.GameInstance => SetupSourceDispatcher.InstanceSourceManager,
-            _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
+            _ => throw new ArgumentOutOfRangeException(nameof(entry), $"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
     }
 
@@ -438,9 +441,8 @@ file class JsonDictSerializer : IFileSerializer<ConcurrentDictionary<string, str
 
     public ConcurrentDictionary<string, string> Deserialize(Stream source)
     {
-        if (source.Length == 0)
-            return new ConcurrentDictionary<string, string>();
-        return JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? new();
+        if (source.Length == 0) return [];
+        return JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? [];
     }
 
     public void Serialize(ConcurrentDictionary<string, string> input, Stream destination) =>

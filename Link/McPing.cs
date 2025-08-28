@@ -24,7 +24,7 @@ public class McPing : IDisposable
 
     public McPing(IPEndPoint endpoint, int timeout = DefaultTimeout)
     {
-        _endpoint  = endpoint;
+        _endpoint = endpoint;
         _host = _endpoint.Address.ToString();
         _timeout = timeout;
     }
@@ -48,66 +48,94 @@ public class McPing : IDisposable
         using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(_timeout);
-        // 注册超时回调：强制关闭Socket中断阻塞操作
-        cts.Token.Register(() =>
-        {
-            try
-            {
-                // ReSharper disable AccessToDisposedClosure
-                if (so.Connected) so.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
-                // ReSharper restore AccessToDisposedClosure
-            }
-            catch (ObjectDisposedException) { /* 忽略已释放的异常 */ }
-        });
-        // 信息获取
+
+        // 从这里开始，所有异步操作都使用 cts.Token
         try
         {
             LogWrapper.Debug("McPing", $"Connecting to {_endpoint}");
-            await so.ConnectAsync(_endpoint);
+            await so.ConnectAsync(_endpoint.Address, _endpoint.Port, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            LogWrapper.Error(new TimeoutException("连接超时"), "McPing", $"Failed to connect to the {_endpoint}");
+            return null;
         }
         catch (Exception e)
         {
-            LogWrapper.Error(e, "McPing",$"Failed to connect to the {_endpoint}");
+            LogWrapper.Error(e, "McPing", $"Failed to connect to the {_endpoint}");
             return null;
         }
-        LogWrapper.Debug("McPing",$"Connection established: {_endpoint}");
-        using var stream = new NetworkStream(so, false);
-        var handshakePacket = _BuildHandshakePacket(_host, _endpoint.Port);
-        await stream.WriteAsync(handshakePacket, 0, handshakePacket.Length, cts.Token);
-        LogWrapper.Debug("McPing",$"Handshake sent, packet length: {handshakePacket.Length}");
-        var statusPacket = _BuildStatusRequestPacket();
-        await stream.WriteAsync(statusPacket, 0, statusPacket.Length, cts.Token);
-        LogWrapper.Debug("McPing",$"Status sent, packet length: {statusPacket.Length}");
 
-        var res = new MemoryStream();
-        var buffer = new byte[4096];
+        LogWrapper.Debug("McPing", $"Connection established: {_endpoint}");
+        await using var stream = new NetworkStream(so, false);
+        var handshakePacket = _BuildHandshakePacket(_host, _endpoint.Port);
+        var statusPacket = _BuildStatusRequestPacket();
+
+        using var res = new MemoryStream();
         var watcher = new Stopwatch();
-        watcher.Start();
-        var totalLength = Convert.ToInt64(await VarIntHelper.ReadFromStream(stream, cts.Token));
-        watcher.Stop();
-        LogWrapper.Debug("McPing",$"Total length: {totalLength}");
-        long readLength = 0;
-        while (readLength < totalLength)
+        try
         {
-            var curReaded = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
-            readLength += curReaded;
-            await res.WriteAsync(buffer, 0, curReaded, cts.Token);
+            await stream.WriteAsync(handshakePacket, cts.Token);
+            LogWrapper.Debug("McPing", $"Handshake sent, packet length: {handshakePacket.Length}");
+
+            await stream.WriteAsync(statusPacket, cts.Token);
+            LogWrapper.Debug("McPing", $"Status sent, packet length: {statusPacket.Length}");
+
+            var buffer = new byte[4096];
+            watcher.Start();
+
+            var totalLength = Convert.ToInt64(await VarIntHelper.ReadFromStream(stream, cts.Token));
+            watcher.Stop();
+            LogWrapper.Debug("McPing", $"Total length: {totalLength}");
+
+            long readLength = 0;
+            while (readLength < totalLength)
+            {
+                var curReaded = await stream.ReadAsync(buffer, cts.Token);
+                readLength += curReaded;
+                await res.WriteAsync(buffer, 0, curReaded, cts.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            LogWrapper.Error(new TimeoutException("数据读写超时"), "McPing", $"Operation timed out on {_endpoint}");
+            return null;
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e, "McPing", $"Failed to communicate with {_endpoint}: {e.Message}");
+            return null;
+        }
+        finally
+        {
+            // 确保 socket 在所有情况下都被关闭
+            if (so.Connected) so.Shutdown(SocketShutdown.Both);
         }
 
-        so.Close();
+        so.Close(); // 使用 using 块，这行其实可以移除，但保留也无妨
+
         var retBinary = res.ToArray();
-        var dataLength = Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
-        LogWrapper.Debug("McPing",$"ServerDataLength: {dataLength}");
+        var dataLength =
+            Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
+        LogWrapper.Debug("McPing", $"ServerDataLength: {dataLength}");
         if (dataLength > retBinary.Length) throw new Exception("The server data is too large");
         var retCtx = Encoding.UTF8.GetString([.. retBinary.Skip(1 + packDataHeaderLength).Take(dataLength)]);
-#if DEBUG
-        LogWrapper.Debug("McPing", retCtx);
-#endif
+
         // 反实例化
         var retJson = JsonNode.Parse(retCtx) ?? throw new NullReferenceException("服务器返回了错误的信息");
+#if DEBUG
+        var resJsonDebug = retJson.DeepClone();
+        // 检查根节点是否为 JSON 对象，并且包含 "favicon" 属性
+        if (resJsonDebug is JsonObject jsonObject && jsonObject.ContainsKey("favicon"))
+        {
+            // 将 "favicon" 属性的值替换为省略号
+            jsonObject["favicon"] = "...";
+        }
 
+        LogWrapper.Debug("McPing", resJsonDebug.ToJsonString());
+#endif
         var versionNode = retJson["version"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失: version");
-        var playersNode = retJson["players"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失: players");
+        var playersNode = retJson["players"] ?? new JsonObject();
         var descNode = _convertJNodeToMcString(retJson["description"] ?? new JsonObject());
         var modInfoNode = retJson["modinfo"];
         // 写完后发现可以先修改 description 到纯文本后再直接实例化，事已至此，先推送吧 :\
@@ -123,15 +151,15 @@ public class McPing : IDisposable
             retJson["favicon"]?.ToString() ?? string.Empty,
             watcher.ElapsedMilliseconds,
             modInfoNode is null
-                ?null
-                :new McPingModInfoResult(
+                ? null
+                : new McPingModInfoResult(
                     modInfoNode["type"]?.ToString() ?? "未知服务端类型",
                     (modInfoNode["modList"]?.AsArray() ?? [])
-                        .Where(x => x!.AsObject().TryGetPropertyValue("modid", out _))
-                        .Select(x => new McPingModInfoModResult(
-                            x!["modid"]?.ToString() ?? string.Empty,
-                            x["version"]?.ToString() ?? string.Empty))
-                        .ToList())
+                    .Where(x => x!.AsObject().TryGetPropertyValue("modid", out _))
+                    .Select(x => new McPingModInfoModResult(
+                        x!["modid"]?.ToString() ?? string.Empty,
+                        x["version"]?.ToString() ?? string.Empty))
+                    .ToList())
             );
         return ret;
     }
@@ -145,19 +173,20 @@ public class McPing : IDisposable
         {
             try
             {
-                // ReSharper disable AccessToDisposedClosure
                 if (so.Connected) so.Close();
-                // ReSharper restore AccessToDisposedClosure
             }
-            catch (ObjectDisposedException) { /* Ignore */ }
+            catch (ObjectDisposedException)
+            {
+                /* Ignore */
+            }
         });
-        await so.ConnectAsync(_endpoint);
+        await so.ConnectAsync(_endpoint, cts.Token);
         LogWrapper.Debug("McPing", $"Connected to {_endpoint}");
-        using var stream = new NetworkStream(so, false);
+        await using var stream = new NetworkStream(so, false);
         var queryPack = new byte[] { 0xfe, 0x01 };
-        await stream.WriteAsync(queryPack, 0, queryPack.Length, cts.Token);
+        await stream.WriteAsync(queryPack.AsMemory(0, queryPack.Length), cts.Token);
         var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
+        await stream.CopyToAsync(ms, cts.Token);
         so.Close();
         var retData = ms.ToArray();
         if (retData.Length < 21 || (retData.Length >= 21 && retData[0] != 0xff))
@@ -165,19 +194,20 @@ public class McPing : IDisposable
             LogWrapper.Info("McPing", $"Unknown response from {_endpoint}, ignore");
             return null;
         }
+
         var retRep = Encoding.UTF8.GetString(retData);
         try
         {
-                var retPart = retRep.Split(["\0\0\0"], StringSplitOptions.None);
-                retPart = retPart.Select(s => new string(s
-                        .Where((_, index) => index % 2 == 0)
-                        .ToArray()))
-                        .ToArray();
-                if (retPart.Length < 6)
-                    return null;
-                return new McPingResult(new McPingVersionResult(retPart[2], int.Parse(retPart[1])),
-                    new McPingPlayerResult(int.Parse(retPart[5]), int.Parse(retPart[4]), []), retPart[3], string.Empty, 0,
-                    new McPingModInfoResult(string.Empty, []));
+            var retPart = retRep.Split(["\0\0\0"], StringSplitOptions.None);
+            retPart = retPart.Select(s => new string(s
+                    .Where((_, index) => index % 2 == 0)
+                    .ToArray()))
+                .ToArray();
+            if (retPart.Length < 6)
+                return null;
+            return new McPingResult(new McPingVersionResult(retPart[2], int.Parse(retPart[1])),
+                new McPingPlayerResult(int.Parse(retPart[5]), int.Parse(retPart[4]), []), retPart[3], string.Empty, 0,
+                new McPingModInfoResult(string.Empty, []));
         }
         catch (Exception e)
         {
@@ -196,7 +226,7 @@ public class McPing : IDisposable
     {
         List<byte> handshake = [];
         handshake.AddRange(VarIntHelper.Encode(0)); //状态头 表明这是一个握手包
-        handshake.AddRange(VarIntHelper.Encode(578)); //协议头 表明请求客户端的版本
+        handshake.AddRange(VarIntHelper.Encode(772)); //协议头 表明请求客户端的版本
         var binaryIp = Encoding.UTF8.GetBytes(serverIp);
         if (binaryIp.Length > 255) throw new Exception("服务器地址过长");
         handshake.AddRange(VarIntHelper.Encode((uint)binaryIp.Length)); //服务器地址长度
@@ -226,7 +256,7 @@ public class McPing : IDisposable
         while (stack.Count > 0)
         {
             var current = stack.Pop();
-            LogWrapper.Debug("McPing",$"Current element: {current.GetValueKind()}");
+            LogWrapper.Debug("McPing", $"Current element: {current.GetValueKind()}");
 
             switch (current.GetValueKind())
             {
@@ -251,9 +281,10 @@ public class McPing : IDisposable
                             Convert.ToBoolean(obj["strikethrough"]?.ToString() ?? "false"),
                             Convert.ToBoolean(obj["underline"]?.ToString() ?? "false"),
                             Convert.ToBoolean(obj["italic"]?.ToString() ?? "false")
-                        );
+                            );
                         result.Append($"{formatCode}{obj["text"] ?? string.Empty}");
                     }
+
                     break;
                 }
                 // 处理字符串值
@@ -265,7 +296,7 @@ public class McPing : IDisposable
                 }
                 // 处理数组
                 // 逆序压栈保证原始顺序
-                case  JsonValueKind.Array:
+                case JsonValueKind.Array:
                 {
                     var jArr = current.AsArray();
                     // LogWrapper.Debug("McPing",$"Treat {array} as JArray");
@@ -276,12 +307,13 @@ public class McPing : IDisposable
                 }
                 default:
                 {
-                    LogWrapper.Warn("McPing",$"解析到无法处理的 Motd 内容({current.GetValueKind()})：{current}");
+                    LogWrapper.Warn("McPing", $"解析到无法处理的 Motd 内容({current.GetValueKind()})：{current}");
                     break;
                 }
             }
         }
 
+        LogWrapper.Warn("McPing", $"处理 Motd 内容完成，结果：{result}");
         return result.ToString();
     }
 
@@ -320,10 +352,12 @@ public class McPing : IDisposable
         // if (obfuscated) sb.Append("§k"); // 暂时别用
         if (underline) sb.Append("§n");
         if (strikethrough) sb.Append("§m");
+        if (color.StartsWith('#')) sb.Append(color);
         return sb.ToString();
     }
 
     private bool _disposed;
+
     public void Dispose()
     {
         if (_disposed) return;

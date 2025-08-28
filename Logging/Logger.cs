@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Logging;
 
@@ -78,10 +78,6 @@ public sealed class Logger : IDisposable
         _logEvent.Set();
     }
 
-#if DEBUG
-    private static readonly Regex _PatternNewLine = new(@"\r\n|\n|\r");
-#endif
-
     private void _ProcessLogQueue(CancellationToken token)
     {
         const int maxBatchCount = 100;
@@ -104,7 +100,7 @@ public sealed class Logger : IDisposable
                         continue; // 否则 => 接着等待下一次 Log() 调用
                     }
 #if DEBUG
-                    message = _PatternNewLine.Replace(message, "\r\n");
+                    message = message.ReplaceLineBreak("\r\n");
                     Console.WriteLine(message);
 #endif
                     batch.AppendLine(message);

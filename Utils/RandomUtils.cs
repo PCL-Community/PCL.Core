@@ -21,7 +21,7 @@ public static class RandomUtils {
     public static T PickRandom<T>(ICollection<T> collection) {
         if (collection.Count == 0) throw new ArgumentException("集合不能为空", nameof(collection));
 
-        int index = SharedRandom.Next(0, collection.Count);
+        var index = SharedRandom.Next(0, collection.Count);
         return collection.ElementAt(index);
     }
 
@@ -33,9 +33,7 @@ public static class RandomUtils {
     /// <returns>随机整数，范围为 [min, max]。</returns>
     /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="min"/> 大于 <paramref name="max"/> 时抛出。</exception>
     public static int NextInt(int min, int max) {
-        if (min > max) throw new ArgumentOutOfRangeException(nameof(min), "最小值不能大于最大值");
-
-        return SharedRandom.Next(min, max + 1);
+        return min > max ? throw new ArgumentOutOfRangeException(nameof(min), "最小值不能大于最大值") : SharedRandom.Next(min, max + 1);
     }
 
     /// <summary>
@@ -46,10 +44,10 @@ public static class RandomUtils {
     /// <returns>包含随机顺序元素的新列表。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="list"/> 为 null 时抛出。</exception>
     public static List<T> Shuffle<T>(IList<T> list) {
-        List<T> result = new List<T>(list);
-        int n = result.Count;
-        for (int i = n - 1; i > 0; i--) {
-            int j = SharedRandom.Next(0, i + 1);
+        var result = new List<T>(list);
+        var n = result.Count;
+        for (var i = n - 1; i > 0; i--) {
+            var j = SharedRandom.Next(0, i + 1);
             (result[i], result[j]) = (result[j], result[i]);
         }
 
@@ -63,9 +61,9 @@ public static class RandomUtils {
     /// <param name="list">要打乱的列表。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="list"/> 为 null 时抛出。</exception>
     public static void ShuffleInPlace<T>(IList<T> list) {
-        int n = list.Count;
-        for (int i = n - 1; i > 0; i--) {
-            int j = SharedRandom.Next(0, i + 1);
+        var n = list.Count;
+        for (var i = n - 1; i > 0; i--) {
+            var j = SharedRandom.Next(0, i + 1);
             (list[i], list[j]) = (list[j], list[i]);
         }
     }

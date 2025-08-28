@@ -24,7 +24,7 @@ public static class DialogUtils {
             AddExtension = true,
             Title = title,
             FileName = fileName,
-            Filter = fileFilter ?? String.Empty,
+            Filter = fileFilter ?? "所有文件(*.*)|*.*",
             InitialDirectory = !string.IsNullOrEmpty(initialDirectory) && Directory.Exists(initialDirectory) ? initialDirectory : null
         };
 
@@ -35,7 +35,7 @@ public static class DialogUtils {
             return null;
         }
 
-        string selectedPath = fileDialog.FileName;
+        var selectedPath = fileDialog.FileName;
         LogWrapper.Info($"[UI] 选择文件返回：{selectedPath}");
         return string.IsNullOrEmpty(selectedPath) ? null : Path.GetFullPath(selectedPath);
     }
@@ -66,7 +66,7 @@ public static class DialogUtils {
             return null;
         }
 
-        string selectedPath = fileDialog.FileName;
+        var selectedPath = fileDialog.FileName;
         LogWrapper.Info($"[UI] 选择单个文件返回：{selectedPath}");
         return string.IsNullOrEmpty(selectedPath) ? null : Path.GetFullPath(selectedPath);
     }

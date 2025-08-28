@@ -19,8 +19,6 @@ public static class UiExtension {
     /// <returns>如果控件部分或完全在窗口可视区域内且可见，则返回 true；否则返回 false。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="element"/> 或 <paramref name="mainWindow"/> 为 null 时抛出。</exception>
     public static bool IsVisibleInWindow(this FrameworkElement element, Window mainWindow) {
-        if (element == null) throw new ArgumentNullException(nameof(element));
-        if (mainWindow == null) throw new ArgumentNullException(nameof(mainWindow));
         if (!element.IsVisible) return false;
 
         try {
@@ -42,7 +40,6 @@ public static class UiExtension {
     /// <returns>如果文本被截断，则返回 true；否则返回 false。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="textBlock"/> 为 null 时抛出。</exception>
     public static bool IsTextTrimmed(this TextBlock textBlock) {
-        if (textBlock == null) throw new ArgumentNullException(nameof(textBlock));
         if (textBlock.TextTrimming == TextTrimming.None) return false;
 
         try {

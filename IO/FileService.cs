@@ -189,8 +189,9 @@ public sealed class FileService : GeneralService
                 continue;
             }
 
-            var items = task.Items.ToList();
-            var count = items.Count;
+            var items = task.Items; // 直接使用IEnumerable，避免ToList()的内存分配
+            var itemsList = items as IList<FileItem> ?? items.ToArray(); // 只在需要时才转换为数组
+            var count = itemsList.Count;
             foreach (var item in items)
             {
                 Context.Trace($"正在加载文件: {item}");

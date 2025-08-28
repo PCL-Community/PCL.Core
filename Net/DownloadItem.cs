@@ -104,7 +104,7 @@ public class DownloadItem(
     public async Task NewSegment(
         long startPosition,
         long? endPosition,
-        SegmentInterruptHandler errorCallback,
+        Action<DownloadSegmentStatus, Exception?> errorCallback,
         LinkedListNode<DownloadSegment>? afterNode = null)
     {
         var cToken = _cancelTokenSource.Token;

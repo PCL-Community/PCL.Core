@@ -37,7 +37,7 @@ public static class ETController
         // 检查文件
         LogWrapper.Info("Link", "EasyTier 路径: " + ETPath);
         if (!(File.Exists(ETPath + "\\easytier-core.exe") && File.Exists(ETPath + "\\easytier-cli.exe") &&
-              File.Exists(ETPath + "\\wintun.dll")))
+              File.Exists(ETPath + "\\Packet.dll")))
         {
             LogWrapper.Error("Link", "EasyTier 不存在或不完整");
             return 1;

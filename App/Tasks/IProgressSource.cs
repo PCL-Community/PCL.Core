@@ -4,7 +4,7 @@ public delegate void ProgressChangedHandler(object source, double progress);
 
 /// <summary>
 /// 可量化进度模型。<br/>
-/// 实现 <see cref="IStateChangedSource{TProperty}"/>
+/// 实现 <see cref="IStateChangedSource{TProperty}"/> 或直接实现
 /// <see cref="IObservableProgressSource"/> 以动态响应进度改变。
 /// </summary>
 public interface IProgressSource

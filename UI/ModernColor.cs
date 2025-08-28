@@ -164,7 +164,7 @@ public readonly record struct ModernColor {
 
     /// <summary>显式转换为WPF Color</summary>
     public static explicit operator Color(ModernColor color) =>
-        Color.FromArgb(ToByte(color.A), ToByte(color.R), ToByte(color.G), ToByte(color.B));
+        Color.FromArgb(_ToByte(color.A), _ToByte(color.R), _ToByte(color.G), _ToByte(color.B));
 
     /// <summary>显式转换为SolidColorBrush</summary>
     public static explicit operator SolidColorBrush(ModernColor color) =>
@@ -172,7 +172,7 @@ public readonly record struct ModernColor {
 
     /// <summary>显式转换为System.Drawing.Color</summary>
     public static explicit operator System.Drawing.Color(ModernColor color) =>
-        System.Drawing.Color.FromArgb(ToByte(color.A), ToByte(color.R), ToByte(color.G), ToByte(color.B));
+        System.Drawing.Color.FromArgb(_ToByte(color.A), _ToByte(color.R), _ToByte(color.G), _ToByte(color.B));
 
     /// <summary>从WPF Color隐式转换 (常用转换保持隐式)</summary>
     public static implicit operator ModernColor(Color color) => new(color);
@@ -234,7 +234,7 @@ public readonly record struct ModernColor {
     /// <summary>
     /// 安全地将double转换为byte
     /// </summary>
-    private static byte ToByte(double value) => (byte)Math.Clamp(Math.Round(value), 0, 255);
+    private static byte _ToByte(double value) => (byte)Math.Clamp(Math.Round(value), 0, 255);
 
     #endregion
 
@@ -246,7 +246,6 @@ public readonly record struct ModernColor {
         "HEX" => ToHex(),
         "HEXA" => ToHex(true),
         "RGB" => $"RGB({R:F1}, {G:F1}, {B:F1})",
-        "ARGB" => ToString(),
         _ => ToString()
     };
 
@@ -279,9 +278,9 @@ public sealed class HslConverter {
         var v2 = l < 0.5 ? l * (1 + s) : l + s - l * s;
         var v1 = 2 * l - v2;
 
-        var r = 255 * HueToRgb(v1, v2, h + 1.0 / 3.0);
-        var g = 255 * HueToRgb(v1, v2, h);
-        var b = 255 * HueToRgb(v1, v2, h - 1.0 / 3.0);
+        var r = 255 * _HueToRgb(v1, v2, h + 1.0 / 3.0);
+        var g = 255 * _HueToRgb(v1, v2, h);
+        var b = 255 * _HueToRgb(v1, v2, h - 1.0 / 3.0);
 
         return new ModernColor(r, g, b);
     }
@@ -296,7 +295,7 @@ public sealed class HslConverter {
         }
 
         // 色调调整表 - 每30度一个调整值
-        var adjustments = new double[] {
+        var adjustments = new [] {
             +0.1, -0.06, -0.3, // 0°, 30°, 60°
             -0.19, -0.15, -0.24, // 90°, 120°, 150°
             -0.32, -0.09, +0.18, // 180°, 210°, 240°
@@ -325,7 +324,7 @@ public sealed class HslConverter {
     /// <summary>
     /// HSL转RGB的色调计算
     /// </summary>
-    private static double HueToRgb(double v1, double v2, double vH) {
+    private static double _HueToRgb(double v1, double v2, double vH) {
         vH = ((vH % 1) + 1) % 1; // 确保在0-1范围内
 
         return vH switch {
@@ -354,7 +353,7 @@ public static class ColorUtils {
         if (steps < 2) throw new ArgumentException("步数至少为2", nameof(steps));
 
         var colors = new ModernColor[steps];
-        for (int i = 0; i < steps; i++) {
+        for (var i = 0; i < steps; i++) {
             var t = i / (double)(steps - 1);
             colors[i] = Lerp(from, to, t);
         }
@@ -380,9 +379,7 @@ public static class ColorUtils {
             b += color.B * weight;
         }
 
-        if (totalWeight == 0) return ModernColor.Transparent;
-
-        return new ModernColor(a / totalWeight, r / totalWeight, g / totalWeight, b / totalWeight);
+        return totalWeight == 0 ? ModernColor.Transparent : new ModernColor(a / totalWeight, r / totalWeight, g / totalWeight, b / totalWeight);
     }
 }
 

@@ -9,7 +9,7 @@ using System.Collections.Generic;
 /// 封装异常信息的数据结构。
 /// </summary>
 public record ExceptionData(
-    string CommonReason,
+    string? CommonReason,
     List<string> DescriptionList,
     List<string> StackTraceList);
 
@@ -25,7 +25,7 @@ public static class ExceptionFormatter {
             return "无可用错误信息！";
         }
 
-        var data = GetExceptionInfo(ex, showAllStacks);
+        var data = _GetExceptionInfo(ex, showAllStacks);
         var sb = new StringBuilder();
 
         if (data.CommonReason is not null) {
@@ -50,23 +50,23 @@ public static class ExceptionFormatter {
             return "无可用错误信息！";
         }
 
-        var data = GetExceptionInfo(ex, false);
+        var data = _GetExceptionInfo(ex, false);
 
         if (data.CommonReason is not null) {
             return $"{data.CommonReason}详细错误：{data.DescriptionList.First()}";
-        } else {
-            var uniqueDescriptions = data.DescriptionList.Distinct().ToList();
-            uniqueDescriptions.Reverse();
-            return string.Join(" ← ", uniqueDescriptions);
         }
+        
+        var uniqueDescriptions = data.DescriptionList.Distinct().ToList();
+        uniqueDescriptions.Reverse();
+        return string.Join(" ← ", uniqueDescriptions);
     }
 
     /// <summary>
     /// 核心方法：处理异常并提取所有必要信息。
     /// </summary>
-    private static ExceptionData GetExceptionInfo(Exception ex, bool showAllStacks) {
+    private static ExceptionData _GetExceptionInfo(Exception ex, bool showAllStacks) {
         // 步骤1：获取最底层的异常
-        var innerEx = GetInnermostException(ex);
+        var innerEx = _GetInnermostException(ex);
 
         // 步骤2：获取各级错误的描述与堆栈信息
         var descriptions = new List<string>();
@@ -77,11 +77,10 @@ public static class ExceptionFormatter {
             descriptions.Add(currentEx.Message.ReplaceLineEndings(" "));
 
             if (currentEx.StackTrace is not null) {
-                foreach (var stack in currentEx.StackTrace.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)) {
-                    if (showAllStacks || stack.Contains("pcl", StringComparison.OrdinalIgnoreCase)) {
-                        stacks.Add(stack.Trim());
-                    }
-                }
+                stacks.AddRange(currentEx.StackTrace
+                    .Split([ Environment.NewLine ], StringSplitOptions.RemoveEmptyEntries)
+                    .Where(stack => showAllStacks || stack.Contains("pcl", StringComparison.OrdinalIgnoreCase))
+                    .Select(stack => stack.Trim()));
             }
             if (currentEx.GetType().FullName != "System.Exception") {
                 descriptions.Add($"   错误类型：{currentEx.GetType().FullName}");
@@ -91,15 +90,15 @@ public static class ExceptionFormatter {
         }
 
         // 步骤3：判断常见错误原因
-        var commonReason = GetCommonReason(innerEx, descriptions);
+        var commonReason = _GetCommonReason(innerEx, descriptions);
 
-        return new ExceptionData(commonReason!, descriptions, stacks);
+        return new ExceptionData(commonReason, descriptions, stacks);
     }
 
     /// <summary>
     /// 核心方法：获取最内层的异常。
     /// </summary>
-    private static Exception GetInnermostException(Exception ex) {
+    private static Exception _GetInnermostException(Exception ex) {
         var innerEx = ex;
         while (innerEx.InnerException is not null) {
             innerEx = innerEx.InnerException;
@@ -110,7 +109,7 @@ public static class ExceptionFormatter {
     /// <summary>
     /// 核心方法：根据异常类型或描述获取常见错误原因。
     /// </summary>
-    private static string? GetCommonReason(Exception innerEx, List<string> descriptions) {
+    private static string? _GetCommonReason(Exception innerEx, List<string> descriptions) {
         // 使用 switch 表达式匹配常见类型
         var commonReason = innerEx switch {
             TypeLoadException or BadImageFormatException or MissingMethodException or NotImplementedException or TypeInitializationException =>

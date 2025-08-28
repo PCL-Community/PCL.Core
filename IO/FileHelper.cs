@@ -62,7 +62,7 @@ public static class FileHelper {
     /// <exception cref="UnauthorizedAccessException">没有访问文件夹的权限。</exception>
     public static void CheckPermissionWithException(string path) {
         if (string.IsNullOrWhiteSpace(path)) {
-            throw new ArgumentNullException("文件夹名不能为空！");
+            throw new ArgumentNullException(nameof(path), "文件夹名不能为空！");
         }
         if (!Directory.Exists(path)) {
             throw new DirectoryNotFoundException("文件夹不存在！");

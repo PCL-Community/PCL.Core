@@ -1,8 +1,11 @@
 ﻿using System;
+using System.CodeDom;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace PCL.Core.App.Tasks;
+
+public struct VoidResult;
 
 public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgressSource
 {
@@ -11,26 +14,14 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         _name = ""; 
         _delegate = () => { };
     }
-    protected TaskBase(string name, string? description)
-    {
-        _name = name;
-        _description = description;
-        _delegate = () => { };
-    }
-    protected TaskBase(string name, CancellationToken? cancellationToken, string? description)
+    protected TaskBase(string name, CancellationToken? cancellationToken = null, string? description = null)
     {
         _name = name;
         _description = description;
         CancellationToken = cancellationToken;
         _delegate = () => { };
     }
-    public TaskBase(string name, Delegate loadDelegate, string? description)
-    {
-        _name = name;
-        _description = description;
-        _delegate = loadDelegate;
-    }
-    public TaskBase(string name, Delegate loadDelegate, CancellationToken? cancellationToken, string? description)
+    public TaskBase(string name, Delegate loadDelegate, CancellationToken? cancellationToken = null, string? description = null)
     {
         _name = name;
         _delegate = loadDelegate;

@@ -10,22 +10,22 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
 {
     public TaskBase() 
     { 
-        _name = ""; 
+        Name = ""; 
         _delegate = () => { };
     }
     protected TaskBase(string name, CancellationToken? cancellationToken = null, string? description = null)
     {
-        _name = name;
-        _description = description;
+        Name = name;
+        Description = description;
         CancellationToken = cancellationToken;
         _delegate = () => { };
     }
     public TaskBase(string name, Delegate loadDelegate, CancellationToken? cancellationToken = null, string? description = null)
     {
-        _name = name;
+        Name = name;
         _delegate = loadDelegate;
         CancellationToken = cancellationToken;
-        _description = description;
+        Description = description;
         CancellationToken?.Register(() => { State = TaskState.Canceled; });
     }
 
@@ -53,11 +53,8 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         } 
     }
 
-    private readonly string _name;
-    public string Name { get => _name; }
-
-    private readonly string? _description;
-    public string? Description {  get => _description; }
+    public string Name { get; }
+    public string? Description { get; }
 
     private TaskState _state = TaskState.Waiting;
     public TaskState State
@@ -115,7 +112,5 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
     protected Task<TResult>? BackgroundTask;
 
     public virtual void RunBackground(params object[] objects)
-    {
-        (BackgroundTask = (Task<TResult>)(typeof(TaskBase<TResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new object())).Start();
-    }
+        => (BackgroundTask = (Task<TResult>)(typeof(TaskBase<TResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new object())).Start();
 }

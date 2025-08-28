@@ -95,7 +95,5 @@ public class PipelineTask<TLastResult> : TaskBase<TLastResult>
     }
 
     public override void RunBackground(params object[] objects)
-    {
-        (BackgroundTask = (Task<TLastResult>)(typeof(PipelineTask<TLastResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new object())).Start();
-    }
+        => (BackgroundTask = (Task<TLastResult>)(typeof(PipelineTask<TLastResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new object())).Start();
 }

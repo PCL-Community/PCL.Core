@@ -4,7 +4,7 @@ profile:
   name: qodana.recommended
 # arguments
 ide: QDNET
-bootstrap: 'dotnet build ./PCL.Core.csproj -t:Restore -t:GenerateTypes'
+bootstrap: 'dotnet build ./PCL.Core.csproj -t:Restore'
 fixesStrategy: apply
 include:
   - name: VulnerableLibrariesGlobal

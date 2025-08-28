@@ -103,4 +103,42 @@ public static class TimeUtils {
     public static long GetUnixTimestamp() {
         return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     }
+    
+    /// <summary>
+    /// 将 Unix 时间戳（秒）转换为本地时区的日期时间。
+    /// </summary>
+    /// <param name="unixTimestamp">Unix 时间戳（秒），表示自 1970-01-01 00:00:00 UTC 起的秒数。</param>
+    /// <returns>转换后的本地日期时间。</returns>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="unixTimestamp"/> 为负数或过大时抛出。</exception>
+    public static DateTimeOffset FromUnixTimestamp(long unixTimestamp)
+    {
+        if (unixTimestamp < 0)
+            throw new ArgumentOutOfRangeException(nameof(unixTimestamp), "Unix 时间戳不能为负数。");
+
+        try
+        {
+            return DateTimeOffset.FromUnixTimeSeconds(unixTimestamp).ToLocalTime();
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            throw new ArgumentOutOfRangeException(nameof(unixTimestamp), "Unix 时间戳超出有效范围。", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// 将 UTC 时间转换为当前时区的时间。
+    /// </summary>
+    /// <param name="utcDate">UTC 日期时间。</param>
+    /// <returns>转换后的本地日期时间。</returns>
+    public static DateTimeOffset ToLocalTime(DateTimeOffset utcDate) =>
+        utcDate.ToLocalTime();
+    
+    /// <summary>
+    /// 将 Unix 时间戳（秒）转换为格式化的本地时间字符串（yyyy/MM/dd HH:mm）。
+    /// </summary>
+    /// <param name="unixTimestamp">Unix 时间戳（秒），表示自 1970-01-01 00:00:00 UTC 起的秒数。</param>
+    /// <returns>格式为 yyyy/MM/dd HH:mm 的本地时间字符串。</returns>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="unixTimestamp"/> 为负数或过大时抛出。</exception>
+    public static string FormatUnixTimestamp(long unixTimestamp) =>
+        FromUnixTimestamp(unixTimestamp).ToString("yyyy/MM/dd HH:mm");
 }

@@ -63,19 +63,16 @@
         <EnableDefaultPageItems>false</EnableDefaultPageItems>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Include="**\*.cs" Exclude="bin\**;obj\**;publish\**;**\*.g.cs" />
+        <Compile Include="**\*.cs" Exclude="bin\**;obj\**;publish\**;**\*.g.cs;SourceGenerators\**" />
         <Page Include="**\*.xaml" Exclude="bin\**;obj\**;publish\**" />
     </ItemGroup>
-    <!-- 自定义代码生成目标 -->
-    <Target Name="GenerateTypes" BeforeTargets="CoreCompile">
-        <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
-        <Message Text="Generating setup accessors..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
-        <Message Text="Generating environment secrets..." Importance="normal" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Utils\OS\EnvironmentInteropGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
-        <ItemGroup>
-            <Compile Include="**\*.g.cs" Exclude="bin\**;obj\**;publish\**" />
-        </ItemGroup>
-    </Target>
+    <!-- 源代码生成器 -->
+    <ItemGroup>
+        <AdditionalFiles Include="ProgramSetup\SetupModel.json" />
+        <AdditionalFiles Include="App\LifecycleState.cs" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" 
+                          OutputItemType="Analyzer" 
+                          ReferenceOutputAssembly="false"
+                          Properties="Platform=AnyCPU" />
+    </ItemGroup>
 </Project>

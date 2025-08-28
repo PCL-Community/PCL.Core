@@ -1,7 +1,7 @@
 ﻿using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 
-namespace PCL.Core.UI;
+namespace PCL.Core.UI.Controls;
 
 using System;
 using System.Collections.Generic;

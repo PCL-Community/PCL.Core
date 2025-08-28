@@ -18,4 +18,7 @@ public interface IProgressSource
 /// <summary>
 /// 可动态响应进度变化的可量化进度模型。
 /// </summary>
-public interface IObservableProgressSource : IProgressSource, IPropertyChangedSource<double>;
+public interface IObservableProgressSource : IProgressSource
+{
+    event PropertyChangedHandler<double>? ProgressChanged;
+}

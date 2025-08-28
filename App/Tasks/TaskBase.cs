@@ -98,28 +98,14 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
 
     public virtual async Task<TResult> RunAsync(params object[] objects)
     {
-        try
-        {
-            if (CancellationToken != null)
-                return _result = await new Task<TResult>(() => (TResult)(typeof(TaskBase<TResult>).GetMethod("Run")?.Invoke(this, objects) ?? new()), cancellationToken: (CancellationToken)CancellationToken);
-            return _result = await new Task<TResult>(() => (TResult)(typeof(TaskBase<TResult>).GetMethod("Run")?.Invoke(this, objects) ?? new()));
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        if (CancellationToken != null)
+            return _result = await new Task<TResult>(() => (TResult)(typeof(TaskBase<TResult>).GetMethod("Run")?.Invoke(this, objects) ?? new()), cancellationToken: (CancellationToken)CancellationToken);
+        return _result = await new Task<TResult>(() => (TResult)(typeof(TaskBase<TResult>).GetMethod("Run")?.Invoke(this, objects) ?? new()));
     }
 
     protected Task<TResult>? BackgroundTask;
     public virtual void RunBackground(params object[] objects)
     {
-        try
-        {
-            (BackgroundTask = (Task<TResult>)(typeof(TaskBase<TResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new())).Start();
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        (BackgroundTask = (Task<TResult>)(typeof(TaskBase<TResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new())).Start();
     }
 }

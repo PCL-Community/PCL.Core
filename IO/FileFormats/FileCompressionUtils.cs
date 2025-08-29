@@ -16,9 +16,8 @@ public static class FileCompressionUtils {
     /// </summary>
     /// <param name="compressFilePath">压缩文件的路径。</param>
     /// <param name="destDirectory">解压目标目录。</param>
-    /// <param name="encoding">用于解压 zip 的编码，默认为 GB18030。</param>
     /// <param name="progressIncrementHandler">进度更新回调，接收 0 到 1 的进度值。</param>
-    public static void ExtractFile(string? compressFilePath, string? destDirectory, Encoding? encoding = null, Action<double>? progressIncrementHandler = null) {
+    public static void ExtractFile(string? compressFilePath, string? destDirectory, Action<double>? progressIncrementHandler = null) {
         if (string.IsNullOrEmpty(compressFilePath)) {
             LogWrapper.Error(new ArgumentNullException(nameof(compressFilePath)), "压缩文件路径为空");
             return;
@@ -99,7 +98,6 @@ public static class FileCompressionUtils {
     /// 解压 Tar 流中的内容。
     /// </summary>
     private static void ExtractTarStream(TarInputStream tarStream, string destDirectory, Action<double>? progressIncrementHandler) {
-        TarEntry entry;
         var totalEntries = 0;
         while (tarStream.GetNextEntry() != null) {
             totalEntries++;
@@ -107,7 +105,7 @@ public static class FileCompressionUtils {
         tarStream.Reset();
 
         var currentEntry = 0;
-        while ((entry = tarStream.GetNextEntry()) != null) {
+        while (tarStream.GetNextEntry() is { } entry) {
             var destinationPath = Path.Combine(destDirectory, entry.Name);
             if (entry.IsDirectory) {
                 Directory.CreateDirectory(destinationPath);

@@ -70,7 +70,7 @@ public static class Files {
             var fullToPath = GetFullPath(toPath);
             if (fullFromPath == fullToPath) return;
 
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(fullToPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullToPath) ?? throw new InvalidOperationException("无法获取目标目录"));
             File.Copy(fullFromPath, fullToPath, overwrite: true);
         } catch (Exception ex) {
             throw new Exception($"复制文件出错：{fromPath} → {toPath}", ex);

@@ -28,29 +28,32 @@ public static class IniFileHandler {
     }
 
     /// <summary>
-    /// 获取 INI 文件内容（从缓存或文件读取）。文件不存在或读取失败时返回 null。
+    /// 获取 INI 文件内容（从缓存或文件读取）。文件不存在或读取失败时返回空字典。
     /// </summary>
     /// <param name="fileName">文件完整路径或简写文件名。简写将使用 "Paths.Path\PCL\文件名.ini"。</param>
-    private static ConcurrentDictionary<string, string>? IniGetContent(string fileName) {
+    private static ConcurrentDictionary<string, string> IniGetContent(string fileName) { // 注意：返回类型不再是可空的
         try {
-            string fullPath = GetFullPath(fileName);
+            var fullPath = GetFullPath(fileName);
             return IniCache.GetOrAdd(fullPath, _ => {
-                if (!File.Exists(fullPath)) return null;
+                // 如果文件不存在，返回一个空的字典而不是 null
+                if (!File.Exists(fullPath)) return new ConcurrentDictionary<string, string>();
+            
                 var ini = new ConcurrentDictionary<string, string>();
-                string content = Files.ReadFile(fullPath); // 使用 FileManager.ReadFile
+                var content = Files.ReadFile(fullPath);
                 foreach (var line in content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)) {
-                    int index = line.IndexOf(':');
-                    if (index > 0) {
-                        string key = line[..index];
-                        string value = line[(index + 1)..];
-                        ini[key] = value; // 可能覆盖重复键，见 #3616
+                    var index = line.IndexOf(':');
+                    if (index <= 0) {
+                        continue;
                     }
+                    var key = line[..index];
+                    var value = line[(index + 1)..];
+                    ini[key] = value;
                 }
                 return ini;
             });
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"生成 INI 文件缓存失败（{fileName}）");
-            return null;
+            return new ConcurrentDictionary<string, string>(); // 发生异常时返回一个空字典
         }
     }
 
@@ -76,7 +79,7 @@ public static class IniFileHandler {
     public static bool HasIniKey(string fileName, string key) {
         ArgumentNullException.ThrowIfNull(key);
         var content = IniGetContent(fileName);
-        return content != null && content.ContainsKey(key);
+        return content.ContainsKey(key);
     }
 
     /// <summary>
@@ -85,7 +88,7 @@ public static class IniFileHandler {
     /// <param name="fileName">文件完整路径或简写文件名。简写将使用 "Paths.Path\PCL\文件名.ini"。</param>
     /// <param name="key">要移除的键。</param>
     public static void DeleteIniKey(string fileName, string key) {
-        IniFileHandler.WriteIni(fileName, key, null);
+        WriteIni(fileName, key, null);
     }
 
     /// <summary>
@@ -100,11 +103,11 @@ public static class IniFileHandler {
             ArgumentNullException.ThrowIfNull(key);
             if (key.Contains(':')) throw new ArgumentException($"键名中包含冒号：{key}", nameof(key));
 
-            string cleanedKey = key.Replace("\r", "").Replace("\n", "");
-            string? cleanedValue = value?.Replace("\r", "").Replace("\n", "");
+            var cleanedKey = key.Replace("\r", "").Replace("\n", "");
+            var cleanedValue = value?.Replace("\r", "").Replace("\n", "");
 
             lock (WriteIniLock) {
-                string fullPath = GetFullPath(fileName);
+                var fullPath = GetFullPath(fileName);
                 var content = IniGetContent(fileName) ?? new ConcurrentDictionary<string, string>();
 
                 if (cleanedValue == null) {
@@ -115,7 +118,7 @@ public static class IniFileHandler {
                     content[cleanedKey] = cleanedValue;
                 }
 
-                string fileContent = string.Join("\n", content.Select(pair => $"{pair.Key}:{pair.Value}"));
+                var fileContent = string.Join("\n", content.Select(pair => $"{pair.Key}:{pair.Value}"));
                 Files.WriteFile(fullPath, fileContent); // 使用 FileManager.WriteFile
                 IniCache[fullPath] = content;
             }

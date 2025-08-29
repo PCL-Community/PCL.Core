@@ -76,7 +76,7 @@ public static class FileHashUtils {
             }
 
             // Attempt to open the file with exclusive access
-            using (FileStream fs = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+            using (File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
                 // If we can open the file, it's not being downloaded
                 return false;
             }

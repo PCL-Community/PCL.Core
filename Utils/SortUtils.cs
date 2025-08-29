@@ -39,16 +39,18 @@ public static class SortUtils {
     }
 
     // 实现稳定比较器
-    private class StableComparer<T> : IComparer<T> {
-        private readonly Func<T, T, bool> _comparison;
+    private class StableComparer<T>(Func<T, T, bool> comparison) : IComparer<T> {
+        private readonly Func<T, T, bool> _comparison = comparison ?? throw new ArgumentNullException(nameof(comparison));
+        
+        public int Compare(T? x, T? y) {
+            // Handle null cases
+            if (x is null && y is null) return 0;
+            if (x is null) return -1;
+            if (y is null) return 1;
 
-        public StableComparer(Func<T, T, bool> comparison) {
-            _comparison = comparison ?? throw new ArgumentNullException(nameof(comparison));
-        }
+            var xComesFirst = _comparison(x, y);
+            var yComesFirst = _comparison(y, x);
 
-        public int Compare(T x, T y) {
-            bool xComesFirst = _comparison(x, y);
-            bool yComesFirst = _comparison(y, x);
             if (!xComesFirst && !yComesFirst) // 相等时返回 0，保持稳定
                 return 0;
             return xComesFirst ? -1 : 1; // x 在前返回 -1，否则返回 1

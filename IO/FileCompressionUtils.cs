@@ -31,7 +31,6 @@ public static class FileCompressionUtils {
 
         try {
             Directory.CreateDirectory(destDirectory);
-            encoding ??= Encoding.GetEncoding("GB18030");
 
             if (compressFilePath.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
                 compressFilePath.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase)) {
@@ -56,8 +55,8 @@ public static class FileCompressionUtils {
     /// 解压 GZip 文件（包括 .gz 和 .tgz）。
     /// </summary>
     private static void ExtractGZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
-        string outputFileName = Path.GetFileName(compressFilePath).ToLower().Replace(".tar", "").Replace(".gz", "").Replace(".tgz", "");
-        string outputPath = Path.Combine(destDirectory, outputFileName);
+        var outputFileName = Path.GetFileName(compressFilePath).ToLower().Replace(".tar", "").Replace(".gz", "").Replace(".tgz", "");
+        var outputPath = Path.Combine(destDirectory, outputFileName);
 
         using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
         using GZipInputStream gzipStream = new(compressedFile);
@@ -77,8 +76,8 @@ public static class FileCompressionUtils {
     /// 解压 BZip2 文件。
     /// </summary>
     private static void ExtractBZip2(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
-        string outputFileName = Path.GetFileName(compressFilePath).ToLower().Replace(".bz2", "");
-        string outputPath = Path.Combine(destDirectory, outputFileName);
+        var outputFileName = Path.GetFileName(compressFilePath).ToLower().Replace(".bz2", "");
+        var outputPath = Path.Combine(destDirectory, outputFileName);
 
         using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
         using BZip2InputStream bzip2Stream = new(compressedFile);
@@ -101,15 +100,15 @@ public static class FileCompressionUtils {
     /// </summary>
     private static void ExtractTarStream(TarInputStream tarStream, string destDirectory, Action<double>? progressIncrementHandler) {
         TarEntry entry;
-        int totalEntries = 0;
-        while ((entry = tarStream.GetNextEntry()) != null) {
+        var totalEntries = 0;
+        while (tarStream.GetNextEntry() != null) {
             totalEntries++;
         }
         tarStream.Reset();
 
-        int currentEntry = 0;
+        var currentEntry = 0;
         while ((entry = tarStream.GetNextEntry()) != null) {
-            string destinationPath = Path.Combine(destDirectory, entry.Name);
+            var destinationPath = Path.Combine(destDirectory, entry.Name);
             if (entry.IsDirectory) {
                 Directory.CreateDirectory(destinationPath);
                 continue;
@@ -126,24 +125,21 @@ public static class FileCompressionUtils {
     /// <summary>
     /// 解压 Zip 文件（包括 .zip 和 .jar）。
     /// </summary>
-    private static void ExtractZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler)
-    {
+    private static void ExtractZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
         using ZipFile zipFile = new(compressFilePath);
 
-        long totalEntries = zipFile.Count;
+        var totalEntries = zipFile.Count;
         long currentEntry = 0;
 
-        foreach (ZipEntry entry in zipFile)
-        {
-            string destinationPath = Path.Combine(destDirectory, entry.Name);
-            if (entry.IsDirectory)
-            {
+        foreach (ZipEntry entry in zipFile) {
+            var destinationPath = Path.Combine(destDirectory, entry.Name);
+            if (entry.IsDirectory) {
                 Directory.CreateDirectory(destinationPath);
                 continue;
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-            using Stream zipStream = zipFile.GetInputStream(entry);
+            using var zipStream = zipFile.GetInputStream(entry);
             using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
             zipStream.CopyTo(outputStream);
             currentEntry++;

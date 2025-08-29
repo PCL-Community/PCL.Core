@@ -128,12 +128,12 @@ public static class Files {
             return 0;
         }
 
-        int deletedCount = 0;
+        var deletedCount = 0;
 
         try {
             // 枚举文件，延迟加载以提高性能
-            foreach (string filePath in Directory.EnumerateFiles(path)) {
-                for (int attempt = 0; attempt < 2; attempt++) {
+            foreach (var filePath in Directory.EnumerateFiles(path)) {
+                for (var attempt = 0; attempt < 2; attempt++) {
                     try {
                         File.Delete(filePath);
                         deletedCount++;
@@ -152,12 +152,10 @@ public static class Files {
             }
 
             // 递归删除子目录
-            foreach (string subDir in Directory.EnumerateDirectories(path)) {
-                deletedCount += Files.DeleteDirectory(subDir, ignoreIssue);
-            }
+            deletedCount += Directory.EnumerateDirectories(path).Sum(subDir => DeleteDirectory(subDir, ignoreIssue));
 
             // 删除空目录
-            for (int attempt = 0; attempt < 2; attempt++) {
+            for (var attempt = 0; attempt < 2; attempt++) {
                 try {
                     Directory.Delete(path, true);
                     break;
@@ -207,18 +205,18 @@ public static class Files {
         fromPath = Path.GetFullPath(fromPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         toPath = Path.GetFullPath(toPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
-        var allFiles = Files.EnumerateFiles(fromPath).ToList();
-        long totalFiles = allFiles.LongCount();
+        var allFiles = EnumerateFiles(fromPath).ToList();
+        var totalFiles = allFiles.LongCount();
         long copiedFiles = 0;
 
-        foreach (FileInfo file in allFiles) {
-            string relativePath = file.FullName[fromPath.Length..];
-            string destFilePath = Path.Combine(toPath, relativePath);
+        foreach (var file in allFiles) {
+            var relativePath = file.FullName[fromPath.Length..];
+            var destFilePath = Path.Combine(toPath, relativePath);
 
             // 确保目标目录存在
             Directory.CreateDirectory(Path.GetDirectoryName(destFilePath)!);
 
-            for (int attempt = 0; attempt < 2; attempt++) {
+            for (var attempt = 0; attempt < 2; attempt++) {
                 try {
                     File.Copy(file.FullName, destFilePath, overwrite: true);
                     copiedFiles++;
@@ -243,14 +241,14 @@ public static class Files {
     public static IEnumerable<FileInfo> EnumerateFiles(string? directory) {
         if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
             LogWrapper.Error(new DirectoryNotFoundException($"目录不存在：{directory}"), "遍历文件夹失败");
-            return Enumerable.Empty<FileInfo>();
+            return [];
         }
 
         try {
             return new DirectoryInfo(directory).EnumerateFiles("*", SearchOption.AllDirectories);
         } catch (Exception ex) {
             LogWrapper.Error(ex, $"遍历文件夹失败（{directory}）");
-            return Enumerable.Empty<FileInfo>();
+            return [];
         }
     }
     

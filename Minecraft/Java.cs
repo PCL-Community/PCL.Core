@@ -22,6 +22,8 @@ public enum JavaBrandType
     Dragonwell,
     TencentKona,
     OpenJDK,
+    GraalVmCommunity,
+    JetBrains,
     Unknown
 }
 
@@ -157,6 +159,8 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["Tencent"] = JavaBrandType.TencentKona,
         ["OpenJDK"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
+        ["GraalVM"] = JavaBrandType.GraalVmCommunity,
+        ["JetBrains"] = JavaBrandType.JetBrains
     };
 
     private static JavaBrandType DetermineBrand(string? output)

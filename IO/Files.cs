@@ -55,7 +55,7 @@ public static class Files {
     /// </summary>
     private static string GetFullPath(string filePath) {
         ArgumentNullException.ThrowIfNull(filePath);
-        return filePath.Contains(":\\") ? filePath : Path.Combine(Paths.Path, filePath);
+        return filePath.Contains(":\\") ? filePath : Path.Combine(Paths.ExePath, filePath);
     }
 
     /// <summary>

@@ -7,7 +7,12 @@ public class Paths {
     /// <summary>
     /// 程序可执行文件所在目录，以“\”结尾。
     /// </summary>
-    public static string Path { get; } = GetExecutableDirectory();
+    public static string ExePath { get; } = GetExecutableDirectory();
+    
+    /// <summary>
+    /// 程序可执行文件的完整路径。
+    /// </summary>
+    public static string ExePathWithName { get; } = Assembly.GetExecutingAssembly().Location;
 
     /// <summary>
     /// 获取可执行文件所在目录，确保以“\”结尾。

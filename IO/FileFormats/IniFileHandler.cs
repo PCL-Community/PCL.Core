@@ -17,7 +17,7 @@ public static class IniFileHandler {
     /// </summary>
     private static string GetFullPath(string fileName) {
         ArgumentNullException.ThrowIfNull(fileName);
-        return fileName.Contains(":\\") ? fileName : Path.Combine(Paths.Path, "PCL", $"{fileName}.ini");
+        return fileName.Contains(":\\") ? fileName : Path.Combine(Paths.ExePath, "PCL", $"{fileName}.ini");
     }
 
     /// <summary>

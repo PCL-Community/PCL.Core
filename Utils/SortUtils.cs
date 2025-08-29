@@ -11,11 +11,7 @@ public static class SortUtils {
     /// <param name="list">要排序的列表。</param>
     /// <param name="comparison">比较器，接收两个对象，若第一个对象应排在前面，则返回 true。</param>
     /// <returns>排序后的新列表。</returns>
-    /// <exception cref="ArgumentNullException">当 <paramref name="list"/> 或 <paramref name="comparison"/> 为 null 时抛出。</exception>
     public static List<T> Sort<T>(this IList<T> list, Func<T, T, bool> comparison) {
-        if (list == null) throw new ArgumentNullException(nameof(list));
-        if (comparison == null) throw new ArgumentNullException(nameof(comparison));
-
         // 创建新列表以避免修改原始列表
         var result = new List<T>(list);
         result.Sort(new StableComparer<T>(comparison));

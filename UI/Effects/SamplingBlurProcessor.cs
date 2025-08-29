@@ -180,40 +180,162 @@ internal sealed class SamplingBlurProcessor : IDisposable
     }
 
     /// <summary>
-    /// 性能优先的模糊算法，使用优化的采样策略
+    /// 性能优先的模糊算法，使用智能双通道分离卷积
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private void _ApplyPerformanceBlur(uint[] source, uint[] target, int width, int height,
         double radius, double samplingRate, KernelType kernelType)
     {
-        var intRadius = (int)Math.Ceiling(radius);
-        var skipPattern = samplingRate >= 1.0 ? 1 : (int)Math.Ceiling(1.0 / samplingRate);
-
+        var intRadius = (int)Math.Ceiling(radius * samplingRate);
+        var tempBuffer = _UintPool.Rent(width * height);
+        
+        try
+        {
+            // 双通道分离高斯模糊：水平 -> 垂直
+            _ApplySeparableBlurHorizontal(source, tempBuffer, width, height, intRadius, samplingRate, kernelType);
+            _ApplySeparableBlurVertical(tempBuffer, target, width, height, intRadius, samplingRate, kernelType);
+        }
+        finally
+        {
+            _UintPool.Return(tempBuffer);
+        }
+    }
+    
+    /// <summary>
+    /// 水平方向分离高斯模糊 - 极致优化版本
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private void _ApplySeparableBlurHorizontal(uint[] source, uint[] target, int width, int height, 
+        int radius, double samplingRate, KernelType kernelType)
+    {
+        var weights = _GenerateGaussianKernel(radius);
+        var kernelRadius = weights.Length / 2;
+        
         Parallel.For(0, height, y =>
         {
-            // 采样率控制行处理
-            if (samplingRate < 1.0 && (y % skipPattern) != 0)
+            var rowStart = y * width;
+            
+            for (var x = 0; x < width; x++)
             {
-                // 插值填充跳过的行
-                if (y > 0)
+                double totalA = 0, totalR = 0, totalG = 0, totalB = 0, totalWeight = 0;
+                
+                // 智能采样：根据采样率动态调整采样步长
+                var sampleStep = samplingRate >= 0.8 ? 1 : (int)Math.Ceiling(2.0 - samplingRate);
+                
+                for (var k = -kernelRadius; k <= kernelRadius; k += sampleStep)
                 {
-                    Array.Copy(target, (y - 1) * width, target, y * width, width);
+                    var sampleX = Math.Max(0, Math.Min(width - 1, x + k));
+                    var pixel = source[rowStart + sampleX];
+                    var weight = weights[Math.Abs(k) + kernelRadius];
+                    
+                    totalA += ((pixel >> 24) & 0xFF) * weight;
+                    totalR += ((pixel >> 16) & 0xFF) * weight;
+                    totalG += ((pixel >> 8) & 0xFF) * weight;
+                    totalB += (pixel & 0xFF) * weight;
+                    totalWeight += weight;
                 }
-                return;
-            }
-
-            for (var x = 0; x < width; x += skipPattern)
-            {
-                var (a, r, g, b) = _SamplePixelPerformance(source, width, height, x, y,
-                    intRadius, samplingRate, kernelType);
-
-                // 填充采样点及其邻居
-                for (var dx = 0; dx < skipPattern && x + dx < width; dx++)
+                
+                if (totalWeight > 0)
                 {
-                    target[y * width + (x + dx)] = _PackColor(a, r, g, b);
+                    var invWeight = 1.0 / totalWeight;
+                    target[rowStart + x] = _PackColor(
+                        (byte)Math.Min(255, totalA * invWeight),
+                        (byte)Math.Min(255, totalR * invWeight),
+                        (byte)Math.Min(255, totalG * invWeight),
+                        (byte)Math.Min(255, totalB * invWeight)
+                    );
+                }
+                else
+                {
+                    target[rowStart + x] = source[rowStart + x];
                 }
             }
         });
+    }
+    
+    /// <summary>
+    /// 垂直方向分离高斯模糊 - 极致优化版本
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private void _ApplySeparableBlurVertical(uint[] source, uint[] target, int width, int height,
+        int radius, double samplingRate, KernelType kernelType)
+    {
+        var weights = _GenerateGaussianKernel(radius);
+        var kernelRadius = weights.Length / 2;
+        
+        Parallel.For(0, width, x =>
+        {
+            for (var y = 0; y < height; y++)
+            {
+                double totalA = 0, totalR = 0, totalG = 0, totalB = 0, totalWeight = 0;
+                
+                // 智能采样：根据采样率动态调整采样步长
+                var sampleStep = samplingRate >= 0.8 ? 1 : (int)Math.Ceiling(2.0 - samplingRate);
+                
+                for (var k = -kernelRadius; k <= kernelRadius; k += sampleStep)
+                {
+                    var sampleY = Math.Max(0, Math.Min(height - 1, y + k));
+                    var pixel = source[sampleY * width + x];
+                    var weight = weights[Math.Abs(k) + kernelRadius];
+                    
+                    totalA += ((pixel >> 24) & 0xFF) * weight;
+                    totalR += ((pixel >> 16) & 0xFF) * weight;
+                    totalG += ((pixel >> 8) & 0xFF) * weight;
+                    totalB += (pixel & 0xFF) * weight;
+                    totalWeight += weight;
+                }
+                
+                if (totalWeight > 0)
+                {
+                    var invWeight = 1.0 / totalWeight;
+                    target[y * width + x] = _PackColor(
+                        (byte)Math.Min(255, totalA * invWeight),
+                        (byte)Math.Min(255, totalR * invWeight),
+                        (byte)Math.Min(255, totalG * invWeight),
+                        (byte)Math.Min(255, totalB * invWeight)
+                    );
+                }
+                else
+                {
+                    target[y * width + x] = source[y * width + x];
+                }
+            }
+        });
+    }
+    
+    /// <summary>
+    /// 生成高质量高斯卷积核
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static double[] _GenerateGaussianKernel(int radius)
+    {
+        var size = radius * 2 + 1;
+        var kernel = new double[size];
+        var sigma = radius / 3.0;
+        var twoSigmaSquared = 2.0 * sigma * sigma;
+        var normalization = 1.0 / Math.Sqrt(Math.PI * twoSigmaSquared);
+        double totalWeight = 0;
+        
+        // 生成高斯权重
+        for (var i = 0; i < size; i++)
+        {
+            var x = i - radius;
+            var weight = normalization * Math.Exp(-(x * x) / twoSigmaSquared);
+            kernel[i] = weight;
+            totalWeight += weight;
+        }
+        
+        // 归一化确保权重和为1
+        if (totalWeight > 0)
+        {
+            var invTotal = 1.0 / totalWeight;
+            for (var i = 0; i < size; i++)
+            {
+                kernel[i] *= invTotal;
+            }
+        }
+        
+        return kernel;
     }
 
     /// <summary>

@@ -4,6 +4,10 @@ using System;
 using System.Text;
 
 public static class EncodingUtils {
+    public static bool IsDefaultEncodingUtf8() {
+        return Encoding.Default.CodePage == 65001;
+    }
+    
     private static readonly Encoding GB18030 = Encoding.GetEncoding("GB18030");
 
     /// <summary>

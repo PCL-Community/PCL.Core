@@ -145,8 +145,8 @@ public static class Files {
             await stream.CopyToAsync(memoryStream);
             var bytes = memoryStream.ToArray();
             return (encoding ?? EncodingDetector.DetectEncoding(bytes)).GetString(bytes);
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "读取流出错");
+        } catch (Exception) {
+            LogWrapper.Debug("读取流出错");
             return "";
         }
     }
@@ -218,7 +218,7 @@ public static class Files {
             await stream.CopyToAsync(fileStream);
             return true;
         } catch (Exception ex) {
-            LogWrapper.Warn(ex, "保存流出错");
+            LogWrapper.Debug("保存流出错");
             return false;
         }
     }

@@ -27,8 +27,6 @@ public static class UiExtension {
             var windowRect = new Rect(0, 0, mainWindow.ActualWidth, mainWindow.ActualHeight);
             return windowRect.IntersectsWith(bounds);
         } catch (InvalidOperationException ex) {
-            // 可能由于控件未附加到视觉树
-            LogWrapper.Warn(ex, $"无法检查控件可见性：{element.Name}");
             return false;
         }
     }
@@ -55,7 +53,6 @@ public static class UiExtension {
 
             return formattedText.Width > textBlock.ActualWidth;
         } catch (Exception ex) {
-            LogWrapper.Warn(ex, $"无法检查文本截断：{textBlock.Name}");
             return false;
         }
     }

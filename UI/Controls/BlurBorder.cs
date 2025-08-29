@@ -192,7 +192,7 @@ public class BlurBorder : Border
     }
 
     /// <summary>
-    /// 创建极致优化的模糊效果实例
+    /// 创建优化的模糊效果实例
     /// </summary>
     private Effect CreateOptimizedBlurEffect()
     {

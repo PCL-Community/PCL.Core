@@ -168,7 +168,7 @@ public static class SimilaritySearch {
         int maxBlurCount = 5,
         double minBlurSimilarity = 0.1) {
         if (entries.Count == 0) {
-            return []; // C# 12 集合表达式
+            return [];
         }
 
         if (string.IsNullOrWhiteSpace(query)) {

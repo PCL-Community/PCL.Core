@@ -66,12 +66,13 @@
     <ItemGroup>
         <Compile Include="**\*.cs" Exclude="bin\**;obj\**;publish\**;**\*.g.cs;SourceGenerators\**" />
         <Page Include="**\*.xaml" Exclude="bin\**;obj\**;publish\**" />
+        <Resource Include="UI\Assets\*" />
+        <Resource Include="UI\Assets\Shaders\*.ps" />
     </ItemGroup>
     <!-- 源代码生成器 -->
     <ItemGroup>
         <AdditionalFiles Include="ProgramSetup\SetupModel.json" />
         <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer"
-                          ReferenceOutputAssembly="false" Properties="Platform=AnyCPU" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Properties="Platform=AnyCPU" />
     </ItemGroup>
 </Project>

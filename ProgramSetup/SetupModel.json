@@ -125,6 +125,8 @@
     "ShowStartupLogo": {"key": "UiLauncherLogo", "source": "local", "value": true, "encrypted": false},
     "AdvancedBlur": {"key": "UiBlur", "source": "local", "value": false, "encrypted": false},
     "AdvancedBlurValue": {"key": "UiBlurValue", "source": "local", "value": 16, "encrypted": false},
+    "AdvancedBlurSamplingRate": {"key": "UiBlurSamplingRate", "source": "local", "value": 70, "encrypted": false},
+    "AdvancedBlurType": {"key": "UiBlurType", "source": "local", "value": 0, "encrypted": false},
     "BackgroundColorful": {"key": "UiBackgroundColorful", "source": "local", "value": true, "encrypted": false},
     "WallpaperOpacity": {"key": "UiBackgroundOpacity", "source": "local", "value": 1000, "encrypted": false},
     "WallpaperBlurRadius": {"key": "UiBackgroundBlur", "source": "local", "value": 0, "encrypted": false},

@@ -1,8 +1,17 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
+using ICSharpCode.SharpZipLib.GZip;
+using ICSharpCode.SharpZipLib.Tar;
+using ICSharpCode.SharpZipLib.Zip;
+using ICSharpCode.SharpZipLib.BZip2;
+using PCL.Core.Utils.Exts;
+using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.IO;
 
@@ -49,14 +58,8 @@ public static class Files {
         // 保存 .lnk 文件
         link.Save();
     }
-
-    /// <summary>
-    /// 获取完整的文件路径。如果是相对路径，补全为 "Path\filePath"。
-    /// </summary>
-    private static string GetFullPath(string filePath) {
-        ArgumentNullException.ThrowIfNull(filePath);
-        return filePath.Contains(":\\") ? filePath : Path.Combine(Paths.ExePath, filePath);
-    }
+    
+    #region 异步文件操作
 
     /// <summary>
     /// 复制文件，自动创建目标目录并覆盖已有文件。
@@ -64,16 +67,25 @@ public static class Files {
     /// <param name="fromPath">源文件路径（完整或相对）。</param>
     /// <param name="toPath">目标文件路径（完整或相对）。</param>
     /// <exception cref="Exception">复制失败时抛出。</exception>
-    public static void CopyFile(string fromPath, string toPath) {
-        try { 
+    public static async Task CopyFileAsync(string fromPath, string toPath) {
+        try {
             var fullFromPath = GetFullPath(fromPath);
             var fullToPath = GetFullPath(toPath);
             if (fullFromPath == fullToPath) return;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(fullToPath) ?? throw new InvalidOperationException("无法获取目标目录"));
-            File.Copy(fullFromPath, fullToPath, overwrite: true);
+            var directoryName = Path.GetDirectoryName(fullToPath);
+            if (directoryName is null) {
+                throw new InvalidOperationException("无法获取目标目录");
+            }
+            Directory.CreateDirectory(directoryName);
+
+            // 使用异步流复制
+            const int bufferSize = 4096;
+            await using var sourceStream = new FileStream(fullFromPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            await using var destinationStream = new FileStream(fullToPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous);
+            await sourceStream.CopyToAsync(destinationStream);
         } catch (Exception ex) {
-            throw new Exception($"复制文件出错：{fromPath} → {toPath}", ex);
+            throw new Exception($"复制文件出错：{fromPath} -> {toPath}", ex);
         }
     }
 
@@ -82,17 +94,15 @@ public static class Files {
     /// </summary>
     /// <param name="filePath">文件路径（完整或相对）。</param>
     /// <returns>文件内容的字节数组，失败时返回空数组。</returns>
-    public static byte[] ReadFileBytes(string filePath) {
+    public static async Task<byte[]> ReadFileBytesAsync(string filePath) {
         try {
             var fullPath = GetFullPath(filePath);
             if (File.Exists(fullPath)) {
-                using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                using var memoryStream = new MemoryStream();
-                stream.CopyTo(memoryStream);
-                return memoryStream.ToArray();
+                // 使用 ReadAllBytesAsync
+                return await File.ReadAllBytesAsync(fullPath);
             }
 
-            LogWrapper.Info($"欲读取的文件不存在，已返回空内容：{filePath}");
+            LogWrapper.Info($"读取的文件不存在，已返回空内容：{filePath}");
             return [];
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"读取文件出错：{filePath}");
@@ -106,9 +116,20 @@ public static class Files {
     /// <param name="filePath">文件路径（完整或相对）。</param>
     /// <param name="encoding">文件编码（可选）。</param>
     /// <returns>文件内容的字符串，失败时返回空字符串。</returns>
-    public static string ReadFile(string filePath, Encoding? encoding = null) {
-        var fileBytes = ReadFileBytes(filePath);
-        return encoding == null ? EncodingUtils.DecodeBytes(fileBytes) : encoding.GetString(fileBytes);
+    public static async Task<string> ReadFileAsync(string filePath, Encoding? encoding = null) {
+        if (encoding != null) {
+            // 如果指定了编码，用它来读取
+            var fileBytes = await ReadFileBytesAsync(filePath);
+            return encoding.GetString(fileBytes);
+        }
+
+        // 否则，让 ReadAllTextAsync 自动检测 BOM
+        try {
+            return await File.ReadAllTextAsync(GetFullPath(filePath));
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, $"读取文件出错：{filePath}");
+            return "";
+        }
     }
 
     /// <summary>
@@ -117,11 +138,11 @@ public static class Files {
     /// <param name="stream">要读取的流。</param>
     /// <param name="encoding">文件编码（可选，若为 null 则动态检测）。</param>
     /// <returns>流内容的字符串，失败时返回空字符串。</returns>
-    public static string ReadFile(Stream stream, Encoding? encoding = null) {
+    public static async Task<string> ReadFileAsync(Stream stream, Encoding? encoding = null) {
         try {
             ArgumentNullException.ThrowIfNull(stream);
             using var memoryStream = new MemoryStream();
-            stream.CopyTo(memoryStream);
+            await stream.CopyToAsync(memoryStream);
             var bytes = memoryStream.ToArray();
             return (encoding ?? EncodingDetector.DetectEncoding(bytes)).GetString(bytes);
         } catch (Exception ex) {
@@ -137,16 +158,20 @@ public static class Files {
     /// <param name="text">要写入的文本。</param>
     /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
     /// <param name="encoding">文件编码（可选）。</param>
-    public static void WriteFile(string filePath, string text, bool append = false, Encoding? encoding = null) {
+    public static async Task WriteFileAsync(string filePath, string text, bool append = false, Encoding? encoding = null) {
         var fullPath = GetFullPath(filePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+        var directoryName = Path.GetDirectoryName(fullPath);
+        if (directoryName is null) {
+            throw new InvalidOperationException("无法获取目标目录");
+        }
+        Directory.CreateDirectory(directoryName);
 
         if (append) {
-            encoding ??= EncodingDetector.DetectEncoding(ReadFileBytes(filePath));
-            File.AppendAllText(fullPath, text, encoding);
+            encoding ??= EncodingDetector.DetectEncoding(await ReadFileBytesAsync(fullPath));
+            await File.AppendAllTextAsync(fullPath, text, encoding);
         } else {
             encoding ??= new UTF8Encoding(false); // 无 BOM 的 UTF-8
-            File.WriteAllText(fullPath, text, encoding);
+            await File.WriteAllTextAsync(fullPath, text, encoding);
         }
     }
 
@@ -156,15 +181,19 @@ public static class Files {
     /// <param name="filePath">文件路径（完整或相对）。</param>
     /// <param name="content">要写入的字节数组。</param>
     /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
-    public static void WriteFile(string filePath, byte[] content, bool append = false) {
+    public static async Task WriteFileAsync(string filePath, byte[] content, bool append = false) {
         var fullPath = GetFullPath(filePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+        var directoryName = Path.GetDirectoryName(fullPath);
+        if (directoryName is null) {
+            throw new InvalidOperationException("无法获取目标目录");
+        }
+        Directory.CreateDirectory(directoryName);
 
         if (append) {
-            using var fileStream = new FileStream(fullPath, FileMode.Append, FileAccess.Write);
-            fileStream.Write(content, 0, content.Length);
+            await using var fileStream = new FileStream(fullPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            await fileStream.WriteAsync(content, 0, content.Length);
         } else {
-            File.WriteAllBytes(fullPath, content);
+            await File.WriteAllBytesAsync(fullPath, content);
         }
     }
 
@@ -174,18 +203,250 @@ public static class Files {
     /// <param name="filePath">文件路径（完整或相对）。</param>
     /// <param name="stream">要写入的流。</param>
     /// <returns>写入是否成功。</returns>
-    public static bool WriteFile(string filePath, Stream stream) {
+    public static async Task<bool> WriteFileAsync(string filePath, Stream stream) {
         try {
             ArgumentNullException.ThrowIfNull(stream);
             var fullPath = GetFullPath(filePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+            var directoryName = Path.GetDirectoryName(fullPath);
+            if (directoryName is null) {
+                throw new InvalidOperationException("无法获取目标目录");
+            }
+            Directory.CreateDirectory(directoryName);
 
-            using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+            using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
             fileStream.SetLength(0);
-            stream.CopyTo(fileStream);
+            await stream.CopyToAsync(fileStream);
             return true;
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "保存流出错");
+            return false;
+        }
+    }
+    
+    #endregion
+    
+    #region 文件解压
+    
+    /// <summary>
+    /// 尝试根据文件后缀名判断文件种类并解压，支持 zip、gz、tar、tar.gz 和 bzip2。
+    /// 会尝试将 jar 文件以 zip 方式解压。不会清空目标文件夹，但会创建。
+    /// </summary>
+    public static void ExtractFile(string? compressFilePath, string? destDirectory, Action<double>? progressIncrementHandler = null) {
+        if (string.IsNullOrEmpty(compressFilePath)) {
+            LogWrapper.Error(new ArgumentNullException(nameof(compressFilePath)), "压缩文件路径为空");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(destDirectory)) {
+            LogWrapper.Error(new ArgumentNullException(nameof(destDirectory)), "目标目录路径为空");
+            return;
+        }
+
+        try {
+            Directory.CreateDirectory(destDirectory);
+            
+            if (compressFilePath.EndsWithF(".gz") || compressFilePath.EndsWithF(".tgz")) {
+                ExtractGZip(compressFilePath, destDirectory, progressIncrementHandler);
+            } else if (compressFilePath.EndsWithF(".bz2")) {
+                ExtractBZip2(compressFilePath, destDirectory, progressIncrementHandler);
+            } else if (compressFilePath.EndsWithF(".tar")) {
+                ExtractTar(compressFilePath, destDirectory, progressIncrementHandler);
+            } else if (compressFilePath.EndsWithF(".zip") || compressFilePath.EndsWithF(".jar")) {
+                ExtractZip(compressFilePath, destDirectory, progressIncrementHandler);
+            } else {
+                LogWrapper.Error(new NotSupportedException("不支持的压缩文件格式"), $"文件 {compressFilePath} 的格式不受支持");
+            }
+        } catch (Exception ex) {
+            LogWrapper.Error(ex, $"解压文件 {compressFilePath} 失败");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// 解压 GZip 文件（包括 .gz 和 .tgz）。
+    /// </summary>
+    private static void ExtractGZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+        var outputFileName = Path.GetFileName(compressFilePath).ToLower();
+        if (outputFileName.EndsWithF(".tar.gz") || outputFileName.EndsWithF(".tgz")) {
+            outputFileName = outputFileName.Replace(".tar.gz", "").Replace(".tgz", "");
+        } else if (outputFileName.EndsWithF(".gz")) {
+            outputFileName = outputFileName.Replace(".gz", "");
+        }
+        var outputPath = Path.Combine(destDirectory, outputFileName);
+
+        using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
+        using GZipInputStream gzipStream = new(compressedFile);
+        
+        if (compressFilePath.EndsWithF(".tgz")) {
+            // 处理 .tgz（tar.gz）文件
+            using TarInputStream tarStream = new(gzipStream, Encoding.UTF8);
+            ExtractTarStream(tarStream, destDirectory, progressIncrementHandler);
+        } else {
+            // 处理普通 .gz 文件
+            using FileStream outputStream = new(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
+            gzipStream.CopyTo(outputStream);
+            progressIncrementHandler?.Invoke(1.0);
+        }
+    }
+
+    /// <summary>
+    /// 解压 BZip2 文件。
+    /// </summary>
+    private static void ExtractBZip2(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+        var outputFileName = Path.GetFileName(compressFilePath).ToLower().Replace(".bz2", "");
+        var outputPath = Path.Combine(destDirectory, outputFileName);
+
+        using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
+        using BZip2InputStream bzip2Stream = new(compressedFile);
+        using FileStream outputStream = new(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
+        bzip2Stream.CopyTo(outputStream);
+        progressIncrementHandler?.Invoke(1.0);
+    }
+
+    /// <summary>
+    /// 解压 Tar 文件。
+    /// </summary>
+    private static void ExtractTar(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+        using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
+        using TarInputStream tarStream = new(compressedFile, Encoding.UTF8);
+        ExtractTarStream(tarStream, destDirectory, progressIncrementHandler);
+    }
+
+    /// <summary>
+    /// 解压 Tar 流中的内容。
+    /// </summary>
+    private static void ExtractTarStream(TarInputStream tarStream, string destDirectory, Action<double>? progressIncrementHandler) {
+        var totalEntries = 0;
+        while (tarStream.GetNextEntry() != null) {
+            totalEntries++;
+        }
+        tarStream.Reset();
+
+        var currentEntry = 0;
+        while (tarStream.GetNextEntry() is { } entry) {
+            var destinationPath = Path.Combine(destDirectory, entry.Name);
+            if (entry.IsDirectory) {
+                Directory.CreateDirectory(destinationPath);
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
+            tarStream.CopyEntryContents(outputStream);
+            currentEntry++;
+            progressIncrementHandler?.Invoke((double)currentEntry / totalEntries);
+        }
+    }
+
+    /// <summary>
+    /// 解压 Zip 文件（包括 .zip 和 .jar）。
+    /// </summary>
+    private static void ExtractZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+        using ZipFile zipFile = new(compressFilePath);
+
+        var totalEntries = zipFile.Count;
+        long currentEntry = 0;
+
+        foreach (ZipEntry entry in zipFile) {
+            var destinationPath = Path.Combine(destDirectory, entry.Name);
+            if (entry.IsDirectory) {
+                Directory.CreateDirectory(destinationPath);
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            using var zipStream = zipFile.GetInputStream(entry);
+            using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
+            zipStream.CopyTo(outputStream);
+            currentEntry++;
+            progressIncrementHandler?.Invoke((double)currentEntry / totalEntries);
+        }
+    }
+    
+    #endregion
+    
+    #region 文件哈希计算
+    
+    /// <summary>
+    /// 计算文件的指定哈希值。
+    /// </summary>
+    /// <param name="filePath">要计算哈希的文件路径。</param>
+    /// <param name="hashProvider">哈希算法提供者（如 MD5Provider、SHA1Provider 等）。</param>
+    /// <param name="ignoreOnDownloading">是否忽略下载中的文件。</param>
+    /// <returns>哈希值（十六进制字符串），失败时返回空字符串。</returns>
+    public static string ComputeFileHash(string? filePath, IHashProvider hashProvider, bool ignoreOnDownloading = false) {
+        if (string.IsNullOrEmpty(filePath)) {
+            LogWrapper.Warn(new ArgumentNullException(nameof(filePath)), "文件路径为空");
+            return string.Empty;
+        }
+
+        // 检查文件是否正在下载
+        if (ignoreOnDownloading && IsFileDownloading(filePath)) {
+            return string.Empty;
+        }
+
+        for (var attempt = 0; attempt < 2; attempt++) {
+            try {
+                using FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                return hashProvider.ComputeHash(fs);
+            } catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) {
+                LogWrapper.Warn(ex, $"计算文件哈希失败：{filePath}");
+                return string.Empty;
+            } catch (Exception ex) {
+                if (attempt == 0) {
+                    LogWrapper.Warn(ex, $"计算文件哈希可重试失败：{filePath}");
+                    Thread.Sleep(Random.Shared.Next(200, 500));
+                    continue;
+                }
+                LogWrapper.Warn(ex, $"计算文件哈希失败：{filePath}");
+                return string.Empty;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// 获取文件的 MD5 哈希值。
+    /// </summary>
+    public static string GetFileMD5(string? filePath) => ComputeFileHash(filePath, MD5Provider.Instance);
+
+    /// <summary>
+    /// 获取文件的 SHA1 哈希值。
+    /// </summary>
+    public static string GetFileSHA1(string? filePath) => ComputeFileHash(filePath, SHA1Provider.Instance);
+
+    /// <summary>
+    /// 获取文件的 SHA256 哈希值。
+    /// </summary>
+    public static string GetFileSHA256(string? filePath, bool ignoreOnDownloading = false)
+        => ComputeFileHash(filePath, SHA256Provider.Instance, ignoreOnDownloading);
+
+    /// <summary>
+    /// 获取文件的 SHA512 哈希值。
+    /// </summary>
+    public static string GetFileSHA512(string? filePath, bool ignoreOnDownloading = false)
+        => ComputeFileHash(filePath, SHA512Provider.Instance, ignoreOnDownloading);
+    
+    #endregion
+
+    private static string GetFullPath(string filePath) {
+        ArgumentNullException.ThrowIfNull(filePath);
+        return filePath.Contains(":\\") ? filePath : Path.Combine(Basics.ExecutablePath, filePath);
+    }
+    
+    private static bool IsFileDownloading(string filePath) {
+        try {
+            if (!File.Exists(filePath)) {
+                return false;
+            }
+            
+            using (File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+                return false;
+            }
+        } catch (IOException) {
+            return true;
+        } catch {
             return false;
         }
     }

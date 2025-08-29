@@ -1,7 +1,7 @@
 ﻿using System;
 using PCL.Core.Logging;
 
-namespace PCL.Core.IO.FileFormats;
+namespace PCL.Core.Minecraft;
 
 using fNbt;
 using System.IO;

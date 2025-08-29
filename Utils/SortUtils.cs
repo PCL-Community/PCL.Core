@@ -1,6 +1,4 @@
-﻿using PCL.Core.Logging;
-
-namespace PCL.Core.Utils;
+﻿namespace PCL.Core.Utils;
 
 using System;
 using System.Collections.Generic;
@@ -19,20 +17,14 @@ public static class SortUtils {
     /// <returns>排序后的新列表。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="list"/> 或 <paramref name="comparison"/> 为 null 时抛出。</exception>
     public static List<T> Sort<T>(this IList<T> list, Func<T, T, bool> comparison) {
-        try {
-            // 使用 LINQ OrderBy 实现稳定排序
-            var result = list
-                .Select((item, index) => new { Item = item, Index = index }) // 使用匿名类型保留索引
-                .OrderBy(x => x.Item, new StableComparer<T>(comparison)) // 显式指定比较器
-                .Select(x => x.Item)
-                .ToList();
-
-            LogWrapper.Info($"[Sort] 成功排序列表，元素数：{list.Count}");
-            return result;
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, $"[Sort] 排序失败：{ex.Message}");
-            throw;
-        }
+        // 使用 LINQ OrderBy 实现稳定排序
+        var result = list
+            .Select((item, index) => new { Item = item, Index = index }) // 使用匿名类型保留索引
+            .OrderBy(x => x.Item, new StableComparer<T>(comparison)) // 显式指定比较器
+            .Select(x => x.Item)
+            .ToList();
+        
+        return result;
     }
 
     // 实现稳定比较器
@@ -40,7 +32,6 @@ public static class SortUtils {
         private readonly Func<T, T, bool> _comparison = comparison ?? throw new ArgumentNullException(nameof(comparison));
         
         public int Compare(T? x, T? y) {
-            // Handle null cases
             if (x is null && y is null) return 0;
             if (x is null) return -1;
             if (y is null) return 1;

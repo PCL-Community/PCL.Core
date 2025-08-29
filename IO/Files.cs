@@ -369,7 +369,7 @@ public static class Files {
 
     private static async Task<TarEntry?> GetNextEntryAsync(TarInputStream tarStream, CancellationToken cancellationToken) {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var task = Task.Run(tarStream.GetNextEntry, cts.Token); // 正确：lambda 表达式包装方法调用
+        var task = Task.Run(tarStream.GetNextEntry, cts.Token); 
         if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), cts.Token)).ConfigureAwait(false) == task) {
             return await task.ConfigureAwait(false);
         }
@@ -397,11 +397,11 @@ public static class Files {
         foreach (ZipEntry entry in zipFile) {
             var destinationPath = Path.Combine(destDirectory, entry.Name);
             if (entry.IsDirectory) {
-                Directory.CreateDirectory(destinationPath); // 同步创建目录
+                Directory.CreateDirectory(destinationPath);
                 continue;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!); // 同步创建父目录
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             await using var zipStream = zipFile.GetInputStream(entry);
             await using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
             await zipStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);

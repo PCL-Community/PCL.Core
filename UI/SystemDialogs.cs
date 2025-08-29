@@ -1,7 +1,7 @@
 ﻿using Microsoft.Win32;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Utils.OS;
+namespace PCL.Core.UI;
 
 using System;
 using System.IO;
@@ -9,7 +9,7 @@ using System.IO;
 /// <summary>
 /// 提供文件和文件夹对话框相关的实用方法。
 /// </summary>
-public static class DialogUtils {
+public static class SystemDialogs {
     /// <summary>
     /// 显示保存文件对话框，要求用户选择保存位置。
     /// </summary>

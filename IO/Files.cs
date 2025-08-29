@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -58,7 +59,7 @@ public static class Files {
         // 保存 .lnk 文件
         link.Save();
     }
-    
+
     #region 异步文件操作
 
     /// <summary>
@@ -221,16 +222,24 @@ public static class Files {
             return false;
         }
     }
-    
+
     #endregion
-    
+
     #region 文件解压
-    
+
     /// <summary>
     /// 尝试根据文件后缀名判断文件种类并解压，支持 zip、gz、tar、tar.gz 和 bzip2。
     /// 会尝试将 jar 文件以 zip 方式解压。不会清空目标文件夹，但会创建。
     /// </summary>
-    public static void ExtractFile(string? compressFilePath, string? destDirectory, Action<double>? progressIncrementHandler = null) {
+    /// <param name="compressFilePath">压缩文件路径。</param>
+    /// <param name="destDirectory">目标解压目录。</param>
+    /// <param name="progressIncrementHandler">进度更新回调，接收 0.0 到 1.0 的进度值。</param>
+    /// <param name="cancellationToken">取消操作的令牌。</param>
+    /// <returns>异步任务。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="compressFilePath"/> 或 <paramref name="destDirectory"/> 为 null 或空时抛出。</exception>
+    /// <exception cref="NotSupportedException">当文件格式不受支持时抛出。</exception>
+    public static async Task ExtractFileAsync(string? compressFilePath, string? destDirectory, Action<double>? progressIncrementHandler = null,
+        CancellationToken cancellationToken = default) {
         if (string.IsNullOrEmpty(compressFilePath)) {
             LogWrapper.Error(new ArgumentNullException(nameof(compressFilePath)), "压缩文件路径为空");
             return;
@@ -242,18 +251,18 @@ public static class Files {
         }
 
         try {
-            Directory.CreateDirectory(destDirectory);
-            
+            Directory.CreateDirectory(destDirectory); // 创建目标目录（同步操作，因为通常很快且无异步版本）
+
             if (compressFilePath.EndsWithF(".gz") || compressFilePath.EndsWithF(".tgz")) {
-                ExtractGZip(compressFilePath, destDirectory, progressIncrementHandler);
+                await ExtractGZipAsync(compressFilePath, destDirectory, progressIncrementHandler, cancellationToken).ConfigureAwait(false);
             } else if (compressFilePath.EndsWithF(".bz2")) {
-                ExtractBZip2(compressFilePath, destDirectory, progressIncrementHandler);
+                await ExtractBZip2Async(compressFilePath, destDirectory, progressIncrementHandler, cancellationToken).ConfigureAwait(false);
             } else if (compressFilePath.EndsWithF(".tar")) {
-                ExtractTar(compressFilePath, destDirectory, progressIncrementHandler);
+                await ExtractTarAsync(compressFilePath, destDirectory, progressIncrementHandler, cancellationToken).ConfigureAwait(false);
             } else if (compressFilePath.EndsWithF(".zip") || compressFilePath.EndsWithF(".jar")) {
-                ExtractZip(compressFilePath, destDirectory, progressIncrementHandler);
+                await ExtractZipAsync(compressFilePath, destDirectory, progressIncrementHandler, cancellationToken).ConfigureAwait(false);
             } else {
-                LogWrapper.Error(new NotSupportedException("不支持的压缩文件格式"), $"文件 {compressFilePath} 的格式不受支持");
+                throw new NotSupportedException("不支持的压缩文件格式");
             }
         } catch (Exception ex) {
             LogWrapper.Error(ex, $"解压文件 {compressFilePath} 失败");
@@ -262,9 +271,9 @@ public static class Files {
     }
 
     /// <summary>
-    /// 解压 GZip 文件（包括 .gz 和 .tgz）。
+    /// 异步解压 GZip 文件（包括 .gz 和 .tgz）。
     /// </summary>
-    private static void ExtractGZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+    private static async Task ExtractGZipAsync(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler, CancellationToken cancellationToken) {
         var outputFileName = Path.GetFileName(compressFilePath).ToLower();
         if (outputFileName.EndsWithF(".tar.gz") || outputFileName.EndsWithF(".tgz")) {
             outputFileName = outputFileName.Replace(".tar.gz", "").Replace(".tgz", "");
@@ -273,74 +282,113 @@ public static class Files {
         }
         var outputPath = Path.Combine(destDirectory, outputFileName);
 
-        using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
-        using GZipInputStream gzipStream = new(compressedFile);
-        
+        await using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
+        await using GZipInputStream gzipStream = new(compressedFile);
+
         if (compressFilePath.EndsWithF(".tgz")) {
             // 处理 .tgz（tar.gz）文件
-            using TarInputStream tarStream = new(gzipStream, Encoding.UTF8);
-            ExtractTarStream(tarStream, destDirectory, progressIncrementHandler);
+            await using TarInputStream tarStream = new(gzipStream, Encoding.UTF8);
+            await ExtractTarStreamAsync(tarStream, destDirectory, progressIncrementHandler, cancellationToken).ConfigureAwait(false);
         } else {
             // 处理普通 .gz 文件
-            using FileStream outputStream = new(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
-            gzipStream.CopyTo(outputStream);
+            await using FileStream outputStream = new(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
+            await gzipStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
             progressIncrementHandler?.Invoke(1.0);
         }
     }
 
     /// <summary>
-    /// 解压 BZip2 文件。
+    /// 异步解压 BZip2 文件。
     /// </summary>
-    private static void ExtractBZip2(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+    private static async Task ExtractBZip2Async(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler, CancellationToken cancellationToken) {
         var outputFileName = Path.GetFileName(compressFilePath).ToLower().Replace(".bz2", "");
         var outputPath = Path.Combine(destDirectory, outputFileName);
 
-        using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
-        using BZip2InputStream bzip2Stream = new(compressedFile);
-        using FileStream outputStream = new(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
-        bzip2Stream.CopyTo(outputStream);
+        await using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
+        await using BZip2InputStream bzip2Stream = new(compressedFile);
+        await using FileStream outputStream = new(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
+        await bzip2Stream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
         progressIncrementHandler?.Invoke(1.0);
     }
 
     /// <summary>
-    /// 解压 Tar 文件。
+    /// 异步解压 Tar 文件。
     /// </summary>
-    private static void ExtractTar(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
-        using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
-        using TarInputStream tarStream = new(compressedFile, Encoding.UTF8);
-        ExtractTarStream(tarStream, destDirectory, progressIncrementHandler);
+    private static async Task ExtractTarAsync(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler, CancellationToken cancellationToken) {
+        await using FileStream compressedFile = new(compressFilePath, FileMode.Open, FileAccess.Read);
+        await using TarInputStream tarStream = new(compressedFile, Encoding.UTF8);
+        await ExtractTarStreamAsync(tarStream, destDirectory, progressIncrementHandler, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// 解压 Tar 流中的内容。
+    /// 异步解压 Tar 流中的内容到指定目录。
     /// </summary>
-    private static void ExtractTarStream(TarInputStream tarStream, string destDirectory, Action<double>? progressIncrementHandler) {
-        var totalEntries = 0;
-        while (tarStream.GetNextEntry() != null) {
-            totalEntries++;
+    /// <param name="tarStream">要解压的 Tar 输入流。</param>
+    /// <param name="destDirectory">目标解压目录。</param>
+    /// <param name="progressIncrementHandler">进度更新回调，接收 0.0 到 1.0 的进度值（基于条目计数）。</param>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <exception cref="OperationCanceledException">如果操作被取消。</exception>
+    /// <exception cref="InvalidOperationException">如果路径不合法或解压失败。</exception>
+    /// <exception cref="IOException">如果发生 IO 相关错误。</exception>
+    private static async Task ExtractTarStreamAsync(TarInputStream tarStream, string destDirectory, Action<double>? progressIncrementHandler, CancellationToken cancellationToken) {
+        var entries = new List<TarEntry>();
+        long totalBytes = 0;
+        while (await GetNextEntryAsync(tarStream, cancellationToken).ConfigureAwait(false) is { } entry) {
+            cancellationToken.ThrowIfCancellationRequested();
+            entries.Add(entry);
+            totalBytes += entry.Size;
         }
-        tarStream.Reset();
+        
+        long processedBytes = 0;
 
-        var currentEntry = 0;
-        while (tarStream.GetNextEntry() is { } entry) {
-            var destinationPath = Path.Combine(destDirectory, entry.Name);
-            if (entry.IsDirectory) {
-                Directory.CreateDirectory(destinationPath);
-                continue;
+        tarStream.Reset(); // 重置流以重新读取条目
+        foreach (var entry in entries) {
+            cancellationToken.ThrowIfCancellationRequested();
+            try {
+                var destinationPath = GetSafePath(destDirectory, entry.Name);
+                if (entry.IsDirectory) {
+                    await CreateDirectoryAsync(destinationPath, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                await CreateDirectoryAsync(Path.GetDirectoryName(destinationPath)!, cancellationToken).ConfigureAwait(false);
+                if (entry.Size == 0) {
+                    await File.Create(destinationPath).DisposeAsync();
+                    continue;
+                }
+
+                await using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
+                await tarStream.CopyEntryContentsAsync(outputStream, cancellationToken).ConfigureAwait(false);
+                processedBytes += entry.Size;
+                progressIncrementHandler?.Invoke((double)processedBytes / totalBytes);
+            } catch (IOException ex) {
+                throw new InvalidOperationException($"Failed to extract entry {entry.Name}: {ex.Message}", ex);
             }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-            using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
-            tarStream.CopyEntryContents(outputStream);
-            currentEntry++;
-            progressIncrementHandler?.Invoke((double)currentEntry / totalEntries);
         }
     }
 
+    private static async Task<TarEntry?> GetNextEntryAsync(TarInputStream tarStream, CancellationToken cancellationToken) {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var task = Task.Run(tarStream.GetNextEntry, cts.Token); // 正确：lambda 表达式包装方法调用
+        if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), cts.Token)).ConfigureAwait(false) == task) {
+            return await task.ConfigureAwait(false);
+        }
+        throw new TimeoutException("Operation timed out while reading next Tar entry.");
+    }
+
+    private static string GetSafePath(string destDirectory, string entryName) {
+        var fullPath = Path.GetFullPath(Path.Combine(destDirectory, entryName));
+        return fullPath.StartsWith(Path.GetFullPath(destDirectory)) ? fullPath : throw new InvalidOperationException($"Invalid path detected: {entryName}");
+    }
+
+    private static async Task CreateDirectoryAsync(string path, CancellationToken cancellationToken) {
+        await Task.Run(() => Directory.CreateDirectory(path), cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>
-    /// 解压 Zip 文件（包括 .zip 和 .jar）。
+    /// 异步解压 Zip 文件（包括 .zip 和 .jar）。
     /// </summary>
-    private static void ExtractZip(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler) {
+    private static async Task ExtractZipAsync(string compressFilePath, string destDirectory, Action<double>? progressIncrementHandler, CancellationToken cancellationToken) {
         using ZipFile zipFile = new(compressFilePath);
 
         var totalEntries = zipFile.Count;
@@ -349,44 +397,44 @@ public static class Files {
         foreach (ZipEntry entry in zipFile) {
             var destinationPath = Path.Combine(destDirectory, entry.Name);
             if (entry.IsDirectory) {
-                Directory.CreateDirectory(destinationPath);
+                Directory.CreateDirectory(destinationPath); // 同步创建目录
                 continue;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-            using var zipStream = zipFile.GetInputStream(entry);
-            using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
-            zipStream.CopyTo(outputStream);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!); // 同步创建父目录
+            await using var zipStream = zipFile.GetInputStream(entry);
+            await using FileStream outputStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
+            await zipStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
             currentEntry++;
             progressIncrementHandler?.Invoke((double)currentEntry / totalEntries);
         }
     }
-    
+
     #endregion
-    
+
     #region 文件哈希计算
-    
+
     /// <summary>
-    /// 计算文件的指定哈希值。
+    /// 异步计算文件的指定哈希值。
     /// </summary>
     /// <param name="filePath">要计算哈希的文件路径。</param>
     /// <param name="hashProvider">哈希算法提供者（如 MD5Provider、SHA1Provider 等）。</param>
     /// <param name="ignoreOnDownloading">是否忽略下载中的文件。</param>
     /// <returns>哈希值（十六进制字符串），失败时返回空字符串。</returns>
-    public static string ComputeFileHash(string? filePath, IHashProvider hashProvider, bool ignoreOnDownloading = false) {
+    public static async Task<string> ComputeFileHashAsync(string? filePath, IHashProvider hashProvider, bool ignoreOnDownloading = false) {
         if (string.IsNullOrEmpty(filePath)) {
             LogWrapper.Warn(new ArgumentNullException(nameof(filePath)), "文件路径为空");
             return string.Empty;
         }
 
         // 检查文件是否正在下载
-        if (ignoreOnDownloading && IsFileDownloading(filePath)) {
+        if (ignoreOnDownloading && await IsFileDownloadingAsync(filePath).ConfigureAwait(false)) {
             return string.Empty;
         }
 
         for (var attempt = 0; attempt < 2; attempt++) {
             try {
-                using FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await using FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 return hashProvider.ComputeHash(fs);
             } catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) {
                 LogWrapper.Warn(ex, $"计算文件哈希失败：{filePath}");
@@ -394,7 +442,7 @@ public static class Files {
             } catch (Exception ex) {
                 if (attempt == 0) {
                     LogWrapper.Warn(ex, $"计算文件哈希可重试失败：{filePath}");
-                    Thread.Sleep(Random.Shared.Next(200, 500));
+                    await Task.Delay(Random.Shared.Next(200, 500)).ConfigureAwait(false);
                     continue;
                 }
                 LogWrapper.Warn(ex, $"计算文件哈希失败：{filePath}");
@@ -406,47 +454,52 @@ public static class Files {
     }
 
     /// <summary>
-    /// 获取文件的 MD5 哈希值。
+    /// 异步获取文件的 MD5 哈希值。
     /// </summary>
-    public static string GetFileMD5(string? filePath) => ComputeFileHash(filePath, MD5Provider.Instance);
+    public static Task<string> GetFileMD5Async(string? filePath) => ComputeFileHashAsync(filePath, MD5Provider.Instance);
 
     /// <summary>
-    /// 获取文件的 SHA1 哈希值。
+    /// 异步获取文件的 SHA1 哈希值。
     /// </summary>
-    public static string GetFileSHA1(string? filePath) => ComputeFileHash(filePath, SHA1Provider.Instance);
+    public static Task<string> GetFileSHA1Async(string? filePath) => ComputeFileHashAsync(filePath, SHA1Provider.Instance);
 
     /// <summary>
-    /// 获取文件的 SHA256 哈希值。
+    /// 异步获取文件的 SHA256 哈希值。
     /// </summary>
-    public static string GetFileSHA256(string? filePath, bool ignoreOnDownloading = false)
-        => ComputeFileHash(filePath, SHA256Provider.Instance, ignoreOnDownloading);
+    public static Task<string> GetFileSHA256Async(string? filePath, bool ignoreOnDownloading = false)
+        => ComputeFileHashAsync(filePath, SHA256Provider.Instance, ignoreOnDownloading);
 
     /// <summary>
-    /// 获取文件的 SHA512 哈希值。
+    /// 异步获取文件的 SHA512 哈希值。
     /// </summary>
-    public static string GetFileSHA512(string? filePath, bool ignoreOnDownloading = false)
-        => ComputeFileHash(filePath, SHA512Provider.Instance, ignoreOnDownloading);
-    
-    #endregion
+    public static Task<string> GetFileSHA512Async(string? filePath, bool ignoreOnDownloading = false)
+        => ComputeFileHashAsync(filePath, SHA512Provider.Instance, ignoreOnDownloading);
 
+    /// <summary>
+    /// 获取文件的完整路径。
+    /// </summary>
     private static string GetFullPath(string filePath) {
         ArgumentNullException.ThrowIfNull(filePath);
         return Path.IsPathRooted(filePath) ? filePath : Path.Combine(Basics.ExecutablePath, filePath);
     }
-    
-    private static bool IsFileDownloading(string filePath) {
+
+    /// <summary>
+    /// 异步检查文件是否正在下载。
+    /// </summary>
+    private static async Task<bool> IsFileDownloadingAsync(string filePath) {
         try {
             if (!File.Exists(filePath)) {
                 return false;
             }
-            
-            using (File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
-                return false;
-            }
+
+            await using FileStream fs = new(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return false;
         } catch (IOException) {
             return true;
         } catch {
             return false;
         }
     }
+
+    #endregion
 }

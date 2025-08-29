@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,33 +7,22 @@ using System.Threading.Tasks;
 namespace PCL.Core.App.Tasks;
 public class PipelineTask<TLastResult> : TaskBase<TLastResult>
 {
-    public PipelineTask(string name, Delegate[] delegates, string? description) : base(name, description: description)
+    public PipelineTask(string name, Delegate[] delegates, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)
     {
-        _tasks = [];
-        var i = 0;
-        foreach (var task in delegates)
-        { 
-            _ = _tasks.Append(new TaskBase<object>($"{name} - Pipe {i}", task)); 
-            i++; 
-        }
-        if (delegates.Last().Method.ReturnType != typeof(TLastResult))
-            throw new Exception($"[PipelineTask - {name}] 构造失败：不匹配的返回类型");
-    }
-    public PipelineTask(string name, Delegate[] delegates, CancellationToken? cancellationToken, string? description) : base(name, cancellationToken, description)
-    {
-        _tasks = [];
+        List<TaskBase<object>> tasks = [];
         var i = 0;
         foreach (var task in delegates)
         {
-            _ = _tasks.Append(new TaskBase<object>($"{name} - Pipe {i}", task)); 
+            tasks.Add(new TaskBase<object>($"{name} - Pipe {i}", task)); 
             i++; 
         }
+        _tasks = tasks;
         if (delegates.Last().Method.ReturnType != typeof(TLastResult))
             throw new Exception($"[PipelineTask - {name}] 构造失败：不匹配的返回类型");
         CancellationToken?.Register(() => { State = TaskState.Canceled; });
     }
 
-    private readonly TaskBase<object>[] _tasks;
+    private readonly List<TaskBase<object>> _tasks;
 
     public override TLastResult Run(params object[] objects)
     {
@@ -40,18 +30,18 @@ public class PipelineTask<TLastResult> : TaskBase<TLastResult>
         try
         {
             object lastResult = new();
-            if (objects.Length != _tasks.Length)
-                throw new Exception($"[PipelineTask - {Name}] 运行失败：委托组长度与参数组长度不匹配");
             foreach (var task in _tasks)
                 task.ProgressChanged += (_, o, n) =>
-                    Progress += (n - o) / _tasks.Length;
-            for (var i = 0; i < objects.Length; i++)
+                    Progress += (n - o) / _tasks.Count;
+            for (var i = 0; i < _tasks.Count; i++)
             {
-                var param = (object[])objects[i];
+                object[] param = [lastResult];
+                if (i == 0)
+                    param = objects;
                 CancellationToken?.ThrowIfCancellationRequested();
-                lastResult = typeof(TaskBase<object>).GetMethod("Run")?.Invoke(_tasks[i], [this, .. param]) ?? new object();
+                lastResult = _tasks[i].Run(param);
             }
-            return (TLastResult)lastResult;
+            return Result = (TLastResult)lastResult;
         }
         catch (Exception)
         {
@@ -66,25 +56,20 @@ public class PipelineTask<TLastResult> : TaskBase<TLastResult>
         State = TaskState.Running;
         try
         {
-            object lastResult = new();
-            if (objects.Length != _tasks.Length)
-                throw new Exception($"[PipelineTask - {Name}] 运行失败：委托组长度与参数组长度不匹配");
-            foreach ( var task in _tasks )
+            foreach (var task in _tasks)
                 task.ProgressChanged += (_, o, n) =>
-                    Progress += (n - o) / _tasks.Length;
-            return await Task();
-            async Task<TLastResult> Task()
+                    Progress += (n - o) / _tasks.Count;
+            object lastResult = new();
+            for (var i = 0; i < _tasks.Count; i++)
             {
-                for (var i = 0; i < objects.Length; i++)
-                {
-                    object[] param = [lastResult];
-                    if (i == 0)
-                        param = objects;
-                    lastResult = await (Task<object>)(typeof(TaskBase<object>).GetMethod("RunAsync")?.Invoke(_tasks[i], param) ?? new object());
-                }
-                State = TaskState.Completed;
-                return (TLastResult)lastResult;
+                object[] param = [lastResult];
+                CancellationToken?.ThrowIfCancellationRequested();
+                if (i == 0)
+                    param = objects;
+                lastResult = await _tasks[i].RunAsync(param);
             }
+            State = TaskState.Completed;
+            return (TLastResult)lastResult;
         }
         catch (Exception)
         {
@@ -95,5 +80,5 @@ public class PipelineTask<TLastResult> : TaskBase<TLastResult>
     }
 
     public override void RunBackground(params object[] objects)
-        => (BackgroundTask = (Task<TLastResult>)(typeof(PipelineTask<TLastResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new object())).Start();
+        => (BackgroundTask = RunAsync(objects)).Start();
 }

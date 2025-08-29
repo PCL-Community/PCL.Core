@@ -76,6 +76,7 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
                 return BackgroundTask.Result;
             return _result;
         }
+        set => _result = value;
     }
 
     private readonly Delegate _delegate;
@@ -88,9 +89,8 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         State = TaskState.Running;
         try
         {
-            var res = (TResult)(typeof(Delegate).GetMethod("DynamicInvoke")?.Invoke(_delegate, [this, .. objects]) ?? new object());
-            if (CancellationToken?.IsCancellationRequested ?? false)
-                ((CancellationToken)CancellationToken).ThrowIfCancellationRequested();
+            var res = (TResult)(_delegate.DynamicInvoke([this, ..objects]) ?? new object());
+            CancellationToken?.ThrowIfCancellationRequested();
             State = TaskState.Completed;
             return _result = res;
         }
@@ -105,12 +105,12 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
     public virtual async Task<TResult> RunAsync(params object[] objects)
     {
         if (CancellationToken != null)
-            return _result = await new Task<TResult>(() => (TResult)(typeof(TaskBase<TResult>).GetMethod("Run")?.Invoke(this, objects) ?? new object()), cancellationToken: (CancellationToken)CancellationToken);
-        return _result = await new Task<TResult>(() => (TResult)(typeof(TaskBase<TResult>).GetMethod("Run")?.Invoke(this, objects) ?? new object()));
+            return _result = await Task.Run(() => Run(objects), cancellationToken: (CancellationToken)CancellationToken);
+        return _result = await Task.Run(() => Run(objects));
     }
 
     protected Task<TResult>? BackgroundTask;
 
     public virtual void RunBackground(params object[] objects)
-        => (BackgroundTask = (Task<TResult>)(typeof(TaskBase<TResult>).GetMethod("RunAsync")?.Invoke(this, objects) ?? new object())).Start();
+        => (BackgroundTask = RunAsync(objects)).Start();
 }

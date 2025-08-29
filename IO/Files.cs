@@ -253,11 +253,9 @@ public static class Files {
             return Enumerable.Empty<FileInfo>();
         }
     }
-
-    private static readonly Dispatcher? UiDispatcher = Dispatcher.CurrentDispatcher;
     
     /// <summary>
     /// 检查当前线程是否为 UI 主线程。
     /// </summary>
-    public static bool IsRunningInUiThread => UiDispatcher?.CheckAccess() ?? false;
+    public static bool IsRunningInUiThread => Dispatcher.CurrentDispatcher.CheckAccess();
 }

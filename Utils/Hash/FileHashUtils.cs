@@ -69,8 +69,23 @@ public static class FileHashUtils {
         => ComputeFileHash(filePath, SHA512Provider.Instance, ignoreOnDownloading);
 
     private static bool IsFileDownloading(string filePath) {
-        // 占位符，用于检查文件是否在下载
-        // 如果需要，请实现 NetManage.Files 检查逻辑
-        return false;
+        try {
+            // Check if file exists
+            if (!File.Exists(filePath)) {
+                return false;
+            }
+
+            // Attempt to open the file with exclusive access
+            using (FileStream fs = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+                // If we can open the file, it's not being downloaded
+                return false;
+            }
+        } catch (IOException) {
+            // If we get an IOException, the file is likely being used/downloaded
+            return true;
+        } catch {
+            // Handle other potential exceptions, but assume file is not downloading
+            return false;
+        }
     }
 }

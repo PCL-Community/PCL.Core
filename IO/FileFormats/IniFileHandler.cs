@@ -6,7 +6,6 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 public static class IniFileHandler {
     private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> IniCache = new();

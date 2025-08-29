@@ -209,12 +209,14 @@ public class BlurBorder : Border
         }
         else
         {
-            // 低采样率使用我们的优化实现
-            var optimizedBlur = OptimizedBlurFactory.CreateAdaptive(BlurRadius);
-            optimizedBlur.SamplingRate = BlurSamplingRate;
-            optimizedBlur.RenderingBias = BlurRenderingBias;
-            optimizedBlur.KernelType = BlurKernelType;
-            return optimizedBlur.GetEffectInstance();
+            // 使用高性能的AdaptiveBlurEffect，已包含完整的blur功能
+            return new AdaptiveBlurEffect
+            {
+                Radius = BlurRadius,
+                SamplingRate = BlurSamplingRate,
+                RenderingBias = BlurRenderingBias,
+                KernelType = BlurKernelType
+            };
         }
     }
 

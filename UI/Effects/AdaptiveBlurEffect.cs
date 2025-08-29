@@ -10,8 +10,9 @@ using System.Windows.Media.Effects;
 namespace PCL.Core.UI.Effects;
 
 /// <summary>
-/// 高性能自适应采样模糊效果，支持采样深度控制
+/// 高性能自适应采样模糊效果，支持采样深度控制和阴影渲染
 /// 通过智能采样算法实现性能提升，可配置采样率以平衡质量和性能
+/// 集成阴影渲染功能，解决阴影效果丢失问题
 /// </summary>
 public sealed class AdaptiveBlurEffect : ShaderEffect
 {

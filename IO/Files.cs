@@ -213,7 +213,7 @@ public static class Files {
             }
             Directory.CreateDirectory(directoryName);
 
-            using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
             fileStream.SetLength(0);
             await stream.CopyToAsync(fileStream);
             return true;

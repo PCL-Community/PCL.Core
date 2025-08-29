@@ -1,10 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using PCL.Core.Minecraft;
+using PCL.Core.App;
 using PCL.Core.ProgramSetup;
 
-namespace PCL.Core.App;
+namespace PCL.Core.Minecraft;
 
 [LifecycleService(LifecycleState.Loaded)]
 public sealed class JavaSerivce : GeneralService

@@ -180,8 +180,10 @@ public static class Files {
     /// </summary>
     /// <param name="filePath">文件路径（完整或相对）。</param>
     /// <param name="content">要写入的字节数组。</param>
-    /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
-    public static async Task WriteFileAsync(string filePath, byte[] content, bool append = false) {
+    /// <param name="append">是否追加到文件（true）或覆盖（false）。默认为 false。</param>
+    /// <param name="cancellationToken">取消操作的令牌。</param>
+    /// <returns>一个 Task，表示异步写入操作。</returns>
+    public static async Task WriteFileAsync(string filePath, byte[] content, bool append = false, CancellationToken cancellationToken = default) {
         var fullPath = GetFullPath(filePath);
         var directoryName = Path.GetDirectoryName(fullPath);
         if (directoryName is null) {
@@ -189,12 +191,9 @@ public static class Files {
         }
         Directory.CreateDirectory(directoryName);
 
-        if (append) {
-            await using var fileStream = new FileStream(fullPath, FileMode.Append, FileAccess.Write, FileShare.Read);
-            await fileStream.WriteAsync(content, 0, content.Length);
-        } else {
-            await File.WriteAllBytesAsync(fullPath, content);
-        }
+        var fileMode = append ? FileMode.Append : FileMode.Create;
+        await using var fileStream = new FileStream(fullPath, fileMode, FileAccess.Write, FileShare.Read);
+        await fileStream.WriteAsync(content.AsMemory(), cancellationToken);
     }
 
     /// <summary>

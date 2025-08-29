@@ -1,6 +1,4 @@
-﻿using PCL.Core.Logging;
-
-namespace PCL.Core.Utils.Exts;
+﻿namespace PCL.Core.Utils.Exts;
 
 using System;
 using System.Windows;
@@ -26,7 +24,7 @@ public static class UiExtension {
             var bounds = transform.TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
             var windowRect = new Rect(0, 0, mainWindow.ActualWidth, mainWindow.ActualHeight);
             return windowRect.IntersectsWith(bounds);
-        } catch (InvalidOperationException ex) {
+        } catch (InvalidOperationException) {
             return false;
         }
     }
@@ -52,7 +50,7 @@ public static class UiExtension {
                 );
 
             return formattedText.Width > textBlock.ActualWidth;
-        } catch (Exception ex) {
+        } catch (Exception) {
             return false;
         }
     }

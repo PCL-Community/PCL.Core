@@ -49,14 +49,7 @@ public readonly record struct ModernColor {
     /// <summary>
     /// 从Alpha和SolidColorBrush创建
     /// </summary>
-    public ModernColor(double a, SolidColorBrush brush) {
-        ArgumentNullException.ThrowIfNull(brush);
-        var color = brush.Color;
-        A = a;
-        R = color.R;
-        G = color.G;
-        B = color.B;
-    }
+    public ModernColor(double a, SolidColorBrush brush) : this(a, brush.Color) {}
     
     /// <summary>
     /// 从Alpha和Color创建
@@ -89,21 +82,15 @@ public readonly record struct ModernColor {
     /// <summary>
     /// 从SolidColorBrush创建
     /// </summary>
-    public ModernColor(SolidColorBrush brush) {
-        ArgumentNullException.ThrowIfNull(brush);
-        var color = brush.Color;
-        A = color.A;
-        R = color.R;
-        G = color.G;
-        B = color.B;
-    }
+    public ModernColor(SolidColorBrush brush) : this(brush.Color) {}
     
     /// <summary>
     /// 从Brush创建
     /// </summary>
     public ModernColor(Brush brush) {
-        ArgumentNullException.ThrowIfNull(brush);
-        var color = ((SolidColorBrush) brush).Color;
+        if (brush is not SolidColorBrush solidColorBrush)
+            throw new ArgumentException("Only SolidColorBrush is supported.", nameof(brush));
+        var color = solidColorBrush.Color;
         A = color.A;
         R = color.R;
         G = color.G;

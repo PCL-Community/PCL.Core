@@ -217,7 +217,7 @@ public static class Files {
             fileStream.SetLength(0);
             await stream.CopyToAsync(fileStream);
             return true;
-        } catch (Exception ex) {
+        } catch (Exception) {
             LogWrapper.Debug("保存流出错");
             return false;
         }

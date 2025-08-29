@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Text;
 using System.Threading;
 using System.Windows.Threading;
 using PCL.Core.Logging;
+using PCL.Core.Utils;
 
 namespace PCL.Core.IO;
 
@@ -54,206 +56,143 @@ public static class Files {
     }
 
     /// <summary>
-    /// 检查是否拥有对指定文件夹的 I/O 权限。
-    /// 如果文件夹不存在，会返回 false。
+    /// 获取完整的文件路径。如果是相对路径，补全为 "Path\filePath"。
     /// </summary>
-    /// <param name="path">要检查的文件夹路径。</param>
-    /// <returns>如果拥有权限且文件夹存在，则为 true；否则为 false。</returns>
-    public static bool CheckPermission(string path) {
+    private static string GetFullPath(string filePath) {
+        ArgumentNullException.ThrowIfNull(filePath);
+        return filePath.Contains(":\\") ? filePath : Path.Combine(Paths.Path, filePath);
+    }
+
+    /// <summary>
+    /// 复制文件，自动创建目标目录并覆盖已有文件。
+    /// </summary>
+    /// <param name="fromPath">源文件路径（完整或相对）。</param>
+    /// <param name="toPath">目标文件路径（完整或相对）。</param>
+    /// <exception cref="Exception">复制失败时抛出。</exception>
+    public static void CopyFile(string fromPath, string toPath) {
         try {
-            if (string.IsNullOrWhiteSpace(path)) {
-                return false;
+            string fullFromPath = GetFullPath(fromPath);
+            string fullToPath = GetFullPath(toPath);
+            if (fullFromPath == fullToPath) return;
+
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(fullToPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+            File.Copy(fullFromPath, fullToPath, overwrite: true);
+        } catch (Exception ex) {
+            throw new Exception($"复制文件出错：{fromPath} → {toPath}", ex);
+        }
+    }
+
+    /// <summary>
+    /// 读取文件为字节数组，失败时返回空数组。支持读取被占用的文件。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）。</param>
+    /// <param name="encoding">文件编码（可选）。</param>
+    /// <returns>文件内容的字节数组，失败时返回空数组。</returns>
+    public static byte[] ReadFileBytes(string filePath, Encoding? encoding = null) {
+        try {
+            string fullPath = GetFullPath(filePath);
+            if (File.Exists(fullPath)) {
+                using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var memoryStream = new MemoryStream();
+                stream.CopyTo(memoryStream);
+                return memoryStream.ToArray();
             }
 
-            // 检查一些系统特殊文件夹，这些文件夹通常没有权限
-            if (path.EndsWith(":\\System Volume Information", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith(":\\$RECYCLE.BIN", StringComparison.OrdinalIgnoreCase)) {
-                return false;
-            }
+            LogWrapper.Info($"欲读取的文件不存在，已返回空内容：{filePath}");
+            return [];
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, $"读取文件出错：{filePath}");
+            return [];
+        }
+    }
 
-            // 检查文件夹是否存在
-            if (!Directory.Exists(path)) {
-                return false;
-            }
+    /// <summary>
+    /// 读取文件为字符串，失败时返回空字符串。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）。</param>
+    /// <param name="encoding">文件编码（可选）。</param>
+    /// <returns>文件内容的字符串，失败时返回空字符串。</returns>
+    public static string ReadFile(string filePath, Encoding? encoding = null) {
+        byte[] fileBytes = ReadFileBytes(filePath);
+        return encoding == null ? EncodingUtils.DecodeBytes(fileBytes) : encoding.GetString(fileBytes);
+    }
 
-            // 核心逻辑：通过创建和删除临时文件来检查权限
-            var tempFileName = Path.Combine(path, Guid.NewGuid().ToString());
-            using (File.Create(tempFileName)) { }
-            File.Delete(tempFileName);
+    /// <summary>
+    /// 从流中读取所有文本。
+    /// </summary>
+    /// <param name="stream">要读取的流。</param>
+    /// <param name="encoding">文件编码（可选，若为 null 则动态检测）。</param>
+    /// <returns>流内容的字符串，失败时返回空字符串。</returns>
+    public static string ReadFile(Stream stream, Encoding? encoding = null) {
+        try {
+            ArgumentNullException.ThrowIfNull(stream);
+            using var memoryStream = new MemoryStream();
+            stream.CopyTo(memoryStream);
+            byte[] bytes = memoryStream.ToArray();
+            return (encoding ?? EncodingDetector.DetectEncoding(bytes)).GetString(bytes);
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "读取流出错");
+            return "";
+        }
+    }
 
+    /// <summary>
+    /// 写入字符串到文件，支持追加或覆盖，自动创建目录。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）。</param>
+    /// <param name="text">要写入的文本。</param>
+    /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
+    /// <param name="encoding">文件编码（可选）。</param>
+    public static void WriteFile(string filePath, string text, bool append = false, Encoding? encoding = null) {
+        string fullPath = GetFullPath(filePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+
+        if (append) {
+            encoding ??= EncodingDetector.DetectEncoding(ReadFileBytes(filePath));
+            File.AppendAllText(fullPath, text, encoding);
+        } else {
+            encoding ??= new UTF8Encoding(false); // 无 BOM 的 UTF-8
+            File.WriteAllText(fullPath, text, encoding);
+        }
+    }
+
+    /// <summary>
+    /// 写入字节数组到文件，自动创建目录。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）。</param>
+    /// <param name="content">要写入的字节数组。</param>
+    /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
+    public static void WriteFile(string filePath, byte[] content, bool append = false) {
+        string fullPath = GetFullPath(filePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+
+        if (append) {
+            using var fileStream = new FileStream(fullPath, FileMode.Append, FileAccess.Write);
+            fileStream.Write(content, 0, content.Length);
+        } else {
+            File.WriteAllBytes(fullPath, content);
+        }
+    }
+
+    /// <summary>
+    /// 将流写入文件，自动创建目录。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）。</param>
+    /// <param name="stream">要写入的流。</param>
+    /// <returns>写入是否成功。</returns>
+    public static bool WriteFile(string filePath, Stream stream) {
+        try {
+            ArgumentNullException.ThrowIfNull(stream);
+            string fullPath = GetFullPath(filePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
+
+            using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+            fileStream.SetLength(0);
+            stream.CopyTo(fileStream);
             return true;
-        } catch (IOException) {
-            return false;
-        } catch (UnauthorizedAccessException) {
-            return false;
-        } catch (SecurityException) {
-            return false;
         } catch (Exception ex) {
-            // 捕获并记录其他未知异常
-            LogWrapper.Warn(ex, $"没有对文件夹 {path} 的权限，请尝试以管理员权限运行。");
+            LogWrapper.Warn(ex, "保存流出错");
             return false;
         }
     }
-
-    /// <summary>
-    /// 检查是否拥有对指定文件夹的 I/O 权限。
-    /// 如果出错，则抛出异常。
-    /// </summary>
-    /// <param name="path">要检查的文件夹路径。</param>
-    /// <exception cref="ArgumentNullException">文件夹路径为空或只包含空格。</exception>
-    /// <exception cref="DirectoryNotFoundException">文件夹不存在。</exception>
-    /// <exception cref="UnauthorizedAccessException">没有访问文件夹的权限。</exception>
-    public static void CheckPermissionWithException(string path) {
-        if (string.IsNullOrWhiteSpace(path)) {
-            throw new ArgumentNullException(nameof(path), "文件夹名不能为空！");
-        }
-        if (!Directory.Exists(path)) {
-            throw new DirectoryNotFoundException("文件夹不存在！");
-        }
-
-        // 核心逻辑：创建和删除临时文件
-        var tempFileName = Path.Combine(path, "CheckPermission");
-        using (File.Create(tempFileName)) { }
-        File.Delete(tempFileName);
-    }
-
-    /// <summary>
-    /// 删除文件夹及其内容，返回删除的文件数。支持忽略错误。
-    /// </summary>
-    /// <param name="path">要删除的文件夹路径。</param>
-    /// <param name="ignoreIssue">是否忽略删除过程中的错误。</param>
-    /// <returns>成功删除的文件数。</returns>
-    public static int DeleteDirectory(string? path, bool ignoreIssue = false) {
-        if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) {
-            return 0;
-        }
-
-        var deletedCount = 0;
-
-        try {
-            // 枚举文件，延迟加载以提高性能
-            foreach (var filePath in Directory.EnumerateFiles(path)) {
-                for (var attempt = 0; attempt < 2; attempt++) {
-                    try {
-                        File.Delete(filePath);
-                        deletedCount++;
-                        break;
-                    } catch (Exception ex) when (attempt == 0) {
-                        LogWrapper.Error(ex, $"删除文件失败，将在 0.3s 后重试（{filePath}）");
-                        Thread.Sleep(300);
-                    } catch (Exception ex) {
-                        if (ignoreIssue) {
-                            LogWrapper.Error(ex, "删除单个文件可忽略地失败");
-                        } else {
-                            throw;
-                        }
-                    }
-                }
-            }
-
-            // 递归删除子目录
-            deletedCount += Directory.EnumerateDirectories(path).Sum(subDir => DeleteDirectory(subDir, ignoreIssue));
-
-            // 删除空目录
-            for (var attempt = 0; attempt < 2; attempt++) {
-                try {
-                    Directory.Delete(path, true);
-                    break;
-                } catch (Exception ex) when (attempt == 0 && !IsRunningInUiThread) {
-                    LogWrapper.Error(ex, $"删除文件夹失败，将在 0.3s 后重试（{path}）");
-                    Thread.Sleep(300);
-                } catch (Exception ex) {
-                    if (ignoreIssue) {
-                        LogWrapper.Error(ex, "删除单个文件夹可忽略地失败");
-                    } else {
-                        throw;
-                    }
-                }
-            }
-        } catch (DirectoryNotFoundException ex) {
-            // 处理疑似符号链接的情况
-            LogWrapper.Error(ex, $"疑似为孤立符号链接，尝试直接删除（{path}）", "Developer");
-            try {
-                Directory.Delete(path);
-            } catch (Exception deleteEx) {
-                if (!ignoreIssue) {
-                    throw;
-                }
-                LogWrapper.Error(deleteEx, $"删除符号链接文件夹失败（{path}）");
-            }
-        }
-
-        return deletedCount;
-    }
-
-    /// <summary>
-    /// 复制文件夹及其内容，失败时抛出异常。
-    /// </summary>
-    /// <param name="fromPath">源文件夹路径。</param>
-    /// <param name="toPath">目标文件夹路径。</param>
-    /// <param name="progressIncrementHandler">进度更新回调，接收 0 到 1 的进度值。</param>
-    public static void CopyDirectory(string? fromPath, string? toPath, Action<double>? progressIncrementHandler = null) {
-        if (string.IsNullOrEmpty(fromPath)) {
-            throw new ArgumentNullException(nameof(fromPath), "源文件夹路径为空");
-        }
-
-        if (string.IsNullOrEmpty(toPath)) {
-            throw new ArgumentNullException(nameof(toPath), "目标文件夹路径为空");
-        }
-
-        // 规范化路径
-        fromPath = Path.GetFullPath(fromPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        toPath = Path.GetFullPath(toPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-
-        var allFiles = EnumerateFiles(fromPath).ToList();
-        var totalFiles = allFiles.LongCount();
-        long copiedFiles = 0;
-
-        foreach (var file in allFiles) {
-            var relativePath = file.FullName[fromPath.Length..];
-            var destFilePath = Path.Combine(toPath, relativePath);
-
-            // 确保目标目录存在
-            Directory.CreateDirectory(Path.GetDirectoryName(destFilePath)!);
-
-            for (var attempt = 0; attempt < 2; attempt++) {
-                try {
-                    File.Copy(file.FullName, destFilePath, overwrite: true);
-                    copiedFiles++;
-                    progressIncrementHandler?.Invoke((double)copiedFiles / totalFiles);
-                    break;
-                } catch (Exception ex) when (attempt == 0) {
-                    LogWrapper.Error(ex, $"复制文件失败，将在 0.3s 后重试（{file.FullName} 到 {destFilePath}）");
-                    Thread.Sleep(300);
-                } catch (Exception ex) {
-                    LogWrapper.Error(ex, $"复制文件失败（{file.FullName} 到 {destFilePath}）");
-                    throw;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 遍历文件夹中的所有文件。
-    /// </summary>
-    /// <param name="directory">要遍历的文件夹路径。</param>
-    /// <returns>文件信息的枚举器。</returns>
-    public static IEnumerable<FileInfo> EnumerateFiles(string? directory) {
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
-            LogWrapper.Error(new DirectoryNotFoundException($"目录不存在：{directory}"), "遍历文件夹失败");
-            return [];
-        }
-
-        try {
-            return new DirectoryInfo(directory).EnumerateFiles("*", SearchOption.AllDirectories);
-        } catch (Exception ex) {
-            LogWrapper.Error(ex, $"遍历文件夹失败（{directory}）");
-            return [];
-        }
-    }
-    
-    /// <summary>
-    /// 检查当前线程是否为 UI 主线程。
-    /// </summary>
-    public static bool IsRunningInUiThread => Dispatcher.CurrentDispatcher.CheckAccess();
 }

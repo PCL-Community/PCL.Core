@@ -431,7 +431,7 @@ public static class Files {
 
     private static string GetFullPath(string filePath) {
         ArgumentNullException.ThrowIfNull(filePath);
-        return filePath.Contains(":\\") ? filePath : Path.Combine(Basics.ExecutablePath, filePath);
+        return Path.IsPathRooted(filePath) ? filePath : Path.Combine(Basics.ExecutablePath, filePath);
     }
     
     private static bool IsFileDownloading(string filePath) {

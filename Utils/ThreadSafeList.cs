@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Linq; // 需要 using System.Linq; 来使用 ToArray() 和 ToList()
 
 public class ThreadSafeList<T> : IList<T> {
-    private readonly List<T> _list = new List<T>();
-    private readonly object _syncRoot = new object();
+    private readonly List<T> _list = [];
+    private readonly object _syncRoot = new();
 
     public ThreadSafeList() { }
 

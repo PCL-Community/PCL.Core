@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security;
 using System.Text;
-using System.Threading;
-using System.Windows.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -70,9 +65,9 @@ public static class Files {
     /// <param name="toPath">目标文件路径（完整或相对）。</param>
     /// <exception cref="Exception">复制失败时抛出。</exception>
     public static void CopyFile(string fromPath, string toPath) {
-        try {
-            string fullFromPath = GetFullPath(fromPath);
-            string fullToPath = GetFullPath(toPath);
+        try { 
+            var fullFromPath = GetFullPath(fromPath);
+            var fullToPath = GetFullPath(toPath);
             if (fullFromPath == fullToPath) return;
 
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(fullToPath) ?? throw new InvalidOperationException("无法获取目标目录"));
@@ -86,11 +81,10 @@ public static class Files {
     /// 读取文件为字节数组，失败时返回空数组。支持读取被占用的文件。
     /// </summary>
     /// <param name="filePath">文件路径（完整或相对）。</param>
-    /// <param name="encoding">文件编码（可选）。</param>
     /// <returns>文件内容的字节数组，失败时返回空数组。</returns>
-    public static byte[] ReadFileBytes(string filePath, Encoding? encoding = null) {
+    public static byte[] ReadFileBytes(string filePath) {
         try {
-            string fullPath = GetFullPath(filePath);
+            var fullPath = GetFullPath(filePath);
             if (File.Exists(fullPath)) {
                 using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 using var memoryStream = new MemoryStream();
@@ -113,7 +107,7 @@ public static class Files {
     /// <param name="encoding">文件编码（可选）。</param>
     /// <returns>文件内容的字符串，失败时返回空字符串。</returns>
     public static string ReadFile(string filePath, Encoding? encoding = null) {
-        byte[] fileBytes = ReadFileBytes(filePath);
+        var fileBytes = ReadFileBytes(filePath);
         return encoding == null ? EncodingUtils.DecodeBytes(fileBytes) : encoding.GetString(fileBytes);
     }
 
@@ -128,7 +122,7 @@ public static class Files {
             ArgumentNullException.ThrowIfNull(stream);
             using var memoryStream = new MemoryStream();
             stream.CopyTo(memoryStream);
-            byte[] bytes = memoryStream.ToArray();
+            var bytes = memoryStream.ToArray();
             return (encoding ?? EncodingDetector.DetectEncoding(bytes)).GetString(bytes);
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "读取流出错");
@@ -144,7 +138,7 @@ public static class Files {
     /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
     /// <param name="encoding">文件编码（可选）。</param>
     public static void WriteFile(string filePath, string text, bool append = false, Encoding? encoding = null) {
-        string fullPath = GetFullPath(filePath);
+        var fullPath = GetFullPath(filePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
 
         if (append) {
@@ -163,7 +157,7 @@ public static class Files {
     /// <param name="content">要写入的字节数组。</param>
     /// <param name="append">是否追加到文件（true）或覆盖（false）。</param>
     public static void WriteFile(string filePath, byte[] content, bool append = false) {
-        string fullPath = GetFullPath(filePath);
+        var fullPath = GetFullPath(filePath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
 
         if (append) {
@@ -183,7 +177,7 @@ public static class Files {
     public static bool WriteFile(string filePath, Stream stream) {
         try {
             ArgumentNullException.ThrowIfNull(stream);
-            string fullPath = GetFullPath(filePath);
+            var fullPath = GetFullPath(filePath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException("无法获取目标目录"));
 
             using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);

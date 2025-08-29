@@ -59,8 +59,8 @@ public static class SimilaritySearch {
         }
 
         // 预处理：转为小写并移除空格，然后转换为 ReadOnlySpan 以提高性能。
-        ReadOnlySpan<char> sourceSpan = source.ToLower().Replace(" ", "").AsSpan();
-        ReadOnlySpan<char> querySpan = query.ToLower().Replace(" ", "").AsSpan();
+        var sourceSpan = source.ToLower().Replace(" ", "").AsSpan();
+        var querySpan = query.ToLower().Replace(" ", "").AsSpan();
 
         if (sourceSpan.IsEmpty || querySpan.IsEmpty) {
             return 0.0;
@@ -69,42 +69,46 @@ public static class SimilaritySearch {
         // 使用布尔数组来跟踪源文本中已被匹配的字符，避免重复分配字符串。
         var usedSourceIndices = new bool[sourceSpan.Length];
         double weightedLengthSum = 0;
-        int queryIndex = 0;
+        var queryIndex = 0;
 
         while (queryIndex < querySpan.Length) {
-            int longestMatchLength = 0;
-            int bestMatchSourceStartIndex = -1;
+            var longestMatchLength = 0;
+            var bestMatchSourceStartIndex = -1;
 
             // 寻找以当前 queryIndex 为起点的最长匹配子串
-            for (int sourceIndex = 0; sourceIndex < sourceSpan.Length; sourceIndex++) {
-                int currentMatchLength = 0;
+            for (var sourceIndex = 0; sourceIndex < sourceSpan.Length; sourceIndex++) {
+                var currentMatchLength = 0;
                 // 计算从当前 sourceIndex 和 queryIndex 开始的匹配长度
                 // 同时确保源字符未被使用
                 while ((queryIndex + currentMatchLength) < querySpan.Length &&
                        (sourceIndex + currentMatchLength) < sourceSpan.Length &&
-                       !usedSourceIndices[sourceIndex + currentMatchLength] && // 优化点：检查是否已用
+                       !usedSourceIndices[sourceIndex + currentMatchLength] &&
                        sourceSpan[sourceIndex + currentMatchLength] == querySpan[queryIndex + currentMatchLength]) {
                     currentMatchLength++;
                 }
 
-                if (currentMatchLength > longestMatchLength) {
-                    longestMatchLength = currentMatchLength;
-                    bestMatchSourceStartIndex = sourceIndex;
+                // 卫语句：如果当前匹配不比最长匹配更长，则直接继续下一次循环
+                if (currentMatchLength <= longestMatchLength) {
+                    continue;
                 }
+
+                // 如果满足条件，更新最长匹配信息
+                longestMatchLength = currentMatchLength;
+                bestMatchSourceStartIndex = sourceIndex;
             }
 
             if (longestMatchLength > 0) {
                 // 标记源中对应的字符为已使用
-                for (int i = 0; i < longestMatchLength; i++) {
+                for (var i = 0; i < longestMatchLength; i++) {
                     usedSourceIndices[bestMatchSourceStartIndex + i] = true;
                 }
 
                 // 根据长度加成
-                double incrementWeight = Math.Pow(LengthPowerBase, 3 + longestMatchLength) - LengthWeightOffset;
+                var incrementWeight = Math.Pow(LengthPowerBase, 3 + longestMatchLength) - LengthWeightOffset;
 
                 // 根据位置加成
-                int positionDifference = Math.Abs(queryIndex - bestMatchSourceStartIndex);
-                double positionBonus = 1.0 + PositionBonusFactor * Math.Max(0, MaxPositionBonusDistance - positionDifference);
+                var positionDifference = Math.Abs(queryIndex - bestMatchSourceStartIndex);
+                var positionBonus = 1.0 + PositionBonusFactor * Math.Max(0, MaxPositionBonusDistance - positionDifference);
                 incrementWeight *= positionBonus;
 
                 weightedLengthSum += incrementWeight;
@@ -115,9 +119,9 @@ public static class SimilaritySearch {
         }
 
         // 计算最终结果：(加权匹配总和 / 查询长度) * 源长度影响比例 * 短查询奖励
-        double normalizedScore = weightedLengthSum / querySpan.Length;
-        double sourceLengthPenalty = SourceLengthImpactFactor / Math.Sqrt(sourceSpan.Length + SourceLengthSmoothing);
-        double shortQueryBonus = query.Length == 1 ? ShortQueryBonusFactor : 1.0;
+        var normalizedScore = weightedLengthSum / querySpan.Length;
+        var sourceLengthPenalty = SourceLengthImpactFactor / Math.Sqrt(sourceSpan.Length + SourceLengthSmoothing);
+        var shortQueryBonus = query.Length == 1 ? ShortQueryBonusFactor : 1.0;
 
         return normalizedScore * sourceLengthPenalty * shortQueryBonus;
     }
@@ -126,12 +130,12 @@ public static class SimilaritySearch {
     /// 获取多段文本加权后的相似度。
     /// </summary>
     private static double SearchSimilarityWeighted(List<KeyValuePair<string, double>> source, string query) {
-        if (source == null || !source.Any()) return 0.0;
+        if (!source.Any()) return 0.0;
 
-        double totalWeight = source.Sum(pair => pair.Value);
+        var totalWeight = source.Sum(pair => pair.Value);
         if (totalWeight == 0) return 0.0;
 
-        double weightedSum = source.Sum(pair => SearchSimilarity(pair.Key, query) * pair.Value);
+        var weightedSum = source.Sum(pair => SearchSimilarity(pair.Key, query) * pair.Value);
 
         return weightedSum / totalWeight;
     }
@@ -163,7 +167,7 @@ public static class SimilaritySearch {
         string query,
         int maxBlurCount = 5,
         double minBlurSimilarity = 0.1) {
-        if (entries == null || !entries.Any()) {
+        if (!entries.Any()) {
             return []; // C# 12 集合表达式
         }
 
@@ -171,7 +175,7 @@ public static class SimilaritySearch {
             return entries; // 或者返回空列表，取决于业务需求
         }
 
-        string[] queryParts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        var queryParts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(q => q.ToLower())
             .ToArray();
 
@@ -191,9 +195,11 @@ public static class SimilaritySearch {
             .ThenByDescending(e => e.Similarity);
 
         // 3. 构建最终结果列表
-        var absoluteMatches = sortedEntries.Where(e => e.AbsoluteRight);
+        var sortedEntriesList = sortedEntries.ToList();
+        
+        var absoluteMatches = sortedEntriesList.Where(e => e.AbsoluteRight);
 
-        var blurMatches = sortedEntries
+        var blurMatches = sortedEntriesList
             .Where(e => !e.AbsoluteRight && e.Similarity >= minBlurSimilarity)
             .Take(maxBlurCount);
 

@@ -23,21 +23,21 @@ public static class EncodingUtils {
             if (bytes.Length == 0) return "";
 
             // 使用 EncodingDetector 检测编码
-            Encoding encoding = EncodingDetector.DetectEncoding(bytes);
+            var encoding = EncodingDetector.DetectEncoding(bytes);
 
             // 如果检测到有效编码（非 Encoding.Default），直接解码
-            if (encoding != Encoding.Default) {
+            if (!encoding.Equals(Encoding.Default)) {
                 ReadOnlySpan<byte> span = bytes.AsSpan();
-                if (encoding == Encoding.UTF8 && span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF) {
+                if (encoding.Equals(Encoding.UTF8) && span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF) {
                     return encoding.GetString(span[3..]); // 跳过 UTF-8 BOM
                 }
-                if (encoding == Encoding.BigEndianUnicode && span.Length >= 2 && span[0] == 0xFE && span[1] == 0xFF) {
+                if (encoding.Equals(Encoding.BigEndianUnicode) && span.Length >= 2 && span[0] == 0xFE && span[1] == 0xFF) {
                     return encoding.GetString(span[2..]); // 跳过 UTF-16 BE BOM
                 }
-                if (encoding == Encoding.Unicode && span.Length >= 2 && span[0] == 0xFF && span[1] == 0xFE) {
+                if (encoding.Equals(Encoding.Unicode) && span.Length >= 2 && span[0] == 0xFF && span[1] == 0xFE) {
                     return encoding.GetString(span[2..]); // 跳过 UTF-16 LE BOM
                 }
-                if (encoding == Encoding.UTF32 && span.Length >= 4 && span[0] == 0xFF && span[1] == 0xFE && span[2] == 0x00 && span[3] == 0x00) {
+                if (encoding.Equals(Encoding.UTF32) && span.Length >= 4 && span[0] == 0xFF && span[1] == 0xFE && span[2] == 0x00 && span[3] == 0x00) {
                     return encoding.GetString(span[4..]); // 跳过 UTF-32 LE BOM
                 }
                 if (encoding.CodePage == Encoding.GetEncoding("utf-32BE").CodePage && span.Length >= 4 && span[0] == 0x00 && span[1] == 0x00 && span[2] == 0xFE && span[3] == 0xFF) {
@@ -47,13 +47,9 @@ public static class EncodingUtils {
             }
 
             // 无 BOM 或检测为 Encoding.Default，尝试 UTF-8
-            string utf8Result;
             try {
-                utf8Result = Encoding.UTF8.GetString(bytes);
-                if (utf8Result.Contains('\uFFFD')) {
-                    return GB18030.GetString(bytes); // 无效 UTF-8，回退到 GB18030
-                }
-                return utf8Result;
+                var utf8Result = Encoding.UTF8.GetString(bytes);
+                return utf8Result.Contains('\uFFFD') ? GB18030.GetString(bytes) : utf8Result; // 无效 UTF-8，回退到 GB18030
             } catch (DecoderFallbackException) {
                 return GB18030.GetString(bytes); // UTF-8 解码失败，回退到 GB18030
             }

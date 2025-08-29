@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using PCL.Core.Minecraft;
@@ -50,14 +49,7 @@ public sealed class JavaSerivce : GeneralService
 
     private static List<JavaLocalCache> _GetCaches()
     {
-        var entry = SetupEntries.ForKeyName("LaunchArgumentJavaUser");
-        if (entry == null)
-        {
-            Context.Error("Java cache key not fund.");
-            throw new ArgumentNullException(nameof(entry), "Java cache key not found.");
-        }
-
-        var raw = SetupService.GetString(entry);
+        var raw = Setup.Launch.Javas;
         if (string.IsNullOrEmpty(raw))
         {
             return [];
@@ -70,13 +62,6 @@ public sealed class JavaSerivce : GeneralService
     private static void _SetCache(List<JavaLocalCache> caches)
     {
         var jsonContent = JsonSerializer.Serialize(caches);
-        var entry = SetupEntries.ForKeyName("LaunchArgumentJavaUser");
-        if (entry == null)
-        {
-            Context.Error("Failed to set java cache.");
-            throw new ArgumentNullException(nameof(entry), "Failed to set java cache.");
-        }
-
-        SetupService.SetString(entry, jsonContent);
+        Setup.Launch.Javas = jsonContent;
     }
 }

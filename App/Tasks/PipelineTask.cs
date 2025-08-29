@@ -41,6 +41,7 @@ public class PipelineTask<TLastResult> : TaskBase<TLastResult>
                 CancellationToken?.ThrowIfCancellationRequested();
                 lastResult = _tasks[i].Run(param);
             }
+            State = TaskState.Completed;
             return Result = (TLastResult)lastResult;
         }
         catch (Exception)

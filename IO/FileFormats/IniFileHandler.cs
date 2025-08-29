@@ -1,4 +1,5 @@
-﻿using PCL.Core.Logging;
+﻿using System.Collections.Generic;
+using PCL.Core.Logging;
 
 namespace PCL.Core.IO.FileFormats;
 
@@ -56,7 +57,7 @@ public static class IniFileHandler {
             return new ConcurrentDictionary<string, string>(); // 发生异常时返回一个空字典
         }
     }
-
+    
     /// <summary>
     /// 读取 INI 文件中指定键的值（可能使用缓存）。
     /// </summary>
@@ -67,7 +68,8 @@ public static class IniFileHandler {
     public static string ReadIni(string fileName, string key, string defaultValue = "") {
         ArgumentNullException.ThrowIfNull(key);
         var content = IniGetContent(fileName);
-        return content != null && content.TryGetValue(key, out var value) ? value : defaultValue;
+        // 使用 GetValueOrDefault 简化查找逻辑
+        return content.GetValueOrDefault(key) ?? defaultValue;
     }
 
     /// <summary>

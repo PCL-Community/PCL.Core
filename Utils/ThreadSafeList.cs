@@ -12,7 +12,6 @@ public class ThreadSafeList<T> : IList<T> {
     public ThreadSafeList() { }
 
     public ThreadSafeList(IEnumerable<T> collection) {
-        if (collection == null) throw new ArgumentNullException(nameof(collection));
         lock (_syncRoot) {
             _list.AddRange(collection);
         }

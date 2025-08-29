@@ -20,6 +20,6 @@ public class Paths {
     private static string GetExecutableDirectory() {
         var location = Assembly.GetExecutingAssembly().Location;
         var directory = System.IO.Path.GetDirectoryName(location) ?? throw new InvalidOperationException("无法获取可执行文件目录");
-        return directory.EndsWith("\\") ? directory : directory + "\\";
+        return directory.EndsWith('\\') ? directory : directory + "\\";
     }
 }

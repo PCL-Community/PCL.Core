@@ -19,9 +19,6 @@ public static class SortUtils {
     /// <returns>排序后的新列表。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="list"/> 或 <paramref name="comparison"/> 为 null 时抛出。</exception>
     public static List<T> Sort<T>(this IList<T> list, Func<T, T, bool> comparison) {
-        if (list == null) throw new ArgumentNullException(nameof(list));
-        if (comparison == null) throw new ArgumentNullException(nameof(comparison));
-
         try {
             // 使用 LINQ OrderBy 实现稳定排序
             var result = list

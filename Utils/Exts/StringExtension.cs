@@ -211,7 +211,7 @@ public static class StringExtension
         => str.EndsWith(suffix, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     public static bool ContainsF(this string str, string subStr, bool ignoreCase = false)
-        => str.IndexOf(subStr, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) >= 0;
+        => str.Contains(subStr, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     public static int IndexOfF(this string str, string subStr, bool ignoreCase = false)
         => str.IndexOf(subStr, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);

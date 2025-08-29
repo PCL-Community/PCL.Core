@@ -159,7 +159,7 @@ public static class Directories {
         toPath = Path.GetFullPath(toPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
         var allFiles = EnumerateFiles(fromPath).ToList();
-        var totalFiles = allFiles.LongCount();
+        var totalFiles = allFiles.Count;
         long copiedFiles = 0;
 
         foreach (var file in allFiles) {

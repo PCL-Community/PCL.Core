@@ -130,7 +130,7 @@ public static class SimilaritySearch {
     /// 获取多段文本加权后的相似度。
     /// </summary>
     private static double SearchSimilarityWeighted(List<KeyValuePair<string, double>> source, string query) {
-        if (!source.Any()) return 0.0;
+        if (source.Count == 0) return 0.0;
 
         var totalWeight = source.Sum(pair => pair.Value);
         if (totalWeight == 0) return 0.0;
@@ -167,7 +167,7 @@ public static class SimilaritySearch {
         string query,
         int maxBlurCount = 5,
         double minBlurSimilarity = 0.1) {
-        if (!entries.Any()) {
+        if (entries.Count == 0) {
             return []; // C# 12 集合表达式
         }
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using PCL.Core.Logging;
 
-namespace PCL.Core.IO;
+namespace PCL.Core.IO.FileFormats;
 
 using fNbt;
 using System.IO;

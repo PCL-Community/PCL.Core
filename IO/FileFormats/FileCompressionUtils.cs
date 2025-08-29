@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.IO;
+﻿namespace PCL.Core.IO.FileFormats;
 
 using System;
 using System.IO;

@@ -63,11 +63,11 @@ public static class WikiMapper {
         if (id.StartsWith("inf-")) return id.Replace("inf-", "Infdev_");
         if (id.StartsWith("in-")) return id.Replace("in-", "Indev_");
         if (id.StartsWith("rd-")) return "pre-Classic_" + id;
-        if (id.StartsWith("b")) return id.Replace("b", "Beta_");
-        if (id.StartsWith("a")) return id.Replace("a", "Alpha_v");
-        if (id.StartsWith("c")) return id.Replace("c", "Classic_").Replace("st", "SURVIVAL_TEST");
+        if (id.StartsWith('b')) return id.Replace("b", "Beta_");
+        if (id.StartsWith('a')) return id.Replace("a", "Alpha_v");
+        if (id.StartsWith('c')) return id.Replace("c", "Classic_").Replace("st", "SURVIVAL_TEST");
 
-        if (id.Contains("w")) return id;
+        if (id.Contains('w')) return id;
 
         return "Java版" + id;
     }

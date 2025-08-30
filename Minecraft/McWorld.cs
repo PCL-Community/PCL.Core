@@ -31,7 +31,7 @@ public class McWorld {
     /// </summary>
     /// <param name="savePath">存档路径。文件夹，以 “\” 结尾。</param>
     public McWorld(string savePath) {
-        SavePath = savePath.EndsWith("\\") ? savePath : savePath + "\\";
+        SavePath = savePath.EndsWith('\\') ? savePath : savePath + "\\";
     }
 
     /// <summary>

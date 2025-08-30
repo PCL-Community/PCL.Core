@@ -47,9 +47,11 @@ public static class LogManager {
                 File.Delete(tempPath);
             }
             await zipStream.FinishAsync(cancelToken);
+            LogWrapper.Info("Log", $"日志导出完成: {selectedPath}");
             
             return true;
         } catch (Exception ex) {
+            LogWrapper.Warn(ex, "Log", $"日志导出失败");
             return false;
         } finally {
             if (Directory.Exists(tempDirName)) {

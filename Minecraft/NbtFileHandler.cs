@@ -14,11 +14,12 @@ public static class NbtFileHandler {
     /// <summary>
     /// 异步读取 NBT 文件。
     /// </summary>
+    /// <typeparam name="T">要读取的 NbtTag 类型，必须继承自 NbtTag。</typeparam>
     /// <param name="filePath">目标文件路径（完整或相对）。</param>
-    /// <param name="tagName">要读取的 NbtList 的标签名称。</param>
+    /// <param name="tagName">要读取的 NbtTag 的标签名称。</param>
     /// <param name="cancelToken">取消操作的令牌。</param>
-    /// <returns>一个 NbtList 对象，如果文件或标签不存在则返回 null。</returns>
-    public static async Task<NbtList?> ReadNbtFileAsync(string filePath, string tagName, CancellationToken cancelToken = default) {
+    /// <returns>一个指定类型的 NbtTag 对象，如果文件或标签不存在则返回 null。</returns>
+    public static async Task<T?> ReadNbtFileAsync<T>(string filePath, string tagName, CancellationToken cancelToken = default) where T : NbtTag {
         try {
             var fullPath = Path.GetFullPath(filePath);
             if (!File.Exists(fullPath)) {
@@ -33,7 +34,7 @@ public static class NbtFileHandler {
                 nbtFile.LoadFromStream(fs, NbtCompression.AutoDetect);
             }, cancelToken);
 
-            var result = nbtFile.RootTag.Get<NbtList>(tagName);
+            var result = nbtFile.RootTag.Get<T>(tagName);
             if (result == null) {
                 LogWrapper.Warn($"未找到指定的 NBT 标签：{tagName}");
             }

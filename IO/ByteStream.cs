@@ -12,8 +12,8 @@ public class ByteStream(Stream stream)
     public static string GetReadableLength(long length)
     {
         string[] unit = ["B", "KB", "MB", "GB", "TB", "PB"];
-        long displayCount = length * 100;
-        int displayUnit = 0;
+        var displayCount = length * 100;
+        var displayUnit = 0;
         while (displayCount >= 102400)
         {
             displayCount >>= 10;

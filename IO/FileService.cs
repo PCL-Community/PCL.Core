@@ -29,7 +29,7 @@ public static class PredefinedFileTasks
     public static readonly IFileTask CacheInformation = FileTask.FromSingleFile(PredefinedFileItems.CacheInformation, FileTransfers.DoNothing);
     public static readonly IFileTask GrayProfile = FileTask.FromSingleFile(PredefinedFileItems.GrayProfile, FileTransfers.DoNothing, FileProcesses.ParseJson<GrayProfileConfig>());
     public static readonly IFileTask GlobalSetup = FileTask.FromSingleFile(PredefinedFileItems.GlobalSetup, SetupService.MigrateGlobalSetupFile, FileProcesses.Deserialize(SetupService.GlobalFileSerializer));
-    public static readonly IFileTask LocalSetup = FileTask.FromSingleFile(PredefinedFileItems.LocalSetup, FileTransfers.DoNothing, FileProcesses.Deserialize(SetupService.LocalFileSerializer));
+    public static readonly IFileTask LocalSetup = FileTask.FromSingleFile(PredefinedFileItems.LocalSetup, FileTransfers.CreateIfNotExist, FileProcesses.Deserialize(SetupService.LocalFileSerializer));
     
     internal static readonly IFileTask[] Preload = [
         CacheInformation, GrayProfile, GlobalSetup, LocalSetup

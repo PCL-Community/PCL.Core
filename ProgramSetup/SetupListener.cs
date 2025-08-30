@@ -18,7 +18,7 @@ namespace PCL.Core.ProgramSetup;
 /// </code>
 /// <code>
 /// [ListenSetupChanged("UiCustomType")]
-/// public static void OnMainpageTypeChanged(int oldValue, int newValue, string? gamePath) { }
+/// public static void OnHomepageTypeChanged(int oldValue, int newValue, string? gamePath) { }
 /// </code>
 /// </example>
 public static class SetupListener

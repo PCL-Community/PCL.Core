@@ -194,14 +194,7 @@ public sealed class RpcService : GeneralService
     /// </summary>
     /// <param name="prop">要添加的属性</param>
     /// <returns>是否成功添加（若已存在相同名称的属性则无法添加）</returns>
-    public static bool AddProperty(RpcProperty prop)
-    {
-        var key = prop.Name;
-        if (_PropertyMap.ContainsKey(key))
-            return false;
-        _PropertyMap[key] = prop;
-        return true;
-    }
+    public static bool AddProperty(RpcProperty prop) => _PropertyMap.TryAdd(prop.Name, prop);
 
     /// <summary>
     /// 通过指定的名称删除已存在的 RPC 属性
@@ -263,13 +256,7 @@ public sealed class RpcService : GeneralService
     /// <param name="name">函数名称</param>
     /// <param name="func">函数过程</param>
     /// <returns>是否成功添加（若已存在相同名称的函数则无法添加）</returns>
-    public static bool AddFunction(string name, RpcFunction func)
-    {
-        if (_FunctionMap.ContainsKey(name))
-            return false;
-        _FunctionMap[name] = func;
-        return true;
-    }
+    public static bool AddFunction(string name, RpcFunction func) => _FunctionMap.TryAdd(name, func);
 
     /// <summary>
     /// 通过指定的名称删除已存在的 RPC 函数

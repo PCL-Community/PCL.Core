@@ -12,8 +12,8 @@
     "BuyGame": {"key": "HintBuy", "source": "global", "value": false, "encrypted": false},
     "CleanJunkFile": {"key": "HintClearRubbish", "source": "global", "value": 0, "encrypted": false},
     "UpdateMod": {"key": "HintUpdateMod", "source": "global", "value": false, "encrypted": false},
-    "MainpageCommand": {"key": "HintCustomCommand", "source": "global", "value": false, "encrypted": false},
-    "UntrustedMainpage": {"key": "HintCustomWarn", "source": "global", "value": false, "encrypted": false},
+    "HomepageCommand": {"key": "HintCustomCommand", "source": "global", "value": false, "encrypted": false},
+    "UntrustedHomepage": {"key": "HintCustomWarn", "source": "global", "value": false, "encrypted": false},
     "MoreInstanceSetup": {"key": "HintMoreAdvancedSetup", "source": "global", "value": false, "encrypted": false},
     "IndieSetup": {"key": "HintIndieSetup", "source": "global", "value": false, "encrypted": false},
     "LaunchWithProfile": {"key": "HintProfileSelect", "source": "global", "value": false, "encrypted": false},
@@ -21,7 +21,8 @@
     "MaxGameLog": {"key": "HintMaxLog", "source": "global", "value": false, "encrypted": false},
     "NonAsciiGamePath": {"key": "HintDisableGamePathCheckTip", "source": "global", "value": false, "encrypted": false},
     "CommunityEdition": {"key": "UiLauncherCEHint", "source": "global", "value": false, "encrypted": false},
-    "CommunityEditionCount": {"key": "UiLauncherCEHintCount", "source": "global", "value": false, "encrypted": false}
+    "CommunityEditionCount": {"key": "UiLauncherCEHintCount", "source": "global", "value": 0, "encrypted": false},
+    "SchematicFirstTime": {"key": "UiSchematicFirstTimeHintShown", "source": "global", "value": false, "encrypted": false}
   },
   "ns:System": {
     "Eula": {"key": "SystemEula", "source": "global", "value": false, "encrypted": false},
@@ -39,7 +40,9 @@
     "AnnounceSolution": {"key": "SystemSystemActivity", "source": "local", "value": 0, "encrypted": false},
     "ShowedAnnouncements": {"key": "SystemSystemAnnouncement", "source": "local", "value": "", "encrypted": false},
     "HttpProxy": {"key": "SystemHttpProxy", "source": "global", "value": "", "encrypted": true},
-    "UseDefaultProxy": {"key": "SystemUseDefaultProxy", "source": "global", "value": true, "encrypted": false},
+    "HttpProxyType": {"key": "SystemHttpProxyType", "source": "global", "value": 1, "encrypted": false},
+	"HttpProxyCustomUsername": {"key": "SystemHttpProxyCustomUsername", "source": "global", "value": "", "encrypted": false},
+	"HttpProxyCustomPassword": {"key": "SystemHttpProxyCustomPassword", "source": "global", "value": "", "encrypted": false},
     "DisableHardwareAcceleration": {"key": "SystemDisableHardwareAcceleration", "source": "global", "value": false, "encrypted": false},
     "Telemetry": {"key": "SystemTelemetry", "source": "global", "value": false, "encrypted": false},
     "MirrorChyanKey": {"key": "SystemMirrorChyanKey", "source": "global", "value": "", "encrypted": true},
@@ -57,8 +60,8 @@
   },
   "ns:Cache": {
     "ExportConfigPath": {"key": "CacheExportConfig", "source": "global", "value": "", "encrypted": false},
-    "SavedMainpageUrl": {"key": "CacheSavedPageUrl", "source": "global", "value": "", "encrypted": false},
-    "SavedMainpageVersion": {"key": "CacheSavedPageVersion", "source": "global", "value": "", "encrypted": false},
+    "SavedHomepageUrl": {"key": "CacheSavedPageUrl", "source": "global", "value": "", "encrypted": false},
+    "SavedHomepageVersion": {"key": "CacheSavedPageVersion", "source": "global", "value": "", "encrypted": false},
     "FileDownloadFolder": {"key": "CacheDownloadFolder", "source": "global", "value": "", "encrypted": false},
     "DownloadUserAgent": {"key": "ToolDownloadCustomUserAgent", "source": "global", "value": "", "encrypted": false},
     "JavaListVersion": {"key": "CacheJavaListVersion", "source": "global", "value": 0, "encrypted": false},
@@ -70,11 +73,12 @@
   },
   "ns:Link": {
     "EulaAgreed": {"key": "LinkEula", "source": "global", "value": false, "encrypted": false},
+    "Username": {"key": "LinkUsername", "source": "global", "value": "", "encrypted": false},
     "AnnounceCache": {"key": "LinkAnnounceCache", "source": "global", "value": "", "encrypted": true},
     "AnnounceCacheVer": {"key": "LinkAnnounceCacheVer", "source": "global", "value": 0, "encrypted": false},
     "RelayType": {"key": "LinkRelayType", "source": "global", "value": 0, "encrypted": false},
     "ServerType": {"key": "LinkServerType", "source": "global", "value": 1, "encrypted": false},
-    "ProxyType": {"key": "LinkProxyType", "source": "global", "value": 1, "encrypted": false},
+	"LatencyFirstMode": {"key": "LinkLatencyFirstMode", "source": "global", "value": true, "encrypted": false},
     "RelayServer": {"key": "LinkRelayServer", "source": "global", "value": "", "encrypted": false},
     "NaidRefreshToken": {"key": "LinkNaidRefreshToken", "source": "global", "value": "", "encrypted": true},
     "NaidRefreshExpireTime": {"key": "LinkNaidRefreshExpiresAt", "source": "global", "value": "", "encrypted": true},
@@ -121,13 +125,15 @@
     "ShowStartupLogo": {"key": "UiLauncherLogo", "source": "local", "value": true, "encrypted": false},
     "AdvancedBlur": {"key": "UiBlur", "source": "local", "value": false, "encrypted": false},
     "AdvancedBlurValue": {"key": "UiBlurValue", "source": "local", "value": 16, "encrypted": false},
+    "AdvancedBlurSamplingRate": {"key": "UiBlurSamplingRate", "source": "local", "value": 70, "encrypted": false},
+    "AdvancedBlurType": {"key": "UiBlurType", "source": "local", "value": 0, "encrypted": false},
     "BackgroundColorful": {"key": "UiBackgroundColorful", "source": "local", "value": true, "encrypted": false},
     "WallpaperOpacity": {"key": "UiBackgroundOpacity", "source": "local", "value": 1000, "encrypted": false},
     "WallpaperBlurRadius": {"key": "UiBackgroundBlur", "source": "local", "value": 0, "encrypted": false},
     "WallpaperSuitMode": {"key": "UiBackgroundSuit", "source": "local", "value": 0, "encrypted": false},
-    "MainpageType": {"key": "UiCustomType", "source": "local", "value": 0, "encrypted": false},
-    "MainpageSelectedPreset": {"key": "UiCustomPreset", "source": "local", "value": 0, "encrypted": false},
-    "MainpageCustomUrl": {"key": "UiCustomNet", "source": "local", "value": 0, "encrypted": false},
+    "HomepageType": {"key": "UiCustomType", "source": "local", "value": 0, "encrypted": false},
+    "HomepageSelectedPreset": {"key": "UiCustomPreset", "source": "local", "value": 0, "encrypted": false},
+    "HomepageCustomUrl": {"key": "UiCustomNet", "source": "local", "value": "", "encrypted": false},
     "DarkModeSolution": {"key": "UiDarkMode", "source": "global", "value": 2, "encrypted": false},
     "DarkColor": {"key": "UiDarkColor", "source": "global", "value": 1, "encrypted": false},
     "LightColor": {"key": "UiLightColor", "source": "global", "value": 1, "encrypted": false},
@@ -137,6 +143,7 @@
     "TopBarLeftAlign": {"key": "UiLogoLeft", "source": "local", "value": false, "encrypted": false},
     "AnimationFpsLimit": {"key": "UiAniFPS", "source": "global", "value": 59, "encrypted": false},
     "Font": {"key": "UiFont", "source": "local", "value": "", "encrypted": false},
+	"AutoPauseVideo": {"key": "UiAutoPauseVideo", "source":"local", "value":true, "encrypted":false},
     "ns:Music": {
       "Volume": {"key": "UiMusicVolume", "source": "local", "value": 500, "encrypted": false},
       "StopInGame": {"key": "UiMusicStop", "source": "local", "value": false, "encrypted": false},
@@ -202,6 +209,7 @@
   "ns:Instance": {
     "JvmArgs": {"key": "VersionAdvanceJvm", "source": "instance", "value": "", "encrypted": false},
     "GameArgs": {"key": "VersionAdvanceGame", "source": "instance", "value": "", "encrypted": false},
+    "Renderer": {"key": "VersionAdvanceRenderer", "source": "instance", "value": 0, "encrypted": false},
     "AssetVerifySolutionV1": {"key": "VersionAdvanceAssets", "source": "instance", "value": 0, "encrypted": false},
     "DisableAssetVerifyV2": {"key": "VersionAdvanceAssetsV2", "source": "instance", "value": false, "encrypted": false},
     "IgnoreJavaCompatibility": {"key": "VersionAdvanceJava", "source": "instance", "value": false, "encrypted": false},
@@ -247,6 +255,9 @@
     "SortCode": {"key": "VersionApiCode", "source": "instance", "value": -1, "encrypted": false},
     "McVersion": {"key": "VersionOriginal", "source": "instance", "value": "Unknown", "encrypted": false},
     "VersionMajor": {"key": "VersionOriginalMain", "source": "instance", "value": -1, "encrypted": false},
-    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false}
+    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false},
+    "ModpackVersion": {"key": "VersionModpackVersion", "source": "instance", "value": "", "encrypted": false},
+    "ModpackSource": {"key": "VersionModpackSource", "source": "instance", "value": "", "encrypted": false},
+    "ModpackId": {"key": "VersionModpackId", "source": "instance", "value": "", "encrypted": false}
   }
 }

@@ -17,7 +17,7 @@ public static class VarIntHelper
         using var stream = new MemoryStream();
         do
         {
-            byte temp = (byte)(value & 0x7F); // 取低7位
+            var temp = (byte)(value & 0x7F); // 取低7位
             value >>= 7;                      // 右移7位
             if (value != 0)                   // 如果还有后续数据
                 temp |= 0x80;                 // 设置最高位为1
@@ -44,15 +44,14 @@ public static class VarIntHelper
     /// <exception cref="FormatException">VarInt格式无效或超过最大长度</exception>
     public static ulong Decode(byte[] bytes, out int readLength)
     {
-        if (bytes == null)
-            throw new ArgumentNullException(nameof(bytes));
-        
+        ArgumentNullException.ThrowIfNull(bytes);
+
         ulong result = 0;
-        int shift = 0;
-        int bytesRead = 0;
+        var shift = 0;
+        var bytesRead = 0;
         const int maxBytes = 10; // ulong最大需要10字节
         
-        foreach (byte b in bytes)
+        foreach (var b in bytes)
         {
             if (bytesRead >= maxBytes)
                 throw new FormatException("VarInt exceeds maximum length");
@@ -82,7 +81,7 @@ public static class VarIntHelper
     /// <returns>解码后的32位无符号整数</returns>
     public static uint DecodeUInt(byte[] bytes, out int readLength)
     {
-        ulong result = Decode(bytes, out readLength);
+        var result = Decode(bytes, out readLength);
         if (result > uint.MaxValue)
             throw new OverflowException("Decoded value exceeds UInt32 range");
         return (uint)result;
@@ -99,17 +98,17 @@ public static class VarIntHelper
     public static async Task<ulong> ReadFromStream(Stream stream, CancellationToken cancellationToken = default)
     {
         ulong result = 0;
-        int shift = 0;
-        int bytesRead = 0;
+        var shift = 0;
+        var bytesRead = 0;
         const int maxBytes = 10;
         var buffer = new byte[1];
         while (true)
         {
-            int readLength = await stream.ReadAsync(buffer, 0, 1, cancellationToken);
+            var readLength = await stream.ReadAsync(buffer, 0, 1, cancellationToken);
             if (readLength == 0)
                 throw new EndOfStreamException();
             
-            byte b = buffer[0];
+            var b = buffer[0];
             bytesRead++;
             
             if (bytesRead > maxBytes)
@@ -132,7 +131,7 @@ public static class VarIntHelper
     /// <returns>解码后的32位无符号整数</returns>
     public static async Task<uint> ReadUIntFromStream(Stream stream, CancellationToken cancellationToken = default)
     {
-        ulong result = await ReadFromStream(stream, cancellationToken);
+        var result = await ReadFromStream(stream, cancellationToken);
         if (result > uint.MaxValue)
             throw new OverflowException("Decoded value exceeds UInt32 range");
         return (uint)result;
@@ -140,5 +139,5 @@ public static class VarIntHelper
     
     public static long DecodeZigZag(ulong value) => (long)(value >> 1) ^ -(long)(value & 1);
 
-    public static ulong EncodeZigZag(ulong value) => (ulong)((value << 1) ^ (value >> 63));
+    public static ulong EncodeZigZag(ulong value) => ((value << 1) ^ (value >> 63));
 }

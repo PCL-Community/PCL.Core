@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using PCL.Core.Logging;
 using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
@@ -53,7 +54,7 @@ public sealed class Lifecycle : ILifecycleService
             // 直接写入剩余未输出日志到程序目录
             var path = Path.Combine(PendingLogDirectory, PendingLogFileName);
             if (!Path.IsPathRooted(path)) path = Path.Combine(Basics.ExecutableDirectory, path);
-            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Path.GetPathRoot(path));
+            Directory.CreateDirectory(Basics.GetParentPathOrDefault(path));
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
             foreach (var item in _PendingLogs) writer.WriteLine(item.ComposeMessage());
@@ -282,7 +283,7 @@ public sealed class Lifecycle : ILifecycleService
 #if TRACE
         // 输出仍在运行的线程
         Console.WriteLine("[Lifecycle] Thread(s) still in working:");
-        var currentThreadId = KernelInterop.GetCurrentThreadId();
+        var currentThreadId = KernelInterop.CurrentNativeThreadId;
         foreach (ProcessThread processThread in Process.GetCurrentProcess().Threads)
         {
             var threadId = processThread.Id;
@@ -305,12 +306,17 @@ public sealed class Lifecycle : ILifecycleService
         _KillCurrentProcess();
     }
 
+    private static void _FatalExit()
+    {
+        _Exit(-1);
+    }
+
     private static void _KillCurrentProcess()
     {
         var psi = new ProcessStartInfo
         {
             FileName = "taskkill.exe",
-            Arguments = $"/f /t /pid {Process.GetCurrentProcess().Id}",
+            Arguments = $"/f /t /pid {Environment.ProcessId}",
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -424,7 +430,6 @@ public sealed class Lifecycle : ILifecycleService
     public static void OnException(object ex)
     {
         Context.Fatal("未捕获的异常", ex as Exception);
-        _Exit();
     }
     
     /// <summary>
@@ -452,12 +457,8 @@ public sealed class Lifecycle : ILifecycleService
         {
             var instance = _CreateService(service);
             var identifier = instance.Identifier;
-            if (_ManualServiceMap.ContainsKey(identifier))
-            {
-                Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
-                continue;
-            }
-            _ManualServiceMap[identifier] = instance;
+            if (_ManualServiceMap.TryAdd(identifier, instance)) continue;
+            Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
         }
         // 运行预加载服务
         _StartStateFlow(LifecycleState.BeforeLoading);
@@ -650,6 +651,7 @@ public sealed class Lifecycle : ILifecycleService
                 if (_logService == null) _PendingLogs.Add(item);
                 else _PushLog(item, _logService);
             }
+            if (item.ActionLevel == ActionLevel.MsgBoxFatal) _FatalExit();
         },
         onRequestExit: statusCode =>
         {

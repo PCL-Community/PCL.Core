@@ -6,23 +6,19 @@ using System.Windows.Threading;
 namespace PCL.Core.App;
 
 [LifecycleService(LifecycleState.BeforeLoading, Priority = int.MinValue)]
-public sealed class ApplicationService : GeneralService
+public sealed class ApplicationService() : GeneralService("application", "应用程序", false)
 {
     public static Func<Application>? Loading { private get; set; }
 
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-    private ApplicationService() : base("application", "应用程序", false) { _context = ServiceContext; }
-    
     public override void Start()
     {
-        Context.Debug("正在初始化 WPF 应用程序容器");
+        ServiceContext.Debug("正在初始化 WPF 应用程序容器");
         var app = Loading!.Invoke();
         app.DispatcherUnhandledException += (_, e) => Lifecycle.OnException(e.Exception);
         app.Startup += (_, _) => Lifecycle.OnLoading();
         Lifecycle.CurrentApplication = app;
         Loading = null;
-        Context.Trace("应用程序容器初始化完毕");
+        ServiceContext.Trace("应用程序容器初始化完毕");
     }
 
     public override void Stop()
@@ -31,7 +27,7 @@ public sealed class ApplicationService : GeneralService
         var dispatcher = app.Dispatcher;
         if (Lifecycle.IsForceShutdown)
         {
-            Context.Warn("已指定强制关闭，跳过 WPF 标准关闭流程");
+            ServiceContext.Warn("已指定强制关闭，跳过 WPF 标准关闭流程");
             return;
         }
         if (dispatcher == null || dispatcher.HasShutdownFinished) return;
@@ -40,15 +36,15 @@ public sealed class ApplicationService : GeneralService
         {
             app.Exit += Exited;
             if (dispatcher.HasShutdownStarted) return;
-            Context.Debug("发起 WPF 退出流程");
+            ServiceContext.Debug("发起 WPF 退出流程");
             app.Shutdown();
         });
         try
         {
-            Context.Debug("正在等待应用程序容器退出");
+            ServiceContext.Debug("正在等待应用程序容器退出");
             var result = exited.Wait(5000);
-            if (result) Context.Trace("应用程序容器已退出");
-            else Context.Warn("应用程序容器退出超时，停止等待");
+            if (result) ServiceContext.Trace("应用程序容器已退出");
+            else ServiceContext.Warn("应用程序容器退出超时，停止等待");
         }
         finally
         {

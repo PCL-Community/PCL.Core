@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,9 +16,9 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
 
     public string? Get(string key, string? gamePath = null)
     {
-        if (gamePath is not null)
-            throw new ArgumentException("获取非游戏实例配置时错误地提供了游戏路径", nameof(gamePath));
-        return _content.TryGetValue(key, out var value) ? value : null;
+        return gamePath is not null
+            ? throw new ArgumentException("获取非游戏实例配置时错误地提供了游戏路径", nameof(gamePath))
+            : _content.GetValueOrDefault(key);
     }
 
     public string? Set(string key, string value, string? gamePath = null)

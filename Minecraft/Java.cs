@@ -22,6 +22,8 @@ public enum JavaBrandType
     Dragonwell,
     TencentKona,
     OpenJDK,
+    GraalVmCommunity,
+    JetBrains,
     Unknown
 }
 
@@ -98,7 +100,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
                 return null;
             LogWrapper.Info($"[Java] 解析 {javaExePath} 的 Java 程序信息");
             var javaFileVersion = FileVersionInfo.GetVersionInfo(javaExePath);
-            var javaVersion = Version.Parse(javaFileVersion.FileVersion);
+            var javaVersion = Version.Parse(javaFileVersion.FileVersion!);
             var companyName = javaFileVersion.CompanyName
                               ?? javaFileVersion.FileDescription
                               ?? javaFileVersion.ProductName
@@ -123,9 +125,8 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
             var isJavaUsable = (!isJavaJre && File.Exists(Path.Combine(javaLibDir, "jvm.lib"))) ||
                                (isJavaJre && File.Exists(Path.Combine(javaLibDir, "rt.jar")));
             var shouldDisableByDefault =
-                (isJavaJre && javaVersion.Major >= 16)
-                || (!isJava64Bit && Environment.Is64BitOperatingSystem)
-                || (isJava64Bit && !Environment.Is64BitOperatingSystem)
+                (isJavaJre && javaVersion.Major > 8)
+                || (isJava64Bit ^ Environment.Is64BitOperatingSystem)
                 || !isJavaUsable;
 
             return new Java(
@@ -158,13 +159,16 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["Tencent"] = JavaBrandType.TencentKona,
         ["OpenJDK"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
+        ["GraalVM"] = JavaBrandType.GraalVmCommunity,
+        ["JetBrains"] = JavaBrandType.JetBrains
     };
 
     private static JavaBrandType DetermineBrand(string? output)
     {
         if (output == null) return JavaBrandType.Unknown;
-        var result = _brandMap.Keys.Where(item => output.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0);
-        return result.Any()
+        var result = _brandMap.Keys
+            .Where(item => output.Contains(item, StringComparison.OrdinalIgnoreCase)).ToList();
+        return result.Count != 0
             ? _brandMap[result.First()]
             : JavaBrandType.Unknown;
     }

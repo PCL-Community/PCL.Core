@@ -87,10 +87,10 @@ extra block; seek forwards in oldfile by z bytes".
 			if (BitConverter.ToInt64(diffData, HeaderVersionIndex) != HeaderVersion)
 				throw new Exception("Diff file version is wrong");
 			// 读取 Header 信息
-			long ctrlLen = BitConverter.ToInt64(diffData, HeaderCtrlIndex);
-			long diffLen = BitConverter.ToInt64(diffData, HeaderDiffIndex);
-			long newLen = BitConverter.ToInt64(diffData, HeaderNewSizeIndex);
-			long extraLen = diffData.Length - HeaderSize - ctrlLen - diffLen;
+			var ctrlLen = BitConverter.ToInt64(diffData, HeaderCtrlIndex);
+			var diffLen = BitConverter.ToInt64(diffData, HeaderDiffIndex);
+			var newLen = BitConverter.ToInt64(diffData, HeaderNewSizeIndex);
+			var extraLen = diffData.Length - HeaderSize - ctrlLen - diffLen;
 
 			if (ctrlLen < 0 || diffLen < 0 || extraLen < 0)
 				throw new Exception("Block size is negative");
@@ -127,9 +127,9 @@ extra block; seek forwards in oldfile by z bytes".
 			long oldDataPos = 0;
 			while (newDataPos < newLen)
 			{
-				long addRange = ReadInt64(ctrlReader.ReadBytes(8));
-				long copyRange = ReadInt64(ctrlReader.ReadBytes(8));
-				long seekPos = ReadInt64(ctrlReader.ReadBytes(8));
+				var addRange = ReadInt64(ctrlReader.ReadBytes(8));
+				var copyRange = ReadInt64(ctrlReader.ReadBytes(8));
+				var seekPos = ReadInt64(ctrlReader.ReadBytes(8));
 
 				Console.WriteLine($"Round add-range = {addRange}, copy-range = {copyRange}, seek-pos = {seekPos}");
 				
@@ -155,7 +155,7 @@ extra block; seek forwards in oldfile by z bytes".
 					throw new Exception(
 						$"Copy range overflows, want  copy {copyRange.ToString()}, but only have {newLen - newDataPos} left");
 
-				for (int i = 0; i < copyRange; i++)
+				for (var i = 0; i < copyRange; i++)
 				{
 					ret[newDataPos + i] = extraReader.ReadByte();
 				}
@@ -181,13 +181,13 @@ extra block; seek forwards in oldfile by z bytes".
 	internal static long ReadInt64(byte[] buffer, int offset = 0)
 	{
 		// 手动组合小端序的 long 值
-		long value = ((long)buffer[offset] << 0)  | ((long)buffer[offset + 1] << 8) |
-		             ((long)buffer[offset + 2] << 16) | ((long)buffer[offset + 3] << 24) |
-		             ((long)buffer[offset + 4] << 32) | ((long)buffer[offset + 5] << 40) |
-		             ((long)buffer[offset + 6] << 48) | ((long)buffer[offset + 7] << 56);
+		var value = ((long)buffer[offset] << 0)  | ((long)buffer[offset + 1] << 8) |
+		            ((long)buffer[offset + 2] << 16) | ((long)buffer[offset + 3] << 24) |
+		            ((long)buffer[offset + 4] << 32) | ((long)buffer[offset + 5] << 40) |
+		            ((long)buffer[offset + 6] << 48) | ((long)buffer[offset + 7] << 56);
 
 		// 原始位运算逻辑保持不变
-		long mask = value >> 63;
+		var mask = value >> 63;
 		return (~mask & value) |
 		       (((value & unchecked((long)0x8000000000000000)) - value) & mask);
 	}

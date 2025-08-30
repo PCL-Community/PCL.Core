@@ -1,16 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace PCL.Core.Utils;
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 public class ArgumentsBuilder
 {
-    private readonly Dictionary<string, string?> _args = new();
+    private readonly List<KeyValuePair<string, string?>> _args = [];
 
     /// <summary>
     /// 添加键值对参数（自动处理空格转义）
@@ -21,7 +18,7 @@ public class ArgumentsBuilder
     {
         if (key is null) throw new NullReferenceException(nameof(key));
         if (value is null) throw new NullReferenceException(nameof(value));
-        _args[key] = _handleEscapeValue(value);
+        _args.Add(new KeyValuePair<string, string?>(key, _handleValue(value)));
         return this;
     }
 
@@ -32,7 +29,7 @@ public class ArgumentsBuilder
     public ArgumentsBuilder AddFlag(string flag)
     {
         if (flag is null) throw new NullReferenceException(nameof(flag));
-        _args[flag] = null;
+        _args.Add(new KeyValuePair<string, string?>(flag, null));
         return this;
     }
 
@@ -54,11 +51,27 @@ public class ArgumentsBuilder
         return this;
     }
 
+    public enum PrefixStyle
+    {
+        /// <summary>
+        /// 自动（单字符用-，多字符用--）
+        /// </summary>
+        Auto,
+        /// <summary>
+        /// 强制单横线
+        /// </summary>
+        SingleLine,
+        /// <summary>
+        /// 强制双横线
+        /// </summary>
+        DoubleLine
+    }
+
     /// <summary>
     /// 构建参数字符串
     /// </summary>
-    /// <param name="prefixStyle">前缀样式：0=自动（单字符用-，多字符用--），1=强制单横线，2=强制双横线</param>
-    public string Build(int prefixStyle = 0)
+    /// <param name="prefixStyle">前缀样式</param>
+    public string GetResult(PrefixStyle prefixStyle = 0)
     {
         var sb = new StringBuilder();
 
@@ -69,10 +82,10 @@ public class ArgumentsBuilder
             // 添加前缀
             switch (prefixStyle)
             {
-                case 1: // 强制单横线
+                case PrefixStyle.SingleLine: // 强制单横线
                     sb.Append('-').Append(arg.Key);
                     break;
-                case 2: // 强制双横线
+                case PrefixStyle.DoubleLine: // 强制双横线
                     sb.Append("--").Append(arg.Key);
                     break;
                 default: // 自动判断
@@ -83,7 +96,8 @@ public class ArgumentsBuilder
             // 添加值（如果有）
             if (arg.Value is not null)
             {
-                sb.Append('=').Append(arg.Value);
+                sb.Append('=')
+                    .Append(arg.Value);
             }
         }
 
@@ -92,7 +106,7 @@ public class ArgumentsBuilder
 
     public override string ToString()
     {
-        return Build();
+        return GetResult();
     }
 
     /// <summary>
@@ -100,13 +114,14 @@ public class ArgumentsBuilder
     /// </summary>
     public void Clear() => _args.Clear();
 
-    // 转义包含空格的值（用双引号包裹）
-    private static string _handleEscapeValue(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return "\"\"";
+    private static readonly char[] _CharNeedToQute = [' ', '=', '|', '"'];
 
-        return value.Contains(' ') || value.Contains('"')
-            ? $"\"{value.Replace("\"", "\\\"")}\""  // 处理双引号转义
-            : value;
+    // 转义包含空格的值（用双引号包裹）
+    private static string _handleValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return $"\"{value}\"";
+        return value.All(x => !_CharNeedToQute.Contains(x))
+            ? value
+            : $"\"{value.Replace("\"", "\\\"")}\""; // 处理双引号转义
     }
 }

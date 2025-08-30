@@ -11,7 +11,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 public static class LogManager {
-    public static async Task ExportLogAsync(IEnumerable<string> sourceFiles, CancellationToken cancelToken = default) {
+    public static async Task<bool> ExportLogAsync(IEnumerable<string> sourceFiles, CancellationToken cancelToken = default) {
         const string filter = "PCL CE 日志压缩包|*.zip";
         var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
         var baseName = $"PCL_CE_Logs_{DateTime.Now:yyyyMMddHHmmss}";
@@ -20,7 +20,7 @@ public static class LogManager {
         var selectedPath = SystemDialogs.SelectSaveFile("导出日志文件", fileName, filter, desktopPath);
 
         if (string.IsNullOrEmpty(selectedPath)) {
-            return;
+            return false;
         }
 
         try {
@@ -32,27 +32,25 @@ public static class LogManager {
                 LogWrapper.Info("Log", $"删除在 {selectedPath} 的已有文件");
             }
 
-            await using (var fileStream = new FileStream(selectedPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true)) {
-                await using (var zipStream = new ZipOutputStream(fileStream)) {
-                    foreach (var item in sourceFiles) {
-                        var itemFileName = Path.GetFileName(item);
-                        var tempPath = Path.Combine(tempDirName, itemFileName);
+            await using var fileStream = new FileStream(selectedPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true);
+            await using var zipStream = new ZipOutputStream(fileStream);
+            foreach (var item in sourceFiles) {
+                var itemFileName = Path.GetFileName(item);
+                var tempPath = Path.Combine(tempDirName, itemFileName);
 
-                        await Files.CopyFileAsync(item, tempPath, cancelToken);
-                        await using (var sourceStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true)) {
-                            var entry = new ZipEntry(itemFileName);
-                            await zipStream.PutNextEntryAsync(entry, cancelToken);
-                            await sourceStream.CopyToAsync(zipStream, cancelToken);
-                        }
-                        File.Delete(tempPath);
-                    }
-                    await zipStream.FinishAsync(cancelToken);
+                await Files.CopyFileAsync(item, tempPath, cancelToken);
+                await using (var sourceStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true)) {
+                    var entry = new ZipEntry(itemFileName);
+                    await zipStream.PutNextEntryAsync(entry, cancelToken);
+                    await sourceStream.CopyToAsync(zipStream, cancelToken);
                 }
+                File.Delete(tempPath);
             }
-
-            HintWrapper.Show("日志保存成功！", HintTheme.Success);
+            await zipStream.FinishAsync(cancelToken);
+            
+            return true;
         } catch (Exception ex) {
-            HintWrapper.Show("日志保存失败", HintTheme.Error);
+            return false;
         } finally {
             if (Directory.Exists(tempDirName)) {
                 Directory.Delete(tempDirName, true);

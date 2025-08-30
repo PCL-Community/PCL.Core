@@ -7,12 +7,12 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 
-public class ClipboardUtils {
+public static class ClipboardUtils {
     /// <summary>
     /// 将剪贴板内容设置为用于复制/粘贴操作的文件或文件夹路径列表。
     /// </summary>
     /// <param name="paths">要设置到剪贴板的文件或文件夹路径数组。</param>
-    public void SetClipboardFiles(string[] paths) {
+    public static void SetClipboardFiles(string[] paths) {
         if (paths == null || paths.Length == 0) {
             throw new ArgumentException("Paths cannot be null or empty.", nameof(paths));
         }
@@ -29,7 +29,7 @@ public class ClipboardUtils {
     /// <param name="copyFile">是否粘贴文件</param>
     /// <param name="copyDir">是否粘贴文件夹</param>
     /// <returns>总共粘贴的数量</returns>
-    public async Task<int> PasteFromClipboardAsync(string dest, bool copyFile, bool copyDir) {
+    public static async Task<int> PasteFromClipboardAsync(string dest, bool copyFile, bool copyDir) {
         if (string.IsNullOrEmpty(dest)) {
             throw new ArgumentException("Destination folder cannot be null or empty.", nameof(dest));
         }

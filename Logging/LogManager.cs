@@ -51,7 +51,7 @@ public static class LogManager {
             
             return true;
         } catch (Exception ex) {
-            LogWrapper.Warn(ex, "Log", $"日志导出失败");
+            LogWrapper.Warn(ex, "Log", "日志导出失败");
             return false;
         } finally {
             if (Directory.Exists(tempDirName)) {

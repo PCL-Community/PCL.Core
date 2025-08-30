@@ -219,8 +219,7 @@ public static class Directories {
     /// <returns>文件信息的枚举器。</returns>
     public static async Task<IEnumerable<FileInfo>> EnumerateFilesAsync(string? directory, CancellationToken cancellationToken = default) {
         if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
-            LogWrapper.Error(new DirectoryNotFoundException($"目录不存在：{directory}"), "遍历文件夹失败");
-            return [];
+            throw new DirectoryNotFoundException($"目录不存在：{directory}");
         }
 
         try {

@@ -13,7 +13,7 @@ public class TcpClientHelper
 {
     private TcpClient? _tcpClient;
     private NetworkStream? _stream;
-    private CancellationTokenSource _cts;
+    private CancellationTokenSource _cts =  new();
 
     /// <summary>
     /// 连接到目标 TCP 服务器
@@ -85,7 +85,7 @@ public class TcpClientHelper
 
     public void Disconnect()
     {
-        _cts?.Cancel();
+        _cts.Cancel();
         _stream?.Close();
         _tcpClient?.Close();
     }

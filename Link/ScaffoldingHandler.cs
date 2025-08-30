@@ -1,8 +1,6 @@
 using System;
-using System.Buffers.Binary;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using PCL.Core.Net;
 using PCL.Core.Logging;
 
@@ -17,7 +15,7 @@ public class ScaffoldingHandler
         Int32 bodyLength = BitConverter.ToInt32(reader.ReadBytes(4), 0);
         var bodyBytes = reader.ReadBytes(bodyLength);
                         
-        LogWrapper.Debug("Net", $"收到 TCP 数据");
+        LogWrapper.Debug("Net", "收到 TCP 数据");
 
         byte status = 0;
         
@@ -29,7 +27,7 @@ public class ScaffoldingHandler
                 response = Encoding.ASCII.GetString(bodyBytes);
                 break;
             case "c:protocols":
-                response = SupportedProtocols;
+                response = _SupportedProtocols;
                 break;
             case "c:server_port":
                 response = "25565"; // TODO
@@ -42,8 +40,8 @@ public class ScaffoldingHandler
         
         byte[] responseBodyBytes = Encoding.UTF8.GetBytes(response);
         uint responseBodyLength = (uint)responseBodyBytes.Length;
-        
-        using (var memoryStream = new MemoryStream())
+
+        using var memoryStream = new MemoryStream();
         using (var writer = new BinaryWriter(memoryStream))
         {
             writer.Write(status);
@@ -92,9 +90,8 @@ public class ScaffoldingHandler
         // 请求前置内容
         byte typeLength = isJson ? Encoding.ASCII.GetBytes(typeBytes.Length.ToString())[0] : Encoding.UTF8.GetBytes(typeBytes.Length.ToString())[0];
         UInt32 bodyLength = (UInt32)bodyBytes.Length;
-        var requestBytes = new byte[1 + typeBytes.Length + 4 + bodyBytes.Length];
-        
-        using (var memoryStream = new MemoryStream())
+
+        using var memoryStream = new MemoryStream();
         using (var writer = new BinaryWriter(memoryStream))
         {
             writer.Write(typeLength);
@@ -114,13 +111,13 @@ public class ScaffoldingHandler
         return isJson ? Encoding.UTF8.GetString(result) : Encoding.ASCII.GetString(result);
     }
 
-    public bool Ping()
+    public static bool Ping()
     {
         var response = _SendAndGetResponse(_GetRequestBytes("c:ping", "Test"));
         return response == "Test";
     }
 
-    public static string SupportedProtocols = "c:ping\0c:protocols\0c:server_port\0pclce:modpackId";
+    private static readonly string _SupportedProtocols = "c:ping\0c:protocols\0c:server_port\0pclce:modpackId";
     
     public static string GetSupportedProtocols()
     {

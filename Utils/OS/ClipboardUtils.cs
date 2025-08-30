@@ -23,19 +23,6 @@ public class ClipboardUtils {
     }
 
     /// <summary>
-    /// 将剪贴板内容设置为指定文本。
-    /// </summary>
-    /// <param name="text">要设置到剪贴板的文本内容。</param>
-    /// <exception cref="ArgumentNullException">当 text 为空时抛出此异常。</exception>
-    public void SetClipboardText(string text) {
-        if (text == null) {
-            throw new ArgumentNullException(nameof(text), "Text cannot be null.");
-        }
-
-        Clipboard.SetText(text);
-    }
-
-    /// <summary>
     /// 从剪切板粘贴文件或文件夹
     /// </summary>
     /// <param name="dest">目标文件夹</param>

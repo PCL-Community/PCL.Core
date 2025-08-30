@@ -117,13 +117,14 @@ public static class Files {
     /// </summary>
     /// <param name="filePath">文件路径（完整或相对）</param>
     /// <param name="encoding">文件编码，默认为 UTF-8</param>
+    /// <param name="cancelToken">取消令牌</param>
     /// <returns>文件内容的字符串，失败时返回空字符串</returns>
-    public static async Task<string> ReadAllTextOrEmptyAsync(string filePath, Encoding? encoding = null) {
+    public static async Task<string> ReadAllTextOrEmptyAsync(string filePath, Encoding? encoding = null, CancellationToken cancelToken = default) {
         try {
             var fullPath = GetFullPath(filePath);
             if (!File.Exists(fullPath)) throw new FileNotFoundException(fullPath);
-            if (encoding == null) return await File.ReadAllTextAsync(fullPath);
-            return await File.ReadAllTextAsync(fullPath, encoding);
+            if (encoding == null) return await File.ReadAllTextAsync(fullPath, cancelToken);
+            return await File.ReadAllTextAsync(fullPath, encoding, cancelToken);
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"读取文件出错：{filePath}");
             return "";
@@ -135,12 +136,13 @@ public static class Files {
     /// </summary>
     /// <param name="stream">要读取的流</param>
     /// <param name="encoding">文件编码（可选，若为 null 则动态检测）</param>
+    /// <param name="cancelToken">取消令牌</param>
     /// <returns>流内容的字符串，失败时返回空字符串</returns>
-    public static async Task<string> ReadAllTextOrEmptyAsync(Stream stream, Encoding? encoding = null) {
+    public static async Task<string> ReadAllTextOrEmptyAsync(Stream stream, Encoding? encoding = null, CancellationToken cancelToken = default) {
         try {
             ArgumentNullException.ThrowIfNull(stream);
             using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
+            await stream.CopyToAsync(memoryStream, cancelToken);
             // 使用 MemoryStream 的内部 buffer 避免再分配一次完整的 byte 数组以节省内存
             // 注：内部 buffer 长度可能大于实际数据长度
             var buffer = memoryStream.GetBuffer();

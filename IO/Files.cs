@@ -91,6 +91,32 @@ public static class Files {
             throw new IOException($"复制文件出错：{fromPath} -> {toPath}", ex);
         }
     }
+    
+    public static async Task CopyDirectoryAsync(string sourceDir, string destDir, CancellationToken cancelToken = default) {
+        Directory.CreateDirectory(destDir);
+
+        // 获取所有文件和子目录
+        var files = Directory.GetFiles(sourceDir);
+        var directories = Directory.GetDirectories(sourceDir);
+
+        // 限制并行度，防止资源耗尽
+        var parallelOptions = new ParallelOptions {
+            MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount),
+            CancellationToken = cancelToken
+        };
+
+        // 并行复制文件
+        await Parallel.ForEachAsync(files, parallelOptions, async (file, ct) => {
+            var destFile = Path.Combine(destDir, Path.GetFileName(file));
+            await CopyFileAsync(file, destFile, ct);
+        });
+
+        // 并行处理子目录
+        await Parallel.ForEachAsync(directories, parallelOptions, async (subDir, ct) => {
+            var destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+            await CopyDirectoryAsync(subDir, destSubDir, ct);
+        });
+    }
 
     /// <summary>
     /// 读取文件为字节数组，支持读取被占用的文件。

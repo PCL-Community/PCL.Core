@@ -196,10 +196,10 @@ public class BlurBorder : Border
     /// </summary>
     private Effect CreateOptimizedBlurEffect()
     {
-        // 根据采样率决定使用哪种效果实现
-        if (BlurSamplingRate >= 0.95)
+        // 根据模糊半径和采样率智能选择算法
+        if (BlurRadius <= 2.0 || BlurSamplingRate >= 0.95)
         {
-            // 高采样率使用原生 BlurEffect 获得最佳质量
+            // 小半径或高采样率：使用原生 BlurEffect 获得最佳质量
             return new BlurEffect
             {
                 Radius = BlurRadius,
@@ -207,14 +207,22 @@ public class BlurBorder : Border
                 RenderingBias = BlurRenderingBias
             };
         }
+        else if (BlurRadius >= 50.0 && BlurSamplingRate <= 0.3)
+        {
+            // 大半径低采样率：使用极速优化版本
+            var ultraFastBlur = OptimizedBlurFactory.CreateRealTimePreview(BlurRadius);
+            ultraFastBlur.SamplingRate = Math.Max(0.1, BlurSamplingRate);
+            ultraFastBlur.RenderingBias = RenderingBias.Performance;
+            return ultraFastBlur.GetEffectInstance();
+        }
         else
         {
-            // 低采样率使用我们的优化实现
-            var optimizedBlur = OptimizedBlurFactory.CreateAdaptive(BlurRadius);
-            optimizedBlur.SamplingRate = BlurSamplingRate;
-            optimizedBlur.RenderingBias = BlurRenderingBias;
-            optimizedBlur.KernelType = BlurKernelType;
-            return optimizedBlur.GetEffectInstance();
+            // 中等情况：使用我们的自适应优化算法
+            var adaptiveBlur = OptimizedBlurFactory.CreateAdaptive(BlurRadius);
+            adaptiveBlur.SamplingRate = BlurSamplingRate;
+            adaptiveBlur.RenderingBias = BlurRenderingBias;
+            adaptiveBlur.KernelType = BlurKernelType;
+            return adaptiveBlur.GetEffectInstance();
         }
     }
 
@@ -260,7 +268,7 @@ public class BlurBorder : Border
     /// The sampling rate for blur effect, controlling performance vs quality trade-off.
     /// </summary>
     public static readonly DependencyProperty BlurSamplingRateProperty =
-        DependencyProperty.Register(nameof(BlurSamplingRate), typeof(double), typeof(BlurBorder), new FrameworkPropertyMetadata(0.7, propertyChangedCallback: OnRenderPropertyChanged));
+        DependencyProperty.Register(nameof(BlurSamplingRate), typeof(double), typeof(BlurBorder), new FrameworkPropertyMetadata(0.9, propertyChangedCallback: OnRenderPropertyChanged));
 
     private static void OnRenderPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {

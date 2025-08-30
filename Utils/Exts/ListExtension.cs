@@ -1,7 +1,7 @@
-﻿namespace PCL.Core.Utils;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
+
+namespace PCL.Core.Utils.Exts;
 
 public static class SortUtils {
     /// <summary>

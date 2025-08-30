@@ -1,4 +1,5 @@
-﻿using PCL.Core.Link.EasyTier;
+﻿using System;
+using PCL.Core.Link.EasyTier;
 
 namespace PCL.Core.Link.Lobby;
 
@@ -26,11 +27,11 @@ public static class LobbyTextHandler
     /// <summary>
     /// 依据网络质量指数获取大厅连接状况文本
     /// </summary>
-    /// <returns>[连接状况, 描述]</returns>
-    public static string[] GetQualityDesc(int quality) => quality switch
+    /// <returns>连接状况, 描述</returns>
+    public static Tuple<string, string> GetQualityDesc(int quality) => quality switch
     {
-        >= 3 => ["优秀", "当前网络环境不会影响联机体验\n该网络环境适合作为大厅创建者"],
-        >= 2 => ["一般", "当前网络环境可能会影响您的联机体验"],
-        _ => ["较差", "部分路由器和防火墙设置可能会影响您的联机体验"]
+        >= 3 => new Tuple<string, string>("优秀", "当前网络环境不会影响联机体验\n该网络环境适合作为大厅创建者"),
+        >= 2 => new Tuple<string, string>("一般", "当前网络环境可能会影响您的联机体验"),
+        _ => new Tuple<string, string>("较差", "部分路由器和防火墙设置可能会影响您的联机体验")
     };
 }

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -107,5 +108,10 @@ public static class Basics
             CreateNoWindow = true
         };
         Process.Start(psi);
+    }
+
+    public static bool RunInUi() 
+    {
+        return Application.Current.Dispatcher.CheckAccess();
     }
 }

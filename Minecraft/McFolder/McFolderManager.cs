@@ -67,7 +67,7 @@ public class McFolderManager {
 
             // Scan current directory
             try {
-                string versionsPath = Path.Combine(Basics.ExecutablePath, "versions");
+                var versionsPath = Path.Combine(Basics.ExecutablePath, "versions");
                 if (Directory.Exists(versionsPath)) {
                     originalMcFolderList.Add(new McFolder("Current Folder", Basics.ExecutablePath, McFolderType.Original));
                 }
@@ -153,12 +153,9 @@ public class McFolderManager {
                 return;
             }
 
-            var profiles = new LauncherProfiles
-            {
-                Profiles = new Dictionary<string, Profile>
-                {
-                    ["PCL"] = new Profile
-                    {
+            var profiles = new LauncherProfiles {
+                Profiles = new Dictionary<string, Profile> {
+                    ["PCL"] = new Profile {
                         Icon = "Grass",
                         Name = "PCL",
                         LastVersionId = "latest-release",
@@ -170,9 +167,8 @@ public class McFolderManager {
                 ClientToken = "23323323323323323323323323323333"
             };
 
-            var jsonOptions = new JsonSerializerOptions
-            {
-                WriteIndented = true // 美化 JSON 输出
+            var jsonOptions = new JsonSerializerOptions {
+                WriteIndented = true
             };
 
             var resultJson = JsonSerializer.Serialize(profiles, jsonOptions);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.GZip;
@@ -345,7 +346,7 @@ public static class Files {
             entries.Add(entry);
             totalBytes += entry.Size;
         }
-        
+
         long processedBytes = 0;
 
         tarStream.Reset(); // 重置流以重新读取条目
@@ -376,7 +377,7 @@ public static class Files {
 
     private static async Task<TarEntry?> _GetNextEntryAsync(TarInputStream tarStream, CancellationToken cancellationToken) {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var task = Task.Run(tarStream.GetNextEntry, cts.Token); 
+        var task = Task.Run(tarStream.GetNextEntry, cts.Token);
         if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), cts.Token)).ConfigureAwait(false) == task) {
             return await task.ConfigureAwait(false);
         }
@@ -503,14 +504,11 @@ public static class Files {
     /// </summary>
     /// <returns>若被占用则为 true，否则为 false</returns>
     public static async Task<bool> CheckFileBusyAsync(string filePath) {
-        try
-        {
+        try {
             if (!File.Exists(filePath)) return false;
             await using FileStream fs = new(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read | FileShare.Delete);
             return false;
-        }
-        catch (IOException) { return true; }
-        catch { return false; }
+        } catch (IOException) { return true; } catch { return false; }
     }
 
     #endregion

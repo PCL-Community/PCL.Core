@@ -3,8 +3,6 @@
 namespace PCL.Core.Utils.OS;
 
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 
 public static class ClipboardUtils {
@@ -20,50 +18,5 @@ public static class ClipboardUtils {
         var dataObject = new DataObject();
         dataObject.SetData(DataFormats.FileDrop, paths);
         Clipboard.SetDataObject(dataObject);
-    }
-
-    /// <summary>
-    /// 从剪切板粘贴文件或文件夹
-    /// </summary>
-    /// <param name="dest">目标文件夹</param>
-    /// <param name="copyFile">是否粘贴文件</param>
-    /// <param name="copyDir">是否粘贴文件夹</param>
-    /// <returns>总共粘贴的数量</returns>
-    public static async Task<int> PasteFromClipboardAsync(string dest, bool copyFile, bool copyDir) {
-        if (string.IsNullOrEmpty(dest)) {
-            throw new ArgumentException("Destination folder cannot be null or empty.", nameof(dest));
-        }
-
-        if (!Directory.Exists(dest)) {
-            Directory.CreateDirectory(dest);
-        }
-
-        var dataObject = Clipboard.GetDataObject();
-        if (dataObject == null || !dataObject.GetDataPresent(DataFormats.FileDrop)) {
-            return 0;
-        }
-
-        var data = dataObject.GetData(DataFormats.FileDrop);
-        if (data is not string[] paths) {
-            return 0;
-        }
-        if (paths.Length == 0) {
-            return 0;
-        }
-
-        var count = 0;
-        foreach (var path in paths) {
-            if (File.Exists(path) && copyFile) {
-                var targetPath = Path.Combine(dest, Path.GetFileName(path));
-                await Files.CopyFileAsync(path, targetPath);
-                count++;
-            } else if (Directory.Exists(path) && copyDir) {
-                var targetDir = Path.Combine(dest, new DirectoryInfo(path).Name);
-                await Files.CopyDirectoryAsync(path, targetDir);
-                count++;
-            }
-        }
-
-        return count;
     }
 }

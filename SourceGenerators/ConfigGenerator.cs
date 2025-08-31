@@ -121,9 +121,9 @@ public sealed class ConfigGenerator : IIncrementalGenerator
     
             if (isAny)
             {
-                // AnyConfigItem：没有“默认值”参数；默认值换为 () => Activator.CreateInstance<T>()
+                // AnyConfigItem：没有“默认值”参数: 替换为无参构造函数
                 var tQualified = _BuildQualifiedTypeName(symbol.Type);
-                defaultCode = "() => System.Activator.CreateInstance<" + tQualified + ">()";
+                defaultCode = "() => new " + tQualified + "()";
     
                 // 来源参数若存在，是第 2 个实参
                 if (args is { Count: >= 2 })

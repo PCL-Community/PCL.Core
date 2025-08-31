@@ -97,7 +97,6 @@
       "CompNameFormatV2": {"key": "ToolDownloadTranslateV2", "source": "global", "value": 1, "encrypted": false},
       "UiIgnoreQuilt": {"key": "ToolDownloadIgnoreQuilt", "source": "global", "value": true, "encrypted": false},
       "ListenClipboard": {"key": "ToolDownloadClipboard", "source": "global", "value": false, "encrypted": false},
-      "EnableCertification": {"key": "ToolDownloadCert", "source": "global", "value": true, "encrypted": false},
       "CompSourceSolution": {"key": "ToolDownloadMod", "source": "global", "value": 1, "encrypted": false},
       "UiCompNameSolution": {"key": "ToolModLocalNameStyle", "source": "global", "value": 0, "encrypted": false},
       "AutoSelectInstance": {"key": "ToolDownloadAutoSelectVersion", "source": "global", "value": true, "encrypted": false}

@@ -24,8 +24,8 @@ public sealed class NetworkService : GeneralService {
         services.AddHttpClient("default").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 UseProxy = true,
-                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip, //在这里添加 None 的给我重学二进制去 😡
-                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13, //默认支持的协议太少
+                AutomaticDecompression = DecompressionMethods.All, //在这里添加 None 的给我重学二进制去 😡
+                SslProtocols = SslProtocols.None,
                 Proxy = HttpProxyManager.Instance,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 25,

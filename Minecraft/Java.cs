@@ -98,7 +98,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         {
             if (!File.Exists(javaExePath))
                 return null;
-            LogWrapper.Info($"[Java] 解析 {javaExePath} 的 Java 程序信息");
+            LogWrapper.Info("Java", $"解析 {javaExePath} 的 Java 程序信息");
             var javaFileVersion = FileVersionInfo.GetVersionInfo(javaExePath);
             var javaVersion = Version.Parse(javaFileVersion.FileVersion!);
             var companyName = javaFileVersion.CompanyName

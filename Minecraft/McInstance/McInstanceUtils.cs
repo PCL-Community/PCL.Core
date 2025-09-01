@@ -9,6 +9,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
 using PCL.Core.ProgramSetup;
+using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.McInstance;
@@ -36,11 +37,6 @@ public static class McInstanceUtils {
         "从零开始，创造无限。",
         "你的故事，等待书写！"
     }.AsReadOnly();
-    private static readonly Random Random = new Random();
-
-    public static string GetRandomDescString() {
-        return DescStrings[Random.Next(DescStrings.Count)];
-    }
     
     /// <summary>
     /// 获取实例的隔离路径，根据全局设置和实例特性决定是否使用独立文件夹。
@@ -49,7 +45,7 @@ public static class McInstanceUtils {
     /// <returns>隔离后的路径，以“\”结尾</returns>
     public static async Task<string> GetIsolatedPathAsync(McInstance instance) {
         if (SetupService.IsUnset(SetupEntries.Instance.IndieV2, instance.Path)) {
-            bool shouldBeIndie = await ShouldBeIndieAsync(instance);
+            var shouldBeIndie = await ShouldBeIndieAsync(instance);
             SetupService.SetBool(SetupEntries.Instance.IndieV2, shouldBeIndie, instance.Path);
         }
         return SetupService.GetBool(SetupEntries.Instance.IndieV2) ? instance.Path : McFolderManager.PathMcFolder;
@@ -71,17 +67,17 @@ public static class McInstanceUtils {
             return true;
         }
 
-        var isModable = await GetIsModableAsync(instance);
+        var isModded = await GetIsModdedAsync(instance);
         var versionInfo = await instance.GetVersionInfoAsync();
-        bool isRelease = versionInfo.IsReleaseVersion;
-        LogWrapper.Info($"[Minecraft] 版本隔离初始化({instance.Name}): 全局设置({SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2)}), IsRelease {isRelease}, Modable {isModable}");
+        var isRelease = versionInfo.IsReleaseVersion;
+        LogWrapper.Info($"[Minecraft] 版本隔离初始化({instance.Name}): 全局设置({SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2)}), IsRelease {isRelease}, Modable {isModded}");
 
         var version = await instance.GetVersionInfoAsync();
         return SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2) switch {
             0 => false,
-            1 => version.HasLabyMod || isModable,
+            1 => version.HasLabyMod || isModded,
             2 => !isRelease,
-            3 => version.HasLabyMod || isModable || !isRelease,
+            3 => version.HasLabyMod || isModded || !isRelease,
             _ => true
         };
     }
@@ -91,7 +87,7 @@ public static class McInstanceUtils {
     /// </summary>
     /// <param name="instance">Minecraft 实例</param>
     /// <returns>是否支持 Mod</returns>
-    public static async Task<bool> GetIsModableAsync(McInstance instance) {
+    public static async Task<bool> GetIsModdedAsync(McInstance instance) {
         if (!instance.IsLoaded) await instance.Load();
         var version = await instance.GetVersionInfoAsync();
         return version.HasFabric || version.HasLegacyFabric || version.HasQuilt ||
@@ -121,24 +117,27 @@ public static class McInstanceUtils {
     /// Gets the default description for the instance.
     /// </summary>
     public static async Task<string> GetDefaultDescription(McInstance instance) {
-        string info = "";
-        McInstanceInfo versionInfo = await instance.GetVersionInfoAsync();
+        var versionInfo = await instance.GetVersionInfoAsync();
         if (instance.IsError) {
-            return info;
+            return "";
         }
-        if (versionInfo.IsFoolVersion) {
-            return GetMcFoolName(versionInfo.McVersion);
-        }
-        return GetRandomDescString();
+        return versionInfo.IsFoolVersion ? GetMcFoolName(versionInfo.McVersion) : RandomUtils.PickRandom(DescStrings);
     }
 
+    /// <summary>
+    /// 异步获取版本的发布日期时间，如果无法获取或解析失败，则返回默认时间（1970-01-01 15:00:00）。
+    /// </summary>
+    /// <returns>版本的发布日期时间，或默认时间。</returns>
     public static async Task<DateTime> TryGetReleaseTimeAsync(McInstance instance) {
         var jsonObject = await instance.GetVersionJsonAsync();
-        if (jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode)) {
-            if (releaseTimeNode != null && DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime)) {
-                return releaseTime;
-            }
+        
+        if (!jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode) || 
+            releaseTimeNode == null || 
+            !DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime))
+        {
+            return new DateTime(1970, 1, 1, 15, 0, 0);
         }
-        return new DateTime(1970, 1, 1, 15, 0, 0);
+
+        return releaseTime;
     }
 }

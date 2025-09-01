@@ -251,10 +251,10 @@ public class McInstanceInfo {
 
         if (HasOptiFine) {
             if (OptiFineVersion == "未知版本") return 0;
-            int code = (McCodeSub >= 0 ? McCodeSub : 0) * 1000000;
-            string letter = OptiFineVersion[0].ToString().ToUpper();
+            var code = (McCodeSub >= 0 ? McCodeSub : 0) * 1000000;
+            var letter = OptiFineVersion[0].ToString().ToUpper();
             code += (letter[0] - 'A' + 1) * 10000;
-            string numberMatch = Regex.Match(OptiFineVersion[1..], @"\d+").Value;
+            var numberMatch = Regex.Match(OptiFineVersion[1..], @"\d+").Value;
             code += int.Parse(numberMatch) * 100;
 
             if (OptiFineVersion.Contains("pre", StringComparison.OrdinalIgnoreCase))

@@ -59,31 +59,47 @@ public class McInstance {
     /// <summary>
     /// 是否可安装 Mod
     /// </summary>
-    public async Task<bool> GetIsModable() => await McInstanceUtils.GetIsModableAsync(this);
+    public async Task<bool> GetIsModded() => await McInstanceUtils.GetIsModdedAsync(this);
 
     /// <summary>
     /// 实例信息
     /// </summary>
     public async Task<McInstanceInfo> GetVersionInfoAsync() {
-        if (_versionInfo == null) {
-            _versionInfo = new McInstanceInfo();
-            try {
-                // 获取发布时间并判断是否为老版本
-                var releaseTime = await McInstanceUtils.TryGetReleaseTimeAsync(this);
-                var version = await GetVersionFromJson(this);
-                if (version != null) {
-                    _versionInfo.McVersion = version;
-                    _versionInfo.CanDetermineVersion = true;
-                } else {
-                    _versionInfo.CanDetermineVersion = false;
-                }
-                _versionInfo.ReleaseTime = releaseTime;
-            } catch (Exception ex) {
-                LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
-                _versionInfo.McVersion = "Unknown";
-                Desc = $"无法识别：{ex.Message}";
-            }
+        if (_versionInfo != null) {
+            return _versionInfo;
         }
+        
+        _versionInfo = new McInstanceInfo();
+        var versionJson = await GetVersionJsonAsync();
+        var version = await GetVersionFromJson(this);
+        try {
+            // 获取发布时间并判断是否为老版本
+            var releaseTime = await McInstanceUtils.TryGetReleaseTimeAsync(this);
+            if (version != null) {
+                _versionInfo.McVersion = version;
+                _versionInfo.CanDetermineVersion = true;
+            } else {
+                _versionInfo.CanDetermineVersion = false;
+            }
+            _versionInfo.ReleaseTime = releaseTime;
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
+            _versionInfo.McVersion = "Unknown";
+            Desc = $"无法识别：{ex.Message}";
+        }
+
+        try {
+            if (IsPatchesFormatJson) {
+                foreach (var patch in versionJson["patches"]!.AsArray()) {
+                    
+                }
+            }
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
+            _versionInfo.McVersion = "Unknown";
+            Desc = $"无法识别：{ex.Message}";
+        }
+
         return _versionInfo;
     }
 
@@ -93,32 +109,34 @@ public class McInstance {
     /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
     /// <exception cref="Exception">如果初始化 JSON 失败或版本依赖项出现嵌套，则抛出异常。</exception>
     public async Task<JsonObject> GetVersionJsonAsync() {
-        if (_versionJson == null) {
-            string jsonPath = System.IO.Path.Combine(Path, $"{Name}.json");
-            if (!File.Exists(jsonPath)) {
-                string[] jsonFiles = Directory.GetFiles(Path, "*.json");
-                if (jsonFiles.Length == 1) {
-                    jsonPath = jsonFiles[0];
-                }
-            }
-
-            try {
-                // 异步读取文件内容
-                await using var fileStream = new FileStream(jsonPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var jsonNode = await JsonNode.ParseAsync(fileStream);
-                var jsonObject = jsonNode.AsObject();
-
-                // 处理 HMCL 格式 JSON
-                if (jsonObject["patches"] != null && jsonObject["time"] == null) {
-                    IsPatchesFormatJson = true;
-                }
-
-                _versionJson = jsonObject; // 保存到字段
-            } catch (Exception ex) {
-                throw new Exception($"初始化实例 JSON 失败（{Name ?? "null"}）", ex);
+        if (_versionJson != null) {
+            return _versionJson;
+        }
+        
+        var jsonPath = System.IO.Path.Combine(Path, $"{Name}.json");
+        if (!File.Exists(jsonPath)) {
+            var jsonFiles = Directory.GetFiles(Path, "*.json");
+            if (jsonFiles.Length == 1) {
+                jsonPath = jsonFiles[0];
             }
         }
 
+        try {
+            // 异步读取文件内容
+            await using var fileStream = new FileStream(jsonPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var jsonNode = await JsonNode.ParseAsync(fileStream);
+            var jsonObject = jsonNode.AsObject();
+
+            // 处理 Patches 格式 JSON
+            if (jsonObject["patches"] != null) {
+                IsPatchesFormatJson = true;
+            }
+
+            _versionJson = jsonObject; // 保存到字段
+        } catch (Exception ex) {
+            throw new Exception($"初始化实例 JSON 失败（{Name ?? "null"}）", ex);
+        }
+        
         return _versionJson;
     }
 
@@ -136,57 +154,63 @@ public class McInstance {
     /// 实例 JAR 中的 version.json 文件对象
     /// </summary>
     public async Task<JsonObject?> GetVersionJsonInJar() {
-        if (_versionJsonInJar == null) {
-            string jarPath = $"{Path}{Name}.jar";
-            if (File.Exists(jarPath)) {
-                try {
-                    await using var fileStream = new FileStream(jarPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    using var zipFile = new ZipFile(fileStream); // SharpZipLib 的 ZipFile
+        if (_versionJsonInJar != null) {
+            return _versionJsonInJar;
+        }
+        
+        var jarPath = $"{Path}{Name}.jar";
+        if (!File.Exists(jarPath)) {
+            return null;
+        }
+        
+        try {
+            await using var fileStream = new FileStream(jarPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var zipFile = new ZipFile(fileStream); // SharpZipLib 的 ZipFile
 
-                    var versionJsonEntry = zipFile.GetEntry("version.json");
-                    if (versionJsonEntry != null) {
-                        await using var entryStream = zipFile.GetInputStream(versionJsonEntry);
-                        JsonNode? jsonNode = await JsonNode.ParseAsync(entryStream);
-                        if (jsonNode is JsonObject jsonObj) {
-                            _versionJsonInJar = jsonObj; // 保存到字段
-                        }
-                    }
-                } catch (Exception ex) {
-                    LogWrapper.Warn(ex, "从实例 JAR 中读取 version.json 失败");
+            var versionJsonEntry = zipFile.GetEntry("version.json");
+            if (versionJsonEntry != null) {
+                await using var entryStream = zipFile.GetInputStream(versionJsonEntry);
+                var jsonNode = await JsonNode.ParseAsync(entryStream);
+                if (jsonNode is JsonObject jsonObj) {
+                    _versionJsonInJar = jsonObj; // 保存到字段
                 }
             }
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "从实例 JAR 中读取 version.json 失败");
         }
         return _versionJsonInJar;
     }
 
-
     public async Task<string?> GetVersionFromJson(McInstance instance) {
         var versionJson = await instance.GetVersionJsonAsync();
         try {
-            string? version = null;
-            // Get version from clientVersion
-            if (versionJson.TryGetPropertyValue("clientVersion", out var clientVersionElement)) {
-                version = clientVersionElement.ToString();
-            }
-
             // Get version from patches
-            if (versionJson.TryGetPropertyValue("patches", out var patchesElement) &&
-                patchesElement.GetValueKind() == JsonValueKind.Array) {
-                var patchesArray = patchesElement as JsonArray;
-                foreach (var patch in patchesArray.AsEnumerable()) {
-                    if (patch is JsonObject patchObj) {
-                        if (patchObj.TryGetPropertyValue("id", out var idElement) && idElement.ToString() == "game" &&
-                            patchObj.TryGetPropertyValue("version", out var versionElement)) {
-                            version = versionElement.ToString();
-                        }
+            if (versionJson.TryGetPropertyValue("patches", out var patchesElement) && 
+                patchesElement?.GetValueKind() == JsonValueKind.Array) {
+                var patchesArray = (JsonArray)patchesElement;
+                var gamePatch = patchesArray
+                    .OfType<JsonObject>()
+                    .FirstOrDefault(patch => 
+                        patch.TryGetPropertyValue("id", out var idElement) && 
+                        idElement?.ToString() == "game" && 
+                        patch.TryGetPropertyValue("version", out _));
+
+                if (gamePatch?.TryGetPropertyValue("version", out var versionElement) == true) {
+                    var version = versionElement?.ToString();
+                    if (!string.IsNullOrEmpty(version)) {
+                        return version;
                     }
                 }
+            }
+            
+            // Get version from clientVersion
+            if (versionJson.TryGetPropertyValue("clientVersion", out var clientVersionElement)) {
+                return clientVersionElement!.ToString();
             }
 
             // Fallback
             LogWrapper.Warn($"无法完全确认 MC 版本号的实例：{Name}");
             Desc = "PCL 无法识别该实例的 MC 版本号";
-            return version;
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
             Desc = $"无法识别：{ex.Message}";

@@ -19,10 +19,22 @@ public static class RandomUtils {
     /// <exception cref="ArgumentNullException">当 <paramref name="collection"/> 为 null 时抛出。</exception>
     /// <exception cref="ArgumentException">当 <paramref name="collection"/> 为空时抛出。</exception>
     public static T PickRandom<T>(ICollection<T> collection) {
-        if (collection.Count == 0) throw new ArgumentException("集合不能为空", nameof(collection));
-
-        var index = SharedRandom.Next(0, collection.Count);
-        return collection.ElementAt(index);
+        return collection.Count == 0 
+            ? throw new ArgumentException("集合不能为空", nameof(collection)) 
+            : collection.ElementAt(SharedRandom.Next(collection.Count));
+    }
+    
+    /// <summary>
+    /// 从给定的只读集合中随机选择一个元素。
+    /// </summary>
+    /// <typeparam name="T">集合中元素的类型。</typeparam>
+    /// <param name="collection">包含元素的只读集合，不能为 null 或空。</param>
+    /// <returns>从集合中随机选择的元素。</returns>
+    /// <exception cref="ArgumentException">如果集合为 null 或空，则抛出此异常。</exception>
+    public static T PickRandom<T>(IReadOnlyCollection<T> collection) {
+        return collection.Count == 0 
+            ? throw new ArgumentException("集合不能为空", nameof(collection)) 
+            : collection.ElementAt(SharedRandom.Next(collection.Count));
     }
 
     /// <summary>

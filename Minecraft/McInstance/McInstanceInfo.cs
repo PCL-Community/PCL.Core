@@ -1,43 +1,72 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft.McInstance;
 
 /// <summary>
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。
 /// </summary>
-public class McInstanceInfo
-{
+public class McInstanceInfo {
     /// <summary>
     /// 指示实例的 API 信息是否已加载。
     /// </summary>
     public bool IsApiLoaded { get; set; }
+    
+    /// <summary>
+    /// 实例发布时间
+    /// </summary>
+    public DateTime ReleaseTime { get; set; } = new DateTime(1970, 1, 1, 15, 0, 0);
 
-    // 原版相关
+    /// <summary>
+    /// 是否可以判断版本号。
+    /// </summary>
+    public bool CanDetermineVersion { get; set; } = false;
+    
     /// <summary>
     /// 原版版本名，如 "1.12.2" 或 "16w01a"。
     /// </summary>
-    public string McName { get; set; } = string.Empty;
+    public string McVersion { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 可读的版本名
+    /// </summary>
+    public string FormattedMcVersion => McVersion == string.Empty ? "未知版本" : McFormatter.FormatVersion(McVersion);
 
     /// <summary>
-    /// 原版主版本号，如 12（对于 1.12.2），快照版为 99，不可用为 -1。
+    /// 是否为正式版（Release），即版本号形如 "1.12.2" 而非 "16w01a" 或 "1.12.2-pre1"。
+    /// </summary>
+    public bool IsReleaseVersion => RegexPatterns.McReleaseVersion.IsMatch(McVersion);
+
+    /// <summary>
+    /// 是否为愚人节版（Fool）。
+    /// </summary>
+    public bool IsFoolVersion => ReleaseTime.Month == 4 && ReleaseTime.Day == 1;
+    
+    /// <summary>
+    /// 是否为快照版（Snapshot）。
+    /// </summary>
+    public bool IsSnapshotVersion => !IsReleaseVersion && IsFoolVersion;
+
+    /// <summary>
+    /// 是否为远古版（Old）。
+    /// </summary>
+    public bool IsOldVersion => ReleaseTime.Year > 2000 && ReleaseTime <= new DateTime(2011, 11, 16);
+
+    /// <summary>
+    /// 原版主版本号，如 12（对于 1.12.2），不可用为 -1。
     /// </summary>
     public int McCodeMain { get; set; } = -1;
 
     /// <summary>
-    /// 原版次版本号，如 2（对于 1.12.2），快照版为 99，不可用为 -1。
+    /// 原版次版本号，如 2（对于 1.12.2），不可用为 -1。
     /// </summary>
     public int McCodeSub { get; set; } = -1;
 
     /// <summary>
-    /// 是否为非快照版，且具有有效的原版版本号。
-    /// </summary>
-    public bool IsStandardVersion => McCodeMain > -1 && McCodeMain < 99 && McCodeSub > -1 && McCodeSub < 99;
-
-    /// <summary>
     /// 标准的原版版本号。若为快照版或无效版本号，返回 0.0.0。
     /// </summary>
-    public Version McInstance => IsStandardVersion ? new Version(1, McCodeMain, McCodeSub) : new Version(0, 0, 0);
+    public Version McInstance => IsReleaseVersion ? new Version(1, McCodeMain, McCodeSub) : new Version(0, 0, 0);
 
     // OptiFine
     /// <summary>
@@ -136,8 +165,7 @@ public class McInstanceInfo
     /// <summary>
     /// 生成用户友好的实例信息描述字符串。
     /// </summary>
-    public override string ToString()
-    {
+    public override string ToString() {
         string result = string.Empty;
         if (HasForge) result += $", Forge{(ForgeVersion == "未知版本" ? "" : " " + ForgeVersion)}";
         if (HasNeoForge) result += $", NeoForge{(NeoForgeVersion == "未知版本" ? "" : " " + NeoForgeVersion)}";
@@ -149,7 +177,7 @@ public class McInstanceInfo
         if (HasOptiFine) result += $", OptiFine{(OptiFineVersion == "未知版本" ? "" : " " + OptiFineVersion)}";
         if (HasLiteLoader) result += ", LiteLoader";
 
-        return result == string.Empty ? $"原版 {McName}" : $"{McName}{result}";
+        return result == string.Empty ? $"原版 {McVersion}" : $"{McVersion}{result}";
     }
 
     private int _sortCode = -2;
@@ -157,18 +185,12 @@ public class McInstanceInfo
     /// <summary>
     /// 用于排序比较的编号。
     /// </summary>
-    public int SortCode
-    {
-        get
-        {
-            if (_sortCode == -2)
-            {
-                try
-                {
+    public int SortCode {
+        get {
+            if (_sortCode == -2) {
+                try {
                     _sortCode = CalculateSortCode();
-                }
-                catch (Exception ex)
-                {
+                } catch (Exception ex) {
                     _sortCode = -1;
                     Console.WriteLine($"获取 API 版本信息失败：{ToString()} - {ex.Message}");
                 }
@@ -178,10 +200,8 @@ public class McInstanceInfo
         set => _sortCode = value;
     }
 
-    private int CalculateSortCode()
-    {
-        if (HasLegacyFabric || HasFabric)
-        {
+    private int CalculateSortCode() {
+        if (HasLegacyFabric || HasFabric) {
             string version = HasLegacyFabric ? LegacyFabricVersion : FabricVersion;
             if (version == "未知版本") return 0;
             var subVersions = version.Split('.');
@@ -190,8 +210,7 @@ public class McInstanceInfo
             throw new Exception($"无效的 {(HasLegacyFabric ? "LegacyFabric" : "Fabric")} 版本：{version}");
         }
 
-        if (HasQuilt)
-        {
+        if (HasQuilt) {
             if (QuiltVersion == "未知版本") return 0;
             bool isBeta = QuiltVersion.Contains("-beta", StringComparison.OrdinalIgnoreCase);
             var subVersions = QuiltVersion.Replace("-beta", "", StringComparison.OrdinalIgnoreCase).Split('.');
@@ -200,8 +219,7 @@ public class McInstanceInfo
             throw new Exception($"无效的 Quilt 版本：{QuiltVersion}");
         }
 
-        if (HasCleanroom)
-        {
+        if (HasCleanroom) {
             if (CleanroomVersion == "未知版本") return 0;
             bool isAlpha = CleanroomVersion.Contains("-alpha", StringComparison.OrdinalIgnoreCase);
             var subVersions = CleanroomVersion.Replace("-alpha", "", StringComparison.OrdinalIgnoreCase).Split('.');
@@ -210,8 +228,7 @@ public class McInstanceInfo
             throw new Exception($"无效的 Cleanroom 版本：{CleanroomVersion}");
         }
 
-        if (HasForge || HasNeoForge)
-        {
+        if (HasForge || HasNeoForge) {
             string version = HasForge ? ForgeVersion : NeoForgeVersion;
             if (version == "未知版本") return 0;
             var subVersions = version.Split('.');
@@ -222,8 +239,7 @@ public class McInstanceInfo
             throw new Exception($"无效的 {(HasForge ? "Forge" : "NeoForge")} 版本：{version}");
         }
 
-        if (HasLabyMod)
-        {
+        if (HasLabyMod) {
             if (LabyModVersion == "未知版本") return 0;
             var subVersions = LabyModVersion.Split('.');
             if (subVersions.Length == 4)
@@ -233,8 +249,7 @@ public class McInstanceInfo
             throw new Exception($"无效的 LabyMod 版本：{LabyModVersion}");
         }
 
-        if (HasOptiFine)
-        {
+        if (HasOptiFine) {
             if (OptiFineVersion == "未知版本") return 0;
             int code = (McCodeSub >= 0 ? McCodeSub : 0) * 1000000;
             string letter = OptiFineVersion[0].ToString().ToUpper();

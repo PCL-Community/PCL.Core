@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -13,6 +14,34 @@ using PCL.Core.Utils.Exts;
 namespace PCL.Core.Minecraft.McInstance;
 
 public static class McInstanceUtils {
+    private static readonly IReadOnlyList<string> DescStrings = new List<string> {
+        "开启一段全新的冒险之旅！",
+        "创造属于你的独特世界。",
+        "探索无尽的可能性。",
+        "随时随地，开始你的旅程。",
+        "打造你的梦想之地。",
+        "自由发挥，享受无限乐趣。",
+        "一个属于你的 Minecraft 故事。",
+        "发现新奇，创造精彩。",
+        "轻松开启，畅玩无忧。",
+        "你的冒险，从这里起航。",
+        "构建、探索、尽情享受！",
+        "适合每一位玩家的乐园。",
+        "创造与冒险的完美结合。",
+        "开启属于你的游戏篇章。",
+        "探索未知，创造奇迹。",
+        "属于你的 Minecraft 世界。",
+        "简单上手，乐趣无穷。",
+        "打造你的专属冒险舞台。",
+        "从零开始，创造无限。",
+        "你的故事，等待书写！"
+    }.AsReadOnly();
+    private static readonly Random Random = new Random();
+
+    public static string GetRandomDescString() {
+        return DescStrings[Random.Next(DescStrings.Count)];
+    }
+    
     /// <summary>
     /// 获取实例的隔离路径，根据全局设置和实例特性决定是否使用独立文件夹。
     /// </summary>
@@ -43,10 +72,11 @@ public static class McInstanceUtils {
         }
 
         var isModable = await GetIsModableAsync(instance);
-        bool isRelease = instance.State != McInstanceState.Fool && instance.State != McInstanceState.Old && instance.State != McInstanceState.Snapshot;
-        LogWrapper.Info($"[Minecraft] 版本隔离初始化（{instance.Name}）：全局设置（{SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2)}），State {instance.State}, IsRelease {isRelease}, Modable {isModable}");
+        var versionInfo = await instance.GetVersionInfoAsync();
+        bool isRelease = versionInfo.IsReleaseVersion;
+        LogWrapper.Info($"[Minecraft] 版本隔离初始化({instance.Name}): 全局设置({SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2)}), IsRelease {isRelease}, Modable {isModable}");
 
-        var version = await instance.GetVersionAsync();
+        var version = await instance.GetVersionInfoAsync();
         return SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2) switch {
             0 => false,
             1 => version.HasLabyMod || isModable,
@@ -63,37 +93,10 @@ public static class McInstanceUtils {
     /// <returns>是否支持 Mod</returns>
     public static async Task<bool> GetIsModableAsync(McInstance instance) {
         if (!instance.IsLoaded) await instance.Load();
-        var version = await instance.GetVersionAsync();
+        var version = await instance.GetVersionInfoAsync();
         return version.HasFabric || version.HasLegacyFabric || version.HasQuilt ||
                version.HasForge || version.HasLiteLoader || version.HasNeoForge ||
                version.HasCleanroom || instance.DisplayType == McInstanceCardType.API;
-    }
-
-    /// <summary>
-    /// 确定实例的类型（快照、愚人节、老版本等）。
-    /// </summary>
-    /// <param name="instance">Minecraft 实例</param>
-    /// <returns>实例状态</returns>
-    public static async Task<McInstanceState> DetermineInstanceTypeAsync(McInstance instance) {
-        var version = await instance.GetVersionAsync();
-        var versionJson = await instance.GetVersionJsonAsync();
-        if (versionJson["type"]?.ToString() == "fool" || !string.IsNullOrEmpty(GetMcFoolName(version.McName))) {
-            return McInstanceState.Fool;
-        }
-        if (version.McName.Contains("w", StringComparison.OrdinalIgnoreCase) ||
-            instance.Name.Contains("combat", StringComparison.OrdinalIgnoreCase) ||
-            version.McName.Contains("rc", StringComparison.OrdinalIgnoreCase) ||
-            version.McName.Contains("pre", StringComparison.OrdinalIgnoreCase) ||
-            version.McName.Contains("experimental", StringComparison.OrdinalIgnoreCase) ||
-            versionJson?["type"]?.ToString() is "snapshot" or "pending") {
-            return McInstanceState.Snapshot;
-        }
-        if (versionJson.ToString().Contains("optifine")) {
-            version.HasOptiFine = true;
-            version.OptiFineVersion = Regex.Match(versionJson.ToString(), "(?<=HD_U_)[^\"\":/]+")?.Value ?? "未知版本";
-            return McInstanceState.OptiFine;
-        }
-        return McInstanceState.Original;
     }
 
     // 假设 GetMcFoolName 也移动到此静态类
@@ -119,44 +122,14 @@ public static class McInstanceUtils {
     /// </summary>
     public static async Task<string> GetDefaultDescription(McInstance instance) {
         string info = "";
-        McInstanceInfo version = await instance.GetVersionAsync();
-        switch (instance.State) {
-            case McInstanceState.Snapshot:
-                if (version.McName.ContainsF("pre", true)) {
-                    info = "预发布版 " + version.McName;
-                } else if (version.McName.ContainsF("rc", true)) {
-                    info = "发布候选 " + version.McName;
-                } else if (version.McName.Contains("experimental") || version.McName == "pending") {
-                    info = "实验性快照";
-                } else {
-                    info = "快照" + version.McName;
-                }
-                break;
-            case McInstanceState.Old:
-                info = "远古版本";
-                break;
-            case McInstanceState.Original:
-            case McInstanceState.Forge:
-            case McInstanceState.NeoForge:
-            case McInstanceState.Fabric:
-            case McInstanceState.LegacyFabric:
-            case McInstanceState.Quilt:
-            case McInstanceState.LabyMod:
-            case McInstanceState.OptiFine:
-            case McInstanceState.LiteLoader:
-            case McInstanceState.Cleanroom:
-                info = version.ToString();
-                break;
-            case McInstanceState.Fool:
-                info = GetMcFoolName(version.McName);
-                break;
-            case McInstanceState.Error:
-                return info; // Return existing error information
-            default:
-                info = "发生了未知错误，请向作者反馈此问题";
-                break;
+        McInstanceInfo versionInfo = await instance.GetVersionInfoAsync();
+        if (instance.IsError) {
+            return info;
         }
-        return info;
+        if (versionInfo.IsFoolVersion) {
+            return GetMcFoolName(versionInfo.McVersion);
+        }
+        return GetRandomDescString();
     }
 
     public static async Task<DateTime> TryGetReleaseTimeAsync(McInstance instance) {
@@ -167,9 +140,5 @@ public static class McInstanceUtils {
             }
         }
         return new DateTime(1970, 1, 1, 15, 0, 0);
-    }
-
-    public static string GetVersionFromJson(McInstance instance) {
-        return "Unknown"; // 根据实际需求实现
     }
 }

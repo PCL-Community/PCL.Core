@@ -81,4 +81,11 @@ public static partial class RegexPatterns
     public static readonly Regex MotdCode = _MotdCode();
     [GeneratedRegex("(§[0-9a-fk-oAr]|#[0-9A-Fa-f]{6})", RegexOptions.Compiled)]
     private static partial Regex _MotdCode();
+    
+    /// <summary>
+    /// 匹配 Minecraft 正式版版本号，如 1.20.4、1.19.3 等。
+    /// </summary>
+    public static readonly Regex McReleaseVersion = _McReleaseVersion();
+    [GeneratedRegex(@"^\d+\.\d+\.\d+$|^\d+\.\d+$", RegexOptions.Compiled)]
+    private static partial Regex _McReleaseVersion();
 }

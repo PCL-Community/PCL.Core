@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Utils.Threading;
 
-// 使用 ChatGPT 生成的代码
+// 使用 AI 生成的代码
+// 时间: 2025/9/1
+// 模型: GPT-5
 
 /// <summary>
 /// 一个带配额的 AsyncAutoResetEvent。

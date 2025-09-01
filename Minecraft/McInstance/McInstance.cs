@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -14,18 +15,10 @@ using PCL.Core.ProgramSetup;
 namespace PCL.Core.Minecraft.McInstance;
 
 public class McInstance {
-    private readonly McInstanceIsolationHandler _isolationHandler;
-    
     private string? _name;
-    private string? _jsonText;
     private JsonObject? _versionJson;
     private McInstanceInfo? _version;
-    private string? _inheritVersion;
     private JsonObject? _versionJsonInJar;
-
-    public McInstance(string path, McInstanceIsolationHandler isolationHandler) {
-        _isolationHandler = isolationHandler ?? throw new ArgumentNullException(nameof(isolationHandler));
-    }
     
     /// <summary>
     /// 实例文件夹路径，以“\”结尾
@@ -35,12 +28,17 @@ public class McInstance {
     /// <summary>
     /// 应用版本隔离后的 Minecraft 根文件夹路径，以“\”结尾
     /// </summary>
-    public string PathIndie => _isolationHandler.GetInstancePath(this);
-
+    public async Task<string> GetPathIndie() => await McInstanceUtils.GetIsolatedPathAsync(this);
+    
     /// <summary>
     /// 实例文件夹名称
     /// </summary>
     public string Name => _name ??= string.IsNullOrEmpty(Path) ? "" : new DirectoryInfo(Path).Name;
+    
+    /// <summary>
+    /// 实例发布时间
+    /// </summary>
+    public DateTime ReleaseTime { get; set; } = new DateTime(1970, 1, 1, 15, 0, 0);
 
     /// <summary>
     /// 显示的描述文本
@@ -70,13 +68,7 @@ public class McInstance {
     /// <summary>
     /// 是否可安装 Mod
     /// </summary>
-    public async Task<bool> GetIsModable() {
-        if (!IsLoaded) Load();
-        var version = await GetVersionAsync();
-        return version.HasFabric || version.HasLegacyFabric || version.HasQuilt ||
-               version.HasForge || version.HasLiteLoader || version.HasNeoForge ||
-               version.HasCleanroom || DisplayType == McInstanceCardType.API;
-    }
+    public async Task<bool> GetIsModable() => await McInstanceUtils.GetIsModableAsync(this);
 
     /// <summary>
     /// 实例信息
@@ -86,8 +78,8 @@ public class McInstance {
             _version = new McInstanceInfo();
             try {
                 // 获取发布时间并判断是否为老版本
-                var releaseTime = await TryGetReleaseTimeAndVersion();
-                _version.McName = releaseTime <= new DateTime(2011, 11, 16) ? "Old" : GetVersionFromJson();
+                var releaseTime = await McInstanceUtils.TryGetReleaseTimeAsync(this);
+                _version.McName = releaseTime <= new DateTime(2011, 11, 16) ? "Old" : McInstanceUtils.GetVersionFromJson(this);
                 ReleaseTime = releaseTime;
             } catch (Exception ex) {
                 LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
@@ -97,11 +89,6 @@ public class McInstance {
         }
         return _version;
     }
-
-    /// <summary>
-    /// 实例发布时间
-    /// </summary>
-    public DateTime ReleaseTime { get; set; } = new DateTime(1970, 1, 1, 15, 0, 0);
     
     /// <summary>
     /// 异步获取 JSON 对象。
@@ -138,13 +125,6 @@ public class McInstance {
         }
 
         return _versionJson;
-    }
-
-    /// <summary>
-    /// 设置 JSON 对象。
-    /// </summary>
-    public JsonObject VersionJson {
-        set => _versionJson = value;
     }
 
     /// <summary>
@@ -211,7 +191,7 @@ public class McInstance {
             _ = await GetVersionJsonAsync();
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"实例 JSON 可用性检查失败（{Path}）");
-            VersionJson = null;
+            _versionJson = null;
             Info = ex.Message;
             State = McInstanceState.Error;
             return false;
@@ -223,8 +203,8 @@ public class McInstance {
 
     public async Task<McInstance> Load() {
         try {
+            var version = await GetVersionAsync();
             if (await Check()) {
-                var version = await GetVersionAsync();
                 // 确定实例分类
                 switch (version.McName) {
                     case "Unknown":
@@ -234,7 +214,7 @@ public class McInstance {
                         State = McInstanceState.Old;
                         break;
                     default:
-                        ProcessApiType();
+                        await McInstanceUtils.DetermineInstanceTypeAsync(this);
                         break;
                 }
             }
@@ -244,34 +224,35 @@ public class McInstance {
             Logo = DetermineLogo();
 
             // 确定实例描述和状态
-            Info = string.IsNullOrEmpty(Setup.Instance.CustomInfo(Path))
-                ? GetDefaultDescription()
-                : Setup.Instance.CustomInfo(Path);
-            IsStar = Setup.Instance.Starred(Path);
-            DisplayType = Setup.Instance.DisplayType(Path);
+            Info = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
+                ? await McInstanceUtils.GetDefaultDescription(this)
+                : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
+            SetupService.SetString(SetupEntries.Instance.Starred, Path);
+            IsStar = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
+            DisplayType = (McInstanceCardType) SetupService.GetInt32(SetupEntries.Instance.DisplayType, Path);
 
             // 写入缓存
             if (Directory.Exists(Path)) {
-                Setup.Instance.State(Path) = State;
-                Setup.Instance.Info(Path) = Info;
-                Setup.Instance.LogoPath(Path) = Logo;
+                SetupService.SetInt32(SetupEntries.Instance.State, (int) State, Path);
+                SetupService.SetString(SetupEntries.Instance.Info, Info, Path);
+                SetupService.SetString(SetupEntries.Instance.LogoPath, Logo, Path);
             }
 
             if (State != McInstanceState.Error) {
-                Setup.Instance.ReleaseTime(Path) = ReleaseTime.ToString("yyyy-MM-dd HH:mm");
-                Setup.Instance.FabricVersion(Path) = Version.FabricVersion;
-                Setup.Instance.LegacyFabricVersion(Path) = Version.LegacyFabricVersion;
-                Setup.Instance.QuiltVersion(Path) = Version.QuiltVersion;
-                Setup.Instance.LabyModVersion(Path) = Version.LabyModVersion;
-                Setup.Instance.OptiFineVersion(Path) = Version.OptiFineVersion;
-                Setup.Instance.HasLiteLoader(Path) = Version.HasLiteLoader;
-                Setup.Instance.ForgeVersion(Path) = Version.ForgeVersion;
-                Setup.Instance.NeoForgeVersion(Path) = Version.NeoForgeVersion;
-                Setup.Instance.CleanroomVersion(Path) = Version.CleanroomVersion;
-                Setup.Instance.SortCode(Path) = Version.SortCode;
-                Setup.Instance.McVersion(Path) = Version.McName;
-                Setup.Instance.VersionMajor(Path) = Version.McCodeMain;
-                Setup.Instance.VersionMinor(Path) = Version.McCodeSub;
+                SetupService.SetString(SetupEntries.Instance.ReleaseTime, ReleaseTime.ToString("yyyy-MM-dd HH:mm"), Path);
+                SetupService.SetString(SetupEntries.Instance.FabricVersion, version.FabricVersion, Path);
+                SetupService.SetString(SetupEntries.Instance.LegacyFabricVersion, version.LegacyFabricVersion, Path);
+                SetupService.SetString(SetupEntries.Instance.QuiltVersion, version.QuiltVersion, Path);
+                SetupService.SetString(SetupEntries.Instance.LabyModVersion, version.LabyModVersion, Path);
+                SetupService.SetString(SetupEntries.Instance.OptiFineVersion, version.OptiFineVersion, Path);
+                SetupService.SetBool(SetupEntries.Instance.HasLiteLoader, version.HasLiteLoader, Path);
+                SetupService.SetString(SetupEntries.Instance.ForgeVersion, version.ForgeVersion, Path);
+                SetupService.SetString(SetupEntries.Instance.NeoForgeVersion, version.NeoForgeVersion, Path);
+                SetupService.SetString(SetupEntries.Instance.CleanroomVersion, version.CleanroomVersion, Path);
+                SetupService.SetInt32(SetupEntries.Instance.SortCode, version.SortCode, Path);
+                SetupService.SetString(SetupEntries.Instance.McVersion, version.McName, Path);
+                SetupService.SetInt32(SetupEntries.Instance.VersionMajor, version.McCodeMain, Path);
+                SetupService.SetInt32(SetupEntries.Instance.VersionMinor, version.McCodeSub, Path);
             }
         } catch (Exception ex) {
             Info = $"未知错误：{ex}";
@@ -293,43 +274,6 @@ public class McInstance {
             logo = System.IO.Path.Combine(Basics.ImagePath, iconPath);
         }
         return logo;
-    }
-
-    private async void ProcessApiType() {
-        var versionJson = await GetVersionJsonAsync();
-        if (versionJson["type"]?.ToString() == "fool" || !string.IsNullOrEmpty(GetMcFoolName(Version.McName))) {
-            State = McInstanceState.Fool;
-        } else if (version.McName.Contains("w", StringComparison.OrdinalIgnoreCase) ||
-                   Name.Contains("combat", StringComparison.OrdinalIgnoreCase) ||
-                   version.McName.Contains("rc", StringComparison.OrdinalIgnoreCase) ||
-                   version.McName.Contains("pre", StringComparison.OrdinalIgnoreCase) ||
-                   version.McName.Contains("experimental", StringComparison.OrdinalIgnoreCase) ||
-                   versionJson?["type"]?.ToString() is "snapshot" or "pending") {
-            State = McInstanceState.Snapshot;
-        }
-
-        if (realJson.Contains("optifine")) {
-            State = McInstanceState.OptiFine;
-            Version.HasOptiFine = true;
-            Version.OptiFineVersion = Regex.Match(realJson, "(?<=HD_U_)[^\"":/]+")?.Value ?? "未知版本";
-        }
-        // ... 其他 API 类型处理类似
-    }
-
-    private async Task<DateTime> TryGetReleaseTimeAndVersion() {
-        var jsonObject = await GetVersionJsonAsync();
-        if(jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode)) {
-            if(releaseTimeNode != null && DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime)) {
-                return releaseTime;
-            }
-        }
-        return new DateTime(1970, 1, 1, 15, 0, 0);
-    }
-
-    private string GetVersionFromJson() {
-        // 实现从 JSON 获取版本号的逻辑
-        // 这里需要根据实际需求实现具体逻辑
-        return "Unknown";
     }
 }
 

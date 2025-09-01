@@ -52,6 +52,11 @@ public static class Basics
     public static string CurrentDirectory => Environment.CurrentDirectory;
 
     /// <summary>
+    /// 程序内嵌图片文件夹路径，以“/”结尾。
+    /// </summary>
+    public static readonly string ImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
+
+    /// <summary>
     /// 在新的工作线程运行指定委托。
     /// </summary>
     /// <param name="action">要运行的委托</param>

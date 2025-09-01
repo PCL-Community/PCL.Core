@@ -4,11 +4,13 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
 using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.BZip2;
 using PCL.Core.Logging;
+using PCL.Core.UI;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
@@ -59,6 +61,59 @@ public static class Files {
         link.Save();
     }
 
+    public static async Task<bool> ExportAsZipArchiveAsync(
+        IEnumerable<string> sourceFiles,
+        string dialogTitle,
+        string defaultFileName,
+        string fileFilter,
+        string defaultDirectory,
+        string tempDirPrefix,
+        CancellationToken cancellationToken = default) {
+        var tempDirName = $"{tempDirPrefix}.tmp";
+        var selectedPath = SystemDialogs.SelectSaveFile(dialogTitle, defaultFileName, fileFilter, defaultDirectory);
+
+        if (string.IsNullOrEmpty(selectedPath)) {
+            return false;
+        }
+
+        try {
+            Directory.CreateDirectory(tempDirName);
+
+            if (File.Exists(selectedPath)) {
+                File.Delete(selectedPath);
+                LogWrapper.Info("Files", $"删除已有文件：{selectedPath}");
+            }
+
+            await using var fileStream = new FileStream(selectedPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true);
+            await using var zipStream = new ZipOutputStream(fileStream);
+            foreach (var item in sourceFiles) {
+                cancellationToken.ThrowIfCancellationRequested();
+                var itemFileName = Path.GetFileName(item);
+                var tempPath = Path.Combine(tempDirName, itemFileName);
+
+                await CopyFileAsync(item, tempPath, cancellationToken);
+                await using (var sourceStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true)) {
+                    var entry = new ZipEntry(itemFileName);
+                    await zipStream.PutNextEntryAsync(entry, cancellationToken);
+                    await sourceStream.CopyToAsync(zipStream, cancellationToken);
+                }
+                File.Delete(tempPath);
+            }
+            await zipStream.FinishAsync(cancellationToken);
+            LogWrapper.Info("Files", $"导出 Zip 成功：{selectedPath}");
+
+            return true;
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "Log", "导出 Zip 失败");
+            return false;
+        } finally {
+            if (Directory.Exists(tempDirName)) {
+                Directory.Delete(tempDirName, true);
+                LogWrapper.Debug("Log", $"清理临时文件夹：{tempDirName}");
+            }
+        }
+    }
+
     #region 异步文件操作
 
     /// <summary>
@@ -90,6 +145,32 @@ public static class Files {
         } catch (Exception ex) {
             throw new IOException($"复制文件出错：{fromPath} -> {toPath}", ex);
         }
+    }
+
+    public static async Task CopyDirectoryAsync(string sourceDir, string destDir, CancellationToken cancelToken = default) {
+        Directory.CreateDirectory(destDir);
+
+        // 获取所有文件和子目录
+        var files = Directory.GetFiles(sourceDir);
+        var directories = Directory.GetDirectories(sourceDir);
+
+        // 限制并行度，防止资源耗尽
+        var parallelOptions = new ParallelOptions {
+            MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount),
+            CancellationToken = cancelToken
+        };
+
+        // 并行复制文件
+        await Parallel.ForEachAsync(files, parallelOptions, async (file, ct) => {
+            var destFile = Path.Combine(destDir, Path.GetFileName(file));
+            await CopyFileAsync(file, destFile, ct);
+        });
+
+        // 并行处理子目录
+        await Parallel.ForEachAsync(directories, parallelOptions, async (subDir, ct) => {
+            var destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+            await CopyDirectoryAsync(subDir, destSubDir, ct);
+        });
     }
 
     /// <summary>
@@ -345,7 +426,7 @@ public static class Files {
             entries.Add(entry);
             totalBytes += entry.Size;
         }
-        
+
         long processedBytes = 0;
 
         tarStream.Reset(); // 重置流以重新读取条目
@@ -376,7 +457,7 @@ public static class Files {
 
     private static async Task<TarEntry?> _GetNextEntryAsync(TarInputStream tarStream, CancellationToken cancellationToken) {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var task = Task.Run(tarStream.GetNextEntry, cts.Token); 
+        var task = Task.Run(tarStream.GetNextEntry, cts.Token);
         if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), cts.Token)).ConfigureAwait(false) == task) {
             return await task.ConfigureAwait(false);
         }
@@ -503,15 +584,58 @@ public static class Files {
     /// </summary>
     /// <returns>若被占用则为 true，否则为 false</returns>
     public static async Task<bool> CheckFileBusyAsync(string filePath) {
-        try
-        {
+        try {
             if (!File.Exists(filePath)) return false;
             await using FileStream fs = new(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read | FileShare.Delete);
             return false;
-        }
-        catch (IOException) { return true; }
-        catch { return false; }
+        } catch (IOException) { return true; } catch { return false; }
     }
 
     #endregion
+    
+    
+    /// <summary>
+    /// 从剪切板粘贴文件或文件夹
+    /// </summary>
+    /// <param name="dest">目标文件夹</param>
+    /// <param name="copyFile">是否粘贴文件</param>
+    /// <param name="copyDir">是否粘贴文件夹</param>
+    /// <returns>总共粘贴的数量</returns>
+    public static async Task<int> PasteFromClipboardAsync(string dest, bool copyFile, bool copyDir) {
+        if (string.IsNullOrEmpty(dest)) {
+            throw new ArgumentException("Destination folder cannot be null or empty.", nameof(dest));
+        }
+
+        if (!Directory.Exists(dest)) {
+            Directory.CreateDirectory(dest);
+        }
+
+        var dataObject = Clipboard.GetDataObject();
+        if (dataObject == null || !dataObject.GetDataPresent(DataFormats.FileDrop)) {
+            return 0;
+        }
+
+        var data = dataObject.GetData(DataFormats.FileDrop);
+        if (data is not string[] paths) {
+            return 0;
+        }
+        if (paths.Length == 0) {
+            return 0;
+        }
+
+        var count = 0;
+        foreach (var path in paths) {
+            if (File.Exists(path) && copyFile) {
+                var targetPath = Path.Combine(dest, Path.GetFileName(path));
+                await CopyFileAsync(path, targetPath);
+                count++;
+            } else if (Directory.Exists(path) && copyDir) {
+                var targetDir = Path.Combine(dest, new DirectoryInfo(path).Name);
+                await CopyDirectoryAsync(path, targetDir);
+                count++;
+            }
+        }
+
+        return count;
+    }
 }

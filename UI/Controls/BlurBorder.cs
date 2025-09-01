@@ -210,7 +210,7 @@ public class BlurBorder : Border
         else if (BlurRadius >= 50.0 && BlurSamplingRate <= 0.3)
         {
             // 大半径低采样率：使用极速优化版本
-            var ultraFastBlur = OptimizedBlurFactory.CreateRealTimePreview(BlurRadius);
+            var ultraFastBlur = HighPerformanceBlurEffect.Presets.RealTimePreview(BlurRadius);
             ultraFastBlur.SamplingRate = Math.Max(0.1, BlurSamplingRate);
             ultraFastBlur.RenderingBias = RenderingBias.Performance;
             return ultraFastBlur.GetEffectInstance();
@@ -218,7 +218,7 @@ public class BlurBorder : Border
         else
         {
             // 中等情况：使用我们的自适应优化算法
-            var adaptiveBlur = OptimizedBlurFactory.CreateAdaptive(BlurRadius);
+            var adaptiveBlur = HighPerformanceBlurEffect.Presets.Adaptive(BlurRadius);
             adaptiveBlur.SamplingRate = BlurSamplingRate;
             adaptiveBlur.RenderingBias = BlurRenderingBias;
             adaptiveBlur.KernelType = BlurKernelType;

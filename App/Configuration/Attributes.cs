@@ -45,7 +45,7 @@ public sealed class ConfigGroupAttribute(string name) : Attribute
 }
 
 /// <summary>
-/// 标记一个与 <see cref="ConfigEventRegister"/> 签名兼容的 public static 方法，以注册配置项事件。
+/// 标记一个与 <see cref="ConfigEventRegistry"/> 签名兼容的 public static 方法，以注册配置项事件。
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class RegisterConfigEventAttribute : Attribute;

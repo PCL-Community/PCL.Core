@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
@@ -29,6 +30,12 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             static (ctx, _) => _GetConfigClass(ctx)
         ).Where(static m => m is not null);
 
+        // 新增：收集 [RegisterConfigEvent] 的 public static 属性
+        var eventCandidates = context.SyntaxProvider.CreateSyntaxProvider(
+            static (s, _) => s is PropertyDeclarationSyntax { AttributeLists.Count: > 0 },
+            static (ctx, _) => _GetRegisterConfigEventCandidate(ctx)
+        ).Where(static m => m is not null);
+
         var collected = propertyCandidates.Collect()
             .Combine(groupCandidates.Collect())
             .Combine(configClassCandidates.Collect());
@@ -51,12 +58,11 @@ public sealed class ConfigGenerator : IIncrementalGenerator
                 try
                 {
                     var tree = _BuildConfigTree(config, itemList, groupList);
-                    if (tree is null) continue;
 
                     // 跳过无用生成（无顶层项和顶层组声明的类型）
                     if (tree.TopItems.Count == 0 && tree.TopGroups.Count == 0) continue;
 
-                    var source = _EmitSource(tree);
+                    var source = _GenerateAdditionalSource(tree);
                     var hint = _MakeHintName(config);
                     spc.AddSource(hint, source);
                 }
@@ -67,12 +73,16 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             }
         });
 
-        var allItems = propertyCandidates.Collect();
-        context.RegisterSourceOutput(allItems, static (spc, itemsObj) =>
+        var serviceInputs = propertyCandidates.Collect().Combine(eventCandidates.Collect());
+        context.RegisterSourceOutput(serviceInputs, static (spc, tuple) =>
         {
-            var items = itemsObj.Cast<ItemModel>().OrderBy(i => i.DeclOrder).ToList();
-            if (items.Count == 0) return;
-            var src = _EmitConfigServiceInitSource(items);
+            var items  = tuple.Left.Cast<ItemModel>().OrderBy(i => i.DeclOrder).ToList();
+            var events = tuple.Right.Cast<EventRegisterModel>().OrderBy(e => e.DeclOrder).ToList();
+
+            // 两者都为空则不生成
+            if (items.Count == 0 && events.Count == 0) return;
+
+            var src = _GenerateServiceInitSource(items, events);
             spc.AddSource("ConfigService.g.cs", src);
         });
     }
@@ -89,7 +99,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         if (attrDefItem == null && attrDefAny == null) return null;
     
         AttributeData? picked = null;
-        bool isAny = false;
+        var isAny = false;
     
         foreach (var a in symbol.GetAttributes())
         {
@@ -184,15 +194,49 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             DeclOrder = _GetDeclarationOrder(symbol)
         };
     }
+    
+    private static object? _GetRegisterConfigEventCandidate(GeneratorSyntaxContext ctx)
+    {
+        var propSyntax = (PropertyDeclarationSyntax)ctx.Node;
+        if (ctx.SemanticModel.GetDeclaredSymbol(propSyntax) is not { } symbol) return null;
+
+        // 仅 public static
+        if (symbol.DeclaredAccessibility != Accessibility.Public || !symbol.IsStatic) return null;
+
+        // 精确匹配 [RegisterConfigEvent]
+        var compilation = ctx.SemanticModel.Compilation;
+        var attrDef = compilation.GetTypeByMetadataName("PCL.Core.App.Configuration.RegisterConfigEventAttribute");
+        if (attrDef is null) return null;
+        var hasAttr = symbol.GetAttributes().Any(a =>
+            a.AttributeClass is not null &&
+            SymbolEqualityComparer.Default.Equals(a.AttributeClass, attrDef));
+        if (!hasAttr) return null;
+
+        return new EventRegisterModel
+        {
+            Property = symbol,
+            DeclOrder = _GetDeclarationOrder(symbol)
+        };
+    }
 
     private static object? _GetConfigClass(GeneratorSyntaxContext ctx)
     {
         var classSyntax = (ClassDeclarationSyntax)ctx.Node;
         if (ModelExtensions.GetDeclaredSymbol(ctx.SemanticModel, classSyntax) is not INamedTypeSymbol symbol) return null;
 
-        // 限定为 static partial
-        if (!symbol.IsStatic) return null;
+        // 限定为 partial
         if (!_IsPartial(symbol)) return null;
+
+        // 绕过 [ConfigGroup]
+        var compilation = ctx.SemanticModel.Compilation;
+        var attrDef = compilation.GetTypeByMetadataName("PCL.Core.App.Configuration.ConfigGroupAttribute");
+        if (attrDef is not null)
+        {
+            var hasAttr = symbol.GetAttributes().Any(a =>
+                a.AttributeClass is not null &&
+                SymbolEqualityComparer.Default.Equals(a.AttributeClass, attrDef));
+            if (hasAttr) return null;
+        }
 
         return new ConfigModel
         {
@@ -219,7 +263,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static ConfigTree? _BuildConfigTree(ConfigModel config,
+    private static ConfigTree _BuildConfigTree(ConfigModel config,
         ImmutableArray<ItemModel> items,
         ImmutableArray<GroupModel> groups)
     {
@@ -295,19 +339,17 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         return $"{ns}.{config.ConfigType.Name}.g.cs";
     }
 
-    private static string _EmitSource(ConfigTree tree)
+    private static string _GenerateAdditionalSource(ConfigTree tree)
     {
         var sb = new StringBuilder(4096);
 
         var ns = string.IsNullOrEmpty(tree.Namespace) ? null : tree.Namespace;
         var configType = tree.ConfigType;
         var configName = configType.Name;
-        var configAccessibility = _ToAccessibility(configType.DeclaredAccessibility);
 
         sb.AppendLine("// ** 使用 IDE 删除该文件可能导致项目配置文件中的引用被删除，请谨慎操作 **");
         sb.AppendLine("// <auto-generated />");
         sb.AppendLine("// 此文件由 Source Generator 自动生成，请勿手动修改");
-        sb.AppendLine("// ReSharper disable All");
         sb.AppendLine();
         sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine("using System.Linq;");
@@ -322,7 +364,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
-        sb.Append(configAccessibility).Append(" static partial class ").Append(configName).AppendLine();
+        sb.Append("partial class ").Append(configName).AppendLine();
         sb.AppendLine("{");
 
         // === Config Items ===
@@ -347,8 +389,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         {
             foreach (var grp in tree.TopGroups)
             {
-                _EmitGroupInto(sb, grp, indent: 1);
-                sb.AppendLine();
+                _EmitGroupInto(sb, grp, indent: 1, isTopLevel: true);
             }
         }
 
@@ -356,105 +397,161 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
-    private static string _EmitConfigServiceInitSource(IReadOnlyList<ItemModel> items)
+    private static string _GenerateServiceInitSource(IReadOnlyList<ItemModel> items, IReadOnlyList<EventRegisterModel> events)
     {
         var sb = new StringBuilder(1024);
-        sb.AppendLine("// <auto-generated/>");
-        sb.AppendLine("// ReSharper disable All");
+        sb.AppendLine("// ** 使用 IDE 删除该文件可能导致项目配置文件中的引用被删除，请谨慎操作 **");
+        sb.AppendLine("// <auto-generated />");
+        sb.AppendLine("// 此文件由 Source Generator 自动生成，请勿手动修改");
+        sb.AppendLine();
         sb.AppendLine("namespace PCL.Core.App.Configuration;");
         sb.AppendLine();
         sb.AppendLine("public sealed partial class ConfigService");
         sb.AppendLine("{");
+
+        // 配置项初始化
         sb.AppendLine("    private static void _InitializeConfigItems()");
         sb.AppendLine("    {");
-        sb.AppendLine("        (string, object)[] items = [");
- 
-        for (int i = 0; i < items.Count; i++)
+        sb.AppendLine("        (string, IEventScope)[] items = [");
+
+        HashSet<string> keysAdded = [];
+        for (var i = 0; i < items.Count; i++)
         {
             var it = items[i];
-            var t = _BuildQualifiedTypeName(it.Type);
+            var key = it.Key;
+            if (!keysAdded.Add(key)) continue;
+            var typeName = _CorrectTypeName(_BuildQualifiedTypeName(it.Type), out _);
             sb.Append("            (\"")
-                .Append(_EscapeString(it.Key))
-                .Append("\", new ConfigItem<")
-                .Append(t)
-                .Append(">(\"")
-                .Append(_EscapeString(it.Key))
-                .Append("\", ")
-                .Append(it.DefaultValueCode)
-                .Append(", ")
-                .Append(it.SourceCode)
-                .Append("))");
+                .Append(_EscapeString(key))
+                .Append("\", new ConfigItem<").Append(typeName).Append(">(\"")
+                .Append(_EscapeString(key)).Append("\", ")
+                .Append(it.DefaultValueCode).Append(", ").Append(it.SourceCode)
+              .Append("))");
             if (i != items.Count - 1) sb.Append(',');
             sb.AppendLine();
         }
- 
+
         sb.AppendLine("        ];");
-        sb.AppendLine("        foreach (var (key, value) in items) _Items[key] = value;");
+        sb.AppendLine("        foreach (var (key, value) in items) {");
+        sb.AppendLine("            _KeySet.Add(key);");
+        sb.AppendLine("            _Items[key] = value;");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // 事件观察器初始化
+        sb.AppendLine("    private static void _InitializeObservers()");
+        sb.AppendLine("    {");
+        sb.AppendLine("        ConfigEventRegistry[] registers = [");
+
+        for (var i = 0; i < events.Count; i++)
+        {
+            var ev = events[i];
+            sb.Append("            ")
+              .Append(_BuildQualifiedPropertyAccess(ev.Property));
+            if (i != events.Count - 1) sb.Append(',');
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("        ];");
+        sb.AppendLine("        foreach (var r in registers) foreach (var scope in r.Scopes) {");
+        sb.AppendLine("            RegisterObserver(scope, r.ToObserver());");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+
         sb.AppendLine("}");
         return sb.ToString();
     }
 
-    private static void _EmitItem(StringBuilder sb, ItemModel item, int indent, bool isTopLevel)
+    private static Action<StringBuilder>? _EmitItem(StringBuilder sb, ItemModel item, int indent, bool isTopLevel)
     {
-        var typeName = _BuildQualifiedTypeName(item.Type);
+        Action<StringBuilder>? accessorInitializer = null;
+        var typeName = _CorrectTypeName(_BuildQualifiedTypeName(item.Type), out var fullTypeName);
         var propName = item.Property.Name;
-        var staticKeyword = item.IsStatic || isTopLevel ? "static " : "";
+        var configItemName = propName + "Config";
+        var staticKeyword = item.IsStatic || isTopLevel ? "static " : string.Empty;
         var indentStr = new string(' ', indent * 4);
 
         // 注释
-        sb.Append(indentStr).AppendLine("// Item: " + propName + " [" + item.Key + "]");
+        sb.Append(indentStr).Append("// Item: ").Append(propName).Append(" [").Append(item.Key).AppendLine("]");
 
-        // 字段
+        // 访问器
         sb.Append(indentStr)
-          .Append("public static readonly ConfigItem<")
-          .Append(typeName)
-          .Append("> ")
-          .Append(propName)
-          .Append("Config = ConfigService.GetConfigItem<")
-          .Append(typeName)
+          .Append("public ").Append(staticKeyword).Append("partial ")
+          .Append(fullTypeName ?? typeName).Append(' ').Append(propName);
+
+        if (fullTypeName != null)
+        {
+            var accessorName = "ACCESSOR_" + propName;
+            sb.Append(" => ").Append(accessorName).AppendLine(";");
+            // 初始化带参数访问器
+            sb.Append(indentStr)
+              .Append("private ").Append(staticKeyword).Append("readonly ")
+              .Append(fullTypeName).Append(' ');
+            // ReSharper disable once VariableHidesOuterVariable
+            void AccessorInitializer(StringBuilder sb)
+            {
+                // 向构造函数传递生成访问器初始化代码的 StringBuilder 链式调用，以解决巨硬 2025 年
+                // 仍然没支持隔壁 JVM 在 1.0 就支持的极其先进的 非静态字段初始化访问非静态上下文 的问题
+                sb.Append(accessorName)
+                  .Append(" = new((arg) => ")
+                  .Append(configItemName)
+                  .Append(".GetValue(arg), (arg, value) => ")
+                  .Append(configItemName)
+                  .AppendLine(".SetValue(value, arg));");
+            }
+            if (item.IsStatic) AccessorInitializer(sb);
+            else {
+                accessorInitializer = AccessorInitializer;
+                sb.Append(accessorName).AppendLine(";");
+            }
+        }
+        else
+        {
+            sb.Append(" { get => ")
+              .Append(configItemName)
+              .Append(".GetValue(); set => ")
+              .Append(configItemName)
+              .AppendLine(".SetValue(value); }");
+        }
+
+        // 配置项
+        sb.Append(indentStr)
+          .Append("public ").Append(staticKeyword)
+          .Append("ConfigItem<").Append(typeName).Append("> ")
+          .Append(configItemName).Append(" => ConfigService.GetConfigItem<")
+            .Append(typeName)
           .Append(">(\"")
-          .Append(_EscapeString(item.Key))
+            .Append(_EscapeString(item.Key))
           .AppendLine("\");");
-
-        // 属性访问器
-        sb.Append(indentStr)
-          .Append("public ")
-          .Append(staticKeyword)
-          .Append("partial ")
-          .Append(typeName)
-          .Append(' ')
-          .Append(propName)
-          .Append(" { get => ")
-          .Append(propName)
-          .Append("Config.GetValue(); set => ")
-          .Append(propName)
-          .AppendLine("Config.SetValue(value); }");
+        
+        return accessorInitializer;
     }
 
-    private static void _EmitGroupInto(StringBuilder sb, GroupNode node, int indent)
+    private static void _EmitGroupInto(StringBuilder sb, GroupNode node, int indent, bool isTopLevel = false)
     {
         var indentStr = new string(' ', indent * 4);
         var type = node.Model.GroupType;
         var typeName = type.Name;
-        var accessibility = _ToAccessibility(type.DeclaredAccessibility);
-        var sealedKeyword = type.IsSealed ? " sealed" : string.Empty;
+        var staticKeyword = isTopLevel ? "static " : string.Empty;
 
         // 组实例字段（在其父作用域中）
         sb.AppendLine();
         sb.Append(indentStr).Append("// Group: ").AppendLine(node.Model.GroupName);
         sb.Append(indentStr)
-          .Append("public static readonly ")
+          .Append("public ")
+          .Append(staticKeyword)
+          .Append("readonly ")
           .Append(typeName)
           .Append(' ')
           .Append(node.Model.GroupName)
-          .AppendLine(" = new();");
+          .Append(" = ")
+          .Append(typeName)
+          .AppendLine(".SINGLE_INSTANCE;");
 
         // 嵌套类型定义
         sb.Append(indentStr)
-          .Append(accessibility)
-          .Append(sealedKeyword)
-          .Append(" partial class ")
+          .Append("public sealed partial class ")
           .Append(typeName)
           .AppendLine(" : IConfigScope");
         sb.Append(indentStr).AppendLine("{");
@@ -462,9 +559,11 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         // === Config Items ===
         sb.Append(indentStr).AppendLine("    // === Config Items ===");
         sb.Append(indentStr).AppendLine();
+        List<Action<StringBuilder>> accessorInitializers = [];
         foreach (var item in node.Items.OrderBy(i => i.DeclOrder))
         {
-            _EmitItem(sb, item, indent + 1, isTopLevel: false);
+            var result = _EmitItem(sb, item, indent + 1, isTopLevel: false);
+            if (result != null) accessorInitializers.Add(result);
             sb.AppendLine();
         }
 
@@ -473,37 +572,46 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         foreach (var child in node.Children.OrderBy(c => c.Model.DeclOrder))
         {
             _EmitGroupInto(sb, child, indent + 1);
-            sb.AppendLine();
         }
 
         // === Group Scope Implementation ===
         sb.AppendLine();
         sb.Append(indentStr).AppendLine("    // === Group Scope Implementation ===");
         sb.Append(indentStr).AppendLine();
-        sb.Append(indentStr).Append("    public static readonly IConfigScope[] InnerScopes = [").AppendLine();
+        sb.Append(indentStr).AppendLine("    public static readonly " + typeName + " SINGLE_INSTANCE = new();");
+        sb.Append(indentStr).AppendLine("    private readonly IConfigScope[] _InnerScopes;");
+        sb.Append(indentStr).AppendLine("    private " + typeName + "()");
+        sb.Append(indentStr).AppendLine("    {");
+        sb.Append(indentStr).AppendLine("        _InnerScopes = [");
 
         // InnerScopes: 先项再子组
         var first = true;
-        foreach (var item in node.Items.OrderBy(i => i.DeclOrder))
+        foreach (var item in node.Items.SkipWhile(i => i.IsStatic).OrderBy(i => i.DeclOrder))
         {
             if (!first) sb.AppendLine(",");
-            sb.Append(indentStr).Append("        ").Append(item.Property.Name).Append("Config");
+            sb.Append(indentStr).Append("            ").Append(item.Property.Name).Append("Config");
             first = false;
         }
         foreach (var child in node.Children.OrderBy(c => c.Model.DeclOrder))
         {
             if (!first) sb.AppendLine(",");
-            sb.Append(indentStr).Append("        ").Append(child.Model.GroupName);
+            sb.Append(indentStr).Append("            ").Append(child.Model.GroupName);
             first = false;
         }
         if (!first) sb.AppendLine();
-        sb.Append(indentStr).AppendLine("    ];");
+        sb.Append(indentStr).AppendLine("        ];");
+        foreach (var initializer in accessorInitializers)
+        {
+            sb.Append(indentStr).Append("        ");
+            initializer.Invoke(sb);
+        }
+        sb.Append(indentStr).AppendLine("    }");
 
         // CheckScope
         sb.Append(indentStr).AppendLine("    public IEnumerable<string> CheckScope(IReadOnlySet<string> keys)");
         sb.Append(indentStr).AppendLine("    {");
         sb.Append(indentStr).AppendLine("        IEnumerable<string> result = [];");
-        sb.Append(indentStr).AppendLine("        foreach (var scope in InnerScopes)");
+        sb.Append(indentStr).AppendLine("        foreach (var scope in _InnerScopes)");
         sb.Append(indentStr).AppendLine("        {");
         sb.Append(indentStr).AppendLine("            var next = scope.CheckScope(keys);");
         sb.Append(indentStr).AppendLine("            if (next.Any()) result = result.Concat(next);");
@@ -515,7 +623,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         sb.Append(indentStr).AppendLine("    public bool Reset(object? argument = null)");
         sb.Append(indentStr).AppendLine("    {");
         sb.Append(indentStr).AppendLine("        var result = true;");
-        sb.Append(indentStr).AppendLine("        foreach (var scope in InnerScopes)");
+        sb.Append(indentStr).AppendLine("        foreach (var scope in _InnerScopes)");
         sb.Append(indentStr).AppendLine("        {");
         sb.Append(indentStr).AppendLine("            var next = scope.Reset(argument);");
         sb.Append(indentStr).AppendLine("            if (!next) result = false;");
@@ -527,7 +635,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         sb.Append(indentStr).AppendLine("    public bool IsDefault(object? argument = null)");
         sb.Append(indentStr).AppendLine("    {");
         sb.Append(indentStr).AppendLine("        var result = true;");
-        sb.Append(indentStr).AppendLine("        foreach (var scope in InnerScopes)");
+        sb.Append(indentStr).AppendLine("        foreach (var scope in _InnerScopes)");
         sb.Append(indentStr).AppendLine("        {");
         sb.Append(indentStr).AppendLine("            var next = scope.IsDefault(argument);");
         sb.Append(indentStr).AppendLine("            if (!next) result = false;");
@@ -539,20 +647,6 @@ public sealed class ConfigGenerator : IIncrementalGenerator
     }
 
     private static string _EscapeString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
-
-    private static string _ToAccessibility(Accessibility a)
-    {
-        switch (a)
-        {
-            case Accessibility.Public: return "public";
-            case Accessibility.Internal: return "internal";
-            case Accessibility.Protected: return "protected";
-            case Accessibility.Private: return "private";
-            case Accessibility.ProtectedOrInternal: return "protected internal";
-            case Accessibility.ProtectedAndInternal: return "private protected";
-            default: return "public";
-        }
-    }
 
     // ===== Models/Trees =====
 
@@ -584,6 +678,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
     private sealed class ConfigModel
     {
         public INamedTypeSymbol ConfigType { get; set; } = null!;
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public int DeclOrder { get; set; }
     }
 
@@ -594,6 +689,13 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         public List<ItemModel> TopItems { get; set; } = [];
         public List<GroupNode> TopGroups { get; set; } = [];
     }
+
+    private sealed class EventRegisterModel
+    {
+        public IPropertySymbol Property { get; set; } = null!;
+        public int DeclOrder { get; set; }
+    }
+
     private static string _RenderDefaultValueCode(SemanticModel sm, ExpressionSyntax expr)
     {
         if (expr is LiteralExpressionSyntax || _IsNegativeNumeric(expr))
@@ -643,7 +745,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
                && l.IsKind(SyntaxKind.NumericLiteralExpression);
     }
 
-    // 新增：来源渲染（缺省为 ConfigSource.Shared）
+    // 来源渲染（缺省为 ConfigSource.Shared）
     private static string _RenderSourceCode(SemanticModel sm, ExpressionSyntax expr)
     {
         // 允许直接写枚举成员或带限定名
@@ -657,7 +759,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         return expr.ToString();
     }
 
-    // 新增：构建“命名空间.类型链.成员”形式
+    // 构建“命名空间.类型链.成员”形式完整名称
     private static string _BuildQualifiedSymbolName(ISymbol symbol)
     {
         // 枚举成员/const 字段
@@ -706,14 +808,16 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             default: keyword = ""; return false;
         }
     }
-    
+
     // 类型完整名（命名空间 + 外层类型 + 内层类型）
     private static string _BuildQualifiedTypeName(ITypeSymbol type)
     {
         // Nullable<T> 处理：T? / 呈现内层类型后加 ?
-        if (type is INamedTypeSymbol nt &&
-            nt.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
-            nt.TypeArguments.Length == 1)
+        if (type is INamedTypeSymbol
+            {
+                OriginalDefinition.SpecialType: SpecialType.System_Nullable_T,
+                TypeArguments.Length: 1
+            } nt)
         {
             var inner = nt.TypeArguments[0];
             return _BuildQualifiedTypeName(inner) + "?";
@@ -732,5 +836,25 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             SymbolDisplayMiscellaneousOptions.UseSpecialTypes
         );
         return type.ToDisplayString(format);
+    }
+
+    private static string _BuildQualifiedPropertyAccess(IPropertySymbol prop)
+    {
+        var owner = _BuildQualifiedTypeName(prop.ContainingType);
+        return owner + "." + prop.Name;
+    }
+
+    // 传入 qualified name，返回真实的 type name
+    // 若传入不是真实 type name，则 fullTypeName 将被赋予传入值，否则为 null
+    private static string _CorrectTypeName(string typeName, out string? fullTypeName)
+    {
+        var isArgConfig = typeName.StartsWith("PCL.Core.App.Configuration.ArgConfig<");
+        if (isArgConfig)
+        {
+            fullTypeName = typeName;
+            typeName = typeName.Substring(37, typeName.Length - 38);
+        }
+        else fullTypeName = null;
+        return typeName;
     }
 }

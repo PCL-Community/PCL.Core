@@ -2,7 +2,7 @@
 
 namespace PCL.Core.App.Configuration;
 
-public class ConfigEventRegister(
+public class ConfigEventRegistry(
     IEnumerable<IConfigScope> scope,
     ConfigEventHandler handler,
     ConfigEvent trigger = ConfigEvent.Changed,
@@ -13,7 +13,7 @@ public class ConfigEventRegister(
     public ConfigEventHandler Handler => handler;
     public bool IsPreview => isPreview;
 
-    public ConfigEventRegister(
+    public ConfigEventRegistry(
         IConfigScope scope,
         ConfigEventHandler handler,
         ConfigEvent trigger = ConfigEvent.Changed,

@@ -12,7 +12,7 @@ public class ConfigItem<TValue>(
     string key,
     Func<TValue> defaultValue,
     ConfigSource source
-) : IConfigScope
+) : IConfigScope, IEventScope
 {
     private Func<TValue>? _defaultValueGetter = defaultValue;
     private TValue? _defaultValue;
@@ -113,53 +113,28 @@ public class ConfigItem<TValue>(
 
     #endregion
 
-    #region 事件监听
+    #region 事件处理
 
     private readonly HashSet<ConfigObserver> _observers = [];
     private readonly HashSet<ConfigObserver> _previewObservers = [];
 
-    /// <summary>
-    /// 传入事件观察器以观察事件。
-    /// </summary>
     public void Observe(ConfigObserver observer)
     {
         if (observer.IsPreview) _previewObservers.Add(observer);
         else _observers.Add(observer);
     }
 
-    /// <summary>
-    /// 传入事件类型与处理委托以观察事件。
-    /// </summary>
-    public ConfigObserver Observe(ConfigEvent e, ConfigEventHandler handler, bool isPreview = false)
-    {
-        var observer = new ConfigObserver(e, handler, isPreview);
-        Observe(observer);
-        return observer;
-    }
-
-    /// <summary>
-    /// 取消观察事件。
-    /// </summary>
     public bool Unobserve(ConfigObserver observer)
         => observer.IsPreview ? _previewObservers.Remove(observer) : _observers.Remove(observer);
 
     // 获取值，若未设置则返回 null
-    private object? _GetValueOrNull(object? argument, bool bypass)
+    private object? _GetValueOrNull(object? argument)
     {
-        if (bypass) return null;
         var exists = _provider.GetValue<TValue>(Key, out var value, argument);
         return exists ? value : null;
     }
 
-    /// <summary>
-    /// 触发配置项事件。
-    /// </summary>
-    /// <param name="trigger">触发事件</param>
-    /// <param name="argument">上下文参数</param>
-    /// <param name="newValue">用于向事件参数传递的新值</param>
-    /// <param name="bypassOldValue">是否跳过旧值传递，若为 <c>true</c> 则向事件参数传递 <c>null</c>，默认为<c>false</c></param>
-    /// <returns></returns>
-    public ConfigEventArgs? TriggerEvent(ConfigEvent trigger, object? argument, object? newValue, bool bypassOldValue = false)
+    public ConfigEventArgs? TriggerEvent(ConfigEvent trigger, object? argument, object? newValue, bool bypassOldValue = false, bool fillNewValue = false)
     {
         ConfigEventArgs? e = null;
         var replaceNewValue = false;
@@ -169,7 +144,12 @@ public class ConfigItem<TValue>(
             where logic > 0
             select observer
         )) {
-            e ??= new ConfigEventArgs(Key, trigger, argument, _GetValueOrNull(argument, bypassOldValue), newValue);
+            if (e == null)
+            {
+                var currentValue = (fillNewValue || !bypassOldValue) ? _GetValueOrNull(argument) : null;
+                if (newValue == null && fillNewValue) newValue = currentValue ?? DefaultValue;
+                e = new ConfigEventArgs(Key, trigger, argument, bypassOldValue ? null : currentValue, newValue);
+            }
             observer.Handler(e);
             // 对 preview 的特殊处理
             if (observer.IsPreview)

@@ -219,7 +219,7 @@ internal sealed class HighPerformanceBlurProcessor : IDisposable
         {
             var sampleX = Math.Max(0, Math.Min(width - 1, x + k));
             var pixel = source[rowStart + sampleX];
-            var weight = weights[Math.Min(kernelRadius, Math.Abs(k))];
+            var weight = weights[kernelRadius + k];
 
             totalA += ((pixel >> 24) & 0xFF) * weight;
             totalR += ((pixel >> 16) & 0xFF) * weight;

@@ -43,10 +43,10 @@ public static class McInstanceLogic {
     /// </summary>
     public static async Task<string> GetDefaultDescription(McInstance instance) {
         var versionInfo = await instance.GetVersionInfoAsync();
-        if (instance.IsError) {
+        if (instance.DisplayType == McInstanceCardType.Error) {
             return "";
         }
-        return versionInfo.VersionType == McVersionType.Fool ? McInstanceUtils.GetMcFoolVersionDesc(versionInfo.McVersion) : RandomUtils.PickRandom(DescStrings);
+        return versionInfo!.VersionType == McVersionType.Fool ? McInstanceUtils.GetMcFoolVersionDesc(versionInfo.McVersion) : RandomUtils.PickRandom(DescStrings);
     }
     
     /// <summary>
@@ -54,7 +54,11 @@ public static class McInstanceLogic {
     /// </summary>
     /// <param name="instance">Minecraft 实例</param>
     /// <returns>隔离后的路径，以“\”结尾</returns>
-    public static async Task<string> GetIsolatedPathAsync(McInstance instance) {
+    public static async Task<string?> GetIsolatedPathAsync(McInstance instance) {
+        if (instance.DisplayType == McInstanceCardType.Error) {
+            return null;
+        }
+        
         if (SetupService.IsUnset(SetupEntries.Instance.IndieV2, instance.Path)) {
             var shouldBeIndie = await ShouldBeIndieAsync(instance);
             SetupService.SetBool(SetupEntries.Instance.IndieV2, shouldBeIndie, instance.Path);
@@ -80,75 +84,24 @@ public static class McInstanceLogic {
             return true;
         }
 
-        var isModded = versionInfo.IsModded;
+        var isModded = versionInfo!.IsModded;
         var isRelease = versionInfo.VersionType == McVersionType.Release;
         LogWrapper.Info($"[Minecraft] 版本隔离初始化({instance.Name}): 全局设置({SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2)})");
-
-        var version = await instance.GetVersionInfoAsync();
+        
         return SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2) switch {
             0 => false,
-            1 => version.HasPatcher("labymod") || isModded,
+            1 => versionInfo.HasPatcher("labymod") || isModded,
             2 => !isRelease,
-            3 => version.HasPatcher("labymod") || isModded || !isRelease,
+            3 => versionInfo.HasPatcher("labymod") || isModded || !isRelease,
             _ => true
         };
-    }
-
-    /// <summary>
-    /// 异步获取版本的发布日期时间，如果无法获取或解析失败，则返回默认时间（1970-01-01 15:00:00）。
-    /// </summary>
-    /// <returns>版本的发布日期时间，或默认时间。</returns>
-    public static async Task<DateTime> GetReleaseTime(McInstance instance) {
-        var jsonObject = await instance.GetVersionJsonAsync();
-        
-        if (!jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode) || 
-            releaseTimeNode == null || 
-            !DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime))
-        {
-            return DateTime.MinValue;
-        }
-
-        return releaseTime;
-    }
-    
-    public static async Task<string?> GetVersionFromJson(McInstance instance) {
-        var versionJson = await instance.GetVersionJsonAsync();
-        
-        var version = McInstanceUtils.RecognizeMcVersion(versionJson);
-
-        if (version == null) {
-            LogWrapper.Warn($"无法确认 MC 版本号的实例：{instance.Name}");
-            instance.Desc = "PCL 无法识别该实例的 MC 版本号";
-            return null;
-        }
-        return version;
-    }
-    
-    public static async Task<McVersionType> GetVersionType(McInstance instance, DateTime releaseTime) {
-        var versionJson = await instance.GetVersionJsonAsync();
-
-        if (releaseTime.Month == 4 && releaseTime.Day == 1) {
-            return McVersionType.Fool;
-        }
-        
-        if (releaseTime.Year > 2000 && releaseTime <= new DateTime(2011, 11, 16)) {
-            return McVersionType.Old;
-        }
-        
-        if (versionJson.TryGetPropertyValue("type", out var typeElement)) {
-            var typeString = typeElement!.GetValue<string>();
-            if (typeString == "release") {
-                return McVersionType.Release;
-            }
-        }
-        return McVersionType.Snapshot;
     }
     
     public static async Task<string> DetermineLogo(McInstance instance) {
         var logo = SetupService.GetString(SetupEntries.Instance.LogoPath, instance.Path);
         var versionInfo = await instance.GetVersionInfoAsync();
         if (string.IsNullOrEmpty(logo) || !SetupService.GetBool(SetupEntries.Instance.IsLogoCustom, instance.Path)) {
-            if (instance.IsError) {
+            if (instance.DisplayType == McInstanceCardType.Error) {
                 return Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
             }
             return versionInfo.GetLogo();

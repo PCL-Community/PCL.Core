@@ -31,7 +31,7 @@ public class McFolderManager {
         new Func<object, Task>(async _ => await McFolderListLoadAsync())
     ];
 
-    public static PipelineTask<string> McFolderListLoadTask = new("McFolder管道", PipelineSteps);
+    public static PipelineTask<string> McFolderListLoadTask = new("McFolder加载任务", PipelineSteps);
 
     private static async Task McFolderListLoadAsync() {
         try {

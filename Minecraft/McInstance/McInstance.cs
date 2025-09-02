@@ -1,13 +1,9 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Zip;
-using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
@@ -20,6 +16,10 @@ public class McInstance {
     private JsonObject? _versionJson;
     private McInstanceInfo? _versionInfo;
     private JsonObject? _versionJsonInJar;
+    
+    public McInstance(string path) {
+        Path = (path.Contains(":") ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith("\\") ? "" : "\\");
+    }
 
     /// <summary>
     /// 实例文件夹路径，以“\”结尾
@@ -59,31 +59,35 @@ public class McInstance {
     /// <summary>
     /// 实例信息
     /// </summary>
-    public async Task<McInstanceInfo> GetVersionInfoAsync() {
+    public async Task<McInstanceInfo?> GetVersionInfoAsync() {
         if (_versionInfo != null) {
             return _versionInfo;
         }
 
-        _versionInfo = new McInstanceInfo();
+        var versionInfo = new McInstanceInfo();
         var versionJson = await GetVersionJsonAsync();
+
+        if (versionJson == null) {
+            return null;
+        }
         
         // 获取 MC 版本
-        var version = await McInstanceLogic.GetVersionFromJson(this);
+        var version = McInstanceUtils.RecognizeMcVersion(versionJson);
         
         if (version != null) {
-            _versionInfo.McVersion = version;
+            versionInfo.McVersion = version;
         } else {
             LogWrapper.Warn("识别 Minecraft 版本时出错");
-            _versionInfo.McVersion = "Unknown";
+            versionInfo.McVersion = "Unknown";
             Desc = "无法识别 Minecraft 版本";
         }
         
         // 获取发布时间
-        var releaseTime = await McInstanceLogic.GetReleaseTime(this);
-        _versionInfo.ReleaseTime = releaseTime;
+        var releaseTime = McInstanceUtils.RecognizeReleaseTime(versionJson);
+        versionInfo.ReleaseTime = releaseTime;
         
         // 获取版本类型
-        _versionInfo.VersionType = await McInstanceLogic.GetVersionType(this, releaseTime);
+        versionInfo.VersionType = McInstanceUtils.RecognizeVersionType(versionJson, releaseTime);
 
         var options = new JsonSerializerOptions {
             PropertyNameCaseInsensitive = true
@@ -92,14 +96,17 @@ public class McInstance {
             if (IsPatchesFormatJson) {
                 foreach (var patch in versionJson["patches"]!.AsArray()) {
                     var patcherInfo = patch.Deserialize<PatcherInfo>(options);
-                    _versionInfo.Patchers.Add(patcherInfo);
+                    if (patcherInfo != null) {
+                        versionInfo.Patchers.Add(patcherInfo);
+                    }
                 }
             }
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
-            _versionInfo.McVersion = "Unknown";
+            versionInfo.McVersion = "Unknown";
             Desc = $"无法识别：{ex.Message}";
         }
+        _versionInfo = versionInfo;
 
         return _versionInfo;
     }
@@ -108,8 +115,7 @@ public class McInstance {
     /// 异步获取 JSON 对象。
     /// </summary>
     /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
-    /// <exception cref="Exception">如果初始化 JSON 失败或版本依赖项出现嵌套，则抛出异常。</exception>
-    public async Task<JsonObject> GetVersionJsonAsync() {
+    public async Task<JsonObject?> GetVersionJsonAsync() {
         if (_versionJson != null) {
             return _versionJson;
         }
@@ -119,6 +125,8 @@ public class McInstance {
             var jsonFiles = Directory.GetFiles(Path, "*.json");
             if (jsonFiles.Length == 1) {
                 jsonPath = jsonFiles[0];
+            } else {
+                return null;
             }
         }
 
@@ -144,7 +152,7 @@ public class McInstance {
     /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
-    public async Task<bool> GetIsOldJsonAsync() => (await GetVersionJsonAsync())["minecraftArguments"]?.ToString() != null;
+    public async Task<bool> GetIsOldJsonAsync() => (await GetVersionJsonAsync())?["minecraftArguments"]?.ToString() is not null;
 
     /// <summary>
     /// 是否为 Patches 格式 JSON
@@ -182,20 +190,12 @@ public class McInstance {
         return _versionJsonInJar;
     }
 
-    public bool IsLoaded { get; private set; }
-
-    public bool IsError { get; private set; }
-
-    public McInstance(string path) {
-        Path = (path.Contains(":") ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith("\\") ? "" : "\\");
-    }
-
-    private async Task<bool> Check() {
+    public async Task<bool> Check() {
         if (!Directory.Exists(Path)) {
             Desc = $"未找到实例 {Name}";
             return false;
         }
-
+        
         try {
             Directory.CreateDirectory(Path + "PCL\\");
             await Directories.CheckPermissionWithExceptionAsync(Path + "PCL\\");
@@ -204,12 +204,15 @@ public class McInstance {
             LogWrapper.Warn(ex, "没有访问实例文件夹的权限");
             return false;
         }
-
-        try {
-            await GetVersionJsonAsync();
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, $"实例 JSON 可用性检查失败（{Path}）");
-            Desc = ex.Message;
+        
+        return await CheckJson();
+    }
+    
+    public async Task<bool> CheckJson() {
+        var versionJson = await GetVersionJsonAsync();
+        if (versionJson == null) {
+            LogWrapper.Warn($"实例 JSON 可用性检查失败（{Path}）");
+            Desc = "实例 JSON 不存在或无法解析";
             return false;
         }
 
@@ -217,34 +220,25 @@ public class McInstance {
     }
 
     public async Task<McInstance> Load() {
-        try {
-            if (!await Check()) {
-                IsError = true;
-            }
+        if (!await Check()) {
+            DisplayType = McInstanceCardType.Error;
+        }
 
-            // 确定实例图标
-            Logo = await McInstanceLogic.DetermineLogo(this);
+        // 确定实例图标
+        Logo = await McInstanceLogic.DetermineLogo(this);
 
-            // 确定实例描述和状态
-            Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
-                ? await McInstanceLogic.GetDefaultDescription(this)
-                : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
-            SetupService.SetString(SetupEntries.Instance.Starred, Path);
-            IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
-            DisplayType = (McInstanceCardType)SetupService.GetInt32(SetupEntries.Instance.DisplayType, Path);
+        // 确定实例描述和状态
+        Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
+            ? await McInstanceLogic.GetDefaultDescription(this)
+            : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
+        SetupService.SetString(SetupEntries.Instance.Starred, Path);
+        IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
+        DisplayType = (McInstanceCardType)SetupService.GetInt32(SetupEntries.Instance.DisplayType, Path);
 
-            // 写入缓存
-            if (Directory.Exists(Path)) {
-                SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
-                SetupService.SetString(SetupEntries.Instance.LogoPath, Logo, Path);
-            }
-        } catch (Exception ex) {
-            Desc = $"未知错误：{ex}";
-            Logo = Basics.ImagePath + "Blocks/RedstoneBlock.png";
-            IsError = true;
-            LogWrapper.Warn(ex, $"加载实例失败（{Name}）");
-        } finally {
-            IsLoaded = true;
+        // 写入缓存
+        if (Directory.Exists(Path)) {
+            SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
+            SetupService.SetString(SetupEntries.Instance.LogoPath, Logo, Path);
         }
         return this;
     }

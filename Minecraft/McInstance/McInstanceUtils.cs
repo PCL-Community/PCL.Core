@@ -78,4 +78,37 @@ public static class McInstanceUtils {
 
         return null;
     }
+    
+    /// <summary>
+    /// 异步获取版本的发布日期时间，如果无法获取或解析失败，则返回默认时间（1970-01-01 15:00:00）。
+    /// </summary>
+    /// <returns>版本的发布日期时间，或默认时间。</returns>
+    public static DateTime RecognizeReleaseTime(JsonObject jsonObject) {
+        if (!jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode) || 
+            releaseTimeNode == null || 
+            !DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime))
+        {
+            return DateTime.MinValue;
+        }
+
+        return releaseTime;
+    }
+    
+    public static McVersionType RecognizeVersionType(JsonObject versionJson, DateTime releaseTime) {
+        if (releaseTime is { Month: 4, Day: 1 }) {
+            return McVersionType.Fool;
+        }
+        
+        if (releaseTime.Year > 2000 && releaseTime <= new DateTime(2011, 11, 16)) {
+            return McVersionType.Old;
+        }
+        
+        if (versionJson.TryGetPropertyValue("type", out var typeElement)) {
+            var typeString = typeElement!.GetValue<string>();
+            if (typeString == "release") {
+                return McVersionType.Release;
+            }
+        }
+        return McVersionType.Snapshot;
+    }
 }

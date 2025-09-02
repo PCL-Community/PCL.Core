@@ -1,5 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using PCL.Core.App;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft.McInstance;
@@ -8,6 +14,20 @@ namespace PCL.Core.Minecraft.McInstance;
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。
 /// </summary>
 public class McInstanceInfo {
+    private static readonly ImmutableDictionary<string, string> LoaderImageMap = 
+        new Dictionary<string, string>
+        {
+            { "neoforge", "Blocks/NeoForge.png" },
+            { "fabric", "Blocks/Fabric.png" },
+            { "legacyfabric", "Blocks/Fabric.png" },
+            { "forge", "Blocks/Forge.png" },
+            { "liteloader", "Blocks/Egg.png" },
+            { "quilt", "Blocks/Quilt.png" },
+            { "cleanroom", "Blocks/Cleanroom.png" },
+            { "labymod", "Blocks/LabyMod.png" },
+            { "optifine", "Blocks/OptiFine.png" }
+        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+    
     /// <summary>
     /// 指示实例的 API 信息是否已加载。
     /// </summary>
@@ -16,12 +36,7 @@ public class McInstanceInfo {
     /// <summary>
     /// 实例发布时间
     /// </summary>
-    public DateTime ReleaseTime { get; set; } = new DateTime(1970, 1, 1, 15, 0, 0);
-
-    /// <summary>
-    /// 是否可以判断版本号。
-    /// </summary>
-    public bool CanDetermineVersion { get; set; } = false;
+    public DateTime ReleaseTime { get; set; } = DateTime.MinValue;
     
     /// <summary>
     /// 原版版本名，如 "1.12.2" 或 "16w01a"。
@@ -31,137 +46,75 @@ public class McInstanceInfo {
     /// <summary>
     /// 可读的版本名
     /// </summary>
-    public string FormattedMcVersion => McVersion == string.Empty ? "未知版本" : McFormatter.FormatVersion(McVersion);
+    public string FormattedVersion => McVersion == string.Empty ? "未知版本" : McFormatter.FormatVersion(McVersion);
 
     /// <summary>
-    /// 是否为正式版（Release），即版本号形如 "1.12.2" 而非 "16w01a" 或 "1.12.2-pre1"。
+    /// 是否为正常版本号格式的版本
     /// </summary>
-    public bool IsReleaseVersion => RegexPatterns.McReleaseVersion.IsMatch(McVersion);
-
-    /// <summary>
-    /// 是否为愚人节版（Fool）。
-    /// </summary>
-    public bool IsFoolVersion => ReleaseTime.Month == 4 && ReleaseTime.Day == 1;
+    public bool IsNormalVersion => RegexPatterns.McNormalVersion.IsMatch(McVersion);
     
     /// <summary>
-    /// 是否为快照版（Snapshot）。
+    /// MC 版本类型
     /// </summary>
-    public bool IsSnapshotVersion => !IsReleaseVersion && IsFoolVersion;
+    public McVersionType VersionType = McVersionType.Release;
 
-    /// <summary>
-    /// 是否为远古版（Old）。
-    /// </summary>
-    public bool IsOldVersion => ReleaseTime.Year > 2000 && ReleaseTime <= new DateTime(2011, 11, 16);
-
+    /*
     /// <summary>
     /// 原版主版本号，如 12（对于 1.12.2），不可用为 -1。
     /// </summary>
-    public int McCodeMain { get; set; } = -1;
+    public int McVersionMinor = IsNormalVersion
 
     /// <summary>
     /// 原版次版本号，如 2（对于 1.12.2），不可用为 -1。
     /// </summary>
-    public int McCodeSub { get; set; } = -1;
+    public int McVersionPatch
 
     /// <summary>
     /// 标准的原版版本号。若为快照版或无效版本号，返回 0.0.0。
     /// </summary>
-    public Version McInstance => IsReleaseVersion ? new Version(1, McCodeMain, McCodeSub) : new Version(0, 0, 0);
+    public Version McInstance => VersionType == McVersionType.Release ? new Version(1, McCodeMain, McCodeSub) : new Version(0, 0, 0);
+    */
+    public List<PatcherInfo> Patchers { get; } = new();
 
-    // OptiFine
-    /// <summary>
-    /// 是否通过 JSON 安装了 OptiFine。
-    /// </summary>
-    public bool HasOptiFine { get; set; }
+    public bool IsModded => HasAnyPatcher([
+        "cleanroom", "liteloader", "forge", "neoforge", "fabric", "legacyfabric", "quilt"
+    ]);
+    
+    // 检查是否包含特定加载器
+    public bool HasPatcher(string patcherId) {
+        return Patchers.Any(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+    }
+    
+    // 检查是否包含一组加载器中的任意一个
+    public bool HasAnyPatcher(IEnumerable<string> patcherIds) {
+        return patcherIds.Any(id => Patchers.Any(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase)));
+    }
+    
+    public string GetLogo() {
+        switch (VersionType) {
+            case McVersionType.Fool:
+                return Path.Combine(Basics.ImagePath, "Blocks/GoldBlock.png");
+            case McVersionType.Old:
+                return Path.Combine(Basics.ImagePath, "Blocks/CobbleStone.png");
+            case McVersionType.Snapshot:
+                return Path.Combine(Basics.ImagePath, "Blocks/CommandBlock.png");
+            case McVersionType.Release:
+                break;
+        }
 
-    /// <summary>
-    /// OptiFine 版本号，如 "C8" 或 "C9_pre10"。
-    /// </summary>
-    public string OptiFineVersion { get; set; } = string.Empty;
+        // 其次判断加载器等
+        foreach (var loader in new[] { "neoforge", "fabric", "legacyFabric", "forge", "liteloader", "quilt", "cleanroom", "labymod", "optifine" }) {
+            if (Patchers.Any(p => p.Id.Equals(loader, StringComparison.OrdinalIgnoreCase)))
+            {
+                return Path.Combine(Basics.ImagePath, LoaderImageMap[loader]);
+            }
+        }
 
-    // Forge
-    /// <summary>
-    /// 是否安装了 Forge。
-    /// </summary>
-    public bool HasForge { get; set; }
+        // 正常版本
+        return Path.Combine(Basics.ImagePath, "Blocks/Grass.png");
+    }
 
-    /// <summary>
-    /// Forge 版本号，如 "31.1.2" 或 "14.23.5.2847"。
-    /// </summary>
-    public string ForgeVersion { get; set; } = string.Empty;
-
-    // NeoForge
-    /// <summary>
-    /// 是否安装了 NeoForge。
-    /// </summary>
-    public bool HasNeoForge { get; set; }
-
-    /// <summary>
-    /// NeoForge 版本号，如 "21.0.2-beta" 或 "47.1.79"。
-    /// </summary>
-    public string NeoForgeVersion { get; set; } = string.Empty;
-
-    // Cleanroom
-    /// <summary>
-    /// 是否安装了 Cleanroom。
-    /// </summary>
-    public bool HasCleanroom { get; set; }
-
-    /// <summary>
-    /// Cleanroom 版本号，如 "0.2.4-alpha"。
-    /// </summary>
-    public string CleanroomVersion { get; set; } = string.Empty;
-
-    // Fabric
-    /// <summary>
-    /// 是否安装了 Fabric。
-    /// </summary>
-    public bool HasFabric { get; set; }
-
-    /// <summary>
-    /// Fabric 版本号，如 "0.7.2.175"。
-    /// </summary>
-    public string FabricVersion { get; set; } = string.Empty;
-
-    // LegacyFabric
-    /// <summary>
-    /// 是否安装了 LegacyFabric。
-    /// </summary>
-    public bool HasLegacyFabric { get; set; }
-
-    /// <summary>
-    /// LegacyFabric 版本号，如 "0.7.2.175"。
-    /// </summary>
-    public string LegacyFabricVersion { get; set; } = string.Empty;
-
-    // Quilt
-    /// <summary>
-    /// 是否安装了 Quilt。
-    /// </summary>
-    public bool HasQuilt { get; set; }
-
-    /// <summary>
-    /// Quilt 版本号，如 "0.26.1-beta.1" 或 "0.26.0"。
-    /// </summary>
-    public string QuiltVersion { get; set; } = string.Empty;
-
-    // LabyMod
-    /// <summary>
-    /// 是否安装了 LabyMod。
-    /// </summary>
-    public bool HasLabyMod { get; set; }
-
-    /// <summary>
-    /// LabyMod 版本号，如 "4.2.59"。
-    /// </summary>
-    public string LabyModVersion { get; set; } = string.Empty;
-
-    // LiteLoader
-    /// <summary>
-    /// 是否安装了 LiteLoader。
-    /// </summary>
-    public bool HasLiteLoader { get; set; }
-
+    /*
     /// <summary>
     /// 生成用户友好的实例信息描述字符串。
     /// </summary>
@@ -269,4 +222,12 @@ public class McInstanceInfo {
 
         return -1;
     }
+    */
+}
+
+public enum McVersionType {
+    Fool,
+    Release,
+    Snapshot,
+    Old
 }

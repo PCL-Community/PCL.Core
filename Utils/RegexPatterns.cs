@@ -83,9 +83,9 @@ public static partial class RegexPatterns
     private static partial Regex _MotdCode();
     
     /// <summary>
-    /// 匹配 Minecraft 正式版版本号，如 1.20.4、1.19.3 等。
+    /// 匹配 Minecraft 正常版本号，如 1.20.4、1.19.3 等。
     /// </summary>
-    public static readonly Regex McReleaseVersion = _McReleaseVersion();
+    public static readonly Regex McNormalVersion = _McNormalVersion();
     [GeneratedRegex(@"^\d+\.\d+\.\d+$|^\d+\.\d+$", RegexOptions.Compiled)]
-    private static partial Regex _McReleaseVersion();
+    private static partial Regex _McNormalVersion();
 }

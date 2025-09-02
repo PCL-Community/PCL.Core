@@ -29,7 +29,7 @@ public class McInstance {
     /// <summary>
     /// 应用版本隔离后的 Minecraft 根文件夹路径，以“\”结尾
     /// </summary>
-    public async Task<string> GetPathIndie() => await McInstanceUtils.GetIsolatedPathAsync(this);
+    public async Task<string> GetIsolatedPath() => await McInstanceLogic.GetIsolatedPathAsync(this);
 
     /// <summary>
     /// 实例文件夹名称
@@ -57,41 +57,42 @@ public class McInstance {
     public McInstanceCardType DisplayType { get; set; } = McInstanceCardType.Auto;
 
     /// <summary>
-    /// 是否可安装 Mod
-    /// </summary>
-    public async Task<bool> GetIsModded() => await McInstanceUtils.GetIsModdedAsync(this);
-
-    /// <summary>
     /// 实例信息
     /// </summary>
     public async Task<McInstanceInfo> GetVersionInfoAsync() {
         if (_versionInfo != null) {
             return _versionInfo;
         }
-        
+
         _versionInfo = new McInstanceInfo();
         var versionJson = await GetVersionJsonAsync();
-        var version = await GetVersionFromJson(this);
-        try {
-            // 获取发布时间并判断是否为老版本
-            var releaseTime = await McInstanceUtils.TryGetReleaseTimeAsync(this);
-            if (version != null) {
-                _versionInfo.McVersion = version;
-                _versionInfo.CanDetermineVersion = true;
-            } else {
-                _versionInfo.CanDetermineVersion = false;
-            }
-            _versionInfo.ReleaseTime = releaseTime;
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
+        
+        // 获取 MC 版本
+        var version = await McInstanceLogic.GetVersionFromJson(this);
+        
+        if (version != null) {
+            _versionInfo.McVersion = version;
+        } else {
+            LogWrapper.Warn("识别 Minecraft 版本时出错");
             _versionInfo.McVersion = "Unknown";
-            Desc = $"无法识别：{ex.Message}";
+            Desc = "无法识别 Minecraft 版本";
         }
+        
+        // 获取发布时间
+        var releaseTime = await McInstanceLogic.GetReleaseTime(this);
+        _versionInfo.ReleaseTime = releaseTime;
+        
+        // 获取版本类型
+        _versionInfo.VersionType = await McInstanceLogic.GetVersionType(this, releaseTime);
 
+        var options = new JsonSerializerOptions {
+            PropertyNameCaseInsensitive = true
+        };
         try {
             if (IsPatchesFormatJson) {
                 foreach (var patch in versionJson["patches"]!.AsArray()) {
-                    
+                    var patcherInfo = patch.Deserialize<PatcherInfo>(options);
+                    _versionInfo.Patchers.Add(patcherInfo);
                 }
             }
         } catch (Exception ex) {
@@ -112,7 +113,7 @@ public class McInstance {
         if (_versionJson != null) {
             return _versionJson;
         }
-        
+
         var jsonPath = System.IO.Path.Combine(Path, $"{Name}.json");
         if (!File.Exists(jsonPath)) {
             var jsonFiles = Directory.GetFiles(Path, "*.json");
@@ -125,7 +126,7 @@ public class McInstance {
             // 异步读取文件内容
             await using var fileStream = new FileStream(jsonPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var jsonNode = await JsonNode.ParseAsync(fileStream);
-            var jsonObject = jsonNode.AsObject();
+            var jsonObject = jsonNode!.AsObject();
 
             // 处理 Patches 格式 JSON
             if (jsonObject["patches"] != null) {
@@ -136,7 +137,7 @@ public class McInstance {
         } catch (Exception ex) {
             throw new Exception($"初始化实例 JSON 失败（{Name ?? "null"}）", ex);
         }
-        
+
         return _versionJson;
     }
 
@@ -157,12 +158,12 @@ public class McInstance {
         if (_versionJsonInJar != null) {
             return _versionJsonInJar;
         }
-        
+
         var jarPath = $"{Path}{Name}.jar";
         if (!File.Exists(jarPath)) {
             return null;
         }
-        
+
         try {
             await using var fileStream = new FileStream(jarPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var zipFile = new ZipFile(fileStream); // SharpZipLib 的 ZipFile
@@ -179,43 +180,6 @@ public class McInstance {
             LogWrapper.Warn(ex, "从实例 JAR 中读取 version.json 失败");
         }
         return _versionJsonInJar;
-    }
-
-    public async Task<string?> GetVersionFromJson(McInstance instance) {
-        var versionJson = await instance.GetVersionJsonAsync();
-        try {
-            // Get version from patches
-            if (versionJson.TryGetPropertyValue("patches", out var patchesElement) && 
-                patchesElement?.GetValueKind() == JsonValueKind.Array) {
-                var patchesArray = (JsonArray)patchesElement;
-                var gamePatch = patchesArray
-                    .OfType<JsonObject>()
-                    .FirstOrDefault(patch => 
-                        patch.TryGetPropertyValue("id", out var idElement) && 
-                        idElement?.ToString() == "game" && 
-                        patch.TryGetPropertyValue("version", out _));
-
-                if (gamePatch?.TryGetPropertyValue("version", out var versionElement) == true) {
-                    var version = versionElement?.ToString();
-                    if (!string.IsNullOrEmpty(version)) {
-                        return version;
-                    }
-                }
-            }
-            
-            // Get version from clientVersion
-            if (versionJson.TryGetPropertyValue("clientVersion", out var clientVersionElement)) {
-                return clientVersionElement!.ToString();
-            }
-
-            // Fallback
-            LogWrapper.Warn($"无法完全确认 MC 版本号的实例：{Name}");
-            Desc = "PCL 无法识别该实例的 MC 版本号";
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
-            Desc = $"无法识别：{ex.Message}";
-            return null;
-        }
     }
 
     public bool IsLoaded { get; private set; }
@@ -262,11 +226,11 @@ public class McInstance {
             await Check();
 
             // 确定实例图标
-            Logo = await DetermineLogo();
+            Logo = await McInstanceLogic.DetermineLogo(this);
 
             // 确定实例描述和状态
             Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
-                ? await McInstanceUtils.GetDefaultDescription(this)
+                ? await McInstanceLogic.GetDefaultDescription(this)
                 : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
             SetupService.SetString(SetupEntries.Instance.Starred, Path);
             IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
@@ -280,19 +244,10 @@ public class McInstance {
 
             if (!IsError) {
                 SetupService.SetString(SetupEntries.Instance.ReleaseTime, versionInfo.ReleaseTime.ToString("yyyy-MM-dd HH:mm"), Path);
-                SetupService.SetString(SetupEntries.Instance.FabricVersion, versionInfo.FabricVersion, Path);
-                SetupService.SetString(SetupEntries.Instance.LegacyFabricVersion, versionInfo.LegacyFabricVersion, Path);
-                SetupService.SetString(SetupEntries.Instance.QuiltVersion, versionInfo.QuiltVersion, Path);
-                SetupService.SetString(SetupEntries.Instance.LabyModVersion, versionInfo.LabyModVersion, Path);
-                SetupService.SetString(SetupEntries.Instance.OptiFineVersion, versionInfo.OptiFineVersion, Path);
-                SetupService.SetBool(SetupEntries.Instance.HasLiteLoader, versionInfo.HasLiteLoader, Path);
-                SetupService.SetString(SetupEntries.Instance.ForgeVersion, versionInfo.ForgeVersion, Path);
-                SetupService.SetString(SetupEntries.Instance.NeoForgeVersion, versionInfo.NeoForgeVersion, Path);
-                SetupService.SetString(SetupEntries.Instance.CleanroomVersion, versionInfo.CleanroomVersion, Path);
-                SetupService.SetInt32(SetupEntries.Instance.SortCode, versionInfo.SortCode, Path);
+                // SetupService.SetInt32(SetupEntries.Instance.SortCode, versionInfo.SortCode, Path);
                 SetupService.SetString(SetupEntries.Instance.McVersion, versionInfo.McVersion, Path);
-                SetupService.SetInt32(SetupEntries.Instance.VersionMajor, versionInfo.McCodeMain, Path);
-                SetupService.SetInt32(SetupEntries.Instance.VersionMinor, versionInfo.McCodeSub, Path);
+                // SetupService.SetInt32(SetupEntries.Instance.VersionMajor, versionInfo.McCodeMain, Path);
+                // SetupService.SetInt32(SetupEntries.Instance.VersionMinor, versionInfo.McCodeSub, Path);
             }
         } catch (Exception ex) {
             Desc = $"未知错误：{ex}";
@@ -303,57 +258,6 @@ public class McInstance {
             IsLoaded = true;
         }
         return this;
-    }
-
-    private async Task<string> DetermineLogo() {
-        var logo = SetupService.GetString(SetupEntries.Instance.LogoPath, Path);
-        var versionInfo = await GetVersionInfoAsync();
-        if (string.IsNullOrEmpty(logo) || !SetupService.GetBool(SetupEntries.Instance.IsLogoCustom, Path)) {
-            if (IsError) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
-            }
-
-            // 优先判断特殊版本
-            if (versionInfo.IsFoolVersion) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/GoldBlock.png");
-            }
-            if (versionInfo.IsOldVersion) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/CobbleStone.png");
-            }
-            if (versionInfo.IsSnapshotVersion) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/CommandBlock.png");
-            }
-
-            // 其次判断加载器等
-            if (versionInfo.HasNeoForge) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/NeoForge.png");
-            }
-            if (versionInfo.HasFabric || versionInfo.HasLegacyFabric) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/Fabric.png");
-            }
-            if (versionInfo.HasForge) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/Forge.png");
-            }
-            if (versionInfo.HasLiteLoader) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/Egg.png");
-            }
-            if (versionInfo.HasQuilt) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/Quilt.png");
-            }
-            if (versionInfo.HasCleanroom) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/Cleanroom.png");
-            }
-            if (versionInfo.HasLabyMod) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/LabyMod.png");
-            }
-            if (versionInfo.HasOptiFine) {
-                return System.IO.Path.Combine(Basics.ImagePath, "Blocks/OptiFine.png");
-            }
-
-            // 正常版本
-            return System.IO.Path.Combine(Basics.ImagePath, "Blocks/Grass.png");
-        }
-        return logo;
     }
 }
 

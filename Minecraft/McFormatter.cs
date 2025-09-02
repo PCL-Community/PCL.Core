@@ -1,4 +1,7 @@
-﻿namespace PCL.Core.Minecraft;
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace PCL.Core.Minecraft;
 
 public static class McFormatter {
     public static string GetWikiUrlSuffix(string gameVersion) {

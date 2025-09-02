@@ -135,7 +135,7 @@ public class McInstance {
 
             _versionJson = jsonObject; // 保存到字段
         } catch (Exception ex) {
-            throw new Exception($"初始化实例 JSON 失败（{Name ?? "null"}）", ex);
+            LogWrapper.Warn(ex, $"初始化实例 JSON 失败（{Name}）");
         }
 
         return _versionJson;
@@ -190,9 +190,8 @@ public class McInstance {
         Path = (path.Contains(":") ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith("\\") ? "" : "\\");
     }
 
-    public async Task<bool> Check() {
+    private async Task<bool> Check() {
         if (!Directory.Exists(Path)) {
-            IsError = true;
             Desc = $"未找到实例 {Name}";
             return false;
         }
@@ -201,19 +200,16 @@ public class McInstance {
             Directory.CreateDirectory(Path + "PCL\\");
             await Directories.CheckPermissionWithExceptionAsync(Path + "PCL\\");
         } catch (Exception ex) {
-            IsError = true;
             Desc = "PCL 没有对该文件夹的访问权限，请以管理员身份运行";
             LogWrapper.Warn(ex, "没有访问实例文件夹的权限");
             return false;
         }
 
         try {
-            _ = await GetVersionJsonAsync();
+            await GetVersionJsonAsync();
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"实例 JSON 可用性检查失败（{Path}）");
-            _versionJson = null;
             Desc = ex.Message;
-            IsError = true;
             return false;
         }
 
@@ -222,8 +218,9 @@ public class McInstance {
 
     public async Task<McInstance> Load() {
         try {
-            var versionInfo = await GetVersionInfoAsync();
-            await Check();
+            if (!await Check()) {
+                IsError = true;
+            }
 
             // 确定实例图标
             Logo = await McInstanceLogic.DetermineLogo(this);
@@ -240,14 +237,6 @@ public class McInstance {
             if (Directory.Exists(Path)) {
                 SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
                 SetupService.SetString(SetupEntries.Instance.LogoPath, Logo, Path);
-            }
-
-            if (!IsError) {
-                SetupService.SetString(SetupEntries.Instance.ReleaseTime, versionInfo.ReleaseTime.ToString("yyyy-MM-dd HH:mm"), Path);
-                // SetupService.SetInt32(SetupEntries.Instance.SortCode, versionInfo.SortCode, Path);
-                SetupService.SetString(SetupEntries.Instance.McVersion, versionInfo.McVersion, Path);
-                // SetupService.SetInt32(SetupEntries.Instance.VersionMajor, versionInfo.McCodeMain, Path);
-                // SetupService.SetInt32(SetupEntries.Instance.VersionMinor, versionInfo.McCodeSub, Path);
             }
         } catch (Exception ex) {
             Desc = $"未知错误：{ex}";

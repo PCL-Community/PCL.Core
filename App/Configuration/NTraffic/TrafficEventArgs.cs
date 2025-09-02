@@ -77,9 +77,9 @@ public class TrafficEventArgs<TInput, TOutput> : TrafficEventArgs
         /// 设置输出值。
         /// </summary>
         /// <param name="value">值</param>
-        public void SetOutput(TOutput? value)
+        public void SetOutput<T>(T? value)
         {
-            Output = value;
+            Output = (TOutput?)(object?)value;
             HasOutput = true;
         }
     }

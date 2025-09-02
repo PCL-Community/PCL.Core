@@ -1,27 +1,17 @@
 ﻿namespace PCL.Core.App.Configuration.NTraffic;
 
 /// <summary>
-/// 键值对操作执行类型。
+/// 物流操作执行类型。
 /// </summary>
 public enum TrafficAccess
 {
     /// <summary>
-    /// 检查键是否存在
-    /// </summary>
-    CheckExists,
-
-    /// <summary>
-    /// 读取值。
+    /// 读取。
     /// </summary>
     Read,
 
     /// <summary>
-    /// 写入值。
+    /// 写入。
     /// </summary>
-    Write,
-
-    /// <summary>
-    /// 删除值。
-    /// </summary>
-    Delete
+    Write
 }

@@ -5,11 +5,12 @@ using PCL.Core.Utils.Threading;
 namespace PCL.Core.App.Configuration.NTraffic;
 
 /// <summary>
-/// 异步物流中心，提供可选异步执行符合条件操作的消费实现。
+/// 异步物流中心，提供可选异步执行操作的消费实现。<br/>
+/// 注意：异步物流将忽略输出值。
 /// </summary>
-public abstract class AsyncTrafficCenter : TrafficCenter
+public abstract class AsyncTrafficCenter(int maxThread) : TrafficCenter
 {
-    private readonly LimitedTaskPool _taskPool = new(1);
+    private readonly LimitedTaskPool _taskPool = new(maxThread);
 
     protected sealed override void OnTraffic<TInput, TOutput>(
         PreviewTrafficEventArgs<TInput, TOutput> e,

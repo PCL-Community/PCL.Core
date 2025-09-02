@@ -23,7 +23,7 @@ public class LimitedTaskPool
     /// 初始化 <see cref="LimitedTaskPool"/> 实例
     /// </summary>
     /// <param name="maxThread">参考 <see cref="MaxThread"/>，最小为 1</param>
-    /// <exception cref="ArgumentOutOfRangeException">最大线程数小于 1</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxThread"/> 小于 1</exception>
     public LimitedTaskPool(int maxThread)
     {
         if (maxThread < 1) throw new ArgumentOutOfRangeException(nameof(maxThread));

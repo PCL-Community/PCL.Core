@@ -39,7 +39,7 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     }
 
     /// <summary>
-    /// 请求物流操作。
+    /// 请求标准物流操作。
     /// </summary>
     public bool Request<TInput, TOutput>(object? context, TrafficAccess access,
         bool hasInput, TInput? input, bool hasInitialOutput, ref TOutput? output)
@@ -53,19 +53,29 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     }
 
     /// <summary>
-    /// 请求物流操作。
+    /// 请求无输出值的物流操作。
     /// </summary>
-    public bool Request<TInput, TOutput>(object? context, TrafficAccess access, bool hasInput, TInput? input)
+    public void Request<TInput, TOutput>(object? context, TrafficAccess access, bool hasInput, TInput? input)
     {
         // 初始化事件参数
         var e = _GetEventArgs<TInput, TOutput>(context, access, hasInput, input);
         _OnTraffic(e);
-        return e.HasOutput;
+    }
+
+    /// <summary>
+    /// 请求有初始输出值且不接收返回值的物流操作。
+    /// </summary>
+    public void Request<TInput, TOutput>(object? context, TrafficAccess access, bool hasInput, TInput? input, TOutput? initialOutput)
+    {
+        // 初始化事件参数
+        var e = _GetEventArgs<TInput, TOutput>(context, access, hasInput, input);
+        e.SetOutput(initialOutput);
+        _OnTraffic(e);
     }
 
     #region IConfigProvider Implementation
 
-    public bool GetValue<T>(string key, [NotNullWhen(true)] out T? value, object? argument = null)
+    public bool GetValue<T>(string key, [NotNullWhen(true)] out T? value, object? argument)
     {
         T? result = default;
         var hasOutput = Request(argument, TrafficAccess.Read, true, key, false, ref result);
@@ -73,21 +83,20 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
         return hasOutput;
     }
 
-    public void SetValue<T>(string key, T value, object? argument = null)
+    public void SetValue<T>(string key, T value, object? argument)
     {
-        ArgumentNullException.ThrowIfNull(value, nameof(value));
-        Request(argument, TrafficAccess.Write, true, key, false, ref value!);
+        Request(argument, TrafficAccess.Write, true, key, value);
     }
 
-    public void Delete(string key, object? argument = null)
+    public void Delete(string key, object? argument)
     {
-        Request<string, bool>(argument, TrafficAccess.Delete, true, key);
+        Request<string, bool>(argument, TrafficAccess.Write, true, key);
     }
 
-    public bool Exists(string key, object? argument = null)
+    public bool Exists(string key, object? argument)
     {
         var result = false;
-        return Request(argument, TrafficAccess.CheckExists, true, key, false, ref result) && result;
+        return Request(argument, TrafficAccess.Read, true, key, true, ref result) && result;
     }
 
     #endregion

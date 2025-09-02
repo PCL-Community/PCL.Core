@@ -16,18 +16,18 @@ public interface TrafficEventArgs
 }
 
 // ReSharper disable once InconsistentNaming
-public interface PreviewTrafficEventArgs : TrafficEventArgs
+public interface PreviewTrafficEventArgs
 {
     /// <summary>
     /// 转换到特定类型的事件参数。
     /// </summary>
     /// <exception cref="System.InvalidCastException">类型不匹配</exception>
-    public new TrafficEventArgs<TInput, TOutput>.Preview Cast<TInput, TOutput>() => (TrafficEventArgs<TInput, TOutput>.Preview)this;
+    public TrafficEventArgs<TInput, TOutput>.Preview Cast<TInput, TOutput>() => (TrafficEventArgs<TInput, TOutput>.Preview)this;
 
     /// <summary>
     /// 尝试转换到特定类型的事件参数，若类型不匹配则返回 <c>null</c>。
     /// </summary>
-    public new TrafficEventArgs<TInput, TOutput>.Preview? TryCast<TInput, TOutput>() => this as TrafficEventArgs<TInput, TOutput>.Preview;
+    public TrafficEventArgs<TInput, TOutput>.Preview? TryCast<TInput, TOutput>() => this as TrafficEventArgs<TInput, TOutput>.Preview;
 }
 
 public class TrafficEventArgs<TInput, TOutput> : TrafficEventArgs

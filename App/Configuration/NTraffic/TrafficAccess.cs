@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.App.Configuration.Implementations;
+﻿namespace PCL.Core.App.Configuration.NTraffic;
 
 /// <summary>
 /// 键值对操作执行类型。

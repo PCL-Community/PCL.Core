@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.App.Configuration.Implementations;
+﻿namespace PCL.Core.App.Configuration.NTraffic;
 
 public delegate void TrafficEventHandler(TrafficEventArgs e);
 

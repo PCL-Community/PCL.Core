@@ -1,15 +1,12 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Logging;
-using PCL.Core.Net.Nat;
 using PCL.Core.Net.Nat.Stun;
-using PCL.Core.Utils;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Nat;
 
 public class NatTest(StunClient stun)
 {
@@ -33,15 +30,22 @@ public class NatTest(StunClient stun)
     private IPEndPoint _PraseXorIpAddress(byte[] data, byte[] magicCookie, byte[] transaction)
     {
         var ipFamily = data[1];
-        var port = BinaryUtils.ToUInt16FromLittleEndian(data, 2);
+        var dataSpan = data.AsSpan();
+        var port = BinaryPrimitives.ReadUInt16BigEndian(dataSpan[2..4]);
         IPAddress ip;
         switch (ipFamily)
         {
             case 0x01:
-                ip = new IPAddress(BinaryUtils.ToUInt32FromBigEndian(data, 4) ^ BitConverter.ToUInt32(magicCookie));
+                ip = new IPAddress(BinaryPrimitives.ReadUInt32BigEndian(dataSpan[4..]) ^ BitConverter.ToUInt32(magicCookie));
                 break;
             case 0x02:
-                ip = new IPAddress(BinaryUtils.ToInt64FromBigEndian(data, 4));
+                byte[] xorKey = [..magicCookie, ..transaction];
+                for (var i = 0; i < xorKey.Length; i++)
+                {
+                    data[i] ^= xorKey[i];
+                }
+
+                ip = new IPAddress(BinaryPrimitives.ReadInt64BigEndian(dataSpan[4..]));
                 break;
             default:
                 throw new Exception("Unknown IPFamily " + ipFamily);
@@ -52,9 +56,9 @@ public class NatTest(StunClient stun)
     private IPEndPoint _PraseMappedIpAddress(byte[] data)
     {
         var ipFamily = data[1];
-        var port = BinaryUtils.ToUInt16FromBigEndian(data, 2);
-        var ipData = new byte[data.Length - 4];
-        Buffer.BlockCopy(data, 4, ipData, 0, data.Length - 4);
+        var dataSpan = data.AsSpan();
+        var port = BinaryPrimitives.ReadUInt16BigEndian(dataSpan[2..4]);
+        var ipData = data[4..];
         return new IPEndPoint(new IPAddress(ipData), port);
     }
 }

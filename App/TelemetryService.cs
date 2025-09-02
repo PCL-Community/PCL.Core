@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Win32;
 using PCL.Core.Logging;
 using PCL.Core.Net;
+using PCL.Core.Net.Nat;
 using PCL.Core.Net.Nat.Stun;
 using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.OS;

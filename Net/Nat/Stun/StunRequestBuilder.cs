@@ -1,11 +1,10 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Utils;
 
 namespace PCL.Core.Net.Nat.Stun;
 
@@ -42,8 +41,8 @@ public class StunRequestBuilder
         var dataLength = _attributesList.Count * 4 + // Attribute header length (4 bytes for each header)
                          _attributesList.Sum(x => x.content.Length); // Attribute value length
         var dataLengthWithHeader = dataLength + 20; // 20 bytes for stun header
-        var ms = new MemoryStream(dataLengthWithHeader);
-        var writer = new BinaryWriter(ms);
+        var requestData = new byte[dataLengthWithHeader];
+        var requestDataSpan = requestData.AsSpan();
 
         /*
        0                   1                   2                   3
@@ -59,16 +58,18 @@ public class StunRequestBuilder
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          */
 
-        writer.Write(BinaryUtils.GetBigEndianBytes((ushort)_messageType));
-        writer.Write(BinaryUtils.GetBigEndianBytes((ushort)dataLength));
-        writer.Write(BinaryUtils.GetBigEndianBytes(MagicCookie));
-        writer.Write(_transactionId);
+        BinaryPrimitives.WriteUInt16BigEndian(requestDataSpan[..2], (ushort)_messageType);
+        BinaryPrimitives.WriteUInt16BigEndian(requestDataSpan[2..4], (ushort)dataLength);
+        BinaryPrimitives.WriteUInt32BigEndian(requestDataSpan[4..8], MagicCookie);
+        _transactionId.AsSpan().CopyTo(requestData.AsSpan(8));
+        var offset = 20;
         foreach (var tuple in _attributesList)
         {
-            writer.Write(_BuildAttributesStruct(tuple.attributes, tuple.content));
+            var attributeData = _BuildAttributesStruct(tuple.attributes, tuple.content).AsSpan();
+            attributeData.CopyTo(requestData.AsSpan(offset));
+            offset += attributeData.Length;
         }
-        writer.Flush();
-        await _client.SendDataAsync(ms.ToArray());
+        await _client.SendDataAsync(requestData.ToArray());
         var stunResponse = await _client.ReceiveDataAsync(cancellationToken);
         var ret = _PraseResponse(stunResponse.Buffer);
         if (ret is null) return null;
@@ -78,11 +79,11 @@ public class StunRequestBuilder
 
     private StunResponse? _PraseResponse(byte[] data)
     {
-        var rMessageType = (StunMessageType)BinaryUtils.ToUInt16FromBigEndian(data);
-        var rMessageLength = BinaryUtils.ToUInt16FromBigEndian(data, 2);
-        var rMagicCookie = BinaryUtils.ToUInt32FromBigEndian(data, 4);
-        var rTransactionId = new byte[12];
-        Buffer.BlockCopy(data, 8, rTransactionId, 0, rTransactionId.Length);
+        var dataSpan = data.AsSpan();
+        var rMessageType = (StunMessageType)BinaryPrimitives.ReadUInt16BigEndian(dataSpan[..2]);
+        var rMessageLength = BinaryPrimitives.ReadUInt16BigEndian(dataSpan[2..4]);
+        var rMagicCookie = BinaryPrimitives.ReadUInt32BigEndian(dataSpan[4..8]);
+        var rTransactionId = data[8..20];
         if (!rTransactionId.SequenceEqual(_transactionId)) return null;
         if (rMagicCookie != MagicCookie) return null;
         var attributeOffset = 20;
@@ -90,11 +91,11 @@ public class StunRequestBuilder
         while (attributeOffset < rMessageLength)
         {
             var addedAttributes = new StunAttributesResponse();
-            var rAttributeType = BinaryUtils.ToUInt16FromBigEndian(data, attributeOffset);
+            var rAttributeType = BinaryPrimitives.ReadUInt16BigEndian(dataSpan[attributeOffset..(attributeOffset + 2)]);
             addedAttributes.Type = (StunAttributes)rAttributeType;
-            addedAttributes.Length = BinaryUtils.ToUInt16FromBigEndian(data, attributeOffset + 2);
-            addedAttributes.Data = new byte[addedAttributes.Length];
-            Buffer.BlockCopy(data, attributeOffset + 4, addedAttributes.Data, 0, addedAttributes.Length);
+            addedAttributes.Length =
+                BinaryPrimitives.ReadUInt16BigEndian(dataSpan[(attributeOffset + 2)..(attributeOffset + 4)]);
+            addedAttributes.Data = data[(attributeOffset + 4)..(attributeOffset + 4 + addedAttributes.Length)];
             rAttributes.Add(addedAttributes);
             attributeOffset += addedAttributes.Length + 4;
         }
@@ -120,11 +121,13 @@ public class StunRequestBuilder
       |                         Value (variable)                ....
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          */
-        var capacity = 4 + content.Length;
+        const int headerSize = 4;
+        var capacity = headerSize + content.Length;
         var data = new byte[capacity];
-        Buffer.BlockCopy(BinaryUtils.GetBigEndianBytes((ushort)attributes), 0, data, 0, 2);
-        Buffer.BlockCopy(BinaryUtils.GetBigEndianBytes((ushort)content.Length), 0, data, 2, 2);
-        Buffer.BlockCopy(content, 0, data, 4, content.Length);
+        var dataSpan = data.AsSpan();
+        BinaryPrimitives.WriteUInt16BigEndian(dataSpan[..2], (ushort)attributes);
+        BinaryPrimitives.WriteUInt16BigEndian(dataSpan[2..4], (ushort)content.Length);
+        content.AsSpan().CopyTo(data.AsSpan(headerSize));
         return data;
     }
 }

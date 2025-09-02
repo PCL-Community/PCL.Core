@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Threading.Tasks;
-using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
 using PCL.Core.ProgramSetup;
@@ -41,8 +35,8 @@ public static class McInstanceLogic {
     /// <summary>
     /// Gets the default description for the instance.
     /// </summary>
-    public static async Task<string> GetDefaultDescription(McInstance instance) {
-        var versionInfo = await instance.GetVersionInfoAsync();
+    public static string GetDefaultDescription(McInstance instance) {
+        var versionInfo = instance.GetVersionInfo();
         if (instance.DisplayType == McInstanceCardType.Error) {
             return "";
         }
@@ -54,20 +48,20 @@ public static class McInstanceLogic {
     /// </summary>
     /// <param name="instance">Minecraft 实例</param>
     /// <returns>隔离后的路径，以“\”结尾</returns>
-    public static async Task<string?> GetIsolatedPathAsync(McInstance instance) {
+    public static string? GetIsolatedPathAsync(McInstance instance) {
         if (instance.DisplayType == McInstanceCardType.Error) {
             return null;
         }
         
         if (SetupService.IsUnset(SetupEntries.Instance.IndieV2, instance.Path)) {
-            var shouldBeIndie = await ShouldBeIndieAsync(instance);
+            var shouldBeIndie = ShouldBeIndieAsync(instance);
             SetupService.SetBool(SetupEntries.Instance.IndieV2, shouldBeIndie, instance.Path);
         }
         return SetupService.GetBool(SetupEntries.Instance.IndieV2) ? instance.Path : McFolderManager.PathMcFolder;
     }
 
-    private static async Task<bool> ShouldBeIndieAsync(McInstance instance) {
-        var versionInfo = await instance.GetVersionInfoAsync();
+    private static bool ShouldBeIndieAsync(McInstance instance) {
+        var versionInfo = instance.GetVersionInfo();
         
         // 从旧的实例独立设置迁移
         if (!SetupService.IsUnset(SetupEntries.Instance.IndieV1, instance.Path) && SetupService.GetInt32(SetupEntries.Instance.IndieV1, instance.Path) > 0) {
@@ -97,14 +91,11 @@ public static class McInstanceLogic {
         };
     }
     
-    public static async Task<string> DetermineLogo(McInstance instance) {
+    public static string DetermineLogo(McInstance instance) {
         var logo = SetupService.GetString(SetupEntries.Instance.LogoPath, instance.Path);
-        var versionInfo = await instance.GetVersionInfoAsync();
+        var versionInfo = instance.GetVersionInfo();
         if (string.IsNullOrEmpty(logo) || !SetupService.GetBool(SetupEntries.Instance.IsLogoCustom, instance.Path)) {
-            if (instance.DisplayType == McInstanceCardType.Error) {
-                return Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
-            }
-            return versionInfo.GetLogo();
+            return versionInfo!.GetLogo();
         }
         return logo;
     }

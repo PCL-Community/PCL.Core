@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Zip;
+using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
@@ -17,6 +18,11 @@ public class McInstance {
     private McInstanceInfo? _versionInfo;
     private JsonObject? _versionJsonInJar;
     
+    /// <summary>
+    /// 初始化 Minecraft 实例
+    /// 初始化后请一定要先运行 Check() 方法
+    /// </summary>
+    /// <param name="path"></param>
     public McInstance(string path) {
         Path = (path.Contains(":") ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith("\\") ? "" : "\\");
     }
@@ -29,7 +35,7 @@ public class McInstance {
     /// <summary>
     /// 应用版本隔离后的 Minecraft 根文件夹路径，以“\”结尾
     /// </summary>
-    public async Task<string> GetIsolatedPath() => await McInstanceLogic.GetIsolatedPathAsync(this);
+    public string? GetIsolatedPath() => McInstanceLogic.GetIsolatedPathAsync(this);
 
     /// <summary>
     /// 实例文件夹名称
@@ -59,20 +65,18 @@ public class McInstance {
     /// <summary>
     /// 实例信息
     /// </summary>
-    public async Task<McInstanceInfo?> GetVersionInfoAsync() {
+    public McInstanceInfo? GetVersionInfo() {
         if (_versionInfo != null) {
             return _versionInfo;
         }
 
         var versionInfo = new McInstanceInfo();
-        var versionJson = await GetVersionJsonAsync();
-
-        if (versionJson == null) {
+        if (DisplayType == McInstanceCardType.Error) {
             return null;
         }
         
         // 获取 MC 版本
-        var version = McInstanceUtils.RecognizeMcVersion(versionJson);
+        var version = McInstanceUtils.RecognizeMcVersion(_versionJson!);
         
         if (version != null) {
             versionInfo.McVersion = version;
@@ -83,18 +87,18 @@ public class McInstance {
         }
         
         // 获取发布时间
-        var releaseTime = McInstanceUtils.RecognizeReleaseTime(versionJson);
+        var releaseTime = McInstanceUtils.RecognizeReleaseTime(_versionJson!);
         versionInfo.ReleaseTime = releaseTime;
         
         // 获取版本类型
-        versionInfo.VersionType = McInstanceUtils.RecognizeVersionType(versionJson, releaseTime);
+        versionInfo.VersionType = McInstanceUtils.RecognizeVersionType(_versionJson!, releaseTime);
 
         var options = new JsonSerializerOptions {
             PropertyNameCaseInsensitive = true
         };
         try {
             if (IsPatchesFormatJson) {
-                foreach (var patch in versionJson["patches"]!.AsArray()) {
+                foreach (var patch in _versionJson!["patches"]!.AsArray()) {
                     var patcherInfo = patch.Deserialize<PatcherInfo>(options);
                     if (patcherInfo != null) {
                         versionInfo.Patchers.Add(patcherInfo);
@@ -152,7 +156,7 @@ public class McInstance {
     /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
-    public async Task<bool> GetIsOldJsonAsync() => (await GetVersionJsonAsync())?["minecraftArguments"]?.ToString() is not null;
+    public bool GetIsOldJsonAsync() => _versionJson?["minecraftArguments"]?.ToString() is not null;
 
     /// <summary>
     /// 是否为 Patches 格式 JSON
@@ -222,24 +226,24 @@ public class McInstance {
     public async Task<McInstance> Load() {
         if (!await Check()) {
             DisplayType = McInstanceCardType.Error;
+            Logo = System.IO.Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
+        } else {
+            // 确定实例图标
+            Logo = McInstanceLogic.DetermineLogo(this);
         }
-
-        // 确定实例图标
-        Logo = await McInstanceLogic.DetermineLogo(this);
 
         // 确定实例描述和状态
         Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
-            ? await McInstanceLogic.GetDefaultDescription(this)
+            ? McInstanceLogic.GetDefaultDescription(this)
             : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
         SetupService.SetString(SetupEntries.Instance.Starred, Path);
         IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
         DisplayType = (McInstanceCardType)SetupService.GetInt32(SetupEntries.Instance.DisplayType, Path);
 
         // 写入缓存
-        if (Directory.Exists(Path)) {
-            SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
-            SetupService.SetString(SetupEntries.Instance.LogoPath, Logo, Path);
-        }
+        SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
+        SetupService.SetString(SetupEntries.Instance.LogoPath, Logo, Path);
+        
         return this;
     }
 }

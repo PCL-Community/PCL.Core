@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
@@ -15,6 +16,7 @@ public class HttpRequestBuilder
     private readonly HttpRequestMessage _request;
     private readonly Dictionary<string, string> _cookies = [];
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
+    private bool _addLauncherHeader = true;
     private bool _doLog = true;
 
     public HttpRequestBuilder(string url, HttpMethod method)
@@ -138,9 +140,9 @@ public class HttpRequestBuilder
     // 快捷方法
     public HttpRequestBuilder WithBearerToken(string token) => WithAuthentication("Bearer", token);
 
-    public HttpRequestBuilder WithHttpVersion(Version version)
+    public HttpRequestBuilder WithDefaultHeaderOption(bool hasDefaultHeader = true)
     {
-        _request.Version = version;
+        _addLauncherHeader = hasDefaultHeader;
         return this;
     }
 
@@ -181,6 +183,12 @@ public class HttpRequestBuilder
                     .Append(_getSafeCookieValue(cookie.Value));
             }
             _request.Headers.TryAddWithoutValidation("Cookie", cookiesCtx.ToString());
+        }
+
+        if (_addLauncherHeader)
+        {
+            WithHeader("User-Agent", $"PCL-Community/PCL2-CE/{Basics.VersionName} (pclc.cc)");
+            WithHeader("Referer", $"https://{Basics.VersionNumber}.ce.open.pcl2.server/");
         }
 
         var client = NetworkService.GetClient();

@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace PCL.Core.Utils;
+namespace PCL.Core.Utils.Codecs;
 
 public static class EncodingDetector
 {

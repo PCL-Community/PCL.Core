@@ -12,7 +12,6 @@ using PCL.Core.ProgramSetup;
 namespace PCL.Core.Minecraft.McInstance;
 
 public static class MinecraftInstanceManager {
-    public const int McInstanceCacheVersion = 30;
     private static McInstance? _mcInstanceCurrent;
     private static object? _mcInstanceLast;
 
@@ -20,6 +19,11 @@ public static class MinecraftInstanceManager {
     /// List of current Minecraft folders.
     /// </summary>
     public static List<McInstance> McInstanceList { get; } = [];
+    
+    /// <summary>
+    /// 用作 UI 显示被排序过的实例字典
+    /// </summary>
+    public static Dictionary<McInstanceCardType, McInstance> McInstanceUiDict { get; set; } = [];
 
     /// <summary>
     /// 当前的 Minecraft 实例
@@ -61,16 +65,16 @@ public static class MinecraftInstanceManager {
     private static void SelectInstanceAsync(List<McInstance> path, CancellationToken cancellationToken) {
         var savedSelection = Setup.Launch.SelectedInstance;
 
-        if (McInstanceList.Any(kvp => kvp.DisplayType != McInstanceCardType.Error)) {
+        if (McInstanceList.Any(kvp => kvp.GetInstanceDisplayType() != McInstanceCardType.Error)) {
             var selectedInstance = McInstanceList
-                .FirstOrDefault(instance => instance.Name == savedSelection && instance.DisplayType != McInstanceCardType.Error);
+                .FirstOrDefault(instance => instance.Name == savedSelection && instance.GetInstanceDisplayType() != McInstanceCardType.Error);
 
             if (selectedInstance != null) {
                 McInstanceCurrent = selectedInstance;
                 LogWrapper.Warn($"选择保存的 Minecraft 实例：{McInstanceCurrent.Path}");
             } else {
                 selectedInstance = McInstanceList
-                    .FirstOrDefault(instance => instance.DisplayType != McInstanceCardType.Error);
+                    .FirstOrDefault(instance => instance.GetInstanceDisplayType() != McInstanceCardType.Error);
 
                 if (selectedInstance != null) {
                     McInstanceCurrent = selectedInstance;

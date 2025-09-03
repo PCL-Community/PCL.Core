@@ -37,7 +37,7 @@ public static class McInstanceLogic {
     /// </summary>
     public static string GetDefaultDescription(McInstance instance) {
         var versionInfo = instance.GetVersionInfo();
-        if (instance.DisplayType == McInstanceCardType.Error) {
+        if (instance.GetInstanceDisplayType() == McInstanceCardType.Error) {
             return "";
         }
         return versionInfo!.VersionType == McVersionType.Fool ? McInstanceUtils.GetMcFoolVersionDesc(versionInfo.McVersion) : RandomUtils.PickRandom(DescStrings);
@@ -49,7 +49,7 @@ public static class McInstanceLogic {
     /// <param name="instance">Minecraft 实例</param>
     /// <returns>隔离后的路径，以“\”结尾</returns>
     public static string? GetIsolatedPathAsync(McInstance instance) {
-        if (instance.DisplayType == McInstanceCardType.Error) {
+        if (instance.GetInstanceDisplayType() == McInstanceCardType.Error) {
             return null;
         }
         

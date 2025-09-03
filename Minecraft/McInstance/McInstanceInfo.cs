@@ -80,6 +80,10 @@ public class McInstanceInfo {
         "cleanroom", "liteloader", "forge", "neoforge", "fabric", "legacyfabric", "quilt"
     ]);
     
+    public bool IsClient => HasAnyPatcher([
+        "labymod", "optifine"
+    ]);
+    
     // 检查是否包含特定加载器
     public bool HasPatcher(string patcherId) {
         return Patchers.Any(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));

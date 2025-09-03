@@ -12,7 +12,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.BZip2;
 using PCL.Core.Logging;
 using PCL.Core.UI;
-using PCL.Core.Utils;
+using PCL.Core.Utils.Codecs;
 using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
 

@@ -8,7 +8,7 @@ using System.Text.Json.Nodes;
 namespace PCL.Core.Minecraft.McInstance;
 
 public static class McInstanceUtils {
-    private static readonly ImmutableDictionary<string, (int Year, string Description)> VersionDescriptions =
+    private static readonly ImmutableDictionary<string, (int Year, string Description)> FoolVersionDescriptions =
         ImmutableDictionary.CreateRange(new Dictionary<string, (int Year, string Description)>
         {
             { "15w14a", (2015, "作为一款全年龄向的游戏，我们需要和平，需要爱与拥抱。") },
@@ -33,14 +33,14 @@ public static class McInstanceUtils {
         name = name.ToLowerInvariant();
 
         // 精确匹配
-        if (VersionDescriptions.TryGetValue(name, out var match))
+        if (FoolVersionDescriptions.TryGetValue(name, out var match))
             return $"{match.Year} | {match.Description}";
 
         // 前缀匹配
         if (name.StartsWith("2.0") || name.StartsWith("2point0"))
             return $"2013 | 这个秘密计划了两年的更新将游戏推向了一个新高度！{GetVariantSuffix(name)}";
 
-        return name.StartsWith("20w14inf") ? "2020 | 我们加入了 20 亿个新的维度，让无限的想象变成了现实！" : "";
+        return "";
     }
     
     private static string GetVariantSuffix(string name) {

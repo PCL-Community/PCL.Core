@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -183,6 +184,8 @@ public class HttpRequestBuilder
         }
 
         var client = NetworkService.GetClient();
+        client.DefaultRequestVersion = HttpVersion.Version30;
+        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
             .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));

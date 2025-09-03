@@ -88,4 +88,25 @@ public static partial class RegexPatterns
     public static readonly Regex McNormalVersion = _McNormalVersion();
     [GeneratedRegex(@"^\d+\.\d+\.\d+$|^\d+\.\d+$", RegexOptions.Compiled)]
     private static partial Regex _McNormalVersion();
+    
+    /// <summary>
+    /// 匹配 Minecraft 快照版本号，如 24w14a 等。
+    /// </summary>
+    public static readonly Regex McSnapshotVersion = _McSnapshotVersion();
+    [GeneratedRegex(@"(\d+)w(\d+)([a-z]?)", RegexOptions.Compiled)]
+    private static partial Regex _McSnapshotVersion();
+
+    /// <summary>
+    /// 匹配 Minecraft Indev 版本号，如 in-20091231-2、in-20100130 等。
+    /// </summary>
+    public static readonly Regex McIndevVersion = _McIndevVersion();
+    [GeneratedRegex(@"^in-(\d{8})(-(\d+))?$", RegexOptions.Compiled)]
+    private static partial Regex _McIndevVersion();
+
+    /// <summary>
+    /// 匹配 Minecraft Infdev 版本号，如 inf-20100611 等。
+    /// </summary>
+    public static readonly Regex McInfdevVersion = _McInfdevVersion();
+    [GeneratedRegex(@"^inf-(\d{8})(-(\d+))?$", RegexOptions.Compiled)]
+    private static partial Regex _McInfdevVersion();
 }

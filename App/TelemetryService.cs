@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 using PCL.Core.Logging;
 using PCL.Core.Net;
@@ -50,15 +52,16 @@ public class TelemetryService : GeneralService
     public override void Start()
     {
         if (!Setup.System.Telemetry) return;
-        var telemetryKey = EnvironmentInterop.GetSecret("TELEMETRY_KEY");
+        var telemetryKey = "test";// EnvironmentInterop.GetSecret("TELEMETRY_KEY");
         if (string.IsNullOrWhiteSpace(telemetryKey)) return;
         var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var natTest = new StunClient5389UDP(new IPEndPoint(Dns.GetHostAddresses("stun.miwifi.com").First(), 3478),
             new IPEndPoint(IPAddress.Any, 0));
         natTest.MappingBehaviorTestAsync().GetAwaiter().GetResult();
+        var natMapBehavior = natTest.State.MappingBehavior;
+        Task.Delay(1_000).GetAwaiter().GetResult();
         natTest.FilteringBehaviorTestAsync().GetAwaiter().GetResult();
         var natFilterBehavior = natTest.State.FilteringBehavior;
-        var natMapBehavior = natTest.State.MappingBehavior;
         var telemetry = new TelemetryData
         {
             Tag = "Telemetry",

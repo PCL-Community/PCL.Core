@@ -152,7 +152,7 @@ public static class MinecraftInstanceManager {
         { McInstanceCardType.LabyMod, "LabyMod" }
     };
 
-    private static IEnumerable<IGrouping<McInstanceCardType, McInstance>> GroupAndSortWithoutDetailedClassification() {
+    private static List<IGrouping<McInstanceCardType, McInstance>> GroupAndSortWithoutDetailedClassification() {
         var moddedTypes = new[] {
             McInstanceCardType.NeoForge, McInstanceCardType.Fabric, McInstanceCardType.Forge,
             McInstanceCardType.Quilt, McInstanceCardType.LegacyFabric,
@@ -171,16 +171,18 @@ public static class MinecraftInstanceManager {
             var group = groupedInstances.FirstOrDefault(g => g.Key == type);
             var instances = group?.ToList() ?? [];
 
-            if (instances.Count > 0) {
-                if (!IsIgnoredType(type)) {
-                    // 对非忽略类型的分组进行排序
-                    instances = instances
-                        .OrderBy(instance => GetSortKey(instance, type),
-                            McVersionComparerFactory.PatcherVersionComparer)
-                        .ToList();
-                }
-                sortedGroups.Add(new Grouping(type, instances));
+            if (instances.Count == 0) {
+                continue;
             }
+            
+            if (!IsIgnoredType(type)) {
+                // 对非忽略类型的分组进行排序
+                instances = instances
+                    .OrderBy(instance => GetSortKey(instance, type),
+                        McVersionComparerFactory.PatcherVersionComparer)
+                    .ToList();
+            }
+            sortedGroups.Add(new Grouping(type, instances));
         }
 
         // 合并 Modded 和 Client
@@ -249,16 +251,10 @@ public static class MinecraftInstanceManager {
     }
 
     // 辅助类实现 IGrouping
-    private class Grouping : IGrouping<McInstanceCardType, McInstance> {
-        public McInstanceCardType Key { get; }
-        private readonly IEnumerable<McInstance> _elements;
+    private class Grouping(McInstanceCardType key, IEnumerable<McInstance> elements) : IGrouping<McInstanceCardType, McInstance> {
+        public McInstanceCardType Key { get; } = key;
 
-        public Grouping(McInstanceCardType key, IEnumerable<McInstance> elements) {
-            Key = key;
-            _elements = elements;
-        }
-
-        public IEnumerator<McInstance> GetEnumerator() => _elements.GetEnumerator();
+        public IEnumerator<McInstance> GetEnumerator() => elements.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

@@ -85,10 +85,7 @@ public class McInstance {
         }
         
         var versionInfo = GetVersionInfo();
-
-        var useDetailedInstanceClassification = Setup.Ui.DetailedInstanceClassification;
-
-        // if (useDetailedInstanceClassification) {
+        
         // 判断各个可安装模组的实例
         if (versionInfo!.HasPatcher("NeoForge")) {
             _cachedDisplayType = McInstanceCardType.NeoForge;
@@ -114,13 +111,6 @@ public class McInstance {
         } else if (versionInfo.HasPatcher("Client")) {
             _cachedDisplayType = McInstanceCardType.Client;
         } 
-        /*} else {
-            if (versionInfo!.IsModded) {
-                _cachedDisplayType = McInstanceCardType.Modded;
-            } else if (versionInfo.IsClient) {
-                _cachedDisplayType = McInstanceCardType.Client;
-            }
-        }*/
 
         if (_cachedDisplayType != null) {
             return;

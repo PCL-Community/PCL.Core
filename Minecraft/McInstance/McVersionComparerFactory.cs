@@ -11,10 +11,11 @@ public class ReleaseVersionComparer : IComparer<string> {
     public int Compare(string? x, string? y) {
         if (x == y) return 0;
         if (x == null) return -1;
-        if (y == null) return 1;
 
         // Use Version.Parse for robust comparison of release versions
-        return Version.Parse(x).CompareTo(Version.Parse(y));
+        return y == null 
+            ? 1 
+            : Version.Parse(x).CompareTo(Version.Parse(y));
     }
 }
 
@@ -39,10 +40,11 @@ public class SnapshotVersionComparer : IComparer<string> {
 
         var xWeek = int.Parse(xMatch.Groups[2].Value);
         var yWeek = int.Parse(yMatch.Groups[2].Value);
-        if (xWeek != yWeek) return xWeek.CompareTo(yWeek);
 
         // Compare sub-version char, e.g., 'a' vs 'b'
-        return string.Compare(xMatch.Groups[3].Value, yMatch.Groups[3].Value, StringComparison.Ordinal);
+        return xWeek != yWeek 
+            ? xWeek.CompareTo(yWeek)
+            : string.Compare(xMatch.Groups[3].Value, yMatch.Groups[3].Value, StringComparison.Ordinal);
     }
 }
 
@@ -62,7 +64,7 @@ public class OldVersionComparer : IComparer<string> {
         return keyCompare != 0 ? keyCompare : StringComparer.Ordinal.Compare(xRaw, yRaw);
     }
 
-    private (int order, object key, string raw) GetSortKey(string version) {
+    private static (int order, object key, string raw) GetSortKey(string version) {
         var raw = version;
         var normalizedVersion = version.Trim().ToLowerInvariant();
 
@@ -77,7 +79,7 @@ public class OldVersionComparer : IComparer<string> {
 
         var indevMatch = RegexPatterns.McIndevVersion.Match(normalizedVersion);
         if (indevMatch.Success) {
-            var key = DateTime.TryParseExact(indevMatch.Groups[1].Value, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out DateTime date)
+            var key = DateTime.TryParseExact(indevMatch.Groups[1].Value, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var date)
                 ? (date, indevMatch.Groups[3].Success ? int.Parse(indevMatch.Groups[3].Value) : 0)
                 : (DateTime.MinValue, 0);
             return (2, key, raw);
@@ -85,7 +87,7 @@ public class OldVersionComparer : IComparer<string> {
 
         var infdevMatch = RegexPatterns.McInfdevVersion.Match(normalizedVersion);
         if (infdevMatch.Success) {
-            var key = DateTime.TryParseExact(infdevMatch.Groups[1].Value, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out DateTime date)
+            var key = DateTime.TryParseExact(infdevMatch.Groups[1].Value, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var date)
                 ? (date, infdevMatch.Groups[3].Success ? int.Parse(infdevMatch.Groups[3].Value) : 0)
                 : (DateTime.MinValue, 0);
             return (3, key, raw);
@@ -106,7 +108,7 @@ public class OldVersionComparer : IComparer<string> {
 
     private static int CompareKeys(object xKey, object yKey) {
         switch (xKey) {
-            case int xInt and var _ when yKey is int yInt:
+            case int xInt when yKey is int yInt:
                 return xInt.CompareTo(yInt);
             case ValueTuple<DateTime, int> xTuple when yKey is ValueTuple<DateTime, int> yTuple:
                 var dateCompare = xTuple.Item1.CompareTo(yTuple.Item1);
@@ -131,10 +133,11 @@ public class FoolVersionComparer : IComparer<string> {
     public int Compare(string? x, string? y) {
         if (x == y) return 0;
         if (x == null) return -1;
-        if (y == null) return 1;
 
         // Order is determined by the hardcoded list index
-        return FoolVersions.IndexOf(x).CompareTo(FoolVersions.IndexOf(y));
+        return y == null 
+            ? 1 
+            : FoolVersions.IndexOf(x).CompareTo(FoolVersions.IndexOf(y));
     }
 }
 
@@ -153,8 +156,8 @@ public abstract class VersionComparerBase : IComparer<string> {
         var (xVersionNum, xSuffix) = SplitVersion(x);
         var (yVersionNum, ySuffix) = SplitVersion(y);
 
-        var xParts = xVersionNum.Split('.').Select(s => int.TryParse(s, out int n) ? n : 0).ToArray();
-        var yParts = yVersionNum.Split('.').Select(s => int.TryParse(s, out int n) ? n : 0).ToArray();
+        var xParts = xVersionNum.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
+        var yParts = yVersionNum.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
 
         for (var i = 0; i < Math.Min(xParts.Length, yParts.Length); i++) {
             if (xParts[i] != yParts[i])
@@ -173,7 +176,9 @@ public abstract class VersionComparerBase : IComparer<string> {
         if (xHasSuffix)
             return CompareSuffix(xSuffix, ySuffix);
 
-        return StringComparer.Ordinal.Compare(x, y);
+        return xHasSuffix 
+            ? CompareSuffix(xSuffix, ySuffix) 
+            : StringComparer.Ordinal.Compare(x, y);
     }
 }
 
@@ -186,7 +191,7 @@ public class NeoForgeVersionComparer : VersionComparerBase {
     }
 
     protected override (string VersionNum, string Suffix) SplitVersion(string version) {
-        var parts = version.Split(new[] { '-' }, 2);
+        var parts = version.Split([ '-' ], 2);
         return (parts[0], parts.Length > 1 ? parts[1] : "");
     }
 }
@@ -200,7 +205,7 @@ public class FabricVersionComparer : VersionComparerBase {
     }
 
     protected override (string VersionNum, string Suffix) SplitVersion(string version) {
-        var parts = version.Split(new[] { '+' }, 2);
+        var parts = version.Split([ '+' ], 2);
         return (parts[0], parts.Length > 1 ? parts[1] : "");
     }
 
@@ -217,12 +222,12 @@ public class ForgeVersionComparer : IComparer<string> {
         if (x == null) return 1;
         if (y == null) return -1;
 
-        var xParts = x.Split('.').Select(s => int.TryParse(s, out int n) ? n : 0).ToArray();
-        var yParts = y.Split('.').Select(s => int.TryParse(s, out int n) ? n : 0).ToArray();
+        var xParts = x.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
+        var yParts = y.Split('.').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
 
-        for (int i = 0; i < Math.Min(Math.Max(xParts.Length, yParts.Length), 4); i++) {
-            int xValue = i < xParts.Length ? xParts[i] : 0;
-            int yValue = i < yParts.Length ? yParts[i] : 0;
+        for (var i = 0; i < Math.Min(Math.Max(xParts.Length, yParts.Length), 4); i++) {
+            var xValue = i < xParts.Length ? xParts[i] : 0;
+            var yValue = i < yParts.Length ? yParts[i] : 0;
             if (xValue != yValue)
                 return xValue.CompareTo(yValue);
         }
@@ -240,7 +245,7 @@ public class QuiltVersionComparer : VersionComparerBase {
     }
 
     protected override (string VersionNum, string Suffix) SplitVersion(string version) {
-        var parts = version.Split(new[] { "-beta." }, 2, StringSplitOptions.None);
+        var parts = version.Split([ "-beta." ], 2, StringSplitOptions.None);
         return (parts[0], parts.Length > 1 ? parts[1] : "");
     }
 
@@ -260,7 +265,7 @@ public class CleanroomVersionComparer : VersionComparerBase {
     }
 
     protected override (string VersionNum, string Suffix) SplitVersion(string version) {
-        var parts = version.Split(new[] { "-alpha" }, 2, StringSplitOptions.None);
+        var parts = version.Split([ "-alpha" ], 2, StringSplitOptions.None);
         return (parts[0], parts.Length > 1 ? parts[1] : "");
     }
 }
@@ -318,10 +323,12 @@ public class OptiFineVersionComparer : IComparer<string> {
         if (xIsPre != yIsPre) return xIsPre ? 1 : -1; // Stable versions (-1) come before pre-releases
         if (xPre != yPre) return xPre.CompareTo(yPre);
 
-        return StringComparer.Ordinal.Compare(x, y);
+        return xPre != yPre 
+            ? xPre.CompareTo(yPre) 
+            : StringComparer.Ordinal.Compare(x, y);
     }
 
-    private (char main, int sub, int pre) Parse(string version) {
+    private static (char main, int sub, int pre) Parse(string version) {
         var preParts = version.Split([ "_pre" ], 2, StringSplitOptions.None);
         var mainPart = preParts[0];
 

@@ -2,6 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using PCL.Core.App.Configuration.Impl;
+using PCL.Core.App.Configuration.NTraffic;
+using PCL.Core.IO;
+using PCL.Core.Logging;
 
 namespace PCL.Core.App.Configuration;
 
@@ -74,23 +81,6 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
     }
 
     /// <summary>
-    /// 获取配置提供方。
-    /// </summary>
-    /// <param name="source">来源定义</param>
-    /// <returns>提供方实例</returns>
-    /// <exception cref="InvalidOperationException">配置提供方尚未初始化完成</exception>
-    /// <exception cref="ArgumentException">来源定义无效</exception>
-    public static IConfigProvider GetProvider(ConfigSource source)
-    {
-        if (!_isProvidersInitialized) throw new InvalidOperationException("Not initialized");
-        return source switch
-        {
-            // TODO
-            _ => throw new ArgumentException($"Invalid source: {source}")
-        };
-    }
-
-    /// <summary>
     /// 向指定作用域批量注册事件观察器。
     /// </summary>
     /// <param name="scope"><see cref="IConfigScope"/> 实例</param>
@@ -103,6 +93,50 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
             var item = _Items[key];
             item.Observe(observer);
         }
+    }
+
+    #endregion
+
+    #region Providers
+
+    private static IConfigProvider? _sharedConfigProvider;
+    private static IConfigProvider? _localConfigProvider;
+    private static IConfigProvider? _instanceConfigProvider;
+    private static ITrafficCenter? _instanceTrafficCenter;
+
+    /// <summary>
+    /// 获取配置提供方。
+    /// </summary>
+    /// <param name="source">来源定义</param>
+    /// <returns>提供方实例</returns>
+    /// <exception cref="InvalidOperationException">配置提供方尚未初始化完成</exception>
+    /// <exception cref="ArgumentException">来源定义无效</exception>
+    public static IConfigProvider GetProvider(ConfigSource source)
+    {
+        if (!_isProvidersInitialized) throw new InvalidOperationException("Not initialized");
+        return source switch
+        {
+            ConfigSource.Shared => _sharedConfigProvider!,
+            ConfigSource.Local => _localConfigProvider!,
+            ConfigSource.GameInstance => _instanceConfigProvider!,
+            _ => throw new ArgumentException($"Invalid source: {source}")
+        };
+    }
+
+    private static void _InitializeProviders()
+    {
+        Action[] inits = [
+            () => {
+                var fileProvider = new JsonFileProvider(Path.Combine(FileService.SharedDataPath, "config.v1.json"));
+                _sharedConfigProvider = new FileTrafficCenter(fileProvider);
+            },
+            () => {
+                var fileProvider = new YamlFileProvider(Path.Combine(FileService.DataPath, "config.v1.yml"));
+                _localConfigProvider = new FileTrafficCenter(fileProvider);
+            }
+        ];
+        try { Task.WaitAll(inits.Select(Task.Run).ToArray()); }
+        catch (AggregateException ex) { throw ex.GetBaseException(); }
     }
 
     #endregion
@@ -125,30 +159,64 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
         timer.Start();
 #endif
         ServiceContext.Info("Config initialization started");
-        ServiceContext.Trace("Initializing providers...");
-        _InitializeProviders();
-        _isProvidersInitialized = true;
-        ServiceContext.Trace("Initializing config items...");
-        _InitializeConfigItems();
-        ServiceContext.Debug($"Finished initialize {_Items.Count} item(s)");
-        _isConfigItemsInitialized = true;
-        ServiceContext.Trace("Initializing observers...");
-        _InitializeObservers();
-        ServiceContext.Info("Invoking init events...");
-        foreach (var (_, item) in _Items)
+        try
         {
-            item.TriggerEvent(ConfigEvent.Init, null, null, true, true);
+            ServiceContext.Trace("Initializing providers...");
+            _InitializeProviders();
+            _isProvidersInitialized = true;
+            ServiceContext.Trace("Initializing config items...");
+            _InitializeConfigItems();
+            ServiceContext.Debug($"Finished initialize {_Items.Count} item(s)");
+            _isConfigItemsInitialized = true;
+            ServiceContext.Trace("Initializing observers...");
+            _InitializeObservers();
+            ServiceContext.Info("Invoking init events...");
+            foreach (var (_, item) in _Items)
+            {
+                item.TriggerEvent(ConfigEvent.Init, null, null, true, true);
+            }
+            IsInitialized = true;
         }
-        IsInitialized = true;
+        catch (Exception ex)
+        {
+            var currentSection = _isConfigItemsInitialized ? "OBSERVER" : _isProvidersInitialized ? "CONFIG_ITEM" : "PROVIDER";
+            var msg = $"配置初始化失败，当前位于 {currentSection} 阶段。";
+#if DEBUG
+            msg += "\n\n嘻嘻，连配置系统都搞不明白...真是杂鱼呢~ 快修好故障重新启动吧，杂鱼杂鱼~";
+#else
+            if (ex is FileInitException e)
+            {
+                var filePath = e.FilePath;
+                var backupPath = e.FilePath + ".failbackup";
+                var bakPath = e.FilePath + ".bak";
+                File.Move(filePath, backupPath, true);
+                if (File.Exists(bakPath)) File.Copy(bakPath, filePath, true);
+                msg += $"\n\n配置文件 {filePath} 的内容出了问题，不出意外的话，它应当已经备份到 {backupPath} 文件中。"
+                    + $"\n为尽可能防止重复故障，配置文件已恢复至上一版本，若曾手动更改过配置文件，请修复问题，并替换当前的配置文件。"
+                    + $"\n\n如果你不知道发生了什么，无视即可，重新打开启动器后相关配置项可能会恢复到默认值，应不影响正常使用。";
+            }
+#endif
+            ServiceContext.Fatal(msg, ex);
+        }
 #if TRACE
         timer.Stop();
         ServiceContext.Info($"Config initialization finished in {timer.ElapsedMilliseconds} ms");
 #endif
     }
 
-    private static void _InitializeProviders()
-    {
-    }
+    [RegisterConfigEvent]
+    public static ConfigEventRegistry SharedVersionInit => new(
+        scope: SharedVersionConfig,
+        trigger: ConfigEvent.Init,
+        handler: e => LogWrapper.Info($"全局配置文件版本: {e.NewValue}")
+    );
+
+    [RegisterConfigEvent]
+    public static ConfigEventRegistry LocalVersionInit => new(
+        scope: LocalVersionConfig,
+        trigger: ConfigEvent.Init,
+        handler: e => LogWrapper.Info($"本地配置文件版本: {e.NewValue}")
+    );
 
     #endregion
 }

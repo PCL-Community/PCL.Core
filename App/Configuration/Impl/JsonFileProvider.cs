@@ -7,10 +7,8 @@ using PCL.Core.IO;
 
 namespace PCL.Core.App.Configuration.Impl;
 
-public class JsonFileProvider : IKeyValueFileProvider
+public class JsonFileProvider : CommonFileProvider
 {
-    public string FilePath { get; }
-
     private readonly JsonObject _rootElement;
 
     private static readonly JsonDocumentOptions _DocumentOptions = new()
@@ -24,13 +22,12 @@ public class JsonFileProvider : IKeyValueFileProvider
         WriteIndented = true,
     };
 
-    public JsonFileProvider(string path)
+    public JsonFileProvider(string path) : base(path)
     {
-        FilePath = path;
         JsonNode? parseResult;
         try
         {
-            var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             parseResult = JsonNode.Parse(stream, documentOptions: _DocumentOptions);
         }
         catch (Exception ex) { throw new FileInitException(path, "Failed to read JSON file", ex); }
@@ -39,7 +36,7 @@ public class JsonFileProvider : IKeyValueFileProvider
         _rootElement = rootElement;
     }
 
-    public T Get<T>(string key)
+    public override T Get<T>(string key)
     {
         var result = _rootElement[key];
         return result == null
@@ -47,23 +44,24 @@ public class JsonFileProvider : IKeyValueFileProvider
             : result.Deserialize<T>()!;
     }
 
-    public void Set<T>(string key, T value)
+    public override void Set<T>(string key, T value)
     {
         _rootElement[key] = JsonSerializer.SerializeToNode(value);
     }
 
-    public bool Exists(string key)
+    public override bool Exists(string key)
     {
         return _rootElement.ContainsKey(key);
     }
 
-    public void Remove(string key)
+    public override void Remove(string key)
     {
         _rootElement.Remove(key);
     }
 
-    public void Sync()
+    public override void Sync()
     {
+        File.Copy(FilePath, FilePath + ".bak", true);
         var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         var writer = new Utf8JsonWriter(stream);
         _rootElement.WriteTo(writer, _SerializerOptions);

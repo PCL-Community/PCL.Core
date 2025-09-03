@@ -6,9 +6,8 @@ using PCL.Core.Logging;
 
 namespace PCL.Core.Utils.Hash;
 
-public class MD5Provider : IHashProvider
-{
-    public static MD5Provider Instance { get; } = new MD5Provider();
+public class MD5Provider : IHashProvider {
+    public static MD5Provider Instance { get; } = new();
     
     public string ComputeHash(Stream input)
     {

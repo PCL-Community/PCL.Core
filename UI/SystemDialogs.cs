@@ -1,7 +1,7 @@
 ﻿using Microsoft.Win32;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Utils.OS;
+namespace PCL.Core.UI;
 
 using System;
 using System.IO;
@@ -9,7 +9,7 @@ using System.IO;
 /// <summary>
 /// 提供文件和文件夹对话框相关的实用方法。
 /// </summary>
-public static class DialogUtils {
+public static class SystemDialogs {
     /// <summary>
     /// 显示保存文件对话框，要求用户选择保存位置。
     /// </summary>
@@ -28,15 +28,15 @@ public static class DialogUtils {
             InitialDirectory = !string.IsNullOrEmpty(initialDirectory) && Directory.Exists(initialDirectory) ? initialDirectory : null
         };
 
-        LogWrapper.Info($"[UI] 打开保存文件对话框：{title}");
+        LogWrapper.Info("Dialog", $"打开保存文件对话框：{title}");
         var result = fileDialog.ShowDialog();
         if (result != true) {
-            LogWrapper.Info("[UI] 选择文件被取消");
+            LogWrapper.Info("Dialog", "选择文件被取消");
             return null;
         }
 
         var selectedPath = fileDialog.FileName;
-        LogWrapper.Info($"[UI] 选择文件返回：{selectedPath}");
+        LogWrapper.Info("Dialog", $"选择文件返回：{selectedPath}");
         return string.IsNullOrEmpty(selectedPath) ? null : Path.GetFullPath(selectedPath);
     }
 
@@ -59,15 +59,15 @@ public static class DialogUtils {
             InitialDirectory = !string.IsNullOrEmpty(initialDirectory) && Directory.Exists(initialDirectory) ? initialDirectory : null
         };
 
-        LogWrapper.Info($"[UI] 打开选择文件对话框：{title}");
+        LogWrapper.Info("Dialog", $"打开选择文件对话框：{title}");
         var result = fileDialog.ShowDialog();
         if (result != true) {
-            LogWrapper.Info("[UI] 选择文件被取消");
+            LogWrapper.Info("Dialog", "选择文件被取消");
             return null;
         }
 
         var selectedPath = fileDialog.FileName;
-        LogWrapper.Info($"[UI] 选择单个文件返回：{selectedPath}");
+        LogWrapper.Info("Dialog", $"选择单个文件返回：{selectedPath}");
         return string.IsNullOrEmpty(selectedPath) ? null : Path.GetFullPath(selectedPath);
     }
 
@@ -88,15 +88,15 @@ public static class DialogUtils {
             ValidateNames = true
         };
 
-        LogWrapper.Info($"[UI] 打开选择多个文件对话框：{title}");
+        LogWrapper.Info("Dialog", $"打开选择多个文件对话框：{title}");
         var result = fileDialog.ShowDialog();
         if (result != true) {
-            LogWrapper.Info("[UI] 选择文件被取消");
+            LogWrapper.Info("Dialog", "选择文件被取消");
             return [];
         }
 
         string[] selectedFiles = fileDialog.FileNames;
-        LogWrapper.Info($"[UI] 选择多个文件返回：{string.Join(",", selectedFiles)}");
+        LogWrapper.Info("Dialog", $"选择多个文件返回：{string.Join(",", selectedFiles)}");
         return selectedFiles.Length == 0 ? [] : Array.ConvertAll(selectedFiles, Path.GetFullPath);
     }
 
@@ -112,21 +112,21 @@ public static class DialogUtils {
             Multiselect = false
         };
 
-        LogWrapper.Info($"[UI] 打开选择文件夹对话框：{title}");
+        LogWrapper.Info("Dialog", $"打开选择文件夹对话框：{title}");
         var result = folderDialog.ShowDialog();
         if (result != true) {
-            LogWrapper.Info("[UI] 选择文件夹被取消");
+            LogWrapper.Info("Dialog", "选择文件夹被取消");
             return null;
         }
 
         var selectedPath = folderDialog.FolderName;
         if (string.IsNullOrEmpty(selectedPath)) {
-            LogWrapper.Info("[UI] 选择文件夹返回：空");
+            LogWrapper.Info("Dialog", "选择文件夹返回：空");
             return null;
         }
 
         var normalizedPath = Path.GetFullPath(selectedPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        LogWrapper.Info($"[UI] 选择文件夹返回：{normalizedPath}");
+        LogWrapper.Info("Dialog", $"选择文件夹返回：{normalizedPath}");
         return normalizedPath;
     }
 }

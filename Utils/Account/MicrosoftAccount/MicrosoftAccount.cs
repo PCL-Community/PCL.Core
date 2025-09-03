@@ -11,7 +11,7 @@ public class MicrosoftAccount : IAccount<MicrosoftAccountData, MicrosoftAuthenti
         throw new System.NotImplementedException();
     }
 
-    public AccountDataProvider<MicrosoftAccountData> GetAccountData()
+    public AccountDataRecord<MicrosoftAccountData> GetAccountData()
     {
         throw new System.NotImplementedException();
     }

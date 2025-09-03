@@ -6,7 +6,7 @@ public interface IAccount<TAccountData, TAuthenticationData>
 {
     AccountStatus Status { get; }
 
-    AccountDataProvider<TAccountData> GetAccountData();
+    AccountDataRecord<TAccountData> GetAccountData();
 
     Task<IAccountAuthentication<TAuthenticationData>> AskAuthenticationAsync();
 

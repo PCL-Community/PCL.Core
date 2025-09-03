@@ -60,6 +60,12 @@ public static class MinecraftInstanceManager {
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "加载 Minecraft 实例列表失败");
         }
+
+        SortInstance();
+        
+        foreach (var instance in McInstanceList) {
+            instance.Load();
+        }
     }
 
     private static void SelectInstanceAsync(List<McInstance> path, CancellationToken cancellationToken) {
@@ -93,5 +99,92 @@ public static class MinecraftInstanceManager {
             }
             LogWrapper.Warn("未找到可用的 Minecraft 实例");
         }
+    }
+
+    private static void SortInstance() {
+        McInstanceUiDict = McInstanceList
+            .ToDictionary(
+                instance => instance.GetInstanceDisplayType(),
+                instance => instance
+            )
+            .OrderBy(kvp => (int)kvp.Key)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+        /*
+        // 常规实例：快照放在最上面，此后按版本号从高到低排序
+        if (McInstanceUiDict.ContainsKey(McInstanceCardType.Release))
+        {
+            List<McInstance> OldList = ResultInstanceList[McInstanceCardType.OriginalLike];
+            // 提取快照
+            McInstance Snapshot = null;
+            foreach (McInstance Instance in OldList) {
+                if (Instance.State == McInstanceState.Snapshot) {
+                    Snapshot = Instance;
+                    break;
+                }
+            }
+            if (Snapshot != null) {
+                OldList.Remove(Snapshot);
+            }
+            // 按版本号排序
+            List<McInstance> NewList = OldList.OrderByDescending(v => v.Version.McCodeMain).ToList();
+            // 回设
+            if (Snapshot != null) {
+                NewList.Insert(0, Snapshot);
+            }
+            ResultInstanceList[McInstanceCardType.OriginalLike] = NewList;
+        }
+
+        // 不常用实例：按发布时间新旧排序，如果不可用则按名称排序
+        if (ResultInstanceList.ContainsKey(McInstanceCardType.Rubbish))
+        {
+            ResultInstanceList[McInstanceCardType.Rubbish].Sort((Left, Right) => {
+                int LeftYear = Left.ReleaseTime.Year; // + (Left.State == McInstanceState.Original || Left.Version.HasOptiFine ? 100 : 0);
+                int RightYear = Right.ReleaseTime.Year; // + (Right.State == McInstanceState.Original || Right.Version.HasOptiFine ? 100 : 0);
+                if (LeftYear > 2000 && RightYear > 2000) {
+                    if (LeftYear != RightYear) {
+                        return LeftYear > RightYear ? 1 : -1;
+                    } else {
+                        return Left.ReleaseTime > Right.ReleaseTime ? 1 : -1;
+                    }
+                } else if (LeftYear > 2000 && RightYear < 2000) {
+                    return 1;
+                } else if (LeftYear < 2000 && RightYear > 2000) {
+                    return -1;
+                } else {
+                    return string.Compare(Left.Name, Right.Name);
+                }
+            });
+        }
+
+        // API 实例：优先按版本排序，此后【先放 Fabric / Quilt / Legacy Fabric，再放 Neo/Forge（按版本号从高到低排序），然后放 Cleanroom / LabyMod，最后放 LiteLoader（按名称排序）】
+        if (ResultInstanceList.ContainsKey(McInstanceCardType.API)) {
+            ResultInstanceList[McInstanceCardType.API].Sort((Left, Right) => {
+                int Basic = VersionSortInteger(Left.Version.McName, Right.Version.McName);
+                if (Basic != 0) {
+                    return Basic > 0 ? 1 : -1;
+                } else {
+                    if (Left.Version.HasFabric != Right.Version.HasFabric) {
+                        return Left.Version.HasFabric ? 1 : -1;
+                    } else if (Left.Version.HasQuilt != Right.Version.HasQuilt) {
+                        return Left.Version.HasQuilt ? 1 : -1;
+                    } else if (Left.Version.HasLegacyFabric != Right.Version.HasLegacyFabric) {
+                        return Left.Version.HasLegacyFabric ? 1 : -1;
+                    } else if (Left.Version.HasNeoForge != Right.Version.HasNeoForge) {
+                        return Left.Version.HasNeoForge ? 1 : -1;
+                    } else if (Left.Version.HasForge != Right.Version.HasForge) {
+                        return Left.Version.HasForge ? 1 : -1;
+                    } else if (Left.Version.HasCleanroom != Right.Version.HasCleanroom) {
+                        return Left.Version.HasCleanroom ? 1 : -1;
+                    } else if (Left.Version.HasLabyMod != Right.Version.HasLabyMod) {
+                        return Left.Version.HasLabyMod ? 1 : -1;
+                    } else if (Left.Version.SortCode != Right.Version.SortCode) {
+                        return Left.Version.SortCode > Right.Version.SortCode ? 1 : -1;
+                    } else {
+                        return string.Compare(Left.Name, Right.Name);
+                    }
+                }
+            });
+        }*/
     }
 }

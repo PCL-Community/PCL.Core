@@ -84,12 +84,12 @@ public class McInstanceInfo {
     
     // 检查是否包含特定加载器
     public bool HasPatcher(string patcherId) {
-        return Patchers.Any(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+        return Patchers.Any(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
     }
     
     // 检查是否包含一组加载器中的任意一个
     public bool HasAnyPatcher(IEnumerable<string> patcherIds) {
-        return patcherIds.Any(id => Patchers.Any(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase)));
+        return patcherIds.Any(id => Patchers.Any(p => p.Id!.Equals(id, StringComparison.OrdinalIgnoreCase)));
     }
     
     public string GetLogo() {
@@ -108,7 +108,7 @@ public class McInstanceInfo {
 
         // 其次判断加载器等
         foreach (var loader in new[] { "neoforge", "fabric", "legacyFabric", "forge", "liteloader", "quilt", "cleanroom", "labymod", "optifine" }) {
-            if (Patchers.Any(p => p.Id.Equals(loader, StringComparison.OrdinalIgnoreCase)))
+            if (Patchers.Any(p => p.Id!.Equals(loader, StringComparison.OrdinalIgnoreCase)))
             {
                 return Path.Combine(Basics.ImagePath, LoaderImageMap[loader]);
             }

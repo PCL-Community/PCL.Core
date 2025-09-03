@@ -111,7 +111,7 @@ public static class LobbyController
             return 1;
         }
             
-        while (CheckETStatus().GetAwaiter().GetResult() != 0)
+        while (CheckETStatusAsync().GetAwaiter().GetResult() != 0)
         {
             Task.Delay(800).GetAwaiter().GetResult();
         }

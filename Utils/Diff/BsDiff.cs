@@ -78,7 +78,7 @@ from oldfile to x bytes from the diff block; copy y bytes from the
 extra block; seek forwards in oldfile by z bytes".
 */
 	
-	public async Task<byte[]> Apply(byte[] originData, byte[] diffData)
+	public async Task<byte[]> ApplyAsync(byte[] originData, byte[] diffData)
 	{
 		return await Task.Run(() =>
 		{
@@ -173,7 +173,7 @@ extra block; seek forwards in oldfile by z bytes".
 		});
 	}
 
-	public Task<byte[]> Make(byte[] originData, byte[] newData)
+	public Task<byte[]> MakeAsync(byte[] originData, byte[] newData)
 	{
 		throw new NotImplementedException();
 	}

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -7,10 +9,10 @@ using System.Text.Json.Serialization;
 using Microsoft.Win32;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.Net.Nat;
-using PCL.Core.Net.Nat.Stun;
 using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.OS;
+using STUN.Client;
+using STUN.StunResult;
 
 namespace PCL.Core.App;
 
@@ -51,9 +53,12 @@ public class TelemetryService : GeneralService
         var telemetryKey = EnvironmentInterop.GetSecret("TELEMETRY_KEY");
         if (string.IsNullOrWhiteSpace(telemetryKey)) return;
         var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var natTest = new NatTest(new StunClient());
-        // var natResult = natTest.DetectNatTypeAsync().Result;
-        var hasPublicIpv6Address = false;
+        var natTest = new StunClient5389UDP(new IPEndPoint(Dns.GetHostAddresses("stun.miwifi.com").First(), 3478),
+            new IPEndPoint(IPAddress.Any, 0));
+        natTest.MappingBehaviorTestAsync().GetAwaiter().GetResult();
+        natTest.FilteringBehaviorTestAsync().GetAwaiter().GetResult();
+        var natFilterBehavior = natTest.State.FilteringBehavior;
+        var natMapBehavior = natTest.State.MappingBehavior;
         var telemetry = new TelemetryData
         {
             Tag = "Telemetry",
@@ -74,9 +79,9 @@ public class TelemetryService : GeneralService
             UsedHmcl = Directory.Exists(Path.Combine(appDataFolder, ".hmcl")),
             UsedBakaXl = Directory.Exists(Path.Combine(appDataFolder, "BakaXL")),
             Memory = KernelInterop.GetPhysicalMemoryBytes().Total,
-            NatMapBehaviour = "", //natResult.MappingBehavior.ToString(),
-            NatFilterBehaviour = "", //natResult.FilteringBehavior.ToString(),
-            Ipv6Status = "Unknown"
+            NatMapBehaviour = natMapBehavior.ToString(),
+            NatFilterBehaviour = natFilterBehavior.ToString(),
+            Ipv6Status = NetworkInterfaceUtils.GetIPv6Status().ToString()
         };
         var sendData = JsonSerializer.Serialize(telemetry);
         using var response = HttpRequestBuilder

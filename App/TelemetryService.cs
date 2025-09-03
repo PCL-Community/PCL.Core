@@ -52,7 +52,7 @@ public class TelemetryService : GeneralService
     public override void Start()
     {
         if (!Setup.System.Telemetry) return;
-        var telemetryKey = "test";// EnvironmentInterop.GetSecret("TELEMETRY_KEY");
+        var telemetryKey = EnvironmentInterop.GetSecret("TELEMETRY_KEY");
         if (string.IsNullOrWhiteSpace(telemetryKey)) return;
         var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var natTest = new StunClient5389UDP(new IPEndPoint(Dns.GetHostAddresses("stun.miwifi.com").First(), 3478),
@@ -69,7 +69,7 @@ public class TelemetryService : GeneralService
             Os = Environment.OSVersion.Version.Build,
             Is64Bit = Environment.Is64BitOperatingSystem,
             IsArm64 = RuntimeInformation.OSArchitecture.Equals(Architecture.Arm64),
-            Launcher = "",
+            Launcher = Basics.VersionName,
             LauncherBranch = Setup.System.UpdateBranch switch
             {
                 0 => "Slow Ring",

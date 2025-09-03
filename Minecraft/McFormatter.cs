@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace PCL.Core.Minecraft;
+﻿namespace PCL.Core.Minecraft;
 
 public static class McFormatter {
     public static string GetWikiUrlSuffix(string gameVersion) {
@@ -76,10 +73,7 @@ public static class McFormatter {
         if (id.StartsWith("rd-")) return "pre-Classic_" + id;
         if (id.StartsWith('b')) return id.Replace("b", "Beta_");
         if (id.StartsWith('a')) return id.Replace("a", "Alpha_v");
-        if (id.StartsWith('c')) return id.Replace("c", "Classic_").Replace("st", "SURVIVAL_TEST");
 
-        if (id.Contains('w')) return id;
-
-        return id;
+        return id.StartsWith('c') ? id.Replace("c", "Classic_").Replace("st", "SURVIVAL_TEST") : id;
     }
 }

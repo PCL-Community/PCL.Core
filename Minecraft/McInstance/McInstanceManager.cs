@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -34,7 +33,6 @@ public static class MinecraftInstanceManager {
             if (ReferenceEquals(_mcInstanceLast, value)) return;
             _mcInstanceCurrent = value;
             _mcInstanceLast = value;
-            if (value == null) return;
         }
     }
 
@@ -50,7 +48,7 @@ public static class MinecraftInstanceManager {
                 McInstanceList.Add(mcInstance);
             }
 
-            SelectInstanceAsync(McInstanceList, cancelToken);
+            SelectInstanceAsync();
 
             if (Setup.System.Debug.AddRandomDelay) {
                 await Task.Delay(Random.Shared.Next(200, 3000), cancelToken);
@@ -68,7 +66,7 @@ public static class MinecraftInstanceManager {
         }
     }
 
-    private static void SelectInstanceAsync(List<McInstance> path, CancellationToken cancellationToken) {
+    private static void SelectInstanceAsync() {
         var savedSelection = Setup.Launch.SelectedInstance;
 
         if (McInstanceList.Any(kvp => kvp.GetInstanceDisplayType() != McInstanceCardType.Error)) {

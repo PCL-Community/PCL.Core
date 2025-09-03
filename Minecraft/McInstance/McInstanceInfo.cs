@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using PCL.Core.App;
 using PCL.Core.Utils;
 
@@ -74,7 +72,7 @@ public class McInstanceInfo {
     /// </summary>
     public Version McInstance => VersionType == McVersionType.Release ? new Version(1, McCodeMain, McCodeSub) : new Version(0, 0, 0);
     */
-    public List<PatcherInfo> Patchers { get; } = new();
+    public List<PatcherInfo> Patchers { get; } = [];
 
     public bool IsModded => HasAnyPatcher([
         "cleanroom", "liteloader", "forge", "neoforge", "fabric", "legacyfabric", "quilt"
@@ -104,6 +102,8 @@ public class McInstanceInfo {
                 return Path.Combine(Basics.ImagePath, "Blocks/CommandBlock.png");
             case McVersionType.Release:
                 break;
+            default:
+                return Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
         }
 
         // 其次判断加载器等

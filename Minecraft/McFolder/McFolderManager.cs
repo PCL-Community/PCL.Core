@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using PCL.Core.App;
@@ -31,7 +30,7 @@ public class McFolderManager {
         new Func<object, Task>(async _ => await McFolderListLoadAsync())
     ];
 
-    public static PipelineTask<string> McFolderListLoadTask = new("McFolder加载任务", PipelineSteps);
+    public static readonly PipelineTask<string> McFolderListLoadTask = new("McFolder加载任务", PipelineSteps);
 
     private static async Task McFolderListLoadAsync() {
         try {
@@ -84,7 +83,7 @@ public class McFolderManager {
 
             // Scan official launcher folder
             var mojangPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft\\");
-            if (!currentMcFolderList.Any() || (mojangPath != currentMcFolderList.First().Path && Directory.Exists(Path.Combine(mojangPath, "versions")))) {
+            if (currentMcFolderList.Count == 0 || (mojangPath != currentMcFolderList.First().Path && Directory.Exists(Path.Combine(mojangPath, "versions")))) {
                 originalMcFolderList.Add(new McFolder("Official Launcher Folder", mojangPath, McFolderType.Original));
             }
 
@@ -110,7 +109,7 @@ public class McFolderManager {
                 .Select(f => $"{f.Name}>{f.Path}")
                 .ToList();
 
-            if (!newSetup.Any()) {
+            if (newSetup.Count == 0) {
                 newSetup.Add("");
             }
 
@@ -119,8 +118,8 @@ public class McFolderManager {
             #endregion
 
             // Create default .minecraft folder if none exist
-            if (!cacheMcFolderList.Any()) {
-                string defaultPath = Path.Combine(Basics.ExecutablePath, ".minecraft", "versions");
+            if (cacheMcFolderList.Count == 0) {
+                var defaultPath = Path.Combine(Basics.ExecutablePath, ".minecraft", "versions");
                 Directory.CreateDirectory(defaultPath);
                 cacheMcFolderList.Add(new McFolder("当前文件夹", Path.Combine(Basics.ExecutablePath, ".minecraft\\"), McFolderType.Original));
             }
@@ -155,7 +154,7 @@ public class McFolderManager {
 
             var profiles = new LauncherProfiles {
                 Profiles = new Dictionary<string, Profile> {
-                    ["PCL"] = new Profile {
+                    ["PCL"] = new () {
                         Icon = "Grass",
                         Name = "PCL",
                         LastVersionId = "latest-release",
@@ -167,11 +166,7 @@ public class McFolderManager {
                 ClientToken = "23323323323323323323323323323333"
             };
 
-            var jsonOptions = new JsonSerializerOptions {
-                WriteIndented = true
-            };
-
-            var resultJson = JsonSerializer.Serialize(profiles, jsonOptions);
+            var resultJson = JsonSerializer.Serialize(profiles, Files.PrettierJsonOptions);
             await Files.WriteFileAsync(filePath, resultJson, encoding: Encodings.GB18030);
             LogWrapper.Info($"[Minecraft] 已创建 launcher_profiles.json：{folder}");
         } catch (Exception ex) {

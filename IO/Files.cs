@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,10 @@ using PCL.Core.Utils.Hash;
 namespace PCL.Core.IO;
 
 public static class Files {
+    public static readonly JsonSerializerOptions PrettierJsonOptions = new() {
+        WriteIndented = true
+    };
+    
     /// <summary>
     /// 在指定路径创建一个指向目标文件的 .lnk 快捷方式。
     /// </summary>
@@ -660,12 +665,10 @@ public static class Files {
             return source.DeepClone();
         }
 
-        JsonObject result = (JsonObject)targetObj.DeepClone(); // 克隆以避免修改原始对象
+        var result = (JsonObject)targetObj.DeepClone(); // 克隆以避免修改原始对象
 
-        foreach (var kvp in sourceObj) {
-            string key = kvp.Key;
-            JsonNode sourceValue = kvp.Value;
-            JsonNode targetValue = result[key];
+        foreach (var (key, sourceValue) in sourceObj) {
+            var targetValue = result[key];
 
             if (sourceValue == null) {
                 // 忽略 null 值，保留目标值
@@ -678,25 +681,27 @@ public static class Files {
             } else if (sourceValue is JsonArray sourceArray && targetValue is JsonArray targetArray) {
                 // 合并数组并去重
                 var uniqueValues = new HashSet<string>(StringComparer.Ordinal);
-                JsonArray mergedArray = new JsonArray();
+                JsonArray mergedArray = [];
 
                 // 添加目标数组元素
                 foreach (var item in targetArray) {
-                    if (item != null) {
-                        string itemStr = item.ToJsonString();
-                        if (uniqueValues.Add(itemStr)) {
-                            mergedArray.Add(item.DeepClone());
-                        }
+                    if (item == null) {
+                        continue;
+                    }
+                    var itemStr = item.ToJsonString();
+                    if (uniqueValues.Add(itemStr)) {
+                        mergedArray.Add(item.DeepClone());
                     }
                 }
 
                 // 添加源数组元素（源覆盖目标）
                 foreach (var item in sourceArray) {
-                    if (item != null) {
-                        string itemStr = item.ToJsonString();
-                        if (uniqueValues.Add(itemStr)) {
-                            mergedArray.Add(item.DeepClone());
-                        }
+                    if (item == null) {
+                        continue;
+                    }
+                    var itemStr = item.ToJsonString();
+                    if (uniqueValues.Add(itemStr)) {
+                        mergedArray.Add(item.DeepClone());
                     }
                 }
 

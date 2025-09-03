@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using PCL.Core.App;
 
 namespace PCL.Core.Minecraft.McInstance;
 
@@ -41,10 +39,8 @@ public static class McInstanceUtils {
         // 前缀匹配
         if (name.StartsWith("2.0") || name.StartsWith("2point0"))
             return $"2013 | 这个秘密计划了两年的更新将游戏推向了一个新高度！{GetVariantSuffix(name)}";
-        if (name.StartsWith("20w14inf"))
-            return "2020 | 我们加入了 20 亿个新的维度，让无限的想象变成了现实！";
 
-        return "";
+        return name.StartsWith("20w14inf") ? "2020 | 我们加入了 20 亿个新的维度，让无限的想象变成了现实！" : "";
     }
     
     private static string GetVariantSuffix(string name) {
@@ -71,12 +67,7 @@ public static class McInstanceUtils {
             }
         }
 
-        // Get version from clientVersion
-        if (versionJson.TryGetPropertyValue("clientVersion", out var clientVersionElement)) {
-            return clientVersionElement!.ToString();
-        }
-
-        return null;
+        return versionJson.TryGetPropertyValue("clientVersion", out var clientVersionElement) ? clientVersionElement!.ToString() : null;
     }
     
     /// <summary>

@@ -25,7 +25,7 @@ public class McInstance {
     /// </summary>
     /// <param name="path"></param>
     public McInstance(string path) {
-        Path = (path.Contains(":") ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith("\\") ? "" : "\\");
+        Path = (path.Contains(':') ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith('\\') ? "" : "\\");
     }
 
     /// <summary>
@@ -130,23 +130,14 @@ public class McInstance {
             _cachedDisplayType = McInstanceCardType.UnknownPatchers;
         } else {
             // 没有任何附加组件，按原版分类
-            switch (versionInfo.VersionType) {
-                case McVersionType.Release:
-                    _cachedDisplayType = McInstanceCardType.Release;
-                    break;
-                case McVersionType.Snapshot:
-                    _cachedDisplayType = McInstanceCardType.Snapshot;
-                    break;
-                case McVersionType.Fool:
-                    _cachedDisplayType = McInstanceCardType.Fool;
-                    break;
-                case McVersionType.Old:
-                    _cachedDisplayType = McInstanceCardType.Old;
-                    break;
-                default:
-                    _cachedDisplayType = McInstanceCardType.UnknownPatchers;
-                    break;
-            }
+            _cachedDisplayType = versionInfo.VersionType switch
+            {
+                McVersionType.Release => McInstanceCardType.Release,
+                McVersionType.Snapshot => McInstanceCardType.Snapshot,
+                McVersionType.Fool => McInstanceCardType.Fool,
+                McVersionType.Old => McInstanceCardType.Old,
+                _ => McInstanceCardType.UnknownPatchers
+            };
         }
     }
 
@@ -154,11 +145,7 @@ public class McInstance {
     /// 实例信息
     /// </summary>
     public McInstanceInfo? GetVersionInfo() {
-        if (_versionInfo != null) {
-            return _versionInfo;
-        }
-
-        return RefreshVersionInfo();
+        return _versionInfo ??= RefreshVersionInfo();
     }
 
     private McInstanceInfo? RefreshVersionInfo() {

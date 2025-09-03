@@ -88,39 +88,39 @@ public class McInstance {
 
         var useDetailedInstanceClassification = Setup.Ui.DetailedInstanceClassification;
 
-        if (useDetailedInstanceClassification) {
-            // 判断各个可安装模组的实例
-            if (versionInfo!.HasPatcher("NeoForge")) {
-                _cachedDisplayType = McInstanceCardType.NeoForge;
-            } else if (versionInfo.HasPatcher("Fabric")) {
-                _cachedDisplayType = McInstanceCardType.Fabric;
-            } else if (versionInfo.HasPatcher("LegacyFabric")) {
-                _cachedDisplayType = McInstanceCardType.LegacyFabric;
-            } else if (versionInfo.HasPatcher("Quilt")) {
-                _cachedDisplayType = McInstanceCardType.Quilt;
-            } else if (versionInfo.HasPatcher("Forge")) {
-                _cachedDisplayType = McInstanceCardType.Forge;
-            } else if (versionInfo.HasPatcher("Cleanroom")) {
-                _cachedDisplayType = McInstanceCardType.Cleanroom;
-            } else if (versionInfo.HasPatcher("LiteLoader")) {
-                _cachedDisplayType = McInstanceCardType.LiteLoader;
-            } 
-            
-            // 判断客户端类型的补丁实例
-            else if (versionInfo.HasPatcher("OptiFine")) {
-                _cachedDisplayType = McInstanceCardType.OptiFine;
-            } else if (versionInfo.HasPatcher("LabyMod")) {
-                _cachedDisplayType = McInstanceCardType.LabyMod;
-            } else if (versionInfo.HasPatcher("Client")) {
-                _cachedDisplayType = McInstanceCardType.Client;
-            } 
-        } else {
+        // if (useDetailedInstanceClassification) {
+        // 判断各个可安装模组的实例
+        if (versionInfo!.HasPatcher("NeoForge")) {
+            _cachedDisplayType = McInstanceCardType.NeoForge;
+        } else if (versionInfo.HasPatcher("Fabric")) {
+            _cachedDisplayType = McInstanceCardType.Fabric;
+        } else if (versionInfo.HasPatcher("LegacyFabric")) {
+            _cachedDisplayType = McInstanceCardType.LegacyFabric;
+        } else if (versionInfo.HasPatcher("Quilt")) {
+            _cachedDisplayType = McInstanceCardType.Quilt;
+        } else if (versionInfo.HasPatcher("Forge")) {
+            _cachedDisplayType = McInstanceCardType.Forge;
+        } else if (versionInfo.HasPatcher("Cleanroom")) {
+            _cachedDisplayType = McInstanceCardType.Cleanroom;
+        } else if (versionInfo.HasPatcher("LiteLoader")) {
+            _cachedDisplayType = McInstanceCardType.LiteLoader;
+        } 
+        
+        // 判断客户端类型的补丁实例
+        else if (versionInfo.HasPatcher("OptiFine")) {
+            _cachedDisplayType = McInstanceCardType.OptiFine;
+        } else if (versionInfo.HasPatcher("LabyMod")) {
+            _cachedDisplayType = McInstanceCardType.LabyMod;
+        } else if (versionInfo.HasPatcher("Client")) {
+            _cachedDisplayType = McInstanceCardType.Client;
+        } 
+        /*} else {
             if (versionInfo!.IsModded) {
                 _cachedDisplayType = McInstanceCardType.Modded;
             } else if (versionInfo.IsClient) {
                 _cachedDisplayType = McInstanceCardType.Client;
             }
-        }
+        }*/
 
         if (_cachedDisplayType != null) {
             return;

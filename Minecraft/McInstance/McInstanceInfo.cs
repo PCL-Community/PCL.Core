@@ -92,6 +92,10 @@ public class McInstanceInfo {
         return patcherIds.Any(id => Patchers.Any(p => p.Id!.Equals(id, StringComparison.OrdinalIgnoreCase)));
     }
     
+    public PatcherInfo? GetPatcher(string patcherId) {
+        return Patchers.FirstOrDefault(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+    }
+    
     public string GetLogo() {
         switch (VersionType) {
             case McVersionType.Fool:

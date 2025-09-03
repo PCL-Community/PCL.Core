@@ -22,7 +22,7 @@ public static class MinecraftInstanceManager {
     /// <summary>
     /// 用作 UI 显示被排序过的实例字典
     /// </summary>
-    public static Dictionary<McInstanceCardType, McInstance> McInstanceUiDict { get; set; } = [];
+    public static Dictionary<McInstanceCardType, List<McInstance>> McInstanceUiDict { get; set; } = [];
 
     /// <summary>
     /// 当前的 Minecraft 实例
@@ -100,89 +100,165 @@ public static class MinecraftInstanceManager {
     }
 
     private static void SortInstance() {
-        McInstanceUiDict = McInstanceList
-            .ToDictionary(
-                instance => instance.GetInstanceDisplayType(),
-                instance => instance
-            )
-            .OrderBy(kvp => (int)kvp.Key)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        var groupedInstances = Setup.Ui.DetailedInstanceClassification
+            ? GroupAndSortWithDetailedClassification()
+            : GroupAndSortWithoutDetailedClassification();
 
-        /*
-        // 常规实例：快照放在最上面，此后按版本号从高到低排序
-        if (McInstanceUiDict.ContainsKey(McInstanceCardType.Release))
+        McInstanceUiDict = groupedInstances
+            .OrderBy(g => Array.IndexOf(SortableTypes, g.Key))
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    // 需要排序的 McInstanceCardType
+    private static readonly McInstanceCardType[] SortableTypes = [
+        McInstanceCardType.Star, McInstanceCardType.Custom,
+        McInstanceCardType.Modded, McInstanceCardType.NeoForge, McInstanceCardType.Fabric,
+        McInstanceCardType.Forge, McInstanceCardType.Quilt, McInstanceCardType.LegacyFabric,
+        McInstanceCardType.Cleanroom, McInstanceCardType.LiteLoader, McInstanceCardType.Client,
+        McInstanceCardType.OptiFine, McInstanceCardType.LabyMod, McInstanceCardType.Release,
+        McInstanceCardType.Snapshot, McInstanceCardType.Fool, McInstanceCardType.Old,
+        McInstanceCardType.UnknownPatchers
+    ];
+
+    // PatcherId 映射
+    private static readonly Dictionary<McInstanceCardType, string> PatcherIds = new()
+    {
+        { McInstanceCardType.Release, "game" },
+        { McInstanceCardType.Snapshot, "game" },
+        { McInstanceCardType.Fool, "game" },
+        { McInstanceCardType.Old, "game" },
+        { McInstanceCardType.Star, "game" },
+        { McInstanceCardType.Custom, "game" },
+        { McInstanceCardType.UnknownPatchers, "game" },
+        { McInstanceCardType.NeoForge, "NeoForge" },
+        { McInstanceCardType.Fabric, "Fabric" },
+        { McInstanceCardType.Forge, "Forge" },
+        { McInstanceCardType.Quilt, "Quilt" },
+        { McInstanceCardType.LegacyFabric, "LegacyFabric" },
+        { McInstanceCardType.Cleanroom, "Cleanroom" },
+        { McInstanceCardType.LiteLoader, "LiteLoader" },
+        { McInstanceCardType.OptiFine, "OptiFine" },
+        { McInstanceCardType.LabyMod, "LabyMod" },
+        { McInstanceCardType.Modded, "Modded" },
+        { McInstanceCardType.Client, "Client" }
+    };
+
+    private static IEnumerable<IGrouping<McInstanceCardType, McInstance>> GroupAndSortWithDetailedClassification()
+    {
+        var moddedTypes = new[] { McInstanceCardType.NeoForge, McInstanceCardType.Fabric, McInstanceCardType.Forge,
+                                  McInstanceCardType.Quilt, McInstanceCardType.LegacyFabric,
+                                  McInstanceCardType.Cleanroom, McInstanceCardType.LiteLoader };
+        var clientTypes = new[] { McInstanceCardType.OptiFine, McInstanceCardType.LabyMod };
+
+        // 按类型分组并内部排序
+        var sortedGroups = new List<IGrouping<McInstanceCardType, McInstance>>();
+        foreach (var type in SortableTypes)
         {
-            List<McInstance> OldList = ResultInstanceList[McInstanceCardType.OriginalLike];
-            // 提取快照
-            McInstance Snapshot = null;
-            foreach (McInstance Instance in OldList) {
-                if (Instance.State == McInstanceState.Snapshot) {
-                    Snapshot = Instance;
-                    break;
-                }
-            }
-            if (Snapshot != null) {
-                OldList.Remove(Snapshot);
-            }
-            // 按版本号排序
-            List<McInstance> NewList = OldList.OrderByDescending(v => v.Version.McCodeMain).ToList();
-            // 回设
-            if (Snapshot != null) {
-                NewList.Insert(0, Snapshot);
-            }
-            ResultInstanceList[McInstanceCardType.OriginalLike] = NewList;
+            var instances = McInstanceList
+                .Where(instance => !IsIgnoredType(instance.GetInstanceDisplayType()))
+                .Where(instance => type switch
+                {
+                    McInstanceCardType.Modded => moddedTypes.Any(t => instance.GetVersionInfo()!.GetPatcher(PatcherIds[t]) != null),
+                    McInstanceCardType.Client => clientTypes.Any(t => instance.GetVersionInfo()!.GetPatcher(PatcherIds[t]) != null),
+                    _ => instance.GetInstanceDisplayType() == type
+                })
+                .OrderBy(instance => GetSortKeyAndComparer(instance, type)
+                , Comparer<object>.Create((x, y) =>
+                    x is DateTime dtX && y is DateTime dtY ? DateTime.Compare(dtX, dtY) : 
+                        McVersionComparerFactory.GetComparer(type).Compare(x.ToString(), y.ToString())))
+                .ToList();
+
+            if (instances.Count > 0)
+                sortedGroups.Add(new Grouping(type, instances));
         }
 
-        // 不常用实例：按发布时间新旧排序，如果不可用则按名称排序
-        if (ResultInstanceList.ContainsKey(McInstanceCardType.Rubbish))
-        {
-            ResultInstanceList[McInstanceCardType.Rubbish].Sort((Left, Right) => {
-                int LeftYear = Left.ReleaseTime.Year; // + (Left.State == McInstanceState.Original || Left.Version.HasOptiFine ? 100 : 0);
-                int RightYear = Right.ReleaseTime.Year; // + (Right.State == McInstanceState.Original || Right.Version.HasOptiFine ? 100 : 0);
-                if (LeftYear > 2000 && RightYear > 2000) {
-                    if (LeftYear != RightYear) {
-                        return LeftYear > RightYear ? 1 : -1;
-                    } else {
-                        return Left.ReleaseTime > Right.ReleaseTime ? 1 : -1;
-                    }
-                } else if (LeftYear > 2000 && RightYear < 2000) {
-                    return 1;
-                } else if (LeftYear < 2000 && RightYear > 2000) {
-                    return -1;
-                } else {
-                    return string.Compare(Left.Name, Right.Name);
+        // 合并 Modded 和 Client
+        var moddedGroup = sortedGroups
+            .Where(g => moddedTypes.Contains(g.Key))
+            .SelectMany(g => g)
+            .OrderBy(instance =>
+            {
+                foreach (var t in moddedTypes)
+                {
+                    var patcher = instance.GetVersionInfo()!.GetPatcher(PatcherIds[t]);
+                    if (patcher != null)
+                        return (Array.IndexOf(SortableTypes, t), patcher.Version);
                 }
+                return (int.MaxValue, "");
+            })
+            .ToList();
+
+        var clientGroup = sortedGroups
+            .Where(g => clientTypes.Contains(g.Key))
+            .SelectMany(g => g)
+            .OrderBy(instance =>
+            {
+                foreach (var t in clientTypes)
+                {
+                    var patcher = instance.GetVersionInfo()!.GetPatcher(PatcherIds[t]);
+                    if (patcher != null)
+                        return (Array.IndexOf(SortableTypes, t), patcher.Version);
+                }
+                return (int.MaxValue, "");
+            })
+            .ToList();
+
+        // 过滤掉 Modded 和 Client 相关类型的单独分组
+        sortedGroups = sortedGroups
+            .Where(g => !moddedTypes.Contains(g.Key) && !clientTypes.Contains(g.Key))
+            .ToList();
+
+        // 添加合并后的 Modded 和 Client 分组
+        if (moddedGroup.Any())
+            sortedGroups.Add(new Grouping(McInstanceCardType.Modded, moddedGroup));
+        if (clientGroup.Any())
+            sortedGroups.Add(new Grouping(McInstanceCardType.Client, clientGroup));
+
+        return sortedGroups;
+    }
+
+    private static IEnumerable<IGrouping<McInstanceCardType, McInstance>> GroupAndSortWithoutDetailedClassification()
+    {
+        return McInstanceList
+            .Where(instance => !IsIgnoredType(instance.GetInstanceDisplayType()))
+            .GroupBy(instance => instance.GetInstanceDisplayType())
+            .Select(g =>
+            {
+                return new Grouping(g.Key, g.OrderBy(instance => GetSortKeyAndComparer(instance, g.Key)
+                        , Comparer<object>.Create((x, y) =>
+                        x is DateTime dtX && y is DateTime dtY ? DateTime.Compare(dtX, dtY) : 
+                            McVersionComparerFactory.GetComparer(g.Key).Compare(x.ToString(), y.ToString())))
+                    .ToList());
             });
+    }
+
+    private static bool IsIgnoredType(McInstanceCardType type) => type == McInstanceCardType.Error;
+
+    private static object GetSortKeyAndComparer(McInstance instance, McInstanceCardType type)
+    {
+        var comparer = McVersionComparerFactory.GetComparer(type);
+        if (comparer is ReleaseTimeComparer) {
+            return instance.GetVersionInfo()!.ReleaseTime;
         }
 
-        // API 实例：优先按版本排序，此后【先放 Fabric / Quilt / Legacy Fabric，再放 Neo/Forge（按版本号从高到低排序），然后放 Cleanroom / LabyMod，最后放 LiteLoader（按名称排序）】
-        if (ResultInstanceList.ContainsKey(McInstanceCardType.API)) {
-            ResultInstanceList[McInstanceCardType.API].Sort((Left, Right) => {
-                int Basic = VersionSortInteger(Left.Version.McName, Right.Version.McName);
-                if (Basic != 0) {
-                    return Basic > 0 ? 1 : -1;
-                } else {
-                    if (Left.Version.HasFabric != Right.Version.HasFabric) {
-                        return Left.Version.HasFabric ? 1 : -1;
-                    } else if (Left.Version.HasQuilt != Right.Version.HasQuilt) {
-                        return Left.Version.HasQuilt ? 1 : -1;
-                    } else if (Left.Version.HasLegacyFabric != Right.Version.HasLegacyFabric) {
-                        return Left.Version.HasLegacyFabric ? 1 : -1;
-                    } else if (Left.Version.HasNeoForge != Right.Version.HasNeoForge) {
-                        return Left.Version.HasNeoForge ? 1 : -1;
-                    } else if (Left.Version.HasForge != Right.Version.HasForge) {
-                        return Left.Version.HasForge ? 1 : -1;
-                    } else if (Left.Version.HasCleanroom != Right.Version.HasCleanroom) {
-                        return Left.Version.HasCleanroom ? 1 : -1;
-                    } else if (Left.Version.HasLabyMod != Right.Version.HasLabyMod) {
-                        return Left.Version.HasLabyMod ? 1 : -1;
-                    } else if (Left.Version.SortCode != Right.Version.SortCode) {
-                        return Left.Version.SortCode > Right.Version.SortCode ? 1 : -1;
-                    } else {
-                        return string.Compare(Left.Name, Right.Name);
-                    }
-                }
-            });
-        }*/
+        var patcherId = PatcherIds[type];
+        var patcher = instance.GetVersionInfo()!.GetPatcher(patcherId);
+        return patcher?.Version ?? instance.GetVersionInfo()!.McVersion;
+    }
+
+    // 辅助类实现 IGrouping
+    private class Grouping : IGrouping<McInstanceCardType, McInstance>
+    {
+        public McInstanceCardType Key { get; }
+        private readonly IEnumerable<McInstance> _elements;
+
+        public Grouping(McInstanceCardType key, IEnumerable<McInstance> elements)
+        {
+            Key = key;
+            _elements = elements;
+        }
+
+        public IEnumerator<McInstance> GetEnumerator() => _elements.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

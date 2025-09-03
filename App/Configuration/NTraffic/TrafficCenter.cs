@@ -20,7 +20,10 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
         Action<PreviewTrafficEventArgs<TInput, TOutput>> onInvokeEvent
     );
 
-    private void _OnTraffic<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)
+    /// <summary>
+    /// 以事件参数请求标准物流操作。
+    /// </summary>
+    public void Request<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)
     {
         OnTraffic(e, ev =>
         {
@@ -29,7 +32,10 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
         });
     }
 
-    private PreviewTrafficEventArgs<TInput, TOutput> _GetEventArgs<TInput, TOutput>(
+    /// <summary>
+    /// 根据已知信息创建事件参数实例。
+    /// </summary>
+    public static PreviewTrafficEventArgs<TInput, TOutput> CreateEventArgs<TInput, TOutput>(
         object? context, TrafficAccess access, bool hasInput, TInput? input)
     {
         var e = hasInput
@@ -45,9 +51,9 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
         bool hasInput, TInput? input, bool hasInitialOutput, ref TOutput? output)
     {
         // 初始化事件参数
-        var e = _GetEventArgs<TInput, TOutput>(context, access, hasInput, input);
+        var e = CreateEventArgs<TInput, TOutput>(context, access, hasInput, input);
         if (hasInitialOutput) e.SetOutput(output);
-        _OnTraffic(e);
+        Request(e);
         if (e.HasOutput) output = e.Output;
         return e.HasOutput;
     }
@@ -58,8 +64,8 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     public void Request<TInput, TOutput>(object? context, TrafficAccess access, bool hasInput, TInput? input)
     {
         // 初始化事件参数
-        var e = _GetEventArgs<TInput, TOutput>(context, access, hasInput, input);
-        _OnTraffic(e);
+        var e = CreateEventArgs<TInput, TOutput>(context, access, hasInput, input);
+        Request(e);
     }
 
     /// <summary>
@@ -68,9 +74,9 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     public void Request<TInput, TOutput>(object? context, TrafficAccess access, bool hasInput, TInput? input, TOutput? initialOutput)
     {
         // 初始化事件参数
-        var e = _GetEventArgs<TInput, TOutput>(context, access, hasInput, input);
+        var e = CreateEventArgs<TInput, TOutput>(context, access, hasInput, input);
         e.SetOutput(initialOutput);
-        _OnTraffic(e);
+        Request(e);
     }
 
     #region IConfigProvider Implementation

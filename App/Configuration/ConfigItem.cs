@@ -42,6 +42,8 @@ public class ConfigItem<TValue>(
     /// </summary>
     public TValue DefaultValue => _GetDefaultValue();
 
+    public object DefaultValueNoType => DefaultValue ?? default!;
+
     public ConfigItem(string key, TValue defaultValue, ConfigSource source)
         : this(key, () => defaultValue, source) { }
 
@@ -95,6 +97,11 @@ public class ConfigItem<TValue>(
     {
         if (value is TValue v) return SetValue(v, argument);
         throw new InvalidCastException($"{value.GetType()} in incompatible with {typeof(TValue)}");
+    }
+
+    public bool SetDefaultValue(object? argument = null)
+    {
+        return SetValue(DefaultValue, argument);
     }
 
     public bool Reset(object? argument = null)
@@ -211,6 +218,18 @@ public interface ConfigItem
     }
 
     /// <summary>
+    /// 传统的用于兼容的值改变事件。<br/>
+    /// 请尽可能避免使用，而是使用 <see cref="RegisterConfigEventAttribute"/>
+    /// 来声明事件观察，或使用 <see cref="Observe(ConfigObserver)"/> 和
+    /// <see cref="Unobserve(ConfigObserver)"/> 来灵活管理事件。
+    /// </summary>
+    public event ConfigEventHandler Changed
+    {
+        add => Observe(ConfigEvent.Changed, value);
+        remove => throw new NotSupportedException("Please use Observe() and Unobserve() to access advanced event management");
+    }
+
+    /// <summary>
     /// 重置配置值，使其变为未设置状态。
     /// </summary>
     /// <param name="argument">上下文参数</param>
@@ -234,4 +253,17 @@ public interface ConfigItem
     /// 我们都不想给非引用类型装箱，但是龙猫想。
     /// </summary>
     public bool SetValueNoType(object value, object? argument = null);
+
+    /// <summary>
+    /// 将配置项的值设置为默认值，设置后 <see cref="IsDefault"/> 将返回 <c>false</c>。
+    /// </summary>
+    /// <param name="argument">上下文参数</param>
+    /// <returns>是否成功设置值，若成功则为 <c>true</c></returns>
+    public bool SetDefaultValue(object? argument = null);
+
+    /// <summary>
+    /// 没有泛型的 <see cref="ConfigItem{T}.DefaultValue"/>。<br/>
+    /// 我们都不想给非引用类型装箱，但是龙猫想。
+    /// </summary>
+    public object DefaultValueNoType { get; }
 }

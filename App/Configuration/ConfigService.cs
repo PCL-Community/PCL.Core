@@ -37,6 +37,16 @@ public sealed partial class ConfigService : GeneralService
     /// </summary>
     [ConfigItem<int>("LocalFileVersion", 1, ConfigSource.Local)] public static partial int LocalVersion { get; set; }
 
+    /// <summary>
+    /// 全局共享配置文件路径。
+    /// </summary>
+    public static string SharedConfigPath { get; } = Path.Combine(FileService.SharedDataPath, "config.v1.json");
+
+    /// <summary>
+    /// 本地配置文件路径。
+    /// </summary>
+    public static string LocalConfigPath { get; } = Path.Combine(FileService.DataPath, "config.v1.yml");
+
     #region Getters & Setters
 
     /// <summary>
@@ -129,37 +139,35 @@ public sealed partial class ConfigService : GeneralService
         Action[] inits = [
             () => // shared config file
             {
-                var sharedConfigPath = Path.Combine(FileService.SharedDataPath, "config.v1.json");
                 // try migrate
-                if (!File.Exists(sharedConfigPath))
+                if (!File.Exists(SharedConfigPath))
                 {
                     string[] oldPaths = [
                         Path.Combine(FileService.OldSharedDataPath, "Config.json"),
                         Path.Combine(FileService.SharedDataPath, "config.json")
                     ];
-                    _TryMigrate(sharedConfigPath, oldPaths.Select(path =>
-                        new ConfigMigration { From = path, To = sharedConfigPath, OnMigration = SharedJsonMigration }));
+                    _TryMigrate(SharedConfigPath, oldPaths.Select(path =>
+                        new ConfigMigration { From = path, To = SharedConfigPath, OnMigration = SharedJsonMigration }));
                 }
                 // load
-                var fileProvider = new JsonFileProvider(sharedConfigPath);
+                var fileProvider = new JsonFileProvider(SharedConfigPath);
                 var trafficCenter = new FileTrafficCenter(fileProvider);
                 _sharedConfigProvider = trafficCenter;
                 _sharedEncryptedConfigProvider = new EncryptedFileTrafficCenter(trafficCenter);
             },
             () => // local config file
             {
-                var localConfigPath = Path.Combine(FileService.DataPath, "config.v1.yml");
                 // try migrate
-                if (!File.Exists(localConfigPath)) _TryMigrate(localConfigPath, [
+                if (!File.Exists(LocalConfigPath)) _TryMigrate(LocalConfigPath, [
                     new ConfigMigration
                     {
                         From = Path.Combine(FileService.DataPath, "setup.ini"),
-                        To = localConfigPath,
+                        To = LocalConfigPath,
                         OnMigration = CatIniMigration
                     }
                 ]);
                 // load
-                var fileProvider = new YamlFileProvider(localConfigPath);
+                var fileProvider = new YamlFileProvider(LocalConfigPath);
                 _localConfigProvider = new FileTrafficCenter(fileProvider);
             },
             () => // instance config file(s)

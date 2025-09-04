@@ -35,11 +35,14 @@ jobs:
           dotnet build "PCL.Core.csproj" \
           -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.architecture }}
 
+      - name: List Generated Files
+        run: |
+          find bin -name "*.g.cs" || echo "No generated files in bin"
+          find obj -name "*.g.cs" || echo "No generated files in obj"
+        if: always()
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: PCL.Core_${{ inputs.configuration }}-${{ inputs.architecture }}_${{ env.SHORT_SHA }}
           path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**
-      
-      - name: List Generated Files
-        run: find bin -name "*.g.cs"

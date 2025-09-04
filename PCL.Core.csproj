@@ -81,10 +81,7 @@
 
     <!-- 确保源生成器正确配置 -->
     <ItemGroup>
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" 
-                        OutputItemType="Analyzer" 
-                        ReferenceOutputAssembly="false" 
-                        Properties="Platform=AnyCPU">
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Properties="Platform=AnyCPU">
             <!-- 确保源生成器在所有配置下都能工作 -->
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

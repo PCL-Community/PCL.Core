@@ -73,8 +73,16 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
+          args:
+            --save-report
           # 传递额外的参数给 Qodana
-          args: |
-            --property=idea.suppressed.plugins.id=com.intellij.ml.llm
+          # args: |
+          #   --property=idea.suppressed.plugins.id=com.intellij.ml.llm
           # 使用项目文件而不是依赖 bootstrap
           use-annotations: true
+
+      - name: Upload Qodana Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qodana-report
+          path: ${{ runner.temp }}/JetBrains/Qodana/*/results/report

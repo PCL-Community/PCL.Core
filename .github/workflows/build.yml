@@ -69,16 +69,16 @@ jobs:
           find ./generated -name "*.cs" -type f | head -20
           
       - name: Qodana Scan
-        uses: JetBrains/qodana-action@v2025.1
+        uses: JetBrains/qodana-action@v2025.2
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           args:
-            --save-report
+            --save-report --report-dir=/github/workspace/qodana/report
           use-annotations: true
 
-      - name: Upload Qodana Report Artifact
+      - name: Upload Qodana HTML Report
         uses: actions/upload-artifact@v4
         with:
           name: qodana-report
-          path: ${{ runner.temp }}/qodana/results/report
+          path: qodana/report

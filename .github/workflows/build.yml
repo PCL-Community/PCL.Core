@@ -74,8 +74,7 @@ jobs:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           args:
-            --save-report
-            --report-dir=/github/workspace/qodana/report
+            --save-report, --report-dir, /github/workspace/qodana/report
           use-annotations: true
 
       - name: Upload Qodana HTML Report

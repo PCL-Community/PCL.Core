@@ -40,7 +40,7 @@ public static class McInstanceLogic {
         if (instance.GetInstanceDisplayType() == McInstanceCardType.Error) {
             return "";
         }
-        return versionInfo!.VersionType == McVersionType.Fool ? McInstanceUtils.GetMcFoolVersionDesc(versionInfo.McVersion) : RandomUtils.PickRandom(DescStrings);
+        return versionInfo!.VersionType == McVersionType.Fool ? McInstanceUtils.GetMcFoolVersionDesc(versionInfo.McVersionStr) : RandomUtils.PickRandom(DescStrings);
     }
     
     /// <summary>

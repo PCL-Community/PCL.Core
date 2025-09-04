@@ -12,6 +12,7 @@ using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
 using PCL.Core.Minecraft.McInstance.Resources;
+using PCL.Core.Minecraft.McLaunch;
 using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Exts;
 
@@ -69,9 +70,8 @@ public class McInstance {
     public bool IsFavorited { get; set; }
 
     #region No Patches Compatibility
-    
-    private readonly FrozenDictionary<string, string> _patcherIdNameMapping = new Dictionary<string, string>
-        {
+
+    private readonly FrozenDictionary<string, string> _patcherIdNameMapping = new Dictionary<string, string> {
             // { "net.fabricmc:fabric-loader", "fabric" }, 
             { "org.quiltmc:quilt-loader", "quilt" },
             { "com.cleanroommc:cleanroom", "cleanroom" },
@@ -100,26 +100,22 @@ public class McInstance {
         }
 
         var hasNeoForge = true;
-        
+
         // NeoForge
         if (FindPatcherVersionsInHashSet("net.neoforged.fancymodloader") != null) {
             try {
-                if (_versionInfo!.McVersion.IsNullOrEmpty()) {
+                if (_versionInfo!.McVersionStr.IsNullOrEmpty()) {
                     try {
                         FindArgumentData("--fml.neoForgeVersion", "neoforge");
                     } catch {
                         FindArgumentData("--fml.forgeVersion", "neoforge");
                     }
                 }
-                if (_versionInfo!.McVersion == "1.20.1") {
-                    FindArgumentData("--fml.forgeVersion", "neoforge");
-                } else {
-                    FindArgumentData("--fml.neoForgeVersion", "neoforge");
-                }
+                FindArgumentData(_versionInfo!.McVersionStr == "1.20.1" ? "--fml.forgeVersion" : "--fml.neoForgeVersion", "neoforge");
 
             } catch (Exception ex) {
                 hasNeoForge = false;
-                LogWrapper.Warn(ex, "识别 NeoForge 版本时出错");
+                LogWrapper.Warn(ex, "识别 NeoForge 时出错");
             }
         } else {
             hasNeoForge = false;
@@ -147,17 +143,17 @@ public class McInstance {
 
         if (!hasNeoForge & !hasFabric) {
             // Forge
-            try { 
+            try {
                 FindArgumentData("--fml.forgeVersion", "forge");
             } catch (Exception ex) {
-                LogWrapper.Warn(ex, "识别 NeoForge 版本时出错");
+                LogWrapper.Warn(ex, "识别 Forge 时出错");
             }
         }
-        
+
         // OptiFine
-        var optifineVersion = FindPatcherVersionsInHashSet("optifine:OptiFine");
-        if (optifineVersion != null) {
-            var parts = optifineVersion.Split('_', 2);
+        var optiFineVersion = FindPatcherVersionsInHashSet("optifine:OptiFine");
+        if (optiFineVersion != null) {
+            var parts = optiFineVersion.Split('_', 2);
             if (parts.Length > 1) {
                 if (Version.TryParse(parts[0], out _)) {
                     _versionInfo!.Patchers.Add(new PatcherInfo {
@@ -167,18 +163,18 @@ public class McInstance {
                 }
             }
         }
-        
+
         // LabyMod
         try {
-            foreach (var node in _versionJson!["arguments"]!["game"]!.AsArray()) {
-                if (node!.GetValueKind() == JsonValueKind.String) {
-                    if (node.ToString().Contains("labymod")) {
-                        _versionInfo!.Patchers.Add(new PatcherInfo {
-                            Id = "labymod"
-                        });
-                        break;
-                    }
-                }
+            // 使用 FirstOrDefault() 查找符合条件的节点
+            var labyModNode = _versionJson!["arguments"]!["game"]!.AsArray()
+                .FirstOrDefault(node =>
+                    node!.GetValueKind() == JsonValueKind.String &&
+                    node.ToString().Contains("labymod", StringComparison.OrdinalIgnoreCase));
+            if (labyModNode != null) {
+                _versionInfo!.Patchers.Add(new PatcherInfo {
+                    Id = "labymod"
+                });
             }
         } catch {
             LogWrapper.Info("未识别到 LabyMod");
@@ -205,7 +201,7 @@ public class McInstance {
             .Select(name => name[(prefix.Length + 1)..])
             .FirstOrDefault();
     }
-    
+
     /// <summary>
     /// 从 JSON 提取 libraries 的 name 属性为 HashSet
     /// </summary>
@@ -270,6 +266,217 @@ public class McInstance {
 
     #endregion
 
+    #region Java Version
+
+    public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRange() {
+        var minVer = new Version(0, 0, 0, 0);
+        var maxVer = new Version(999, 999, 999, 999);
+
+        CheckJavaVersion(out var minVerVanilla, out var maxVerVanilla);
+        minVer = minVerVanilla ?? minVer;
+        maxVer = maxVerVanilla ?? maxVer;
+
+        if (_versionInfo is null || !_versionInfo.IsNormalVersion) {
+            return (minVer, maxVer);
+        }
+
+        // Minecraft jar recommendations
+        var versionJsonInJar = await GetVersionJsonInJar();
+        if (versionJsonInJar != null) {
+            if (versionJsonInJar.TryGetPropertyValue("java_version", out var javaVersionNodeInJar) &&
+                javaVersionNodeInJar?.GetValueKind() == JsonValueKind.Number) {
+                var recommendedJava = javaVersionNodeInJar.GetValue<int>();
+                McLaunchUtils.Log($"Mojang (in JAR) recommends Java {recommendedJava}");
+                if (recommendedJava >= 22) {
+                    minVer = UpdateMin(minVer, new Version(recommendedJava, 0, 0, 0));
+                }
+            }
+        }
+
+        // OptiFine adjustments
+        if (_versionInfo.HasPatcher("optifine")) {
+            if (_versionInfo.McVersion < new Version(1, 7) || _versionInfo.McVersionMinor == 12) {
+                maxVer = UpdateMaxAndLog(maxVer, new Version(8, 999, 999, 999),
+                    "OptiFine <1.7 / 1.12 requires max Java 8");
+            } else if (_versionInfo.McVersion >= new Version(1, 8) && _versionInfo.McVersion < new Version(1, 12)) {
+                LogWrapper.Debug("Launch", "OptiFine 1.8 - 1.11 requires exactly Java 8");
+                minVer = UpdateMin(minVer, new Version(1, 8, 0, 0));
+                maxVer = UpdateMax(maxVer, new Version(8, 999, 999, 999));
+            }
+        }
+
+        // LiteLoader adjustments
+        if (_versionInfo.HasPatcher("liteloader")) {
+            maxVer = UpdateMaxAndLog(maxVer, new Version(8, 999, 999, 999),
+                "LiteLoader requires max Java 8");
+        }
+
+        // Forge adjustments
+        if (_versionInfo.HasPatcher("forge")) {
+            var mcMinor = _versionInfo.McVersionMinor;
+            var mcVersion = _versionInfo.McVersion;
+
+            if (mcVersion >= new Version(1, 6, 1) && mcVersion <= new Version(1, 7, 2)) {
+                LogWrapper.Debug("Launch", "1.6.1 - 1.7.2 Forge requires exactly Java 7");
+                minVer = UpdateMin(minVer, new Version(1, 7, 0, 0));
+                maxVer = UpdateMax(maxVer, new Version(1, 7, 999, 999));
+            } else {
+                var (logMessage, newMin, newMax) = mcMinor switch {
+                    <= 12 => ("<=1.12 Forge requires Java 8", null, new Version(8, 999, 999, 999)),
+                    <= 14 => ("1.13 - 1.14 Forge requires Java 8 - 10", new Version(1, 8, 0, 0), new Version(10, 999, 999, 999)),
+                    15 => ("1.15 Forge requires Java 8 - 15", new Version(1, 8, 0, 0), new Version(15, 999, 999, 999)),
+                    16 when Version.TryParse(_versionInfo.GetPatcher("forge")?.Version, out var forgeVersion)
+                            && forgeVersion > new Version(34, 0, 0)
+                            && forgeVersion < new Version(36, 2, 25) =>
+                        ("1.16 Forge 34.X - 36.2.25 requires max Java 8u321", null, new Version(1, 8, 0, 321)),
+                    18 when _versionInfo.HasPatcher("optifine") =>
+                        ("1.18 Forge + OptiFine requires max Java 18", null, new Version(18, 999, 999, 999)),
+                    _ => (null, null, null) // 默认情况，不匹配任何规则
+                };
+
+                if (logMessage != null) {
+                    LogWrapper.Debug("Launch", logMessage);
+                    if (newMin != null) {
+                        minVer = UpdateMin(minVer, newMin);
+                    }
+                    if (newMax != null) {
+                        maxVer = UpdateMax(maxVer, newMax);
+                    }
+                }
+            }
+        }
+
+        // Cleanroom adjustments
+        if (_versionInfo.HasPatcher("cleanroom")) {
+            minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0),
+                "Cleanroom requires min Java 21");
+        }
+
+        // Fabric adjustments
+        if (_versionInfo.HasPatcher("fabric")) {
+            var mcMinor = _versionInfo.McVersionMinor;
+            // 根据 mcMinor 版本号，使用 switch 表达式确定最低 Java 版本
+            minVer = mcMinor switch {
+                >= 15 and <= 16 => UpdateMinAndLog(minVer, new Version(1, 8, 0, 0), 
+                    "1.15 - 1.16 Fabric requires min Java 8"),
+                >= 18 => UpdateMinAndLog(minVer, new Version(17, 0, 0, 0), 
+                    "1.18+ Fabric requires min Java 17"),
+                _ => minVer // 默认情况，不更新
+            };
+        }
+
+        // LabyMod adjustments
+        if (_versionInfo.HasPatcher("labymod")) {
+            minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0), 
+                "LabyMod requires min Java 21");
+            maxVer = new Version(999, 999, 999, 999); // Reset max if needed, but already high
+        }
+
+        // JSON recommended version
+        if (_versionJson is null || 
+            !_versionJson.TryGetPropertyValue("javaVersion", out var javaVersionNode) ||
+            javaVersionNode?.GetValueKind() != JsonValueKind.Object ||
+            !javaVersionNode.AsObject().TryGetPropertyValue("majorVersion", out var majorVersionElement) ||
+            majorVersionElement?.GetValueKind() != JsonValueKind.Number) {
+    
+            return (minVer, maxVer);
+        }
+
+        // All checks passed, proceed with the main logic
+        var jsonRecommendedJava = majorVersionElement.GetValue<int>();
+        McLaunchUtils.Log($"Mojang recommends Java {jsonRecommendedJava}");
+        if (jsonRecommendedJava >= 22) {
+            minVer = UpdateMin(minVer, new Version(jsonRecommendedJava, 0, 0, 0));
+        }
+
+        return (minVer, maxVer);
+    }
+
+    // Helper to update minVer to the higher value
+    private static Version UpdateMin(Version current, Version candidate) => candidate > current ? candidate : current;
+
+    // Helper to update maxVer to the lower value
+    private static Version UpdateMax(Version current, Version candidate) => candidate < current ? candidate : current;
+
+    // 辅助方法：负责更新版本并打印日志
+    private static Version UpdateMinAndLog(Version currentMin, Version newMin, string logMessage) {
+        LogWrapper.Debug("Launch", logMessage);
+        return UpdateMin(currentMin, newMin);
+    }
+    
+    private static Version UpdateMaxAndLog(Version currentMax, Version newMax, string logMessage) {
+        LogWrapper.Debug("Launch", logMessage);
+        return UpdateMax(currentMax, newMax);
+    }
+
+    // 定义 Java 版本要求规则
+    private static readonly List<(Func<McInstanceInfo, bool> Condition, Version MinVer, Version? MaxVer, string LogMessage)> VanillaJavaVersionRules = new() {
+        // 1.20.5+ (24w14a+)：至少 Java 21
+        (
+            info => !info.IsNormalVersion && info.ReleaseTime >= new DateTime(2024, 4, 2) ||
+                    info.IsNormalVersion && info.McVersion >= new Version(1, 20, 5),
+            new Version(21, 0, 0, 0),
+            null,
+            "MC 1.20.5+ (24w14a+) 要求至少 Java 21"
+        ),
+        // 1.18 pre2+：至少 Java 17
+        (
+            info => !info.IsNormalVersion && info.ReleaseTime >= new DateTime(2021, 11, 16) ||
+                    info.IsNormalVersion && info.McVersion >= new Version(1, 18),
+            new Version(17, 0, 0, 0),
+            null,
+            "MC 1.18 pre2+ 要求至少 Java 17"
+        ),
+        // 1.17+ (21w19a+)：至少 Java 16
+        (
+            info => !info.IsNormalVersion && info.ReleaseTime >= new DateTime(2021, 5, 11) ||
+                    info.IsNormalVersion && info.McVersion >= new Version(1, 17),
+            new Version(16, 0, 0, 0),
+            null,
+            "MC 1.17+ (21w19a+) 要求至少 Java 16"
+        ),
+        // 1.12+：至少 Java 8
+        (
+            info => info.ReleaseTime.Year >= 2017,
+            new Version(1, 8, 0, 0),
+            null,
+            "MC 1.12+ 要求至少 Java 8"
+        ),
+        // 1.5.2-：最高 Java 12
+        (
+            info => info.ReleaseTime <= new DateTime(2013, 5, 1) && info.ReleaseTime.Year >= 2001,
+            new Version(1, 8, 0, 0), // 假设最低 Java 8（可调整）
+            new Version(12, 999, 999, 999),
+            "MC 1.5.2- 要求最高 Java 12"
+        )
+    };
+
+    /// <summary>
+    /// 检查 Minecraft 版本所需的 Java 版本
+    /// </summary>
+    /// <param name="minVer">输出：所需最低 Java 版本</param>
+    /// <param name="maxVer">输出：所需最高 Java 版本（可能为 null）</param>
+    /// <returns>返回 true 表示找到匹配规则，false 表示未匹配</returns>
+    private void CheckJavaVersion(out Version? minVer, out Version? maxVer) {
+        // 使用 FirstOrDefault 查找第一个匹配的规则
+        var matchedRule = VanillaJavaVersionRules.FirstOrDefault(rule => rule.Condition(_versionInfo!));
+
+        // 检查元组中的 Condition 委托是否为 null，来判断是否找到了匹配项
+        if (matchedRule.Condition != null) {
+            LogWrapper.Debug("Launch", matchedRule.LogMessage);
+
+            minVer = matchedRule.MinVer;
+            maxVer = matchedRule.MaxVer;
+        }
+
+        // 默认值：未匹配任何规则
+        LogWrapper.Debug("Launch", "未匹配任何 Java 版本规则，使用默认值");
+        minVer = new Version(1, 8, 0, 0); // 默认最低 Java 8
+        maxVer = null;
+    }
+
+    #endregion
+
     #region Version Json Info
 
     /// <summary>
@@ -289,10 +496,10 @@ public class McInstance {
         var version = McInstanceUtils.RecognizeMcVersion(_versionJson!);
 
         if (version != null) {
-            versionInfo.McVersion = version;
+            versionInfo.McVersionStr = version;
         } else {
             LogWrapper.Warn("识别 Minecraft 版本时出错");
-            versionInfo.McVersion = "Unknown";
+            versionInfo.McVersionStr = "Unknown";
             Desc = "无法识别 Minecraft 版本";
         }
 
@@ -317,7 +524,7 @@ public class McInstance {
             }
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
-            versionInfo.McVersion = "Unknown";
+            versionInfo.McVersionStr = "Unknown";
             Desc = $"无法识别：{ex.Message}";
         }
         _versionInfo = versionInfo;
@@ -332,7 +539,7 @@ public class McInstance {
     public async Task<JsonObject?> GetVersionJsonAsync() {
         return _versionJson ?? await RefreshVersionJsonAsync();
     }
-    
+
     public async Task<JsonObject?> RefreshVersionJsonAsync() {
         var jsonPath = System.IO.Path.Combine(Path, $"{Name}.json");
         if (!File.Exists(jsonPath)) {
@@ -423,21 +630,21 @@ public class McInstance {
 
         ParseLibrariesFromJson();
         ParseAssetIndexFromJson();
-        
+
         ConvertToPatches();
     }
 
     public async Task Refresh() {
         await RefreshVersionJsonAsync();
-        
+
         RefreshVersionInfo();
         RefreshInstanceDisplayType();
 
         SetDescriptiveInfo();
-        
+
         ParseLibrariesFromJson();
         ParseAssetIndexFromJson();
-        
+
         ConvertToPatches();
     }
 
@@ -480,9 +687,9 @@ public class McInstance {
     }
 
     #endregion
-    
+
     #region Asset Index
-    
+
     /// <summary>
     /// 从完整JSON中提取并反序列化assetIndex字段
     /// </summary>
@@ -505,7 +712,7 @@ public class McInstance {
             return null;
         }
     }
-    
+
     #endregion
 
     /// <summary>

@@ -3,8 +3,6 @@ version: 1.0
 profile:
   name: qodana.recommended
 
-ide: QDNET
-
 # 构建命令 - 确保源生成器代码被生成并包含在分析中
 bootstrap: |
   echo "Building project with source generators..."

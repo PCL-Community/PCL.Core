@@ -39,6 +39,7 @@ jobs:
       contents: write
       pull-requests: write
       checks: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -74,7 +75,7 @@ jobs:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           args:
-            --save-report, --report-dir, ${{ github.workspace }}/qodana-report
+            --save-report, --report-dir, ${{ github.workspace }}/qodana-report, --linter, qodana-dotnet, --within-docker, false
           use-annotations: true
 
       - name: Upload Qodana HTML Report

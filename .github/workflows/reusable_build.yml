@@ -37,8 +37,7 @@ jobs:
 
       - name: List Generated Files
         run: |
-          find bin -name "*.g.cs" || echo "No generated files in bin"
-          find obj -name "*.g.cs" || echo "No generated files in obj"
+          find SourceGenerators -name "*.g.cs" || echo "No generated files in bin"
         if: always()
 
       - name: Upload artifacts

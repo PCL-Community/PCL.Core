@@ -48,13 +48,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-      - name: Restore Dependencies
-        run: dotnet restore PCL.Core.slnx
-      - name: Build Solution
-        run: dotnet build PCL.Core.slnx --configuration Debug --no-restore
       - name: Qodana Scan
         uses: JetBrains/qodana-action@v2025.1
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-        with:
-          args: --no-build,--print-problems

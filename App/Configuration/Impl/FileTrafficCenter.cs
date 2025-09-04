@@ -10,6 +10,8 @@ namespace PCL.Core.App.Configuration.Impl;
 
 public sealed class FileTrafficCenter(IKeyValueFileProvider provider) : AsyncTrafficCenter(1)
 {
+    private const string LogModule = "Config";
+
     public IKeyValueFileProvider Provider { get; } = provider;
 
     private readonly AsyncDebounce _saveDebounce = new()
@@ -17,7 +19,11 @@ public sealed class FileTrafficCenter(IKeyValueFileProvider provider) : AsyncTra
         Delay = TimeSpan.FromSeconds(10),
         ScheduledTask = () =>
         {
-            try { provider.Sync(); }
+            try
+            {
+                LogWrapper.Trace(LogModule, $"正在保存 {provider.FilePath}");
+                provider.Sync();
+            }
             catch (Exception ex)
             {
                 LogWrapper.Error(ex, "Config", "配置文件保存失败");

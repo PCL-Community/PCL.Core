@@ -24,10 +24,14 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     private static readonly JsonSerializerOptions _SerializerOptions = new()
     {
-        WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         AllowTrailingCommas = true,
         AllowOutOfOrderMetadataProperties = true,
+    };
+
+    private static readonly JsonWriterOptions _WriterOptions = new()
+    {
+        Indented = true
     };
 
     public JsonFileProvider(string path) : base(path)
@@ -101,8 +105,8 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
     public override void Sync()
     {
         if (File.Exists(FilePath)) File.Copy(FilePath, FilePath + ".bak", true);
-        var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        var writer = new Utf8JsonWriter(stream);
+        using var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using var writer = new Utf8JsonWriter(stream, _WriterOptions);
         _rootElement.WriteTo(writer, _SerializerOptions);
     }
 

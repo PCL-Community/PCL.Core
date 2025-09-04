@@ -21,7 +21,8 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
     private static readonly IDeserializer _Deserializer = new DeserializerBuilder()
         .IgnoreUnmatchedProperties().WithEnforceRequiredMembers().Build();
 
-    private static readonly ISerializer _Serializer = new SerializerBuilder().Build();
+    private static readonly ISerializer _Serializer = new SerializerBuilder()
+        .DisableAliases().Build();
 
     private static YamlMappingNode? _LoadFile(string path)
     {
@@ -99,9 +100,7 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
         if (File.Exists(FilePath)) File.Copy(FilePath, FilePath + ".bak", true);
         using var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         using var writer = new StreamWriter(stream, Encoding.UTF8);
-        var yamlStream = new YamlStream();
-        yamlStream.Load(_rootNode.ConvertToEventStream().GetParser());
-        yamlStream.Save(writer);
+        _Serializer.Serialize(writer, _rootNode);
     }
 
     public IEnumerable<string> Keys => _rootNode.Select(pair => pair.Key.ToString());

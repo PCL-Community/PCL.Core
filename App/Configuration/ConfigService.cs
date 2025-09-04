@@ -37,7 +37,7 @@ public sealed partial class ConfigService : GeneralService
     /// <summary>
     /// 本地配置文件的版本号。
     /// </summary>
-    [ConfigItem<int>("FileVersion", 1, ConfigSource.Local)] public static partial int LocalVersion { get; set; }
+    [ConfigItem<int>("LocalFileVersion", 1, ConfigSource.Local)] public static partial int LocalVersion { get; set; }
 
     #region Getters & Setters
 
@@ -269,15 +269,23 @@ public sealed partial class ConfigService : GeneralService
     public static ConfigEventRegistry SharedVersionInit => new(
         scope: SharedVersionConfig,
         trigger: ConfigEvent.Init,
-        handler: e => LogWrapper.Info($"全局配置文件版本: {e.NewValue}")
+        handler: e => _UpdateConfigVersion(SharedVersionConfig, "全局", (int)e.NewValue!)
     );
 
     [RegisterConfigEvent]
     public static ConfigEventRegistry LocalVersionInit => new(
         scope: LocalVersionConfig,
         trigger: ConfigEvent.Init,
-        handler: e => LogWrapper.Info($"本地配置文件版本: {e.NewValue}")
+        handler: e => _UpdateConfigVersion(LocalVersionConfig, "本地", (int)e.NewValue!)
     );
+
+    private static void _UpdateConfigVersion(ConfigItem<int> versionConfig, string name, int fileVersion)
+    {
+        var targetVersion = versionConfig.DefaultValue;
+        var isUnset = versionConfig.IsDefault();
+        LogWrapper.Info($"{name}配置: 文件版本 {(isUnset ? "UNSET" : fileVersion)}, 目标版本 {targetVersion}");
+        if (isUnset || targetVersion != fileVersion) versionConfig.SetValue(targetVersion);
+    }
 
     #endregion
 }

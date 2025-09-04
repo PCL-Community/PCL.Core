@@ -4,6 +4,11 @@
 public interface IKeyValueFileProvider
 {
     /// <summary>
+    /// 文件路径。
+    /// </summary>
+    public string FilePath { get; }
+
+    /// <summary>
     /// 获取一个值。
     /// </summary>
     public T Get<T>(string key);

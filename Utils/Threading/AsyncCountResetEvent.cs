@@ -29,6 +29,14 @@ public sealed class AsyncCountResetEvent : IDisposable
     private bool _disposed;
 
     /// <summary>
+    /// 析构函数。
+    /// </summary>
+    ~AsyncCountResetEvent()
+    {
+        Dispose();
+    }
+    
+    /// <summary>
     /// 等待一个信号。当信号可用时返回完成的 <see cref="Task"/>。
     /// 如果没有信号，则进入队列等待。
     /// </summary>

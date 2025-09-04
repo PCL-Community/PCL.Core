@@ -52,3 +52,5 @@ jobs:
         uses: JetBrains/qodana-action@v2025.1
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        with:
+          args: --no-baseline

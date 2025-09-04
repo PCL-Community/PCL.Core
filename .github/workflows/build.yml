@@ -78,6 +78,6 @@ jobs:
           use-annotations: true
 
       - name: Upload artifacts
-        - run: |
+        run: |
           ls
           find ./ -name "*.html"

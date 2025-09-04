@@ -52,7 +52,7 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
             var context = JsonSerializer.Serialize(e.Context, _SerializerOptions);
             var input = JsonSerializer.Serialize(e.Input, _SerializerOptions);
             var output = JsonSerializer.Serialize(e.Output, _SerializerOptions);
-            var caller = StackHelper.GetDirectCallerName();
+            var caller = StackHelper.GetDirectCallerName(includeParameters: true);
             var msg = $"Traffic request: {e.Access}@{GetHashCode()}\n" +
                 $"|- {eventArgsName}\n" +
                 $"|- Context: {context}\n" +

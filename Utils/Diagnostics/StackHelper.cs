@@ -16,13 +16,12 @@ public static class StackHelper
     // includeParameters: 是否包含参数类型列表
     // skipAppFrames: 额外跳过的应用层帧数量（例如你自己的日志包装器）
     [MethodImpl(MethodImplOptions.NoInlining)]
-    [StackTraceHidden] // 隐藏本方法在栈中的帧，确保 frame[0] 就是调用点
     public static string GetDirectCallerName(
         bool includeNamespace = true,
         bool includeParameters = false,
         int skipAppFrames = 0)
     {
-        var st = new StackTrace(skipFrames: 0, fNeedFileInfo: false);
+        var st = new StackTrace(skipFrames: 1, fNeedFileInfo: false);
         var frame = st.GetFrame(skipAppFrames);
         var method = frame?.GetMethod();
         if (method is null) return Unknown;

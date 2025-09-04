@@ -69,6 +69,11 @@ public class TrafficEventArgs<TInput, TOutput> : TrafficEventArgs
     public bool IsInitialOutput { get; private set; }
 
     /// <summary>
+    /// 当 <see cref="HasOutput"/> 和 <see cref="IsInitialOutput"/> 同时为 <c>true</c> 时，该值为 <c>true</c>。
+    /// </summary>
+    public bool HasInitialOutput => HasOutput && IsInitialOutput;
+
+    /// <summary>
     /// 输出值。
     /// </summary>
     public TOutput? Output { get; private set; }
@@ -82,17 +87,17 @@ public class TrafficEventArgs<TInput, TOutput> : TrafficEventArgs
         /// 设置输出值。
         /// </summary>
         /// <param name="value">值</param>
-        public void SetOutput<T>(T? value)
+        /// <param name="isInitial">指示该值是否应作为初始值处理</param>
+        public void SetOutput<T>(T? value, bool isInitial = false)
         {
             Output = (TOutput?)(object?)value;
             HasOutput = true;
-            if (IsInitialOutput) IsInitialOutput = false;
+            IsInitialOutput = isInitial;
         }
 
         protected void SetInitialOutput<T>(T? value)
         {
-            SetOutput(value);
-            IsInitialOutput = true;
+            SetOutput(value, true);
         }
     }
 }

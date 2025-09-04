@@ -52,7 +52,7 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     {
         // 初始化事件参数
         var e = CreateEventArgs<TInput, TOutput>(context, access, hasInput, input);
-        if (hasInitialOutput) e.SetOutput(output);
+        if (hasInitialOutput) e.SetOutput(output, true);
         Request(e);
         if (e.HasOutput) output = e.Output;
         return e.HasOutput;
@@ -75,7 +75,7 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     {
         // 初始化事件参数
         var e = CreateEventArgs<TInput, TOutput>(context, access, hasInput, input);
-        e.SetOutput(initialOutput);
+        e.SetOutput(initialOutput, true);
         Request(e);
     }
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using PCL.Core.IO;
 
 namespace PCL.Core.App.Configuration.Impl;
@@ -24,6 +25,9 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
     private static readonly JsonSerializerOptions _SerializerOptions = new()
     {
         WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        AllowTrailingCommas = true,
+        AllowOutOfOrderMetadataProperties = true,
     };
 
     public JsonFileProvider(string path) : base(path)
@@ -60,15 +64,23 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
         try
         {
             var r = result.Deserialize<T>();
-            return r ?? throw new NullReferenceException(GetNullMessage());
+            return r ?? throw GetNullException();
         }
         catch (JsonException)
         {
-            if (typeof(T) == typeof(string)) return (T)(object)result.ToString();
-            var jsonStr = result.Deserialize<string>()!;
-            return JsonSerializer.Deserialize<T>(jsonStr, _SerializerOptions) ?? throw new NullReferenceException(GetNullMessage());
+            T fallback;
+            var type = typeof(T);
+            if (type == typeof(string)) fallback = (T)(object)result.ToString();
+            else
+            {
+                var jsonStr = result.Deserialize<string>()!;
+                if (type == typeof(bool)) fallback = (T)(object)(jsonStr.ToLowerInvariant() is "true" or "1");
+                else fallback = JsonSerializer.Deserialize<T>(jsonStr, _SerializerOptions) ?? throw GetNullException();
+            }
+            Set(key, fallback);
+            return fallback;
         }
-        string GetNullMessage() => $"Deserialized value is null: '{key}'";
+        Exception GetNullException() => new NullReferenceException($"Deserialized value is null: '{key}'");
     }
 
     public override void Set<T>(string key, T value)

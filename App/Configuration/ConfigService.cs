@@ -9,6 +9,8 @@ using PCL.Core.App.Configuration.Impl;
 using PCL.Core.App.Configuration.NTraffic;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
+using YamlDotNet.RepresentationModel;
 
 namespace PCL.Core.App.Configuration;
 
@@ -16,7 +18,7 @@ namespace PCL.Core.App.Configuration;
 /// 全局配置服务。
 /// </summary>
 [LifecycleService(LifecycleState.Loading, Priority = 1919810)]
-public sealed partial class ConfigService() : GeneralService("config", "配置")
+public sealed partial class ConfigService : GeneralService
 {
     private static readonly Dictionary<string, IEventScope> _Items = [];
 
@@ -100,9 +102,9 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
     #region Providers
 
     private static IConfigProvider? _sharedConfigProvider;
+    private static IConfigProvider? _sharedEncryptedConfigProvider;
     private static IConfigProvider? _localConfigProvider;
     private static IConfigProvider? _instanceConfigProvider;
-    private static ITrafficCenter? _instanceTrafficCenter;
 
     /// <summary>
     /// 获取配置提供方。
@@ -117,6 +119,7 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
         return source switch
         {
             ConfigSource.Shared => _sharedConfigProvider!,
+            ConfigSource.SharedEncrypt => _sharedEncryptedConfigProvider!,
             ConfigSource.Local => _localConfigProvider!,
             ConfigSource.GameInstance => _instanceConfigProvider!,
             _ => throw new ArgumentException($"Invalid source: {source}")
@@ -126,12 +129,52 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
     private static void _InitializeProviders()
     {
         Action[] inits = [
-            () => {
-                var fileProvider = new JsonFileProvider(Path.Combine(FileService.SharedDataPath, "config.v1.json"));
-                _sharedConfigProvider = new FileTrafficCenter(fileProvider);
+            () => // shared config file
+            {
+                var sharedConfigPath = Path.Combine(FileService.SharedDataPath, "config.v1.json");
+                // try migrate
+                if (!File.Exists(sharedConfigPath))
+                {
+                    string[] oldPaths = [
+                        Path.Combine(FileService.OldSharedDataPath, "Config.json"),
+                        Path.Combine(FileService.SharedDataPath, "config.json")
+                    ];
+                    _TryMigrate(sharedConfigPath, oldPaths.Select(path =>
+                        new ConfigMigration { From = path, To = sharedConfigPath, OnMigration = Migration }));
+                    void Migration(string from, string to) => File.Copy(from, to);
+                }
+                // load
+                var fileProvider = new JsonFileProvider(sharedConfigPath);
+                var trafficCenter = new FileTrafficCenter(fileProvider);
+                _sharedConfigProvider = trafficCenter;
+                _sharedEncryptedConfigProvider = new EncryptedFileTrafficCenter(trafficCenter);
             },
-            () => {
-                var fileProvider = new YamlFileProvider(Path.Combine(FileService.DataPath, "config.v1.yml"));
+            () => // local config file
+            {
+                var localConfigPath = Path.Combine(FileService.DataPath, "config.v1.yml");
+                // try migrate
+                if (!File.Exists(localConfigPath)) _TryMigrate(localConfigPath, [
+                    new ConfigMigration
+                    {
+                        From = Path.Combine(FileService.DataPath, "setup.ini"),
+                        To = Path.Combine(FileService.DataPath, "config.v1.yml"),
+                        OnMigration = (from, to) =>
+                        {
+                            var lines = File.ReadAllLines(from);
+                            var yamlProvider = new YamlFileProvider(to);
+                            foreach (var line in lines)
+                            {
+                                if (line.IsNullOrWhiteSpace()) continue;
+                                var kv = line.Split(':', 2);
+                                if (kv.Length != 2) continue;
+                                yamlProvider.Set(kv[0], kv[1]);
+                            }
+                            yamlProvider.Sync();
+                        }
+                    }
+                ]);
+                // load
+                var fileProvider = new YamlFileProvider(localConfigPath);
                 _localConfigProvider = new FileTrafficCenter(fileProvider);
             }
         ];
@@ -139,9 +182,27 @@ public sealed partial class ConfigService() : GeneralService("config", "配置")
         catch (AggregateException ex) { throw ex.GetBaseException(); }
     }
 
+    private static void _TryMigrate(string target, IEnumerable<ConfigMigration> migrations)
+    {
+        Context.Info($"Try migrating config: {target}");
+        try
+        {
+            var result = ConfigMigration.Migrate(target, migrations);
+            if (!result) Context.Info("No migration solution available");
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("Migration failed", ex);
+        }
+    }
+
     #endregion
 
     #region Lifecycle & Initialization
+
+    private static LifecycleContext? _context;
+    private static LifecycleContext Context => _context!;
+    public ConfigService() : base("config", "配置") { _context = ServiceContext; }
 
     /// <summary>
     /// 配置服务是否已加载完成。未加载完成时，调用与配置项相关的方法可能会抛出 <see cref="InvalidOperationException"/>。

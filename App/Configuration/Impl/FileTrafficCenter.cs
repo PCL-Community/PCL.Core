@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using PCL.Core.App.Configuration.NTraffic;
 using PCL.Core.Logging;
@@ -34,20 +35,35 @@ public sealed class FileTrafficCenter(IKeyValueFileProvider provider) : AsyncTra
     protected override void OnTrafficSync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)
     {
         if (e.Access != TrafficAccess.Read) return;
-        if (!e.HasInput || e.Input is not string input) return;
+        if (CheckKey(e, out var key)) return;
         // 获取值 / 检查存在性
-        if (e.HasOutput) e.SetOutput(Provider.Exists(input));
-        else e.SetOutput(Provider.Get<TOutput>(input));
+        var exists = Provider.Exists(key);
+        if (e is { HasInitialOutput: true, Output: bool }) e.SetOutput(exists);
+        else if (exists) e.SetOutput(Provider.Get<TOutput>(key));
     }
 
     protected override async Task OnTrafficAsync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)
     {
         if (e.Access != TrafficAccess.Write) return;
-        if (!e.HasInput || e.Input is not string input) return;
+        if (CheckKey(e, out var key)) return;
         // 设置值 / 删除值
-        if (e.HasOutput) Provider.Set(input, e.Output);
-        else Provider.Remove(input);
+        if (e.HasOutput) Provider.Set(key, e.Output);
+        else Provider.Remove(key);
         // 延迟保存
         await _saveDebounce.Reset();
+    }
+
+    /// <summary>
+    /// 检查事件参数所含 key 的合法性。若合法，返回 <c>false</c>，输出 key 的值，否则返回 <c>true</c>。
+    /// </summary>
+    public static bool CheckKey<TInput, TOutput>(TrafficEventArgs<TInput, TOutput> e, [NotNullWhen(false)] out string? key)
+    {
+        if (e is { HasInput: true, Input: string input })
+        {
+            key = input;
+            return false;
+        }
+        key = null;
+        return true;
     }
 }

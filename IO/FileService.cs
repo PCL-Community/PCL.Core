@@ -68,6 +68,12 @@ public sealed class FileService : GeneralService
     public static string SharedDataPath { get => _sharedDataPath; set => _sharedDataPath = value; }
     
     /// <summary>
+    /// Shared synchronized data directory of old versions.<br/>
+    /// Keep the value just for migration, DO NOT USE IT.
+    /// </summary>
+    public static string OldSharedDataPath { get; set; }
+
+    /// <summary>
     /// Shared local data directory, used to put some large files that can be released or downloaded back anytime.
     /// </summary>
     public static string LocalDataPath { get => _localDataPath; set => _localDataPath = value; }
@@ -93,14 +99,17 @@ public sealed class FileService : GeneralService
     {
 #if DEBUG
         const string name = "PCLCE_Debug";
+        const string oldName = ".PCLCEDebug";
 #else
         const string name = "PCLCE";
+        const string oldName = ".PCLCE";
 #endif
-        // correct paths
+        // fill paths
         _dataPath = Path.Combine(DefaultDirectory, "PCL");
         _sharedDataPath = GetSpecialPath(Special.ApplicationData, name);
         _localDataPath = GetSpecialPath(Special.LocalApplicationData, name);
         _tempPath = Path.Combine(Path.GetTempPath(), name);
+        OldSharedDataPath = GetSpecialPath(Special.ApplicationData, oldName);
 #if DEBUG
         // read environment variables
         EnvironmentInterop.ReadVariable("PCL_PATH", ref _dataPath);

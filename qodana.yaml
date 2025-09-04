@@ -4,7 +4,7 @@ profile:
   name: qodana.recommended
 # arguments
 ide: QDNET
-bootstrap: 'dotnet build ./PCL.Core.csproj -t:Restore'
+bootstrap: 'dotnet build ./PCL.Core.csproj'
 include:
   - name: VulnerableLibrariesGlobal
 exclude:

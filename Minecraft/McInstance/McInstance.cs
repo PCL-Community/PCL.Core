@@ -64,6 +64,14 @@ public class McInstance {
     /// </summary>
     public bool IsFavorited { get; set; }
 
+    #region No Patches Compatibility
+
+    private void ConvertToPatches() {
+        
+    }
+
+    #endregion
+
     #region Display Type
 
     /// <summary>
@@ -177,10 +185,10 @@ public class McInstance {
     /// </summary>
     /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
     public async Task<JsonObject?> GetVersionJsonAsync() {
-        if (_versionJson != null) {
-            return _versionJson;
-        }
-
+        return _versionJson ?? await RefreshVersionJsonAsync();
+    }
+    
+    public async Task<JsonObject?> RefreshVersionJsonAsync() {
         var jsonPath = System.IO.Path.Combine(Path, $"{Name}.json");
         if (!File.Exists(jsonPath)) {
             var jsonFiles = Directory.GetFiles(Path, "*.json");
@@ -262,22 +270,26 @@ public class McInstance {
         return true;
     }
 
-    public McInstance Load() {
+    public void Load() {
         GetVersionInfo();
         GetInstanceDisplayType();
 
         SetDescriptiveInfo();
 
-        return this;
+        ParseLibrariesFromJson();
+        ParseAssetIndexFromJson();
     }
 
-    public McInstance Refresh() {
+    public async Task Refresh() {
+        await RefreshVersionJsonAsync();
+        
         RefreshVersionInfo();
         RefreshInstanceDisplayType();
 
         SetDescriptiveInfo();
-
-        return this;
+        
+        ParseLibrariesFromJson();
+        ParseAssetIndexFromJson();
     }
 
     private void SetDescriptiveInfo() {

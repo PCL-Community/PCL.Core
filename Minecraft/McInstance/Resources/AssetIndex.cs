@@ -1,4 +1,5 @@
-﻿using PCL.Core.Logging;
+﻿using PCL.Core.IO;
+using PCL.Core.Logging;
 
 namespace PCL.Core.Minecraft.McInstance.Resources;
 
@@ -33,10 +34,7 @@ public static class AssetIndexDeserializer {
     /// <returns>反序列化后的AssetIndex对象，如果失败则返回null</returns>
     public static AssetIndex? DeserializeAssetIndex(string json) {
         try {
-            var options = new JsonSerializerOptions {
-                PropertyNameCaseInsensitive = true // 忽略键名大小写
-            };
-            return JsonSerializer.Deserialize<AssetIndex>(json, options);
+            return JsonSerializer.Deserialize<AssetIndex>(json, Files.PrettierJsonOptions);
         } catch (JsonException ex) {
             LogWrapper.Warn($"资源索引反序列化错误: {ex.Message}");
             return null;

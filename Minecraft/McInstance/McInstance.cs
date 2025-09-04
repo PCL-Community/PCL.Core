@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -11,6 +13,7 @@ using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
 using PCL.Core.Minecraft.McInstance.Resources;
 using PCL.Core.ProgramSetup;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.McInstance;
 
@@ -19,6 +22,7 @@ public class McInstance {
     private McInstanceInfo? _versionInfo;
 
     private List<Library>? _libraries; // 依赖库列表
+    private HashSet<string> _libraryNameHashCache; // 依赖库哈希缓存
     private AssetIndex? _assetIndex;
 
     private JsonObject? _versionJsonInJar;
@@ -65,9 +69,150 @@ public class McInstance {
     public bool IsFavorited { get; set; }
 
     #region No Patches Compatibility
+    
+    private readonly FrozenDictionary<string, string> _patcherIdNameMapping = new Dictionary<string, string>
+        {
+            // { "net.fabricmc:fabric-loader", "fabric" }, 
+            { "org.quiltmc:quilt-loader", "quilt" },
+            { "com.cleanroommc:cleanroom", "cleanroom" },
+            { "com.mumfrey:liteloader", "liteloader" },
+            // { "optifine:OptiFine", "optifine" },
+            // { "net.minecraftforge:forge", "forge" }
+        }
+        .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private void ConvertToPatches() {
+        if (IsPatchesFormatJson) {
+            return;
+        }
+
+        ParseLibraryNamesAsHashSet();
+
+        // Quilt & Cleanroom & LiteLoader
+        foreach (var pair in _patcherIdNameMapping) {
+            var version = FindPatcherVersionsInHashSet(pair.Key);
+            if (version != null) {
+                _versionInfo!.Patchers.Add(new PatcherInfo {
+                    Id = pair.Value,
+                    Version = version
+                });
+            }
+        }
+
+        var hasNeoForge = true;
         
+        // NeoForge
+        if (FindPatcherVersionsInHashSet("net.neoforged.fancymodloader") != null) {
+            try {
+                if (_versionInfo!.McVersion.IsNullOrEmpty()) {
+                    try {
+                        FindArgumentData("--fml.neoForgeVersion", "neoforge");
+                    } catch {
+                        FindArgumentData("--fml.forgeVersion", "neoforge");
+                    }
+                }
+                if (_versionInfo!.McVersion == "1.20.1") {
+                    FindArgumentData("--fml.forgeVersion", "neoforge");
+                } else {
+                    FindArgumentData("--fml.neoForgeVersion", "neoforge");
+                }
+
+            } catch (Exception ex) {
+                hasNeoForge = false;
+                LogWrapper.Warn(ex, "识别 NeoForge 版本时出错");
+            }
+        } else {
+            hasNeoForge = false;
+        }
+
+        var hasFabric = false;
+        if (!hasNeoForge) {
+            // Fabric & LegacyFabric
+            var fabricVersion = FindPatcherVersionsInHashSet("net.fabricmc:fabric-loader");
+            if (fabricVersion != null) {
+                if (FindPatcherVersionsInHashSet("net.legacyfabric") != null) {
+                    _versionInfo!.Patchers.Add(new PatcherInfo {
+                        Id = "legacyfabric",
+                        Version = fabricVersion
+                    });
+                } else {
+                    _versionInfo!.Patchers.Add(new PatcherInfo {
+                        Id = "fabric",
+                        Version = fabricVersion
+                    });
+                }
+                hasFabric = true;
+            }
+        }
+
+        if (!hasNeoForge & !hasFabric) {
+            // Forge
+            try { 
+                FindArgumentData("--fml.forgeVersion", "forge");
+            } catch (Exception ex) {
+                LogWrapper.Warn(ex, "识别 NeoForge 版本时出错");
+            }
+        }
+        
+        // OptiFine
+        var optifineVersion = FindPatcherVersionsInHashSet("optifine:OptiFine");
+        if (optifineVersion != null) {
+            var parts = optifineVersion.Split('_', 2);
+            if (parts.Length > 1) {
+                if (Version.TryParse(parts[0], out _)) {
+                    _versionInfo!.Patchers.Add(new PatcherInfo {
+                        Id = "optifine",
+                        Version = parts[1]
+                    });
+                }
+            }
+        }
+        
+        // LabyMod
+        try {
+            foreach (var node in _versionJson!["arguments"]!["game"]!.AsArray()) {
+                if (node!.GetValueKind() == JsonValueKind.String) {
+                    if (node.ToString().Contains("labymod")) {
+                        _versionInfo!.Patchers.Add(new PatcherInfo {
+                            Id = "labymod"
+                        });
+                        break;
+                    }
+                }
+            }
+        } catch {
+            LogWrapper.Info("未识别到 LabyMod");
+        }
+    }
+
+    private void FindArgumentData(string argument, string id) {
+        var args = _versionJson!["arguments"]!["game"]!.AsArray();
+        var index = args.IndexOf(argument);
+        var version = args[index + 1];
+        _versionInfo!.Patchers.Add(new PatcherInfo {
+            Id = id,
+            Version = version!.ToString()
+        });
+    }
+
+    /// <summary>
+    /// 从 HashSet 中查找以指定前缀开头的 name 并提取版本号
+    /// </summary>
+    /// <param name="prefix">目标前缀</param>
+    /// <returns>匹配的版本号或如果未找到</returns>
+    private string? FindPatcherVersionsInHashSet(string prefix) {
+        return _libraryNameHashCache.Where(name => name.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase))
+            .Select(name => name[(prefix.Length + 1)..])
+            .FirstOrDefault();
+    }
+    
+    /// <summary>
+    /// 从 JSON 提取 libraries 的 name 属性为 HashSet
+    /// </summary>
+    private void ParseLibraryNamesAsHashSet() {
+        _libraryNameHashCache = _libraries!.Where(lib => lib.Name != null)
+            .Select(lib => lib.Name!)
+            .ToHashSet();
     }
 
     #endregion
@@ -221,7 +366,7 @@ public class McInstance {
     /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
-    public bool GetIsOldJsonAsync() => _versionJson?["minecraftArguments"]?.ToString() is not null;
+    public bool IsOldJson => _versionJson?["minecraftArguments"]?.ToString() is not null;
 
     /// <summary>
     /// 是否为 Patches 格式 JSON
@@ -278,6 +423,8 @@ public class McInstance {
 
         ParseLibrariesFromJson();
         ParseAssetIndexFromJson();
+        
+        ConvertToPatches();
     }
 
     public async Task Refresh() {
@@ -290,6 +437,8 @@ public class McInstance {
         
         ParseLibrariesFromJson();
         ParseAssetIndexFromJson();
+        
+        ConvertToPatches();
     }
 
     private void SetDescriptiveInfo() {

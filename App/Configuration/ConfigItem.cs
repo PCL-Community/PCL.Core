@@ -12,7 +12,7 @@ public class ConfigItem<TValue>(
     string key,
     Func<TValue> defaultValue,
     ConfigSource source
-) : IConfigScope, IEventScope
+) : IConfigScope, ConfigItem
 {
     private Func<TValue>? _defaultValueGetter = defaultValue;
     private TValue? _defaultValue;
@@ -68,6 +68,11 @@ public class ConfigItem<TValue>(
         return exists ? value! : DefaultValue;
     }
 
+    public object GetValueNoType(object? argument = null)
+    {
+        return GetValue(argument) ?? default!;
+    }
+
     /// <summary>
     /// 设置配置值。
     /// </summary>
@@ -86,11 +91,12 @@ public class ConfigItem<TValue>(
         return true;
     }
 
-    /// <summary>
-    /// 重置配置值，使其变为未设置状态。
-    /// </summary>
-    /// <param name="argument">上下文参数</param>
-    /// <returns>是否成功重置值，若成功则为 <c>true</c></returns>
+    public bool SetValueNoType(object value, object? argument = null)
+    {
+        if (value is TValue v) return SetValue(v, argument);
+        throw new InvalidCastException($"{value.GetType()} in incompatible with {typeof(TValue)}");
+    }
+
     public bool Reset(object? argument = null)
     {
         var e = TriggerEvent(ConfigEvent.Reset, argument, DefaultValue);
@@ -99,10 +105,6 @@ public class ConfigItem<TValue>(
         return true;
     }
 
-    /// <summary>
-    /// 检查配置值是否为默认值 (未设置状态)
-    /// </summary>
-    /// <param name="argument">上下文参数</param>
     public bool IsDefault(object? argument = null)
     {
         var result = !_provider.Exists(Key, argument);
@@ -166,4 +168,70 @@ public class ConfigItem<TValue>(
     }
 
     #endregion
+}
+
+// ReSharper disable once InconsistentNaming
+public interface ConfigItem
+{
+    /// <summary>
+    /// 传入事件观察器以观察事件。
+    /// </summary>
+    public void Observe(ConfigObserver observer);
+
+    /// <summary>
+    /// 取消观察事件。
+    /// </summary>
+    public bool Unobserve(ConfigObserver observer);
+
+    /// <summary>
+    /// 触发配置项事件。
+    /// </summary>
+    /// <param name="trigger">触发事件</param>
+    /// <param name="argument">上下文参数</param>
+    /// <param name="newValue">用于向事件参数传递的新值</param>
+    /// <param name="bypassOldValue">若为 <c>true</c> 则向事件参数的旧值传递 <c>null</c>，否则传递当前值</param>
+    /// <param name="fillNewValue">若为 <c>true</c>，当新值为 <c>null</c> 时将传递当前值或默认值</param>
+    /// <returns></returns>
+    public ConfigEventArgs? TriggerEvent(
+        ConfigEvent trigger,
+        object? argument,
+        object? newValue,
+        bool bypassOldValue = false,
+        bool fillNewValue = false
+    );
+
+    /// <summary>
+    /// 传入事件类型与处理委托以观察事件。
+    /// </summary>
+    public ConfigObserver Observe(ConfigEvent trigger, ConfigEventHandler handler, bool isPreview = false)
+    {
+        var observer = new ConfigObserver(trigger, handler, isPreview);
+        Observe(observer);
+        return observer;
+    }
+
+    /// <summary>
+    /// 重置配置值，使其变为未设置状态。
+    /// </summary>
+    /// <param name="argument">上下文参数</param>
+    /// <returns>是否成功重置值，若成功则为 <c>true</c></returns>
+    public bool Reset(object? argument = null);
+
+    /// <summary>
+    /// 检查配置值是否为默认值 (未设置状态)
+    /// </summary>
+    /// <param name="argument">上下文参数</param>
+    public bool IsDefault(object? argument = null);
+
+    /// <summary>
+    /// 没有泛型的 <see cref="ConfigItem{T}.GetValue"/>。<br/>
+    /// 我们都不想给非引用类型装箱，但是龙猫想。
+    /// </summary>
+    public object GetValueNoType(object? argument = null);
+
+    /// <summary>
+    /// 没有泛型的 <see cref="ConfigItem{T}.SetValue"/>。<br/>
+    /// 我们都不想给非引用类型装箱，但是龙猫想。
+    /// </summary>
+    public bool SetValueNoType(object value, object? argument = null);
 }

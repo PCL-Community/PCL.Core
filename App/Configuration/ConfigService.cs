@@ -18,7 +18,7 @@ namespace PCL.Core.App.Configuration;
 [LifecycleService(LifecycleState.Loading, Priority = 1919810)]
 public sealed partial class ConfigService : GeneralService
 {
-    private static readonly Dictionary<string, IEventScope> _Items = [];
+    private static readonly Dictionary<string, ConfigItem> _Items = [];
 
     private static readonly HashSet<string> _KeySet = [];
 
@@ -45,7 +45,7 @@ public sealed partial class ConfigService : GeneralService
     /// <param name="key">配置键</param>
     /// <param name="item">返回可观察对象</param>
     /// <returns>若配置键存在，则为 <c>true</c>，否则为 <c>false</c></returns>
-    public static bool TryGetObservableItem(string key, [NotNullWhen(true)] out IEventScope? item)
+    public static bool TryGetConfigItemNoType(string key, [NotNullWhen(true)] out ConfigItem? item)
         => _Items.TryGetValue(key, out item);
 
     /// <summary>
@@ -59,7 +59,7 @@ public sealed partial class ConfigService : GeneralService
     public static bool TryGetConfigItem<TValue>(string key, out ConfigItem<TValue>? item)
     {
         if (!_isConfigItemsInitialized) throw new InvalidOperationException("Not initialized");
-        var result = TryGetObservableItem(key, out var value);
+        var result = TryGetConfigItemNoType(key, out var value);
         item = result ? (value as ConfigItem<TValue>) : null;
         return result;
     }

@@ -412,7 +412,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         // 配置项初始化
         sb.AppendLine("    private static void _InitializeConfigItems()");
         sb.AppendLine("    {");
-        sb.AppendLine("        (string, IEventScope)[] items = [");
+        sb.AppendLine("        (string, ConfigItem)[] items = [");
 
         HashSet<string> keysAdded = [];
         for (var i = 0; i < items.Count; i++)

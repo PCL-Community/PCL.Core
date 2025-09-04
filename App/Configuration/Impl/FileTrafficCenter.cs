@@ -72,4 +72,12 @@ public sealed class FileTrafficCenter(IKeyValueFileProvider provider) : AsyncTra
         key = null;
         return true;
     }
+
+    protected override void OnStop()
+    {
+        // 停止延时器并保存文件
+        var running = _saveDebounce.IsCurrentTaskRunning;
+        _saveDebounce.Dispose();
+        if (!running) Provider.Sync();
+    }
 }

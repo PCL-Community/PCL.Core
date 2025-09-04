@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using PCL.Core.App.Configuration.Impl;
+using PCL.Core.App.Configuration.NTraffic;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
@@ -109,10 +110,10 @@ public sealed partial class ConfigService : GeneralService
 
     #region Providers
 
-    private static IConfigProvider? _sharedConfigProvider;
-    private static IConfigProvider? _sharedEncryptedConfigProvider;
-    private static IConfigProvider? _localConfigProvider;
-    private static IConfigProvider? _instanceConfigProvider;
+    private static TrafficCenter? _sharedConfigProvider;
+    private static TrafficCenter? _sharedEncryptedConfigProvider;
+    private static TrafficCenter? _localConfigProvider;
+    private static TrafficCenter? _instanceConfigProvider;
 
     /// <summary>
     /// 获取配置提供方。
@@ -297,6 +298,14 @@ public sealed partial class ConfigService : GeneralService
         timer.Stop();
         ServiceContext.Info($"Config initialization finished in {timer.ElapsedMilliseconds} ms");
 #endif
+    }
+
+    public override void Stop()
+    {
+        ServiceContext.Info("Saving config...");
+        _sharedConfigProvider?.Stop();
+        _localConfigProvider?.Stop();
+        _instanceConfigProvider?.Stop();
     }
 
     [RegisterConfigEvent]

@@ -26,7 +26,13 @@ public class AsyncDebounce(CancellationToken cancelToken = default) : IDisposabl
     /// </summary>
     public bool IsCurrentTaskCompleted { get; private set; }
 
+    /// <summary>
+    /// 指示本次延迟任务是否正在运行。
+    /// </summary>
+    public bool IsCurrentTaskRunning => _currentTask != null;
+
     private Task? _currentTask;
+    private Task? _worker; // 跟踪最近一次 worker
     private CancellationTokenSource? _currentDelayCts;
     private readonly CancellationTokenSource _cts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
     private readonly object _resetLock = new();
@@ -37,30 +43,45 @@ public class AsyncDebounce(CancellationToken cancelToken = default) : IDisposabl
     public async Task Reset()
     {
         IsCurrentTaskCompleted = false;
+
+        CancellationTokenSource? capturedCts;
+        Task? runningToAwait;
+
         lock (_resetLock)
         {
-            // 取消并丢弃旧的 CTS
-            _currentDelayCts?.Cancel();
-            _currentDelayCts?.Dispose();
-            _currentDelayCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+            // 只取消，不在这里 Dispose
+            try { _currentDelayCts?.Cancel(); }
+            catch(ObjectDisposedException) { /* ignored */ }
 
-            // 捕获当前 CTS
-            var capturedCts = _currentDelayCts;
-            _ = Task.Run(async () =>
+            _currentDelayCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+            capturedCts = _currentDelayCts;
+
+            // 记录当前运行中的 ScheduledTask，稍后在锁外等待，避免重叠
+            runningToAwait = _currentTask;
+
+            _worker = Task.Run(async () =>
             {
                 try { await Task.Delay(Delay, capturedCts.Token).ConfigureAwait(false); }
                 catch (OperationCanceledException) { return; }
+                finally
+                {
+                    // 仅由使用者自己释放，避免跨线程 Dispose 竞态
+                    // 注意：不要在这里释放 _cts
+                    capturedCts.Dispose();
+                }
 
-                // 身份校验: 只有仍然是当前 CTS 的 worker 才能继续
+                // 身份校验，确保自己仍是“当前”那一次
                 if (
                     !ReferenceEquals(_currentDelayCts, capturedCts) ||
                     capturedCts.IsCancellationRequested ||
                     _cts.IsCancellationRequested
                 ) return;
 
-                // 执行 ScheduledTask
+                if (_currentTask is not null) await _currentTask.ConfigureAwait(false);
+
                 var task = ScheduledTask();
                 lock (_resetLock) _currentTask = task;
+
                 try
                 {
                     await task.ConfigureAwait(false);
@@ -76,16 +97,14 @@ public class AsyncDebounce(CancellationToken cancelToken = default) : IDisposabl
             }, _cts.Token);
         }
 
-        // 等待当前任务，确保 ScheduledTask 不重叠执行
-        Task? running;
-        lock (_resetLock) running = _currentTask;
-        if (running != null) await running.ConfigureAwait(false);
+        // 避免 ScheduledTask 并发
+        if (runningToAwait is not null) await runningToAwait.ConfigureAwait(false);
     }
 
     public void Dispose()
     {
-        try { _cts.Cancel(); }
-        catch (Exception) { /* ignored */ }
+        _cts.Cancel();
+        try { _worker?.Wait(); } catch { /* ignored */ }
         _currentDelayCts?.Dispose();
         _cts.Dispose();
         GC.SuppressFinalize(this);

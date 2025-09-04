@@ -28,6 +28,8 @@ public abstract class AsyncTrafficCenter(int maxThread) : TrafficCenter
         }
     }
 
+    protected override void OnStop() { }
+
     protected virtual void OnTrafficSync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e) { }
 
     protected virtual Task OnTrafficAsync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e) => Task.CompletedTask;

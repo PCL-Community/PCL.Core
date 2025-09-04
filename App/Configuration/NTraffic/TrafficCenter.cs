@@ -36,6 +36,16 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     );
 
     /// <summary>
+    /// 停止操作实现。
+    /// </summary>
+    protected abstract void OnStop();
+
+    /// <summary>
+    /// 停止该物流中心运行，保存状态并释放资源。
+    /// </summary>
+    public void Stop() => OnStop();
+
+    /// <summary>
     /// 以事件参数请求标准物流操作。
     /// </summary>
     public void Request<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)

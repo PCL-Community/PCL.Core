@@ -16,4 +16,6 @@ public abstract class SyncTrafficCenter : TrafficCenter
     }
 
     protected virtual void OnTrafficSync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e) { }
+
+    protected override void OnStop() { }
 }

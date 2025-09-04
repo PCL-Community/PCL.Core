@@ -102,4 +102,35 @@ public static class McInstanceUtils {
         }
         return McVersionType.Snapshot;
     }
+    
+    public static McInstanceCardType? RecognizeInstanceCardType(McInstanceInfo versionInfo) {
+        McInstanceCardType? cachedDisplayType = null;
+        
+        if (versionInfo!.HasPatcher("NeoForge")) {
+            cachedDisplayType = McInstanceCardType.NeoForge;
+        } else if (versionInfo.HasPatcher("Fabric")) {
+            cachedDisplayType = McInstanceCardType.Fabric;
+        } else if (versionInfo.HasPatcher("LegacyFabric")) {
+            cachedDisplayType = McInstanceCardType.LegacyFabric;
+        } else if (versionInfo.HasPatcher("Quilt")) {
+            cachedDisplayType = McInstanceCardType.Quilt;
+        } else if (versionInfo.HasPatcher("Forge")) {
+            cachedDisplayType = McInstanceCardType.Forge;
+        } else if (versionInfo.HasPatcher("Cleanroom")) {
+            cachedDisplayType = McInstanceCardType.Cleanroom;
+        } else if (versionInfo.HasPatcher("LiteLoader")) {
+            cachedDisplayType = McInstanceCardType.LiteLoader;
+        } 
+        
+        // 判断客户端类型的补丁实例
+        else if (versionInfo.HasPatcher("OptiFine")) {
+            cachedDisplayType = McInstanceCardType.OptiFine;
+        } else if (versionInfo.HasPatcher("LabyMod")) {
+            cachedDisplayType = McInstanceCardType.LabyMod;
+        } else if (versionInfo.HasPatcher("Client")) {
+            cachedDisplayType = McInstanceCardType.Client;
+        }
+
+        return cachedDisplayType;
+    }
 }

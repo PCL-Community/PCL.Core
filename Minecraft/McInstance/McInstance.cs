@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -8,17 +9,21 @@ using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
+using PCL.Core.Minecraft.McInstance.Resources;
 using PCL.Core.ProgramSetup;
 
 namespace PCL.Core.Minecraft.McInstance;
 
 public class McInstance {
-    private string? _name;
     private JsonObject? _versionJson;
     private McInstanceInfo? _versionInfo;
+
+    private List<Library>? _libraries; // 依赖库列表
+
     private JsonObject? _versionJsonInJar;
+
     private McInstanceCardType? _cachedDisplayType;
-    
+
     /// <summary>
     /// 初始化 Minecraft 实例
     /// 初始化后请一定要先运行 Check() 方法
@@ -36,12 +41,12 @@ public class McInstance {
     /// <summary>
     /// 应用版本隔离后的 Minecraft 根文件夹路径，以“\”结尾
     /// </summary>
-    public string? GetIsolatedPath() => McInstanceLogic.GetIsolatedPathAsync(this);
+    public string? IsolatedPath => McInstanceLogic.GetIsolatedPathAsync(this);
 
     /// <summary>
     /// 实例文件夹名称
     /// </summary>
-    public string Name => _name ??= string.IsNullOrEmpty(Path) ? "" : new DirectoryInfo(Path).Name;
+    public string Name => string.IsNullOrEmpty(Path) ? "" : new DirectoryInfo(Path).Name;
 
     /// <summary>
     /// 显示的描述文本
@@ -57,6 +62,8 @@ public class McInstance {
     /// 是否为收藏的实例
     /// </summary>
     public bool IsFavorited { get; set; }
+
+    #region Display Type
 
     /// <summary>
     /// 强制实例分类
@@ -77,51 +84,27 @@ public class McInstance {
     /// </summary>
     private void RefreshInstanceDisplayType() {
         var savedDisplayType = (McInstanceCardType)SetupService.GetInt32(SetupEntries.Instance.DisplayType, Path);
-        
+
         // 如果不是自动分类，跳过以下分类流程
         if (savedDisplayType != McInstanceCardType.Auto) {
             _cachedDisplayType = savedDisplayType;
             return;
         }
-        
+
         var versionInfo = GetVersionInfo();
-        
+
         // 判断各个可安装模组的实例
-        if (versionInfo!.HasPatcher("NeoForge")) {
-            _cachedDisplayType = McInstanceCardType.NeoForge;
-        } else if (versionInfo.HasPatcher("Fabric")) {
-            _cachedDisplayType = McInstanceCardType.Fabric;
-        } else if (versionInfo.HasPatcher("LegacyFabric")) {
-            _cachedDisplayType = McInstanceCardType.LegacyFabric;
-        } else if (versionInfo.HasPatcher("Quilt")) {
-            _cachedDisplayType = McInstanceCardType.Quilt;
-        } else if (versionInfo.HasPatcher("Forge")) {
-            _cachedDisplayType = McInstanceCardType.Forge;
-        } else if (versionInfo.HasPatcher("Cleanroom")) {
-            _cachedDisplayType = McInstanceCardType.Cleanroom;
-        } else if (versionInfo.HasPatcher("LiteLoader")) {
-            _cachedDisplayType = McInstanceCardType.LiteLoader;
-        } 
-        
-        // 判断客户端类型的补丁实例
-        else if (versionInfo.HasPatcher("OptiFine")) {
-            _cachedDisplayType = McInstanceCardType.OptiFine;
-        } else if (versionInfo.HasPatcher("LabyMod")) {
-            _cachedDisplayType = McInstanceCardType.LabyMod;
-        } else if (versionInfo.HasPatcher("Client")) {
-            _cachedDisplayType = McInstanceCardType.Client;
-        } 
+        _cachedDisplayType = McInstanceUtils.RecognizeInstanceCardType(versionInfo!);
 
         if (_cachedDisplayType != null) {
             return;
         }
-        
-        if (versionInfo.Patchers.Count > 0) {
+
+        if (versionInfo!.Patchers.Count > 0) {
             _cachedDisplayType = McInstanceCardType.UnknownPatchers;
         } else {
             // 没有任何附加组件，按原版分类
-            _cachedDisplayType = versionInfo.VersionType switch
-            {
+            _cachedDisplayType = versionInfo.VersionType switch {
                 McVersionType.Release => McInstanceCardType.Release,
                 McVersionType.Snapshot => McInstanceCardType.Snapshot,
                 McVersionType.Fool => McInstanceCardType.Fool,
@@ -130,6 +113,10 @@ public class McInstance {
             };
         }
     }
+
+    #endregion
+
+    #region Version Json Info
 
     /// <summary>
     /// 实例信息
@@ -143,10 +130,10 @@ public class McInstance {
         if (_cachedDisplayType == McInstanceCardType.Error) {
             return null;
         }
-        
+
         // 获取 MC 版本
         var version = McInstanceUtils.RecognizeMcVersion(_versionJson!);
-        
+
         if (version != null) {
             versionInfo.McVersion = version;
         } else {
@@ -154,11 +141,11 @@ public class McInstance {
             versionInfo.McVersion = "Unknown";
             Desc = "无法识别 Minecraft 版本";
         }
-        
+
         // 获取发布时间
         var releaseTime = McInstanceUtils.RecognizeReleaseTime(_versionJson!);
         versionInfo.ReleaseTime = releaseTime;
-        
+
         // 获取版本类型
         versionInfo.VersionType = McInstanceUtils.RecognizeVersionType(_versionJson!, releaseTime);
 
@@ -232,6 +219,113 @@ public class McInstance {
     /// </summary>
     public bool IsPatchesFormatJson { get; set; }
 
+    #endregion
+
+    #region Check and Load
+
+    public async Task Check() {
+        if (!await CheckPermission() || !await CheckJson()) {
+            DisplayType = McInstanceCardType.Error;
+            Logo = System.IO.Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
+        } else {
+            // 确定实例图标
+            Logo = McInstanceLogic.DetermineLogo(this);
+        }
+    }
+
+    public async Task<bool> CheckPermission() {
+        if (!Directory.Exists(Path)) {
+            Desc = $"未找到实例 {Name}";
+            return false;
+        }
+
+        try {
+            Directory.CreateDirectory(Path + "PCL\\");
+            await Directories.CheckPermissionWithExceptionAsync(Path + "PCL\\");
+        } catch (Exception ex) {
+            Desc = "PCL 没有对该文件夹的访问权限，请以管理员身份运行";
+            LogWrapper.Warn(ex, "没有访问实例文件夹的权限");
+            return false;
+        }
+        return true;
+    }
+
+    public async Task<bool> CheckJson() {
+        var versionJson = await GetVersionJsonAsync();
+        if (versionJson == null) {
+            LogWrapper.Warn($"实例 JSON 可用性检查失败（{Path}）");
+            Desc = "实例 JSON 不存在或无法解析";
+            return false;
+        }
+
+        return true;
+    }
+
+    public McInstance Load() {
+        GetVersionInfo();
+        GetInstanceDisplayType();
+
+        SetDescriptiveInfo();
+
+        return this;
+    }
+
+    public McInstance Refresh() {
+        RefreshVersionInfo();
+        RefreshInstanceDisplayType();
+
+        SetDescriptiveInfo();
+
+        return this;
+    }
+
+    private void SetDescriptiveInfo() {
+        // 确定实例描述和状态
+        Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
+            ? McInstanceLogic.GetDefaultDescription(this)
+            : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
+        IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
+
+        // 写入缓存
+        SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
+        SetupService.SetString(SetupEntries.Instance.LogoPath, Logo!, Path);
+    }
+
+    #endregion
+
+    #region Libraries
+
+    // 从完整JSON中提取并反序列化libraries字段
+    public bool ParseLibrariesFromJson(string json) {
+        try {
+            // 解析JSON为JsonNode以提取libraries字段
+            var jsonNode = JsonNode.Parse(json);
+            if (jsonNode == null) {
+                Console.WriteLine("JSON解析失败");
+                return false;
+            }
+
+            // 获取libraries字段
+            var librariesNode = jsonNode["libraries"];
+            if (librariesNode == null) {
+                Console.WriteLine("JSON中未找到libraries字段");
+                _libraries = [];
+                return true;
+            }
+
+            // 反序列化libraries字段
+            var librariesJson = librariesNode.ToJsonString();
+            _libraries = LibraryDeserializer.DeserializeLibraries(librariesJson);
+            return _libraries != null;
+        } catch (JsonException ex) {
+            Console.WriteLine($"JSON解析或反序列化错误: {ex.Message}");
+            _libraries = [];
+            return false;
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// 实例 JAR 中的 version.json 文件对象
     /// </summary>
@@ -262,85 +356,16 @@ public class McInstance {
         }
         return _versionJsonInJar;
     }
-    
-    public async Task Check() {
-        if (!await CheckPermission() || !await CheckJson()) {
-            DisplayType = McInstanceCardType.Error;
-            Logo = System.IO.Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
-        } else {
-            // 确定实例图标
-            Logo = McInstanceLogic.DetermineLogo(this);
-        }
-    }
-
-    public async Task<bool> CheckPermission() {
-        if (!Directory.Exists(Path)) {
-            Desc = $"未找到实例 {Name}";
-            return false;
-        }
-        
-        try {
-            Directory.CreateDirectory(Path + "PCL\\");
-            await Directories.CheckPermissionWithExceptionAsync(Path + "PCL\\");
-        } catch (Exception ex) {
-            Desc = "PCL 没有对该文件夹的访问权限，请以管理员身份运行";
-            LogWrapper.Warn(ex, "没有访问实例文件夹的权限");
-            return false;
-        }
-        return true;
-    }
-    
-    public async Task<bool> CheckJson() {
-        var versionJson = await GetVersionJsonAsync();
-        if (versionJson == null) {
-            LogWrapper.Warn($"实例 JSON 可用性检查失败（{Path}）");
-            Desc = "实例 JSON 不存在或无法解析";
-            return false;
-        }
-
-        return true;
-    }
-
-    public McInstance Load() {
-        GetVersionInfo();
-        GetInstanceDisplayType();
-
-        SetDescriptiveInfo();
-        
-        return this;
-    }
-    
-    public McInstance Refresh() {
-        RefreshVersionInfo();
-        RefreshInstanceDisplayType();
-
-        SetDescriptiveInfo();
-        
-        return this;
-    }
-
-    private void SetDescriptiveInfo() {
-        // 确定实例描述和状态
-        Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
-            ? McInstanceLogic.GetDefaultDescription(this)
-            : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
-        SetupService.SetString(SetupEntries.Instance.Starred, Path);
-        IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
-
-        // 写入缓存
-        SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
-        SetupService.SetString(SetupEntries.Instance.LogoPath, Logo!, Path);
-    }
 }
 
 public enum McInstanceCardType {
     Auto, // Used only for forcing automatic instance classification
-    
+
     // PCL 逻辑版本类型
     Star,
     Custom,
     Hidden,
-    
+
     // Patchers 类型版本
     Modded,
     NeoForge,
@@ -350,18 +375,18 @@ public enum McInstanceCardType {
     LegacyFabric,
     Cleanroom,
     LiteLoader,
-    
+
     Client,
     OptiFine,
     LabyMod,
-    
+
     // 正常 MC 版本类型
     Release,
     Snapshot,
     Fool,
     Old,
-    
+
     UnknownPatchers,
-    
+
     Error
 }

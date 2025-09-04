@@ -21,7 +21,9 @@ namespace PCL.Core.IO;
 
 public static class Files {
     public static readonly JsonSerializerOptions PrettierJsonOptions = new() {
-        WriteIndented = true
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
     };
     
     /// <summary>

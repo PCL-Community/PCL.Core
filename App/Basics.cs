@@ -115,8 +115,18 @@ public static class Basics
         Process.Start(psi);
     }
 
-    public static bool RunInUi() 
-    {
+    public static bool RunInUi() {
         return Application.Current.Dispatcher.CheckAccess();
+    }
+    
+    /// <summary>
+    /// 获取程序打包资源的输入流。该资源必须声明为 <c>Resource</c> 类型，否则将会报错，<c>Images</c>
+    /// 和 <c>Resources</c> 目录已默认声明该类型。
+    /// </summary>
+    /// <param name="path">资源路径，例如 "Resources/java-wrapper.jar"。</param>
+    /// <returns>资源输入流，或 null 如果资源不存在。</returns>
+    public static Stream? GetResourceStream(string path) {
+        var resourceInfo = Application.GetResourceStream(new Uri($"pack://application:,,,/{path}", UriKind.Absolute));
+        return resourceInfo?.Stream;
     }
 }

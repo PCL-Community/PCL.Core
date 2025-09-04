@@ -23,7 +23,7 @@ public class McInstance {
     private McInstanceInfo? _versionInfo;
 
     private List<Library>? _libraries; // 依赖库列表
-    private HashSet<string> _libraryNameHashCache; // 依赖库哈希缓存
+    private HashSet<string>? _libraryNameHashCache; // 依赖库哈希缓存
     private AssetIndex? _assetIndex;
 
     private JsonObject? _versionJsonInJar;
@@ -197,7 +197,7 @@ public class McInstance {
     /// <param name="prefix">目标前缀</param>
     /// <returns>匹配的版本号或如果未找到</returns>
     private string? FindPatcherVersionsInHashSet(string prefix) {
-        return _libraryNameHashCache.Where(name => name.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase))
+        return _libraryNameHashCache!.Where(name => name.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase))
             .Select(name => name[(prefix.Length + 1)..])
             .FirstOrDefault();
     }
@@ -410,7 +410,7 @@ public class McInstance {
     }
 
     // 定义 Java 版本要求规则
-    private static readonly List<(Func<McInstanceInfo, bool> Condition, Version MinVer, Version? MaxVer, string LogMessage)> VanillaJavaVersionRules = new() {
+    private static readonly List<(Func<McInstanceInfo, bool> Condition, Version MinVer, Version? MaxVer, string LogMessage)> VanillaJavaVersionRules = [
         // 1.20.5+ (24w14a+)：至少 Java 21
         (
             info => !info.IsNormalVersion && info.ReleaseTime >= new DateTime(2024, 4, 2) ||
@@ -449,7 +449,7 @@ public class McInstance {
             new Version(12, 999, 999, 999),
             "MC 1.5.2- 要求最高 Java 12"
         )
-    };
+    ];
 
     /// <summary>
     /// 检查 Minecraft 版本所需的 Java 版本

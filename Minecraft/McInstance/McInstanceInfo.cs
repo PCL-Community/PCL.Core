@@ -4,8 +4,6 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using PCL.Core.App;
-using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft.McInstance;

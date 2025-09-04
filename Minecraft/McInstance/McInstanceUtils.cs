@@ -106,7 +106,7 @@ public static class McInstanceUtils {
     public static McInstanceCardType? RecognizeInstanceCardType(McInstanceInfo versionInfo) {
         McInstanceCardType? cachedDisplayType = null;
         
-        if (versionInfo!.HasPatcher("NeoForge")) {
+        if (versionInfo.HasPatcher("NeoForge")) {
             cachedDisplayType = McInstanceCardType.NeoForge;
         } else if (versionInfo.HasPatcher("Fabric")) {
             cachedDisplayType = McInstanceCardType.Fabric;

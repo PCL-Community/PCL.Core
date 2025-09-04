@@ -5,7 +5,6 @@ namespace PCL.Core.Minecraft.McInstance.Resources;
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Json.Nodes;
 
 // 表示Minecraft版本JSON中的assetIndex字段
 public class AssetIndex {

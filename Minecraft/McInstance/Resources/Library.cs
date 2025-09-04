@@ -38,7 +38,9 @@ public class Library {
             var ruleMatches = true; // 当前规则是否匹配
 
             // 检查操作系统条件
-            if (rule.Os != null && rule.Os.Name != null) {
+            // Using a property pattern
+            // 简化后的代码（C# 9/10 语法）
+            if (rule is { Os.Name: not null }) {
                 var osName = rule.Os.Name.ToLowerInvariant();
                 var currentOs = EnvironmentInterop.GetCurrentOsName();
 
@@ -60,7 +62,7 @@ public class Library {
                 // 检查系统架构（x86 或 x64）
                 if (rule.Os.Arch != null) {
                     var is32BitSystem = !Environment.Is64BitOperatingSystem;
-                    ruleMatches = ruleMatches && (rule.Os.Arch.ToLowerInvariant() == "x86" == is32BitSystem);
+                    ruleMatches = ruleMatches && string.Equals(rule.Os.Arch, "x86", StringComparison.OrdinalIgnoreCase) == is32BitSystem;
                 }
             }
 
@@ -169,10 +171,7 @@ public static class LibraryDeserializer {
     // 反序列化依赖库列表
     public static List<Library>? DeserializeLibraries(string json) {
         try {
-            var options = new JsonSerializerOptions {
-                PropertyNameCaseInsensitive = true // 忽略大小写
-            };
-            return JsonSerializer.Deserialize<List<Library>>(json, options);
+            return JsonSerializer.Deserialize<List<Library>>(json, Files.PrettierJsonOptions);
         } catch (JsonException ex) {
             LogWrapper.Warn($"依赖库列表反序列化错误: {ex.Message}");
             return null;

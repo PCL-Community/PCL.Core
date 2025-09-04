@@ -4,7 +4,6 @@ using PCL.Core.App;
 using PCL.Core.Link.Natayark;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 

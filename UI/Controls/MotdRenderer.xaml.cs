@@ -1,5 +1,4 @@
 ﻿using PCL.Core.App;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 
 namespace PCL.Core.UI.Controls;

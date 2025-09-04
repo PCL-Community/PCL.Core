@@ -5,7 +5,6 @@ using System.Linq;
 using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;

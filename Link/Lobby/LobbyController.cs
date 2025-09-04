@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 
 using PCL.Core.Link.EasyTier;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Secret;
 using PCL.Core.Net;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;

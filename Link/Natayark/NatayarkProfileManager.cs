@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Utils.OS;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Logging;
 using PCL.Core.UI;
 

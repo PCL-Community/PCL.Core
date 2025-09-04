@@ -2,7 +2,6 @@
 using System.Management;
 using PCL.Core.App;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Secret;

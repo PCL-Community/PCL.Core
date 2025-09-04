@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 

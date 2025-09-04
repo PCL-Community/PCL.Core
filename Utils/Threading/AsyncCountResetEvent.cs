@@ -55,13 +55,11 @@ public sealed class AsyncCountResetEvent : IDisposable
                 _permits--;
                 return Task.CompletedTask;
             }
-            else
-            {
-                var tcs = new TaskCompletionSource<bool>(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _waiters.Enqueue(tcs);
-                return tcs.Task;
-            }
+
+            var tcs = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            _waiters.Enqueue(tcs);
+            return tcs.Task;
         }
     }
 

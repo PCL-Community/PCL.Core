@@ -36,12 +36,12 @@ public static partial class Config
     [ConfigGroup("System")] partial class SystemConfigGroup
     {
         [ConfigItem<bool>("SystemEula", false)] public partial bool Eula { get; set; }
-        [ConfigItem<int>("SystemCount", 0)] public partial int StartupCount { get; set; }
-        [ConfigItem<int>("SystemLaunchCount", 0)] public partial int LaunchCount { get; set; }
-        [ConfigItem<int>("SystemLastVersionReg", 0)] public partial int LastVersion { get; set; }
-        [ConfigItem<int>("SystemHighestSavedBetaVersionReg", 0)] public partial int LastSavedBetaVersion { get; set; }
-        [ConfigItem<int>("SystemHighestBetaVersionReg", 0)] public partial int LastBetaVersion { get; set; }
-        [ConfigItem<int>("SystemHighestAlphaVersionReg", 0)] public partial int LastAlphaVersion { get; set; }
+        [ConfigItem<int>("SystemCount", 0, ConfigSource.SharedEncrypt)] public partial int StartupCount { get; set; }
+        [ConfigItem<int>("SystemLaunchCount", 0, ConfigSource.SharedEncrypt)] public partial int LaunchCount { get; set; }
+        [ConfigItem<int>("SystemLastVersionReg", 0, ConfigSource.SharedEncrypt)] public partial int LastVersion { get; set; }
+        [ConfigItem<int>("SystemHighestSavedBetaVersionReg", 0, ConfigSource.SharedEncrypt)] public partial int LastSavedBetaVersion { get; set; }
+        [ConfigItem<int>("SystemHighestBetaVersionReg", 0, ConfigSource.SharedEncrypt)] public partial int LastBetaVersion { get; set; }
+        [ConfigItem<int>("SystemHighestAlphaVersionReg", 0, ConfigSource.SharedEncrypt)] public partial int LastAlphaVersion { get; set; }
         [ConfigItem<int>("SystemSetupVersionReg", 1)] public partial int SetupVersionGlobal { get; set; }
         [ConfigItem<int>("SystemSetupVersionIni", 1, ConfigSource.Local)] public partial int SetupVersionLocal { get; set; }
         [ConfigItem<string>("SystemSystemCache", "")] public partial string CacheDirectory { get; set; }
@@ -49,17 +49,17 @@ public static partial class Config
         [ConfigItem<int>("SystemSystemUpdateBranch", 0, ConfigSource.Local)] public partial int UpdateBranch { get; set; }
         [ConfigItem<int>("SystemSystemActivity", 0, ConfigSource.Local)] public partial int AnnounceSolution { get; set; }
         [ConfigItem<string>("SystemSystemAnnouncement", "", ConfigSource.Local)] public partial string ShowedAnnouncements { get; set; }
-        [ConfigItem<string>("SystemHttpProxy", "")] public partial string HttpProxy { get; set; }
+        [ConfigItem<string>("SystemHttpProxy", "", ConfigSource.SharedEncrypt)] public partial string HttpProxy { get; set; }
         [ConfigItem<int>("SystemHttpProxyType", 1)] public partial int HttpProxyType { get; set; }
         [ConfigItem<string>("SystemHttpProxyCustomUsername", "")] public partial string HttpProxyCustomUsername { get; set; }
         [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string HttpProxyCustomPassword { get; set; }
         [ConfigItem<bool>("SystemDisableHardwareAcceleration", false)] public partial bool DisableHardwareAcceleration { get; set; }
         [ConfigItem<bool>("SystemTelemetry", false)] public partial bool Telemetry { get; set; }
-        [ConfigItem<string>("SystemMirrorChyanKey", "")] public partial string MirrorChyanKey { get; set; }
+        [ConfigItem<string>("SystemMirrorChyanKey", "", ConfigSource.SharedEncrypt)] public partial string MirrorChyanKey { get; set; }
         [ConfigItem<int>("SystemMaxLog", 13)] public partial int MaxGameLog { get; set; }
         [ConfigItem<string>("LaunchUuid", "")] public partial string LaunchUuid { get; set; }
-        [ConfigItem<string>("LoginLegacyName", "")] public partial string LoginLegacyName { get; set; }
-        [ConfigItem<string>("LoginMsJson", "{}")] public partial string LoginMsJson { get; set; }
+        [ConfigItem<string>("LoginLegacyName", "", ConfigSource.SharedEncrypt)] public partial string LoginLegacyName { get; set; }
+        [ConfigItem<string>("LoginMsJson", "{}", ConfigSource.SharedEncrypt)] public partial string LoginMsJson { get; set; }
         [ConfigItem<int>("LoginMsAuthType", 1)] public partial int LoginMsAuthType { get; set; }
 
         [ConfigGroup("Debug")] partial class DebugConfigGroup
@@ -79,26 +79,26 @@ public static partial class Config
         [ConfigItem<string>("CacheDownloadFolder", "")] public partial string FileDownloadFolder { get; set; }
         [ConfigItem<string>("ToolDownloadCustomUserAgent", "")] public partial string DownloadUserAgent { get; set; }
         [ConfigItem<int>("CacheJavaListVersion", 0)] public partial int JavaListVersion { get; set; }
-        [ConfigItem<string>("CacheAuthUuid", "")] public partial string AuthUuid { get; set; }
-        [ConfigItem<string>("CacheAuthName", "")] public partial string AuthUserName { get; set; }
-        [ConfigItem<string>("CacheAuthUsername", "")] public partial string AuthThirdPartyUserName { get; set; }
-        [ConfigItem<string>("CacheAuthPass", "")] public partial string AuthPassword { get; set; }
-        [ConfigItem<string>("CacheAuthServerServer", "")] public partial string AuthServerAddress { get; set; }
+        [ConfigItem<string>("CacheAuthUuid", "", ConfigSource.SharedEncrypt)] public partial string AuthUuid { get; set; }
+        [ConfigItem<string>("CacheAuthName", "", ConfigSource.SharedEncrypt)] public partial string AuthUserName { get; set; }
+        [ConfigItem<string>("CacheAuthUsername", "", ConfigSource.SharedEncrypt)] public partial string AuthThirdPartyUserName { get; set; }
+        [ConfigItem<string>("CacheAuthPass", "", ConfigSource.SharedEncrypt)] public partial string AuthPassword { get; set; }
+        [ConfigItem<string>("CacheAuthServerServer", "", ConfigSource.SharedEncrypt)] public partial string AuthServerAddress { get; set; }
     }
 
     [ConfigGroup("Link")] partial class LinkConfigGroup
     {
         [ConfigItem<bool>("LinkEula", false)] public partial bool EulaAgreed { get; set; }
         [ConfigItem<string>("LinkUsername", "")] public partial string Username { get; set; }
-        [ConfigItem<string>("LinkAnnounceCache", "")] public partial string AnnounceCache { get; set; }
+        [ConfigItem<string>("LinkAnnounceCache", "", ConfigSource.SharedEncrypt)] public partial string AnnounceCache { get; set; }
         [ConfigItem<int>("LinkAnnounceCacheVer", 0)] public partial int AnnounceCacheVer { get; set; }
         [ConfigItem<int>("LinkRelayType", 0)] public partial int RelayType { get; set; }
         [ConfigItem<int>("LinkServerType", 1)] public partial int ServerType { get; set; }
         [ConfigItem<bool>("LinkLatencyFirstMode", true)] public partial bool LatencyFirstMode { get; set; }
         [ConfigItem<string>("LinkRelayServer", "")] public partial string RelayServer { get; set; }
-        [ConfigItem<string>("LinkNaidRefreshToken", "")] public partial string NaidRefreshToken { get; set; }
-        [ConfigItem<string>("LinkNaidRefreshExpiresAt", "")] public partial string NaidRefreshExpireTime { get; set; }
-        [ConfigItem<bool>("LinkFirstTimeNetTest", true)] public partial bool DoFirstTimeNetTest { get; set; }
+        [ConfigItem<string>("LinkNaidRefreshToken", "", ConfigSource.SharedEncrypt)] public partial string NaidRefreshToken { get; set; }
+        [ConfigItem<string>("LinkNaidRefreshExpiresAt", "", ConfigSource.SharedEncrypt)] public partial string NaidRefreshExpireTime { get; set; }
+        [ConfigItem<bool>("LinkFirstTimeNetTest", true, ConfigSource.SharedEncrypt)] public partial bool DoFirstTimeNetTest { get; set; }
     }
 
     [ConfigGroup("Tool")] partial class ToolConfigGroup
@@ -124,7 +124,7 @@ public static partial class Config
 
         [ConfigGroup("Update")] partial class UpdateConfigGroup
         {
-            [ConfigItem<int>("ToolUpdateAlpha", 0)] public partial int Alpha { get; set; }
+            [ConfigItem<int>("ToolUpdateAlpha", 0, ConfigSource.SharedEncrypt)] public partial int Alpha { get; set; }
             [ConfigItem<bool>("ToolUpdateRelease", false)] public partial bool Release { get; set; }
             [ConfigItem<bool>("ToolUpdateSnapshot", false)] public partial bool Snapshot { get; set; }
             [ConfigItem<string>("ToolUpdateReleaseLast", "")] public partial string LastRelease { get; set; }

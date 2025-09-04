@@ -6,11 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using PCL.Core.App.Configuration.Impl;
-using PCL.Core.App.Configuration.NTraffic;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
-using YamlDotNet.RepresentationModel;
 
 namespace PCL.Core.App.Configuration;
 
@@ -140,8 +138,7 @@ public sealed partial class ConfigService : GeneralService
                         Path.Combine(FileService.SharedDataPath, "config.json")
                     ];
                     _TryMigrate(sharedConfigPath, oldPaths.Select(path =>
-                        new ConfigMigration { From = path, To = sharedConfigPath, OnMigration = Migration }));
-                    void Migration(string from, string to) => File.Copy(from, to);
+                        new ConfigMigration { From = path, To = sharedConfigPath, OnMigration = SharedJsonMigration }));
                 }
                 // load
                 var fileProvider = new JsonFileProvider(sharedConfigPath);
@@ -157,29 +154,58 @@ public sealed partial class ConfigService : GeneralService
                     new ConfigMigration
                     {
                         From = Path.Combine(FileService.DataPath, "setup.ini"),
-                        To = Path.Combine(FileService.DataPath, "config.v1.yml"),
-                        OnMigration = (from, to) =>
-                        {
-                            var lines = File.ReadAllLines(from);
-                            var yamlProvider = new YamlFileProvider(to);
-                            foreach (var line in lines)
-                            {
-                                if (line.IsNullOrWhiteSpace()) continue;
-                                var kv = line.Split(':', 2);
-                                if (kv.Length != 2) continue;
-                                yamlProvider.Set(kv[0], kv[1]);
-                            }
-                            yamlProvider.Sync();
-                        }
+                        To = localConfigPath,
+                        OnMigration = CatIniMigration
                     }
                 ]);
                 // load
                 var fileProvider = new YamlFileProvider(localConfigPath);
                 _localConfigProvider = new FileTrafficCenter(fileProvider);
+            },
+            () => // instance config file(s)
+            {
+                _instanceConfigProvider = new DynamicCacheTrafficCenter
+                {
+                    TrafficCenterFactory = argument =>
+                    {
+                        var dir = Path.GetFullPath(argument.ToString()!);
+                        var configPath = Path.Combine(dir, "PCLCE.v1.yml");
+                        if (!File.Exists(dir)) _TryMigrate(dir, [
+                            new ConfigMigration
+                            {
+                                From = Path.Combine(dir, "PCL.ini"),
+                                To = configPath,
+                                OnMigration = CatIniMigration
+                            }
+                        ]);
+                        var fileProvider = new YamlFileProvider(configPath);
+                        var trafficCenter = new FileTrafficCenter(fileProvider);
+                        return trafficCenter;
+                    }
+                };
             }
         ];
         try { Task.WaitAll(inits.Select(Task.Run).ToArray()); }
         catch (AggregateException ex) { throw ex.GetBaseException(); }
+
+        return;
+        void SharedJsonMigration(string from, string to)
+        {
+            File.Copy(from, to);
+        }
+        void CatIniMigration(string from, string to)
+        {
+            var lines = File.ReadAllLines(from);
+            var yamlProvider = new YamlFileProvider(to);
+            foreach (var line in lines)
+            {
+                if (line.IsNullOrWhiteSpace()) continue;
+                var kv = line.Split(':', 2);
+                if (kv.Length != 2) continue;
+                yamlProvider.Set(kv[0], kv[1]);
+            }
+            yamlProvider.Sync();
+        }
     }
 
     private static void _TryMigrate(string target, IEnumerable<ConfigMigration> migrations)

@@ -15,3 +15,19 @@ public interface ITrafficCenter
     /// </summary>
     public event PreviewTrafficEventHandler? PreviewTraffic;
 }
+
+public static class TrafficCenterExtension
+{
+    /// <summary>
+    /// 尝试将 <see cref="IConfigProvider"/> 实例转换到物流中心。
+    /// </summary>
+    public static ITrafficCenter? TryGetTrafficCenter(this IConfigProvider configProvider)
+        => configProvider as TrafficCenter;
+
+    /// <summary>
+    /// 将 <see cref="IConfigProvider"/> 实例转换到物流中心。
+    /// </summary>
+    /// <exception cref="System.InvalidCastException">该实例的实现不是物流中心</exception>
+    public static ITrafficCenter GetTrafficCenter(this IConfigProvider configProvider)
+        => (TrafficCenter)configProvider;
+}

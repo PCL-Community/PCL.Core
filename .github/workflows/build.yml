@@ -53,4 +53,4 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
-          args: --baseline none
+          args: --commit 2d929e5

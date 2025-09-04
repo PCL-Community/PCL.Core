@@ -53,4 +53,4 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
-          args: --commit 2d929e5
+          diff-base: '2d929e510a48a09d7bdfe2dbfb8b50ec54140310'

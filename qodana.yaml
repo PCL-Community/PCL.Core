@@ -46,16 +46,16 @@ exclude:
   - name: ClassNeverInstantiated.Global
 
 # 排除路径 - 不分析这些路径
-excludePaths:
-  - "**/bin/**"
-  - "**/obj/**"
-  - "**/publish/**"
+# excludePaths:
+#   - "**/bin/**"
+#   - "**/obj/**"
+#   - "**/publish/**"
   # 如果生成的代码仍然有问题，可以排除它们
   # - "**/GeneratedFiles/**"
   # - "**/*.g.cs"
   # - "**/*.Generated.cs"
 
 # 包含路径 - 确保分析这些路径
-includePaths:
-  - "."
-  - "./obj/GeneratedFiles/**/*.cs"
+# includePaths:
+#   - "."
+#   - "./obj/GeneratedFiles/**/*.cs"

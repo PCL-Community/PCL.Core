@@ -75,7 +75,20 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
     {
         var result = _rootNode.Children[key];
         var parser = result.ConvertToEventStream().GetParser();
-        return _Deserializer.Deserialize<T>(parser);
+        try
+        {
+            return _Deserializer.Deserialize<T>(parser);
+        }
+        catch (Exception)
+        {
+            var type = typeof(T);
+            var graphStr = result.ToString();
+            var fallback = (type == typeof(bool))
+                ? (T)(object)(graphStr.ToLowerInvariant() is "true" or "1")
+                : (T)(object)graphStr;
+            Set(key, fallback);
+            return fallback;
+        }
     }
 
     public override void Set<T>(string key, T value)

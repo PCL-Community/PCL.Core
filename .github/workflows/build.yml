@@ -76,3 +76,8 @@ jobs:
           args:
             --linter, qodana-dotnet, --within-docker, false
           use-annotations: true
+
+      - name: Upload artifacts
+        - run: |
+          ls
+          find ./ -name "*.html"

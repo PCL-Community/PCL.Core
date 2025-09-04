@@ -1,5 +1,10 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using PCL.Core.Logging;
+using PCL.Core.Utils.Diagnostics;
 
 namespace PCL.Core.App.Configuration.NTraffic;
 
@@ -8,9 +13,19 @@ namespace PCL.Core.App.Configuration.NTraffic;
 /// </summary>
 public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
 {
+    private const string LogModule = "Traffic";
+
     public event TrafficEventHandler? Traffic;
 
     public event PreviewTrafficEventHandler? PreviewTraffic;
+
+#if DEBUG
+    private static readonly bool _EnableTrace = Basics.CommandLineArguments.Contains("--trace-traffic");
+    private static readonly JsonSerializerOptions _SerializerOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+#endif
 
     /// <summary>
     /// 物流操作实现。
@@ -30,6 +45,23 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
             PreviewTraffic?.Invoke(ev);
             Traffic?.Invoke(ev);
         });
+#if DEBUG
+        if (_EnableTrace)
+        {
+            var eventArgsName = e.ToString()?.Replace("PCL.Core.App.Configuration.NTraffic.", "");
+            var context = JsonSerializer.Serialize(e.Context, _SerializerOptions);
+            var input = JsonSerializer.Serialize(e.Input, _SerializerOptions);
+            var output = JsonSerializer.Serialize(e.Output, _SerializerOptions);
+            var caller = StackHelper.GetDirectCallerName();
+            var msg = $"Traffic request: {e.Access}@{GetHashCode()}\n" +
+                $"|- {eventArgsName}\n" +
+                $"|- Context: {context}\n" +
+                $"|- Input: {input} (HasInput: {e.HasInput})\n" +
+                $"|- Output: {output} (HasOutput: {e.HasOutput}, IsInitialOutput: {e.IsInitialOutput})\n" +
+                $"|- Caller: {caller}";
+            LogWrapper.Trace(LogModule, msg);
+        }
+#endif
     }
 
     /// <summary>

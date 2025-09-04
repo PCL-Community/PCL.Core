@@ -35,11 +35,6 @@ jobs:
           dotnet build "PCL.Core.csproj" \
           -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.architecture }}
 
-      - name: List Generated Files
-        run: |
-          find SourceGenerators -name "*.g.cs" || echo "No generated files in bin"
-        if: always()
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

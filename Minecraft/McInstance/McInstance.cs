@@ -19,6 +19,7 @@ public class McInstance {
     private McInstanceInfo? _versionInfo;
 
     private List<Library>? _libraries; // 依赖库列表
+    private AssetIndex? _assetIndex;
 
     private JsonObject? _versionJsonInJar;
 
@@ -296,34 +297,54 @@ public class McInstance {
     #region Libraries
 
     // 从完整JSON中提取并反序列化libraries字段
-    public bool ParseLibrariesFromJson(string json) {
+    public List<Library>? ParseLibrariesFromJson() {
         try {
-            // 解析JSON为JsonNode以提取libraries字段
-            var jsonNode = JsonNode.Parse(json);
-            if (jsonNode == null) {
-                Console.WriteLine("JSON解析失败");
-                return false;
-            }
-
             // 获取libraries字段
-            var librariesNode = jsonNode["libraries"];
+            var librariesNode = _versionJson!["libraries"];
             if (librariesNode == null) {
                 Console.WriteLine("JSON中未找到libraries字段");
-                _libraries = [];
-                return true;
+                _libraries = null;
+                return null;
             }
 
             // 反序列化libraries字段
             var librariesJson = librariesNode.ToJsonString();
             _libraries = LibraryDeserializer.DeserializeLibraries(librariesJson);
-            return _libraries != null;
+            return _libraries;
         } catch (JsonException ex) {
             Console.WriteLine($"JSON解析或反序列化错误: {ex.Message}");
-            _libraries = [];
-            return false;
+            _libraries = null;
+            return null;
         }
     }
 
+    #endregion
+    
+    #region Asset Index
+    
+    /// <summary>
+    /// 从完整JSON中提取并反序列化assetIndex字段
+    /// </summary>
+    /// <returns>反序列化后的AssetIndex对象，如果不存在或失败则返回null</returns>
+    public AssetIndex? ParseAssetIndexFromJson() {
+        try {
+            var assetIndexNode = _versionJson!["assetIndex"];
+            if (assetIndexNode == null) {
+                LogWrapper.Warn("JSON中未找到assetIndex字段");
+                _assetIndex = null;
+                return null;
+            }
+
+            var assetIndexJson = assetIndexNode.ToJsonString();
+            _assetIndex = AssetIndexDeserializer.DeserializeAssetIndex(assetIndexJson);
+            return _assetIndex;
+        } catch (JsonException ex) {
+            LogWrapper.Warn(ex, "JSON解析或反序列化错误");
+            _assetIndex = null;
+            return null;
+        }
+    }
+    
     #endregion
 
     /// <summary>

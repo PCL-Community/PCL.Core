@@ -75,9 +75,10 @@ jobs:
         with:
           args:
             --save-report
-          # 传递额外的参数给 Qodana
-          # args: |
-          #   --property=idea.suppressed.plugins.id=com.intellij.ml.llm
-          # 使用项目文件而不是依赖 bootstrap
           use-annotations: true
-          upload-result: true
+
+      - name: Upload Qodana Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qodana-report
+          path: ${{ runner.temp }}/qodana/results

@@ -2,6 +2,7 @@
 
 namespace PCL.Core.App;
 
+// test
 public static partial class Config
 {
     [ConfigGroup("Identify")] partial class IdentifyConfigGroup

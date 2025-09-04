@@ -354,7 +354,6 @@ public class OptiFineVersionComparer : IComparer<string> {
 }
 
 // This class acts as a dispatcher to the correct comparer based on type.
-// Its structure is already good and does not require changes.
 public class PatcherVersionComparer : IComparer<(McInstanceCardType, PatcherInfo)> {
     private static readonly Dictionary<McInstanceCardType, IComparer<string>> Comparers = new() {
         { McInstanceCardType.Release, McVersionComparerFactory.ReleaseVersionComparer },
@@ -392,7 +391,6 @@ public class PatcherVersionComparer : IComparer<(McInstanceCardType, PatcherInfo
 }
 
 // This static factory provides singleton instances of each comparer.
-// Its structure is already good and does not require changes.
 public static class McVersionComparerFactory {
     public static IComparer<(McInstanceCardType, PatcherInfo)> PatcherVersionComparer { get; } = new PatcherVersionComparer();
 

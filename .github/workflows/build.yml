@@ -78,4 +78,4 @@ jobs:
           args: |
             --property=idea.suppressed.plugins.id=com.intellij.ml.llm
           # 使用项目文件而不是依赖 bootstrap
-          use-annotations: false
+          use-annotations: true

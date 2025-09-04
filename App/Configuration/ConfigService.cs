@@ -169,11 +169,11 @@ public sealed partial class ConfigService : GeneralService
                     TrafficCenterFactory = argument =>
                     {
                         var dir = Path.GetFullPath(argument.ToString()!);
-                        var configPath = Path.Combine(dir, "PCLCE.v1.yml");
+                        var configPath = Path.Combine(dir, "PCL", "config.v1.yml");
                         if (!File.Exists(dir)) _TryMigrate(dir, [
                             new ConfigMigration
                             {
-                                From = Path.Combine(dir, "PCL.ini"),
+                                From = Path.Combine(dir, "PCL", "setup.ini"),
                                 To = configPath,
                                 OnMigration = CatIniMigration
                             }

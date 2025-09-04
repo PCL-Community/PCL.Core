@@ -111,6 +111,7 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
     public override void Sync()
     {
         if (File.Exists(FilePath)) File.Copy(FilePath, FilePath + ".bak", true);
+        else Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
         using var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         using var writer = new StreamWriter(stream, Encoding.UTF8);
         _Serializer.Serialize(writer, _rootNode);

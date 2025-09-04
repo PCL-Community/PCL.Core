@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using PCL.Core.App;
 using PCL.Core.Link.Natayark;
 using PCL.Core.Logging;
 using PCL.Core.Net;
@@ -124,6 +125,6 @@ public static class LobbyInfoProvider
     /// 获取用于联机显示的用户名
     /// </summary>
     public static string? GetUsername() => AllowCustomName
-        ? Setup.Link.Username.ReplaceNullOrEmpty(NatayarkProfileManager.NaidProfile.Username)
+        ? Config.Link.Username.ReplaceNullOrEmpty(NatayarkProfileManager.NaidProfile.Username)
         : NatayarkProfileManager.NaidProfile.Username;
 }

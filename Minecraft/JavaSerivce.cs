@@ -49,7 +49,7 @@ public sealed class JavaSerivce : GeneralService
 
     private static List<JavaLocalCache> _GetCaches()
     {
-        var raw = Setup.Launch.Javas;
+        var raw = Config.Launch.Javas;
         if (string.IsNullOrEmpty(raw))
         {
             return [];
@@ -62,6 +62,6 @@ public sealed class JavaSerivce : GeneralService
     private static void _SetCache(List<JavaLocalCache> caches)
     {
         var jsonContent = JsonSerializer.Serialize(caches);
-        Setup.Launch.Javas = jsonContent;
+        Config.Launch.Javas = jsonContent;
     }
 }

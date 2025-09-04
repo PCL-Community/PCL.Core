@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Management;
+using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Hash;
@@ -80,8 +81,8 @@ public static class Identify
     {
         try
         {
-            if (string.IsNullOrEmpty(Setup.System.LaunchUuid)) Setup.System.LaunchUuid = GetGuid();
-            var hashCode = GetMachineId(Setup.System.LaunchUuid)
+            if (string.IsNullOrEmpty(Config.System.LaunchUuid)) Config.System.LaunchUuid = GetGuid();
+            var hashCode = GetMachineId(Config.System.LaunchUuid)
                 .Substring(6, 16)
                 .Insert(4, "-")
                 .Insert(9, "-")

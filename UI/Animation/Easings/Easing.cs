@@ -9,9 +9,12 @@ public abstract class Easing : IEasing
 
     public double Ease(double progress)
     {
-        if (progress <= 0.0) return 0.0;
-        if (progress >= 1.0) return 1.0;
-        return EaseCore(progress);
+        return progress switch
+        {
+            <= 0.0 => 0.0,
+            >= 1.0 => 1.0,
+            _ => EaseCore(progress)
+        };
     }
 
     /// <summary>
@@ -22,7 +25,6 @@ public abstract class Easing : IEasing
     /// <returns>过渡值。</returns>
     public double Ease(int currentFrame, int totalFrames)
     {
-        if (totalFrames <= 0) return 0.0;
-        return Ease((double)currentFrame / totalFrames);
+        return totalFrames <= 0 ? 0.0 : Ease((double)currentFrame / totalFrames);
     }
 }

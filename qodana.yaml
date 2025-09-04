@@ -1,11 +1,31 @@
 version: 1.0
+
 profile:
   name: qodana.recommended
+
 ide: QDNET
-bootstrap: 'dotnet build ./PCL.Core.csproj'
+
+# 构建命令 - 确保源生成器代码被生成并包含在分析中
+bootstrap: |
+  echo "Building project with source generators..."
+  dotnet restore ./PCL.Core.csproj
+  dotnet build ./PCL.Core.csproj \
+    -c Debug \
+    -p:Platform=x64 \
+    -p:EmitCompilerGeneratedFiles=true \
+    -p:CompilerGeneratedFilesOutputPath=./obj/GeneratedFiles
+
+# 指定项目文件
+dotnet:
+  project: PCL.Core.csproj
+  configuration: Debug
+  platform: x64
+
+# 包含的检查
 include:
   - name: VulnerableLibrariesGlobal
-  - path: obj/**/*.cs  # Include generated files
+
+# 排除的检查
 exclude:
   - name: NotAccessedPositionalProperty.Global
   - name: UnusedMember.Global
@@ -24,3 +44,18 @@ exclude:
   - name: MemberCanBeProtected.Global
   - name: EventNeverSubscribedTo.Global
   - name: ClassNeverInstantiated.Global
+
+# 排除路径 - 不分析这些路径
+excludePaths:
+  - "**/bin/**"
+  - "**/obj/**"
+  - "**/publish/**"
+  # 如果生成的代码仍然有问题，可以排除它们
+  # - "**/GeneratedFiles/**"
+  # - "**/*.g.cs"
+  # - "**/*.Generated.cs"
+
+# 包含路径 - 确保分析这些路径
+includePaths:
+  - "."
+  - "./obj/GeneratedFiles/**/*.cs"

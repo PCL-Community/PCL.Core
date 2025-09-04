@@ -71,8 +71,23 @@
         <Resource Include="UI\Assets\Shaders\*.ps" />
     </ItemGroup>
     <!-- 源代码生成器 -->
+    <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' Or '$(CI)' == 'true' Or '$(QODANA_SCAN)' == 'true'">
+        <!-- 在 CI/Qodana 环境中输出生成的文件以便分析 -->
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)GeneratedFiles</CompilerGeneratedFilesOutputPath>
+        <!-- 确保生成的文件被包含在编译中 -->
+        <IncludeGeneratedFiles>true</IncludeGeneratedFiles>
+    </PropertyGroup>
+
+    <!-- 确保源生成器正确配置 -->
     <ItemGroup>
-        <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Properties="Platform=AnyCPU" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" 
+                        OutputItemType="Analyzer" 
+                        ReferenceOutputAssembly="false" 
+                        Properties="Platform=AnyCPU">
+            <!-- 确保源生成器在所有配置下都能工作 -->
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </ProjectReference>
     </ItemGroup>
 </Project>

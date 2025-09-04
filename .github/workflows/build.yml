@@ -1,4 +1,5 @@
 ﻿name: Build Test
+
 on:
   push:
     branches:
@@ -42,15 +43,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
-          fetch-depth: 0  # a full history is required for pull request analysis
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
+      
+      # 预先构建项目并生成源代码
+      - name: Pre-build with Source Generators
+        run: |
+          # 恢复依赖
+          dotnet restore PCL.Core.csproj
+          
+          # 构建项目并输出生成的源代码
+          dotnet build PCL.Core.csproj \
+            -c Debug \
+            -p:Platform=x64 \
+            -p:EmitCompilerGeneratedFiles=true \
+            -p:CompilerGeneratedFilesOutputPath=./generated
+          
+          # 列出生成的文件（用于调试）
+          echo "Generated files:"
+          find ./generated -name "*.cs" -type f | head -20
+          
       - name: Qodana Scan
         uses: JetBrains/qodana-action@v2025.1
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           pr-mode: false
+          # 传递额外的参数给 Qodana
+          args: |
+            --property=idea.suppressed.plugins.id=com.intellij.ml.llm
+          # 使用项目文件而不是依赖 bootstrap
+          use-annotations: false

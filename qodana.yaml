@@ -4,7 +4,10 @@ profile:
   name: qodana.recommended
 # arguments
 ide: QDNET
-bootstrap: 'dotnet build ./PCL.Core.csproj'
+bootstrap: 'dotnet build ./PCL.Core.slnx --configuration Debug'
+analysis:
+  include: all
+  exclude: none
 include:
   - name: VulnerableLibrariesGlobal
 exclude:

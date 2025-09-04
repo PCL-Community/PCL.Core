@@ -40,3 +40,6 @@ jobs:
         with:
           name: PCL.Core_${{ inputs.configuration }}-${{ inputs.architecture }}_${{ env.SHORT_SHA }}
           path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**
+      
+      - name: List Generated Files
+        run: find bin -name "*.g.cs"

@@ -74,11 +74,5 @@ jobs:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           args:
-            --save-report, --report-dir, ${{ runner.temp }}/qodana/caches/report, --linter, qodana-dotnet, --within-docker, false
+            --linter, qodana-dotnet, --within-docker, false
           use-annotations: true
-
-      - name: Upload Qodana HTML Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: qodana-report
-          path: ${{ runner.temp }}/qodana/caches/report

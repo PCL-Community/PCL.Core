@@ -33,12 +33,12 @@ public struct NColor
     
     public NColor()
     {
-        this._color = new Vector4(0f, 0f, 0f, 255f);
+        _color = new Vector4(0f, 0f, 0f, 255f);
     }
 
     public NColor(float r, float g, float b, float a = 255f)
     {
-        this._color = new Vector4(r, g, b, a);
+        _color = new Vector4(r, g, b, a);
     }
     
     public NColor(Color color) : this(color.R, color.G, color.B, a: color.A) { }
@@ -126,9 +126,9 @@ public struct NColor
         }
         else
         {
-            double h = sH / 360;
-            double s = sS / 100;
-            double l = sL / 100;
+            var h = sH / 360;
+            var s = sS / 100;
+            var l = sL / 100;
             s = l < 0.5 ? s * l + l : s * (1.0 - l) + l;
             l = 2 * l - s;
             color.R = (float)(255 * _Hue(l, s, h + 1 / 3.0));

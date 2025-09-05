@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using PCL.Core.IO;
 using PCL.Core.Logging;
@@ -159,9 +160,9 @@ public class Os {
 
 // Deserialization method
 public static class LibraryDeserializer {
-    public static Library? DeserializeLibrary(string json) {
+    public static Library? DeserializeLibrary(JsonNode? json) {
         try {
-            return JsonSerializer.Deserialize<Library>(json, Files.PrettierJsonOptions);
+            return json.Deserialize<Library>(Files.PrettierJsonOptions);
         } catch (JsonException ex) {
             LogWrapper.Warn($"依赖库反序列化错误: {ex.Message}");
             return null;
@@ -169,9 +170,9 @@ public static class LibraryDeserializer {
     }
 
     // 反序列化依赖库列表
-    public static List<Library>? DeserializeLibraries(string json) {
+    public static List<Library>? DeserializeLibraries(JsonNode? json) {
         try {
-            return JsonSerializer.Deserialize<List<Library>>(json, Files.PrettierJsonOptions);
+            return json.Deserialize<List<Library>>(Files.PrettierJsonOptions);
         } catch (JsonException ex) {
             LogWrapper.Warn($"依赖库列表反序列化错误: {ex.Message}");
             return null;

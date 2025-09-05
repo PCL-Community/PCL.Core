@@ -17,6 +17,9 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.McInstance;
 
+/// <summary>
+/// 管理实例基础信息
+/// </summary>
 public class McInstance {
     private JsonObject? _versionJson;
     private McInstanceInfo? _versionInfo;
@@ -232,7 +235,7 @@ public class McInstance {
     /// 实例分类
     /// </summary>
     private void RefreshInstanceDisplayType() {
-        var savedDisplayType = (McInstanceCardType) Config.Instance.DisplayType[Path];
+        var savedDisplayType = (McInstanceCardType)Config.Instance.DisplayType[Path];
 
         // 如果不是自动分类，跳过以下分类流程
         if (savedDisplayType != McInstanceCardType.Auto) {
@@ -356,9 +359,9 @@ public class McInstance {
             var mcMinor = _versionInfo.McVersionMinor;
             // 根据 mcMinor 版本号，使用 switch 表达式确定最低 Java 版本
             minVer = mcMinor switch {
-                >= 15 and <= 16 => UpdateMinAndLog(minVer, new Version(1, 8, 0, 0), 
+                >= 15 and <= 16 => UpdateMinAndLog(minVer, new Version(1, 8, 0, 0),
                     "1.15 - 1.16 Fabric requires min Java 8"),
-                >= 18 => UpdateMinAndLog(minVer, new Version(17, 0, 0, 0), 
+                >= 18 => UpdateMinAndLog(minVer, new Version(17, 0, 0, 0),
                     "1.18+ Fabric requires min Java 17"),
                 _ => minVer // 默认情况，不更新
             };
@@ -366,18 +369,18 @@ public class McInstance {
 
         // LabyMod adjustments
         if (_versionInfo.HasPatcher("labymod")) {
-            minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0), 
+            minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0),
                 "LabyMod requires min Java 21");
             maxVer = new Version(999, 999, 999, 999); // Reset max if needed, but already high
         }
 
         // JSON recommended version
-        if (_versionJson is null || 
+        if (_versionJson is null ||
             !_versionJson.TryGetPropertyValue("javaVersion", out var javaVersionNode) ||
             javaVersionNode?.GetValueKind() != JsonValueKind.Object ||
             !javaVersionNode.AsObject().TryGetPropertyValue("majorVersion", out var majorVersionElement) ||
             majorVersionElement?.GetValueKind() != JsonValueKind.Number) {
-    
+
             return (minVer, maxVer);
         }
 
@@ -402,7 +405,7 @@ public class McInstance {
         LogWrapper.Debug("Launch", logMessage);
         return UpdateMin(currentMin, newMin);
     }
-    
+
     private static Version UpdateMaxAndLog(Version currentMax, Version newMax, string logMessage) {
         LogWrapper.Debug("Launch", logMessage);
         return UpdateMax(currentMax, newMax);
@@ -675,8 +678,7 @@ public class McInstance {
             }
 
             // 反序列化libraries字段
-            var librariesJson = librariesNode.ToJsonString();
-            _libraries = LibraryDeserializer.DeserializeLibraries(librariesJson);
+            _libraries = LibraryDeserializer.DeserializeLibraries(librariesNode);
             return _libraries;
         } catch (JsonException ex) {
             Console.WriteLine($"JSON解析或反序列化错误: {ex.Message}");
@@ -701,9 +703,8 @@ public class McInstance {
                 _assetIndex = null;
                 return null;
             }
-
-            var assetIndexJson = assetIndexNode.ToJsonString();
-            _assetIndex = AssetIndexDeserializer.DeserializeAssetIndex(assetIndexJson);
+            
+            _assetIndex = AssetIndexDeserializer.DeserializeAssetIndex(assetIndexNode);
             return _assetIndex;
         } catch (JsonException ex) {
             LogWrapper.Warn(ex, "JSON解析或反序列化错误");
@@ -744,37 +745,4 @@ public class McInstance {
         }
         return _versionJsonInJar;
     }
-}
-
-public enum McInstanceCardType {
-    Auto, // Used only for forcing automatic instance classification
-
-    // PCL 逻辑版本类型
-    Star,
-    Custom,
-    Hidden,
-
-    // Patchers 类型版本
-    Modded,
-    NeoForge,
-    Fabric,
-    Forge,
-    Quilt,
-    LegacyFabric,
-    Cleanroom,
-    LiteLoader,
-
-    Client,
-    OptiFine,
-    LabyMod,
-
-    // 正常 MC 版本类型
-    Release,
-    Snapshot,
-    Fool,
-    Old,
-
-    UnknownPatchers,
-
-    Error
 }

@@ -11,7 +11,7 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.McInstance;
 
-public static class MinecraftInstanceManager {
+public static class McInstanceManager {
     private static McInstance? _mcInstanceCurrent;
     private static object? _mcInstanceLast;
 

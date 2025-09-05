@@ -52,7 +52,7 @@ public static class LaunchEnvironmentManager {
         sourceStream.CopyTo(fileStream);
     }
 
-    private static bool McLaunchNeedsRetroWrapper(McInstance.McInstance mcInstance) {
+    private static bool McLaunchNeedsRetroWrapper(Minecraft.McInstance.McInstance mcInstance) {
         var versionInfo = mcInstance.GetVersionInfo();
         if (versionInfo == null) return false;
 

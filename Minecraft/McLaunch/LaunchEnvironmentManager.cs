@@ -3,7 +3,6 @@ using System.IO;
 using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 
 namespace PCL.Core.Minecraft.McLaunch;
 
@@ -59,7 +58,7 @@ public static class LaunchEnvironmentManager {
 
         var isOldVersion = versionInfo.McVersionMinor < 6 && versionInfo.McVersionMinor != 99;
         var isSpecificVersion = versionInfo.ReleaseTime >= new DateTime(2013, 6, 25) && versionInfo.McVersionMinor == 99;
-        var isRwEnabled = !Setup.Launch.DisableRw && !Setup.Instance.DisableRw[mcInstance.Path];
+        var isRwEnabled = !Config.Launch.DisableRw && !Config.Instance.DisableRw[mcInstance.Path];
 
         return (isOldVersion || isSpecificVersion) && isRwEnabled;
     }

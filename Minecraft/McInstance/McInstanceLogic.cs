@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft.McInstance;
@@ -53,21 +53,15 @@ public static class McInstanceLogic {
             return null;
         }
         
-        if (SetupService.IsUnset(SetupEntries.Instance.IndieV2, instance.Path)) {
+        if (!Config.Instance.IndieV2[instance.Path]) {
             var shouldBeIndie = ShouldBeIndieAsync(instance);
-            SetupService.SetBool(SetupEntries.Instance.IndieV2, shouldBeIndie, instance.Path);
+            Config.Instance.IndieV2[instance.Path] = shouldBeIndie;
         }
-        return SetupService.GetBool(SetupEntries.Instance.IndieV2) ? instance.Path : McFolderManager.PathMcFolder;
+        return Config.Instance.IndieV2[instance.Path] ? instance.Path : McFolderManager.PathMcFolder;
     }
 
     private static bool ShouldBeIndieAsync(McInstance instance) {
         var versionInfo = instance.GetVersionInfo();
-        
-        // 从旧的实例独立设置迁移
-        if (!SetupService.IsUnset(SetupEntries.Instance.IndieV1, instance.Path) && SetupService.GetInt32(SetupEntries.Instance.IndieV1, instance.Path) > 0) {
-            LogWrapper.Info($"[Minecraft] 版本隔离初始化（{instance.Name}）：从旧设置迁移");
-            return SetupService.GetInt32(SetupEntries.Instance.IndieV1, instance.Path) == 1;
-        }
 
         // 若存在 mods 或 saves 文件夹，自动开启隔离
         var modFolder = new DirectoryInfo(instance.Path + "mods\\");
@@ -80,9 +74,9 @@ public static class McInstanceLogic {
 
         var isModded = versionInfo!.IsModded;
         var isRelease = versionInfo.VersionType == McVersionType.Release;
-        LogWrapper.Info($"[Minecraft] 版本隔离初始化({instance.Name}): 全局设置({SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2)})");
+        LogWrapper.Info($"[Minecraft] 版本隔离初始化({instance.Name}): 全局设置({Config.Launch.IndieSolutionV2})");
         
-        return SetupService.GetInt32(SetupEntries.Launch.IndieSolutionV2) switch {
+        return Config.Launch.IndieSolutionV2 switch {
             0 => false,
             1 => versionInfo.HasPatcher("labymod") || isModded,
             2 => !isRelease,
@@ -92,9 +86,9 @@ public static class McInstanceLogic {
     }
     
     public static string DetermineLogo(McInstance instance) {
-        var logo = SetupService.GetString(SetupEntries.Instance.LogoPath, instance.Path);
+        var logo = Config.Instance.LogoPath[instance.Path];
         var versionInfo = instance.GetVersionInfo();
-        if (string.IsNullOrEmpty(logo) || !SetupService.GetBool(SetupEntries.Instance.IsLogoCustom, instance.Path)) {
+        if (string.IsNullOrEmpty(logo) || !Config.Instance.IsLogoCustom[instance.Path]) {
             return versionInfo!.GetLogo();
         }
         return logo;

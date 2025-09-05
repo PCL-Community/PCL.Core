@@ -8,7 +8,6 @@ using PCL.Core.App;
 using PCL.Core.App.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 using PCL.Core.UI;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Codecs;
@@ -38,7 +37,7 @@ public class McFolderManager {
 
             #region Load Custom Folders
 
-            foreach (var folder in Setup.Launch.Folders.Split('|', StringSplitOptions.RemoveEmptyEntries)) {
+            foreach (var folder in Config.Launch.Folders.Split('|', StringSplitOptions.RemoveEmptyEntries)) {
                 if (!folder.Contains('>') || !folder.EndsWith('\\')) {
                     HintWrapper.Show($"无效的 Minecraft 文件夹：{folder}", HintTheme.Error);
                     continue;
@@ -113,7 +112,7 @@ public class McFolderManager {
                 newSetup.Add("");
             }
 
-            Setup.Launch.Folders = string.Join("|", newSetup);
+            Config.Launch.Folders = string.Join("|", newSetup);
 
             #endregion
 
@@ -130,7 +129,7 @@ public class McFolderManager {
             }
 
             // Simulate debug delay if enabled
-            if (Setup.System.Debug.AddRandomDelay) {
+            if (Config.System.Debug.AddRandomDelay) {
                 await Task.Delay(RandomUtils.NextInt(200, 2000));
             }
 

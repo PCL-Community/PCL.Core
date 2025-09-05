@@ -13,7 +13,6 @@ using PCL.Core.Logging;
 using PCL.Core.Minecraft.McFolder;
 using PCL.Core.Minecraft.McInstance.Resources;
 using PCL.Core.Minecraft.McLaunch;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.McInstance;
@@ -233,7 +232,7 @@ public class McInstance {
     /// 实例分类
     /// </summary>
     private void RefreshInstanceDisplayType() {
-        var savedDisplayType = (McInstanceCardType)SetupService.GetInt32(SetupEntries.Instance.DisplayType, Path);
+        var savedDisplayType = (McInstanceCardType) Config.Instance.DisplayType[Path];
 
         // 如果不是自动分类，跳过以下分类流程
         if (savedDisplayType != McInstanceCardType.Auto) {
@@ -650,14 +649,14 @@ public class McInstance {
 
     private void SetDescriptiveInfo() {
         // 确定实例描述和状态
-        Desc = string.IsNullOrEmpty(SetupService.GetString(SetupEntries.Instance.CustomInfo, Path))
+        Desc = string.IsNullOrEmpty(Config.Instance.CustomInfo[Path])
             ? McInstanceLogic.GetDefaultDescription(this)
-            : SetupService.GetString(SetupEntries.Instance.CustomInfo, Path);
-        IsFavorited = SetupService.GetBool(SetupEntries.Instance.Starred, Path);
+            : Config.Instance.CustomInfo[Path];
+        IsFavorited = Config.Instance.Starred[Path];
 
         // 写入缓存
-        SetupService.SetString(SetupEntries.Instance.Info, Desc, Path);
-        SetupService.SetString(SetupEntries.Instance.LogoPath, Logo!, Path);
+        Config.Instance.Info[Path] = Desc;
+        Config.Instance.LogoPath[Path] = Logo!;
     }
 
     #endregion

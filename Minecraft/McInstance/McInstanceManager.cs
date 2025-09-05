@@ -4,9 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.McInstance;
 
@@ -50,7 +51,7 @@ public static class MinecraftInstanceManager {
 
             SelectInstanceAsync();
 
-            if (Setup.System.Debug.AddRandomDelay) {
+            if (Config.System.Debug.AddRandomDelay) {
                 await Task.Delay(Random.Shared.Next(200, 3000), cancelToken);
             }
         } catch (OperationCanceledException) {
@@ -67,7 +68,7 @@ public static class MinecraftInstanceManager {
     }
 
     private static void SelectInstanceAsync() {
-        var savedSelection = Setup.Launch.SelectedInstance;
+        var savedSelection = Config.Launch.SelectedInstance;
 
         if (McInstanceList.Any(kvp => kvp.GetInstanceDisplayType() != McInstanceCardType.Error)) {
             var selectedInstance = McInstanceList
@@ -82,7 +83,7 @@ public static class MinecraftInstanceManager {
 
                 if (selectedInstance != null) {
                     McInstanceCurrent = selectedInstance;
-                    Setup.Launch.SelectedInstance = McInstanceCurrent.Name;
+                    Config.Launch.SelectedInstance = McInstanceCurrent.Name;
                     LogWrapper.Warn($"自动选择 Minecraft 实例：{McInstanceCurrent.Path}");
                 } else {
                     McInstanceCurrent = null;
@@ -91,8 +92,8 @@ public static class MinecraftInstanceManager {
             }
         } else {
             McInstanceCurrent = null;
-            if (savedSelection != null) {
-                Setup.Launch.SelectedInstance = null;
+            if (savedSelection.IsNullOrEmpty()) {
+                Config.Launch.SelectedInstance = string.Empty;
                 LogWrapper.Warn("清除失效的 Minecraft 实例选择");
             }
             LogWrapper.Warn("未找到可用的 Minecraft 实例");
@@ -100,7 +101,7 @@ public static class MinecraftInstanceManager {
     }
 
     private static void SortInstance() {
-        var groupedInstances = Setup.Ui.DetailedInstanceClassification
+        var groupedInstances = Config.Ui.DetailedInstanceClassification
             ? GroupAndSortWithDetailedClassification()
             : GroupAndSortWithoutDetailedClassification();
 

@@ -1,4 +1,4 @@
-﻿using PCL.Core.ProgramSetup;
+﻿using PCL.Core.App;
 using PCL.Core.Utils;
 
 namespace PCL.Core.UI.Controls;
@@ -173,7 +173,7 @@ public partial class MotdRenderer {
         _obfuscatedTextBlocks.Clear();
 
         var colorMap = isWhiteBackground ? _colorMapWithWhiteBackground : _colorMapWithBlackBackground;
-        var font = Setup.Ui.Font;
+        var font = Config.Ui.Font; // Assuming Setup is a static class accessible in the project
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
             : font);
@@ -310,14 +310,16 @@ public partial class MotdRenderer {
             switch (lines.Length) {
                 case 1:
                     var offsetY = (canvasHeight - lineHeight) / 2;
-                    foreach (var textBlock in textBlocks) {
+                    foreach (var textBlock in textBlocks)
+                    {
                         Canvas.SetTop(textBlock, offsetY);
                     }
                     break;
 
                 case 2 when lineIndex == 0:
                     offsetY = (canvasHeight - lineHeight * 2) / 2;
-                    foreach (var textBlock in textBlocks) {
+                    foreach (var textBlock in textBlocks)
+                    {
                         Canvas.SetTop(textBlock, offsetY);
                     }
                     y = lineHeight + offsetY;
@@ -360,7 +362,8 @@ public partial class MotdRenderer {
         return textBlock;
     }
 
-    private static FormattedText _CreateFormattedText(string text, FontFamily fontFamily, double fontSize, bool isBold, bool isItalic) {
+    private static FormattedText _CreateFormattedText(string text, FontFamily fontFamily, double fontSize, bool isBold, bool isItalic)
+    {
         return new FormattedText(
             text,
             System.Globalization.CultureInfo.InvariantCulture,
@@ -395,7 +398,7 @@ public partial class MotdRenderer {
             (int)MotdCanvas.Width, (int)MotdCanvas.Height, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(MotdCanvas);
     }
-
+    
     public void ClearCanvas() {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();

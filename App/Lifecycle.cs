@@ -308,7 +308,7 @@ public sealed class Lifecycle : ILifecycleService
 
     private static void _FatalExit()
     {
-        _Exit(-1);
+        ForceShutdown(-1);
     }
 
     private static void _KillCurrentProcess()

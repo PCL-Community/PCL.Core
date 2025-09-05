@@ -42,8 +42,9 @@ public class EncryptedFileTrafficCenter(TrafficCenter source) : SyncTrafficCente
             var output = EncryptHelper.SecretDecrypt(eInner.Output);
             // 反序列化
             TOutput? result;
-            if (e.Output is string) result = (TOutput)(object)output;
-            else if (e.Output is bool) result = (TOutput)(object)(output.ToLowerInvariant() is "true" or "1");
+            var type = typeof(TOutput);
+            if (type == typeof(string)) result = (TOutput)(object)output;
+            else if (type == typeof(bool)) result = (TOutput)(object)(output.ToLowerInvariant() is "true" or "1");
             else result = JsonSerializer.Deserialize<TOutput>(output, _SerializerOptions);
             e.SetOutput(result);
         }

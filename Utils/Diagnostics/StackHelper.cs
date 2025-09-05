@@ -33,7 +33,6 @@ public static class StackHelper
     // 获取前 maxFrames 层调用栈，返回格式化后的每一帧字符串
     // needFileInfo=true 时会解析 PDB 以拿到文件名与行号（昂贵）
     [MethodImpl(MethodImplOptions.NoInlining)]
-    [StackTraceHidden]
     public static IReadOnlyList<string> GetStack(
         int maxFrames = 10,
         bool includeNamespace = true,
@@ -42,7 +41,7 @@ public static class StackHelper
     {
         if (maxFrames <= 0) return [];
 
-        var st = new StackTrace(skipFrames: 0, fNeedFileInfo: needFileInfo);
+        var st = new StackTrace(skipFrames: 1, fNeedFileInfo: needFileInfo);
         var list = new List<string>(capacity: Math.Min(maxFrames, st.FrameCount));
 
         for (int i = 0, added = 0; i < st.FrameCount && added < maxFrames; i++)
@@ -117,7 +116,7 @@ public static class StackHelper
             for (var i = 0; i < args.Length; i++)
             {
                 if (i > 0) sb.Append(", ");
-                sb.Append(_FormatTypeName(args[i], includeNamespace));
+                sb.Append(_FormatTypeName(args[i], false));
             }
             sb.Append(']');
         }
@@ -156,7 +155,7 @@ public static class StackHelper
             for (var i = 0; i < args.Length; i++)
             {
                 if (i > 0) sb.Append(", ");
-                sb.Append(_FormatTypeName(args[i], includeNamespace));
+                sb.Append(_FormatTypeName(args[i], false));
             }
             sb.Append(']');
             return sb.ToString();

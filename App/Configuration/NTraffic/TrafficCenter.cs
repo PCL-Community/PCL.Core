@@ -50,28 +50,52 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     /// </summary>
     public void Request<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)
     {
-        OnTraffic(e, ev =>
+        try
         {
-            PreviewTraffic?.Invoke(ev);
-            Traffic?.Invoke(ev);
-        });
+            OnTraffic(e, ev =>
+            {
+                PreviewTraffic?.Invoke(ev);
+                Traffic?.Invoke(ev);
+            });
+        }
+        catch (Exception ex)
+        {
+            var msg = $"NTraffic Error Report\n" +
+                $"A exception was thrown while processing a request.\n\n" +
+                $"[Diagnostics Info]\n{_GenerateDiagnosticsInfo(e, true)}\n\n" +
+                $"[Exception Details]\n{ex}";
+            LogWrapper.Fatal(msg);
+            Lifecycle.ForceShutdown(-2);
+        }
 #if DEBUG
         if (_EnableTrace)
         {
-            var eventArgsName = e.ToString()?.Replace("PCL.Core.App.Configuration.NTraffic.", "");
-            var context = JsonSerializer.Serialize(e.Context, _SerializerOptions);
-            var input = JsonSerializer.Serialize(e.Input, _SerializerOptions);
-            var output = JsonSerializer.Serialize(e.Output, _SerializerOptions);
-            var caller = StackHelper.GetDirectCallerName(includeParameters: true);
-            var msg = $"Traffic request: {e.Access}@{GetHashCode()}\n" +
-                $"|- {eventArgsName}\n" +
-                $"|- Context: {context}\n" +
-                $"|- Input: {input} (HasInput: {e.HasInput})\n" +
-                $"|- Output: {output} (HasOutput: {e.HasOutput}, IsInitialOutput: {e.IsInitialOutput})\n" +
-                $"|- Caller: {caller}";
-            LogWrapper.Trace(LogModule, msg);
+            LogWrapper.Trace(LogModule, _GenerateDiagnosticsInfo(e));
         }
 #endif
+    }
+
+    private string _GenerateDiagnosticsInfo<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e, bool appendCallStack = false)
+    {
+#if TRACE
+        const bool needFileInfo = true;
+#else
+        const bool needFileInfo = false;
+#endif
+        var eventArgsName = e.ToString()?.Replace("PCL.Core.App.Configuration.NTraffic.", "");
+        var context = JsonSerializer.Serialize(e.Context, _SerializerOptions);
+        var input = JsonSerializer.Serialize(e.Input, _SerializerOptions);
+        var output = JsonSerializer.Serialize(e.Output, _SerializerOptions);
+        var caller = appendCallStack
+            ? "Stack:\n|=> " + string.Join("\n|=> ", StackHelper.GetStack(includeParameters: true, needFileInfo: needFileInfo).Skip(1))
+            : "Caller: " + StackHelper.GetDirectCallerName(includeParameters: true, skipAppFrames: 1);
+        var msg = $"Traffic request: {e.Access} {GetType().Name}@{GetHashCode()}\n" +
+            $"|- {eventArgsName}\n" +
+            $"|- Context: {context}\n" +
+            $"|- Input: {input} (HasInput: {e.HasInput})\n" +
+            $"|- Output: {output} (HasOutput: {e.HasOutput}, IsInitialOutput: {e.IsInitialOutput})\n" +
+            $"|- {caller}";
+        return msg;
     }
 
     /// <summary>

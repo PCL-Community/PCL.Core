@@ -2,6 +2,7 @@
 
 namespace PCL.Core.App;
 
+// ReSharper disable InconsistentNaming
 public static partial class Config
 {
     [ConfigGroup("Identify")] partial class IdentifyConfigGroup
@@ -28,14 +29,14 @@ public static partial class Config
         [ConfigItem<bool>("HintExportConfig", false)] public partial bool ExportConfig { get; set; }
         [ConfigItem<bool>("HintMaxLog", false)] public partial bool MaxGameLog { get; set; }
         [ConfigItem<bool>("HintDisableGamePathCheckTip", false)] public partial bool NonAsciiGamePath { get; set; }
-        [ConfigItem<bool>("UiLauncherCEHint", false)] public partial bool CommunityEdition { get; set; }
-        [ConfigItem<int>("UiLauncherCEHintCount", 0)] public partial int CommunityEditionCount { get; set; }
+        [ConfigItem<bool>("UiLauncherCEHint", false)] public partial bool CEMessage { get; set; }
+        [ConfigItem<int>("UiLauncherCEHintCount", 0)] public partial int CEMessageCount { get; set; }
         [ConfigItem<bool>("UiSchematicFirstTimeHintShown", false)] public partial bool SchematicFirstTime { get; set; }
     }
 
     [ConfigGroup("System")] partial class SystemConfigGroup
     {
-        [ConfigItem<bool>("SystemEula", false)] public partial bool Eula { get; set; }
+        [ConfigItem<bool>("SystemEula", false)] public partial bool LauncherEula { get; set; }
         [ConfigItem<int>("SystemCount", 0, ConfigSource.SharedEncrypt)] public partial int StartupCount { get; set; }
         [ConfigItem<int>("SystemLaunchCount", 0, ConfigSource.SharedEncrypt)] public partial int LaunchCount { get; set; }
         [ConfigItem<int>("SystemLastVersionReg", 0, ConfigSource.SharedEncrypt)] public partial int LastVersion { get; set; }
@@ -49,10 +50,6 @@ public static partial class Config
         [ConfigItem<int>("SystemSystemUpdateBranch", 0, ConfigSource.Local)] public partial int UpdateBranch { get; set; }
         [ConfigItem<int>("SystemSystemActivity", 0, ConfigSource.Local)] public partial int AnnounceSolution { get; set; }
         [ConfigItem<string>("SystemSystemAnnouncement", "", ConfigSource.Local)] public partial string ShowedAnnouncements { get; set; }
-        [ConfigItem<string>("SystemHttpProxy", "", ConfigSource.SharedEncrypt)] public partial string HttpProxy { get; set; }
-        [ConfigItem<int>("SystemHttpProxyType", 1)] public partial int HttpProxyType { get; set; }
-        [ConfigItem<string>("SystemHttpProxyCustomUsername", "")] public partial string HttpProxyCustomUsername { get; set; }
-        [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string HttpProxyCustomPassword { get; set; }
         [ConfigItem<bool>("SystemDisableHardwareAcceleration", false)] public partial bool DisableHardwareAcceleration { get; set; }
         [ConfigItem<bool>("SystemTelemetry", false)] public partial bool Telemetry { get; set; }
         [ConfigItem<string>("SystemMirrorChyanKey", "", ConfigSource.SharedEncrypt)] public partial string MirrorChyanKey { get; set; }
@@ -61,6 +58,14 @@ public static partial class Config
         [ConfigItem<string>("LoginLegacyName", "", ConfigSource.SharedEncrypt)] public partial string LoginLegacyName { get; set; }
         [ConfigItem<string>("LoginMsJson", "{}", ConfigSource.SharedEncrypt)] public partial string LoginMsJson { get; set; }
         [ConfigItem<int>("LoginMsAuthType", 1)] public partial int LoginMsAuthType { get; set; }
+
+        [ConfigGroup("HttpProxy")] partial class HttpProxyConfigGroup
+        {
+            [ConfigItem<string>("SystemHttpProxy", "", ConfigSource.SharedEncrypt)] public partial string IsEnabled { get; set; }
+            [ConfigItem<int>("SystemHttpProxyType", 1)] public partial int Type { get; set; }
+            [ConfigItem<string>("SystemHttpProxyCustomUsername", "")] public partial string CustomUsername { get; set; }
+            [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string CustomPassword { get; set; }
+        }
 
         [ConfigGroup("Debug")] partial class DebugConfigGroup
         {
@@ -88,7 +93,7 @@ public static partial class Config
 
     [ConfigGroup("Link")] partial class LinkConfigGroup
     {
-        [ConfigItem<bool>("LinkEula", false)] public partial bool EulaAgreed { get; set; }
+        [ConfigItem<bool>("LinkEula", false)] public partial bool LinkEula { get; set; }
         [ConfigItem<string>("LinkUsername", "")] public partial string Username { get; set; }
         [ConfigItem<string>("LinkAnnounceCache", "", ConfigSource.SharedEncrypt)] public partial string AnnounceCache { get; set; }
         [ConfigItem<int>("LinkAnnounceCacheVer", 0)] public partial int AnnounceCacheVer { get; set; }
@@ -109,12 +114,12 @@ public static partial class Config
 
         [ConfigGroup("Download")] partial class DownloadConfigGroup
         {
-            [ConfigItem<int>("ToolDownloadThread", 63)] public partial int ThreadCount { get; set; }
+            [ConfigItem<int>("ToolDownloadThread", 63)] public partial int ThreadLimit { get; set; }
             [ConfigItem<int>("ToolDownloadSpeed", 42)] public partial int SpeedLimit { get; set; }
             [ConfigItem<int>("ToolDownloadSource", 1)] public partial int FileSourceSolution { get; set; }
             [ConfigItem<int>("ToolDownloadVersion", 1)] public partial int VersionSourceSolution { get; set; }
-            [ConfigItem<int>("ToolDownloadTranslate", 0)] public partial int CompNameFormatV1 { get; set; }
-            [ConfigItem<int>("ToolDownloadTranslateV2", 1)] public partial int CompNameFormatV2 { get; set; }
+            [ConfigItem<int>("ToolDownloadTranslate", 0)] public partial int NameFormatV1 { get; set; }
+            [ConfigItem<int>("ToolDownloadTranslateV2", 1)] public partial int NameFormatV2 { get; set; }
             [ConfigItem<bool>("ToolDownloadIgnoreQuilt", false)] public partial bool UiIgnoreQuilt { get; set; }
             [ConfigItem<bool>("ToolDownloadClipboard", false)] public partial bool ListenClipboard { get; set; }
             [ConfigItem<int>("ToolDownloadMod", 1)] public partial int CompSourceSolution { get; set; }
@@ -132,34 +137,51 @@ public static partial class Config
         }
     }
 
-    [ConfigGroup("Ui")] partial class UiConfigGroup
+    [ConfigGroup("UI")] partial class UiConfigGroup
     {
-        [ConfigItem<int>("WindowHeight", 550, ConfigSource.Local)] public partial int WindowHeight { get; set; }
-        [ConfigItem<int>("WindowWidth", 900, ConfigSource.Local)] public partial int WindowWidth { get; set; }
-        [ConfigItem<int>("UiLauncherTransparent", 600, ConfigSource.Local)] public partial int WindowOpacity { get; set; }
-        [ConfigItem<int>("UiLauncherHue", 180, ConfigSource.Local)] public partial int WindowHue { get; set; }
-        [ConfigItem<int>("UiLauncherSat", 80, ConfigSource.Local)] public partial int WindowSat { get; set; }
-        [ConfigItem<int>("UiLauncherDelta", 90, ConfigSource.Local)] public partial int WindowDelta { get; set; }
-        [ConfigItem<int>("UiLauncherLight", 20, ConfigSource.Local)] public partial int WindowLight { get; set; }
-        [ConfigItem<int>("UiLauncherTheme", 0, ConfigSource.Local)] public partial int ThemeSelected { get; set; }
-        [ConfigItem<string>("UiLauncherThemeGold", "")] public partial string ThemeGoldCode { get; set; }
-        [ConfigItem<string>("UiLauncherThemeHide", "0|1|2|3|4")] public partial string ThemeHiddenV1 { get; set; }
-        [ConfigItem<string>("UiLauncherThemeHide2", "0|1|2|3|4")] public partial string ThemeHiddenV2 { get; set; }
+        [ConfigItem<double>("WindowHeight", 550, ConfigSource.Local)] public partial double WindowHeight { get; set; }
+        [ConfigItem<double>("WindowWidth", 900, ConfigSource.Local)] public partial double WindowWidth { get; set; }
         [ConfigItem<bool>("UiLauncherLogo", true, ConfigSource.Local)] public partial bool ShowStartupLogo { get; set; }
-        [ConfigItem<bool>("UiBlur", false, ConfigSource.Local)] public partial bool AdvancedBlur { get; set; }
-        [ConfigItem<int>("UiBlurValue", 16, ConfigSource.Local)] public partial int AdvancedBlurValue { get; set; }
-        [ConfigItem<int>("UiBlurSamplingRate", 70, ConfigSource.Local)] public partial int AdvancedBlurSamplingRate { get; set; }
-        [ConfigItem<int>("UiBlurType", 0, ConfigSource.Local)] public partial int AdvancedBlurType { get; set; }
-        [ConfigItem<bool>("UiBackgroundColorful", true, ConfigSource.Local)] public partial bool BackgroundColorful { get; set; }
-        [ConfigItem<int>("UiBackgroundOpacity", 1000, ConfigSource.Local)] public partial int WallpaperOpacity { get; set; }
-        [ConfigItem<int>("UiBackgroundBlur", 0, ConfigSource.Local)] public partial int WallpaperBlurRadius { get; set; }
-        [ConfigItem<int>("UiBackgroundSuit", 0, ConfigSource.Local)] public partial int WallpaperSuitMode { get; set; }
-        [ConfigItem<int>("UiCustomType", 0, ConfigSource.Local)] public partial int HomepageType { get; set; }
-        [ConfigItem<int>("UiCustomPreset", 0, ConfigSource.Local)] public partial int HomepageSelectedPreset { get; set; }
-        [ConfigItem<string>("UiCustomNet", "", ConfigSource.Local)] public partial string HomepageCustomUrl { get; set; }
-        [ConfigItem<int>("UiDarkMode", 2)] public partial int DarkModeSolution { get; set; }
-        [ConfigItem<int>("UiDarkColor", 1)] public partial int DarkColor { get; set; }
-        [ConfigItem<int>("UiLightColor", 1)] public partial int LightColor { get; set; }
+
+        [ConfigGroup("Theme")] partial class ThemeConfigGroup
+        {
+            [ConfigItem<int>("UiDarkMode", 2)] public partial int ColorMode { get; set; }
+            [ConfigItem<int>("UiDarkColor", 1)] public partial int DarkColor { get; set; }
+            [ConfigItem<int>("UiLightColor", 1)] public partial int LightColor { get; set; }
+            [ConfigItem<int>("UiLauncherTransparent", 600, ConfigSource.Local)] public partial int WindowOpacity { get; set; }
+            [ConfigItem<int>("UiLauncherHue", 180, ConfigSource.Local)] public partial int WindowHue { get; set; }
+            [ConfigItem<int>("UiLauncherSat", 80, ConfigSource.Local)] public partial int WindowSat { get; set; }
+            [ConfigItem<int>("UiLauncherDelta", 90, ConfigSource.Local)] public partial int WindowDelta { get; set; }
+            [ConfigItem<int>("UiLauncherLight", 20, ConfigSource.Local)] public partial int WindowLight { get; set; }
+            [ConfigItem<int>("UiLauncherTheme", 0, ConfigSource.Local)] public partial int ThemeSelected { get; set; }
+            [ConfigItem<string>("UiLauncherThemeGold", "")] public partial string ThemeGoldCode { get; set; }
+            [ConfigItem<string>("UiLauncherThemeHide", "0|1|2|3|4")] public partial string ThemeHiddenV1 { get; set; }
+            [ConfigItem<string>("UiLauncherThemeHide2", "0|1|2|3|4")] public partial string ThemeHiddenV2 { get; set; }
+        }
+
+        [ConfigGroup("Background")] partial class BackgroundConfigGroup
+        {
+            [ConfigItem<bool>("UiBackgroundColorful", true, ConfigSource.Local)] public partial bool BackgroundColorful { get; set; }
+            [ConfigItem<int>("UiBackgroundOpacity", 1000, ConfigSource.Local)] public partial int WallpaperOpacity { get; set; }
+            [ConfigItem<int>("UiBackgroundBlur", 0, ConfigSource.Local)] public partial int WallpaperBlurRadius { get; set; }
+            [ConfigItem<int>("UiBackgroundSuit", 0, ConfigSource.Local)] public partial int WallpaperSuitMode { get; set; }
+        }
+
+        [ConfigGroup("Blur")] partial class BlurConfigGroup
+        {
+            [ConfigItem<bool>("UiBlur", false, ConfigSource.Local)] public partial bool IsEnabled { get; set; }
+            [ConfigItem<int>("UiBlurValue", 16, ConfigSource.Local)] public partial int Radius { get; set; }
+            [ConfigItem<int>("UiBlurSamplingRate", 70, ConfigSource.Local)] public partial int SamplingRate { get; set; }
+            [ConfigItem<int>("UiBlurType", 0, ConfigSource.Local)] public partial int KernelType { get; set; }
+        }
+
+        [ConfigGroup("Homepage")] partial class HomepageConfigGroup
+        {
+            [ConfigItem<int>("UiCustomType", 0, ConfigSource.Local)] public partial int Type { get; set; }
+            [ConfigItem<int>("UiCustomPreset", 0, ConfigSource.Local)] public partial int SelectedPreset { get; set; }
+            [ConfigItem<string>("UiCustomNet", "", ConfigSource.Local)] public partial string CustomUrl { get; set; }
+        }
+
         [ConfigItem<bool>("UiLockWindowSize", false)] public partial bool LockWindowSize { get; set; }
         [ConfigItem<int>("UiLogoType", 1, ConfigSource.Local)] public partial int LogoSolution { get; set; }
         [ConfigItem<string>("UiLogoText", "", ConfigSource.Local)] public partial string LogoCustomText { get; set; }
@@ -174,9 +196,9 @@ public static partial class Config
             [ConfigItem<int>("UiMusicVolume", 500, ConfigSource.Local)] public partial int Volume { get; set; }
             [ConfigItem<bool>("UiMusicStop", false, ConfigSource.Local)] public partial bool StopInGame { get; set; }
             [ConfigItem<bool>("UiMusicStart", false, ConfigSource.Local)] public partial bool StartInGame { get; set; }
-            [ConfigItem<bool>("UiMusicRandom", true, ConfigSource.Local)] public partial bool ShufflePlayback { get; set; }
-            [ConfigItem<bool>("UiMusicSMTC", true, ConfigSource.Local)] public partial bool SmtcEnabled { get; set; }
             [ConfigItem<bool>("UiMusicAuto", true, ConfigSource.Local)] public partial bool StartOnStartup { get; set; }
+            [ConfigItem<bool>("UiMusicRandom", true, ConfigSource.Local)] public partial bool ShufflePlayback { get; set; }
+            [ConfigItem<bool>("UiMusicSMTC", true, ConfigSource.Local)] public partial bool EnableSMTC { get; set; }
         }
 
         [ConfigGroup("Hide")] partial class HideConfigGroup

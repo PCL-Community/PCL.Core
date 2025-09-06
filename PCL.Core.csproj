@@ -46,6 +46,7 @@
     <ItemGroup>
         <PackageReference Include="fNbt" Version="1.0.0" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="Stun.Net" Version="8.0.2" />
         <PackageReference Include="System.Management" Version="9.0.8" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
         <PackageReference Include="Polly" Version="8.6.3" />

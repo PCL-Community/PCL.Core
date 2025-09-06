@@ -36,9 +36,9 @@ public static class NatayarkProfileManager
 
     private static bool _isGettingData = false;
     public static void GetNaidData(string token, bool isRefresh = false, bool isRetry = false)
-        => Task.Run(() => GetNaidDataSync(token, isRefresh, isRetry));
+        => Task.Run(() => GetNaidDataAsync(token, isRefresh, isRetry));
 
-    public static async Task GetNaidDataSync(string token, bool isRefresh = false, bool isRetry = false)
+    public static async Task GetNaidDataAsync(string token, bool isRefresh = false, bool isRetry = false)
     {
         if (_isGettingData) throw new InvalidOperationException("请勿重复操作");
         _isGettingData = true;
@@ -103,7 +103,7 @@ public static class NatayarkProfileManager
                 if(ex.Message.Contains("invalid access token"))
                 {
                     WarnLog("Naid Access Token 无效，尝试刷新登录");
-                    await GetNaidDataSync(Config.Link.NaidRefreshToken, true, true);
+                    await GetNaidDataAsync(Config.Link.NaidRefreshToken, true, true);
                 }
                 else if (ex.Message.Contains("invalid_grant"))
                 {

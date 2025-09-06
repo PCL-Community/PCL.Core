@@ -8,7 +8,7 @@ namespace PCL.Core.Minecraft.Yggdrasil;
 
 public static class ApiLocation
 {
-    public static async Task<string> TryRequest(string address)
+    public static async Task<string> TryRequestAsync(string address)
     {
         var originAddr = address.StartsWith("http") ? address : $"https://{address}";
         var originUri = new Uri(originAddr);

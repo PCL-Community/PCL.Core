@@ -31,7 +31,7 @@ public class JavaManager
     /// 扫描 Java 会对当前已有的结果进行选择性保留
     /// </summary>
     /// <returns></returns>
-    public async Task ScanJava()
+    public async Task ScanJavaAsync()
     {
         if (_scanTask == null || _scanTask.IsCompleted)
             _scanTask = Task.Run(async () =>
@@ -118,7 +118,7 @@ public class JavaManager
     public async Task<List<JavaInfo>> SelectSuitableJava(Version minVersion, Version maxVersion)
     {
         if (_javas.Count == 0)
-            await ScanJava();
+            await ScanJavaAsync();
         var minMajorVersion = minVersion.Major == 1 ? minVersion.Minor : minVersion.Major;
         var maxMajorVersion = maxVersion.Major == 1 ? maxVersion.Minor : maxVersion.Major;
         return (from j in _javas

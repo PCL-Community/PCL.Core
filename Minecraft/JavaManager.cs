@@ -9,7 +9,6 @@ using Microsoft.Win32;
 using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance;
-using PCL.Core.UI;
 
 namespace PCL.Core.Minecraft;
 

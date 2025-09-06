@@ -108,7 +108,7 @@ public static class McInstanceManager {
     }
 
     private static void SortInstance() {
-        var groupedInstances = Config.Ui.DetailedInstanceClassification
+        var groupedInstances = Config.UI.DetailedInstanceClassification
             ? GroupAndSortWithDetailedClassification()
             : GroupAndSortWithoutDetailedClassification();
 

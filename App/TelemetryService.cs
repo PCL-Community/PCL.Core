@@ -49,7 +49,7 @@ public class TelemetryService : GeneralService
     {
         if (!Config.System.Telemetry) return;
         var telemetryKey = EnvironmentInterop.GetSecret("TELEMETRY_KEY");
-        //if (string.IsNullOrWhiteSpace(telemetryKey)) return;
+        if (string.IsNullOrWhiteSpace(telemetryKey)) return;
         var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var natTest = new StunClient5389UDP(new IPEndPoint(Dns.GetHostAddresses("stun.miwifi.com").First(), 3478),
             new IPEndPoint(IPAddress.Any, 0));

@@ -40,7 +40,8 @@ public static class LobbyInfoProvider
     {
         // ReSharper disable once InconsistentNaming
         PCLCE,
-        Terracotta
+        Terracotta,
+        Scaffolding
     }
 
     /// <summary>

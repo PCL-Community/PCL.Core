@@ -94,5 +94,6 @@ public class TelemetryService : GeneralService
             LogWrapper.Info("Telemetry", "已发送调查数据");
         else
             LogWrapper.Error("Telemetry", "调查数据发送失败，请检查网络连接以及使用的版本");
+        Context.DeclareStopped();
     }
 }

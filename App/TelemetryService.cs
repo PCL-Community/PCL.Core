@@ -49,15 +49,11 @@ public class TelemetryService : GeneralService
     {
         if (!Config.System.Telemetry) return;
         var telemetryKey = EnvironmentInterop.GetSecret("TELEMETRY_KEY");
-        if (string.IsNullOrWhiteSpace(telemetryKey)) return;
+        //if (string.IsNullOrWhiteSpace(telemetryKey)) return;
         var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var natTest = new StunClient5389UDP(new IPEndPoint(Dns.GetHostAddresses("stun.miwifi.com").First(), 3478),
             new IPEndPoint(IPAddress.Any, 0));
-        natTest.MappingBehaviorTestAsync().GetAwaiter().GetResult();
-        var natMapBehavior = natTest.State.MappingBehavior;
-        Task.Delay(1_000).GetAwaiter().GetResult();
-        natTest.FilteringBehaviorTestAsync().GetAwaiter().GetResult();
-        var natFilterBehavior = natTest.State.FilteringBehavior;
+        natTest.QueryAsync().GetAwaiter().GetResult();
         var telemetry = new TelemetryData
         {
             Tag = "Telemetry",
@@ -78,8 +74,8 @@ public class TelemetryService : GeneralService
             UsedHmcl = Directory.Exists(Path.Combine(appDataFolder, ".hmcl")),
             UsedBakaXl = Directory.Exists(Path.Combine(appDataFolder, "BakaXL")),
             Memory = KernelInterop.GetPhysicalMemoryBytes().Total,
-            NatMapBehaviour = natMapBehavior.ToString(),
-            NatFilterBehaviour = natFilterBehavior.ToString(),
+            NatMapBehaviour = natTest.State.MappingBehavior.ToString(),
+            NatFilterBehaviour = natTest.State.FilteringBehavior.ToString(),
             Ipv6Status = NetworkInterfaceUtils.GetIPv6Status().ToString()
         };
         var sendData = JsonSerializer.Serialize(telemetry);

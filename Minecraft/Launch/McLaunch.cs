@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.App.Tasks;
 using PCL.Core.Minecraft.Launch.Services;
-using PCL.Core.Minecraft.Launch.Services.Java;
 using PCL.Core.Minecraft.Launch.State;
 
 namespace PCL.Core.Minecraft.Launch;
@@ -14,7 +13,8 @@ public static class McLaunch {
 
         try {
             Delegate[] pipelineSteps = [
-                new Func<TaskBase<object>, object, object>((_, _) => PreCheckService.Validate(launchCts))
+                new Func<TaskBase<object>, object, object>((_, _) => PreCheckService.Validate(launchCts)),
+                new Func<TaskBase<object>, object, Task<JavaInfo>>(async (_, _) => await JavaSelectService.SelectBestJavaAsync()),
             ];
 
             PipelineTask<string> mcLaunchTask = new("实例启动", pipelineSteps, launchCts.Token);

@@ -3,25 +3,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using PCL.Core.App.Tasks;
 using PCL.Core.Minecraft.Instance;
+using PCL.Core.Minecraft.Launch.State;
 using PCL.Core.UI;
 
-namespace PCL.Core.Minecraft.Launch.Services.Java;
+namespace PCL.Core.Minecraft.Launch.Services;
 
 /// <summary>
 /// Java版本选择器
 /// </summary>
-public static class JavaSelector {
+public static class JavaSelectService {
     /// <summary>
     /// 根据版本要求选择最佳Java
     /// </summary>
-    public static async Task<string> SelectBestJavaAsync(string arguments) {
+    public static async Task<JavaInfo> SelectBestJavaAsync() {
         var (minVer, maxVer) = await McInstanceManager.Current!.GetCompatibleJavaVersionRange();
         var javaManager = JavaService.JavaManager;
         var javaInfos = await javaManager.SelectSuitableJava(minVer, maxVer);
         var javaInfo = javaInfos.FirstOrDefault();
         if (javaInfo != null) {
             McLaunchUtils.Log($"选择的 Java：{javaInfo}");
-            return arguments;
+            return javaInfo;
         }
         
         McLaunchUtils.Log("无合适的 Java，需要确认是否自动下载");
@@ -100,7 +101,7 @@ public static class JavaSelector {
             }
             */
         }
-        return arguments;
+        return javaInfo!;
     }
     
     private static bool JavaDownloadConfirm(string javaCode, bool forcedManualDownload = false) {
@@ -113,18 +114,5 @@ public static class JavaSelector {
         return MsgBoxWrapper.Show($"PCL 未找到 {javaCode}，是否需要 PCL 自动下载？\n" +
                         $"如果你已经安装了 {javaCode}，可以在 设置 → 启动选项 → 游戏 Java 中手动导入。",
             "自动下载 Java？", buttons: ["自动下载", "取消"]) == 1;
-    }
-}
-
-/// <summary>
-/// Java版本要求
-/// </summary>
-public class JavaRequirement {
-    public Version MinVersion { get; set; }
-    public Version MaxVersion { get; set; }
-    public McInstance Instance { get; set; }
-
-    public override string ToString() {
-        return $"Java要求: {MinVersion} - {MaxVersion} (实例: {Instance?.Name})";
     }
 }

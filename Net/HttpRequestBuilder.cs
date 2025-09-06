@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using PCL.Core.App;
@@ -40,10 +41,20 @@ public class HttpRequestBuilder
     /// 设置请求载荷
     /// </summary>
     /// <param name="content">请求载荷</param>
+    /// <param name="contentType"></param>
     /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder WithContent(HttpContent content)
+    public HttpRequestBuilder WithContent(HttpContent content, string? contentType = null)
     {
         _request.Content = content;
+        if (contentType is not null) WithHeader("Content-Type", contentType);
+        return this;
+    }
+
+    public HttpRequestBuilder WithContent(string content, string? contentType = null)
+    {
+        _request.Content = contentType is null
+            ? new StringContent(content, Encoding.UTF8)
+            : new StringContent(content, Encoding.UTF8, contentType);
         return this;
     }
 

@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Microsoft.Win32;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.OS;
 using STUN.Client;
 using STUN.StunResult;
@@ -51,7 +50,7 @@ public class TelemetryService : GeneralService
 
     public override void Start()
     {
-        if (!Setup.System.Telemetry) return;
+        if (!Config.System.Telemetry) return;
         var telemetryKey = EnvironmentInterop.GetSecret("TELEMETRY_KEY");
         if (string.IsNullOrWhiteSpace(telemetryKey)) return;
         var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -70,7 +69,7 @@ public class TelemetryService : GeneralService
             Is64Bit = Environment.Is64BitOperatingSystem,
             IsArm64 = RuntimeInformation.OSArchitecture.Equals(Architecture.Arm64),
             Launcher = Basics.VersionName,
-            LauncherBranch = Setup.System.UpdateBranch switch
+            LauncherBranch = Config.System.UpdateBranch switch
             {
                 0 => "Slow Ring",
                 1 => "Fast Ring",

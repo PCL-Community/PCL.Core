@@ -54,7 +54,7 @@ public static class LaunchEnvironmentManager {
     }
 
     private static bool McLaunchNeedsRetroWrapper(McInstance mcInstance) {
-        var versionInfo = mcInstance.GetVersionInfo();
+        var versionInfo = mcInstance.GetInstanceInfo();
         if (versionInfo == null) return false;
 
         var isOldVersion = versionInfo.McVersionMinor < 6 && versionInfo.McVersionMinor != 99;

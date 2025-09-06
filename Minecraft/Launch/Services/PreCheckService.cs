@@ -21,30 +21,30 @@ public static class PreCheckService {
     /// </summary>
     public static object Validate(CancellationTokenSource source) {
         // 检查路径
-        var pathResult = ValidatePaths(source);
+        ValidatePaths(source);
 
         // 检查实例状态
-        var instanceResult = ValidateInstance();
+        ValidateInstance();
 
         // 检查档案有效性
-        var profileResult = ValidateProfile();
+        ValidateProfile();
 
         // 检查登录要求
-        var loginResult = ValidateLoginRequirements();
+        ValidateLoginRequirements();
+        
+        McLaunchUtils.Log("预检查通过，准备启动游戏");
 
         return new VoidResult();
     }
 
-    private static bool ValidatePaths(CancellationTokenSource source) {
+    private static void ValidatePaths(CancellationTokenSource source) {
         if (McInstanceManager.Current == null) {
-            HintWrapper.Show("未选择Minecraft实例", HintTheme.Error);
-            return false;
+            throw new InvalidOperationException("未选择Minecraft实例");
         }
 
         // 检查路径中的特殊字符
         if (McInstanceManager.Current!.IsolatedPath!.Contains('!') || McInstanceManager.Current.IsolatedPath.Contains(';')) {
-            HintWrapper.Show($"游戏路径中不可包含 ! 或 ;（{McInstanceManager.Current.IsolatedPath}）", HintTheme.Error);
-            return false;
+            throw new InvalidOperationException($"游戏路径中不可包含 ! 或 ;（{McInstanceManager.Current.IsolatedPath}）");
         }
 
         // UTF-8代码页下的路径检查
@@ -70,80 +70,66 @@ public static class PreCheckService {
                     break;
             }
         }
-
-        return true;
     }
 
-    private static bool ValidateInstance(McLaunchOptions options)
-    {
-        var instance = options.Version ?? McInstanceCurrent;
-        if (instance == null)
-            return Result.Failed("未选择Minecraft实例");
-
-        try
-        {
-            instance.Load();
-            if (instance.State == McInstanceState.Error)
-                return Result.Failed($"Minecraft存在问题：{instance.Info}");
+    private static void ValidateInstance() {
+        try {
+            McInstanceManager.Current!.Load();
+            if (McInstanceManager.Current.GetInstanceDisplayType() == McInstanceCardType.Error) {
+                throw new InvalidOperationException($"Minecraft存在问题：{McInstanceManager.Current.Desc}");
+            }
+        } catch (Exception ex) {
+            throw new InvalidOperationException($"加载实例失败：{ex.Message}");
         }
-        catch (Exception ex)
-        {
-            return Result.Failed($"加载实例失败：{ex.Message}", ex);
-        }
-
-        return Result.Success();
     }
 
-    private static Result ValidateProfile()
-    {
+    // TODO: 等待档案部分实现
+    private static void ValidateProfile() {
+        /*
         if (SelectedProfile == null)
             return Result.Failed("请先选择一个档案再启动游戏！");
 
-        // 这里应该调用原来的IsProfileVaild()方法
         // 简化实现
         var checkResult = IsProfileVaild();
         if (!string.IsNullOrEmpty(checkResult))
             return Result.Failed(checkResult);
 
         return Result.Success();
+        */
     }
 
-    private static Result ValidateLoginRequirements(LaunchOptions options)
-    {
-        var instance = options.Version ?? McInstanceCurrent;
-        
+    // TODO: 等待档案部分实现
+    private static void ValidateLoginRequirements() {
+        /*
         // 检查是否要求正版验证
-        if (instance.Version.HasLabyMod || Setup.Get("VersionServerLoginRequire", instance) == 1)
-        {
+        if (McInstanceManager.Current.Version.HasLabyMod || Setup.Get("VersionServerLoginRequire", McInstanceManager.Current) == 1) {
             if (SelectedProfile.Type != McLoginType.Ms)
                 return Result.Failed("当前实例要求使用正版验证，请使用正版验证档案启动游戏！");
         }
 
         // 检查是否要求第三方验证
-        if (Setup.Get("VersionServerLoginRequire", instance) == 2)
-        {
+        if (Setup.Get("VersionServerLoginRequire", McInstanceManager.Current) == 2) {
             if (SelectedProfile.Type != McLoginType.Auth)
                 return Result.Failed("当前实例要求使用第三方验证，请使用第三方验证档案启动游戏！");
 
-            var requiredServer = Setup.Get("VersionServerAuthServer", instance);
+            var requiredServer = Setup.Get("VersionServerAuthServer", McInstanceManager.Current);
             if (SelectedProfile.Server.BeforeLast("/authserver") != requiredServer)
                 return Result.Failed("当前档案使用的第三方验证服务器与实例要求使用的不一致！");
         }
 
         // 检查是否要求正版或第三方验证
-        if (Setup.Get("VersionServerLoginRequire", instance) == 3)
-        {
+        if (Setup.Get("VersionServerLoginRequire", McInstanceManager.Current) == 3) {
             if (SelectedProfile.Type == McLoginType.Legacy)
                 return Result.Failed("当前实例要求使用正版验证或第三方验证，请使用符合要求的档案启动游戏！");
 
-            if (SelectedProfile.Type == McLoginType.Auth)
-            {
-                var requiredServer = Setup.Get("VersionServerAuthServer", instance);
+            if (SelectedProfile.Type == McLoginType.Auth) {
+                var requiredServer = Setup.Get("VersionServerAuthServer", McInstanceManager.Current);
                 if (SelectedProfile.Server.BeforeLast("/authserver") != requiredServer)
                     return Result.Failed("当前档案使用的第三方验证服务器与实例要求使用的不一致！");
             }
         }
 
         return Result.Success();
+        */
     }
 }

@@ -199,7 +199,7 @@ public static class McInstanceManager {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in moddedTypes) {
-                    var patcher = instance.GetVersionInfo()!.GetPatcher(PatcherIds[t]);
+                    var patcher = instance.GetInstanceInfo()!.GetPatcher(PatcherIds[t]);
                     if (patcher != null)
                         return (Array.IndexOf(SortableTypes, t), patcher.Version);
                 }
@@ -212,7 +212,7 @@ public static class McInstanceManager {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in clientTypes) {
-                    var patcher = instance.GetVersionInfo()!.GetPatcher(PatcherIds[t]);
+                    var patcher = instance.GetInstanceInfo()!.GetPatcher(PatcherIds[t]);
                     if (patcher != null)
                         return (Array.IndexOf(SortableTypes, t), patcher.Version);
                 }
@@ -255,7 +255,7 @@ public static class McInstanceManager {
 
     private static (McInstanceCardType, PatcherInfo) GetSortKey(McInstance instance, McInstanceCardType type) {
         var patcherId = PatcherIds[type];
-        return (type, instance.GetVersionInfo()!.GetPatcher(patcherId)!);
+        return (type, instance.GetInstanceInfo()!.GetPatcher(patcherId)!);
     }
 
     // 辅助类实现 IGrouping

@@ -103,31 +103,31 @@ public static class McInstanceUtils {
         return McVersionType.Snapshot;
     }
     
-    public static McInstanceCardType? RecognizeInstanceCardType(McInstanceInfo versionInfo) {
+    public static McInstanceCardType? RecognizeInstanceCardType(McInstanceInfo instanceInfo) {
         McInstanceCardType? cachedDisplayType = null;
         
-        if (versionInfo.HasPatcher("NeoForge")) {
+        if (instanceInfo.HasPatcher("NeoForge")) {
             cachedDisplayType = McInstanceCardType.NeoForge;
-        } else if (versionInfo.HasPatcher("Fabric")) {
+        } else if (instanceInfo.HasPatcher("Fabric")) {
             cachedDisplayType = McInstanceCardType.Fabric;
-        } else if (versionInfo.HasPatcher("LegacyFabric")) {
+        } else if (instanceInfo.HasPatcher("LegacyFabric")) {
             cachedDisplayType = McInstanceCardType.LegacyFabric;
-        } else if (versionInfo.HasPatcher("Quilt")) {
+        } else if (instanceInfo.HasPatcher("Quilt")) {
             cachedDisplayType = McInstanceCardType.Quilt;
-        } else if (versionInfo.HasPatcher("Forge")) {
+        } else if (instanceInfo.HasPatcher("Forge")) {
             cachedDisplayType = McInstanceCardType.Forge;
-        } else if (versionInfo.HasPatcher("Cleanroom")) {
+        } else if (instanceInfo.HasPatcher("Cleanroom")) {
             cachedDisplayType = McInstanceCardType.Cleanroom;
-        } else if (versionInfo.HasPatcher("LiteLoader")) {
+        } else if (instanceInfo.HasPatcher("LiteLoader")) {
             cachedDisplayType = McInstanceCardType.LiteLoader;
         } 
         
         // 判断客户端类型的补丁实例
-        else if (versionInfo.HasPatcher("OptiFine")) {
+        else if (instanceInfo.HasPatcher("OptiFine")) {
             cachedDisplayType = McInstanceCardType.OptiFine;
-        } else if (versionInfo.HasPatcher("LabyMod")) {
+        } else if (instanceInfo.HasPatcher("LabyMod")) {
             cachedDisplayType = McInstanceCardType.LabyMod;
-        } else if (versionInfo.HasPatcher("Client")) {
+        } else if (instanceInfo.HasPatcher("Client")) {
             cachedDisplayType = McInstanceCardType.Client;
         }
 

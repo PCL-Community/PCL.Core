@@ -14,7 +14,7 @@ public static class JavaSelector {
     /// <summary>
     /// 根据版本要求选择最佳Java
     /// </summary>
-    public static async Task<string> SelectBestJavaAsync(TaskBase<string> task, string arguments) {
+    public static async Task<string> SelectBestJavaAsync(string arguments) {
         var (minVer, maxVer) = await McInstanceManager.Current!.GetCompatibleJavaVersionRange();
         var javaManager = JavaService.JavaManager;
         var javaInfos = await javaManager.SelectSuitableJava(minVer, maxVer);
@@ -45,7 +45,7 @@ public static class JavaSelector {
             }
         } else if (maxVer < new Version(1, 8)) {
             javaCode = "7";
-            if (McInstanceManager.Current.GetVersionInfo()!.HasPatcher("forge")) {
+            if (McInstanceManager.Current.GetInstanceInfo()!.HasPatcher("forge")) {
                 MsgBoxWrapper.Show("你需要先安装 LegacyJavaFixer Mod，或自行安装 Java 7，然后才能启动该版本。", "未找到 Java");
             } else {
                 if (!JavaDownloadConfirm("Java 7", true)) {

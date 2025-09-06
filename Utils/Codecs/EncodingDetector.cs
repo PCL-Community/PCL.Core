@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace PCL.Core.Utils;
+namespace PCL.Core.Utils.Codecs;
 
 public static class EncodingDetector
 {
@@ -83,12 +83,8 @@ public static class EncodingDetector
     /// </summary>
     private static Encoding? _DetectWithoutBOM(Stream stream, long originalPosition)
     {
-
         // 尝试验证是否为有效 UTF-8
-        if (_IsValidUtf8(stream, originalPosition))
-            return Encoding.UTF8;
-
-        return null;
+        return _IsValidUtf8(stream, originalPosition) ? Encoding.UTF8 : null;
     }
 
     /// <summary>
@@ -99,7 +95,6 @@ public static class EncodingDetector
         const int sampleSize = 1024;
         var buffer = new byte[sampleSize];
         stream.Position = originalPosition;
-        var readBytes = stream.Read(buffer, 0, buffer.Length);
 
         try
         {

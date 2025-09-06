@@ -5,13 +5,13 @@ using PCL.Core.App;
 namespace PCL.Core.Minecraft;
 
 [LifecycleService(LifecycleState.Loaded)]
-public sealed class JavaSerivce : GeneralService
+public sealed class JavaService : GeneralService
 {
     private static LifecycleContext? _context;
     public static LifecycleContext Context => _context!;
 
     /// <inheritdoc />
-    public JavaSerivce() : base("java", "Java服务")
+    public JavaService() : base("java", "Java服务")
     {
         _context = Lifecycle.GetContext(this);
     }

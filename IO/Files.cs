@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,13 +13,19 @@ using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.BZip2;
 using PCL.Core.Logging;
 using PCL.Core.UI;
-using PCL.Core.Utils;
+using PCL.Core.Utils.Codecs;
 using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.IO;
 
 public static class Files {
+    public static readonly JsonSerializerOptions PrettierJsonOptions = new() {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+    
     /// <summary>
     /// 在指定路径创建一个指向目标文件的 .lnk 快捷方式。
     /// </summary>
@@ -593,7 +601,6 @@ public static class Files {
 
     #endregion
     
-    
     /// <summary>
     /// 从剪切板粘贴文件或文件夹
     /// </summary>
@@ -637,5 +644,76 @@ public static class Files {
         }
 
         return count;
+    }
+    
+    /// <summary>
+    /// 合并两个 JSON 对象，源 JSON 覆盖目标 JSON 的同名键，数组去重合并。
+    /// </summary>
+    /// <param name="target">目标 JSON 对象。</param>
+    /// <param name="source">源 JSON 对象，优先级高于目标对象。</param>
+    /// <returns>合并后的 JSON 对象。如果输入无效，返回源或目标的深拷贝。</returns>
+    /// <exception cref="ArgumentNullException">如果 target 和 source 均为 null，则抛出异常。</exception>
+    public static JsonNode MergeJson(JsonNode target, JsonNode source) {
+        if (target == null && source == null) {
+            throw new ArgumentNullException(nameof(target), "目标和源 JSON 不能同时为 null。");
+        }
+        
+        if (target == null) {
+            return source.DeepClone();
+        }
+
+        if (target is not JsonObject targetObj || source is not JsonObject sourceObj) {
+            // 如果源是对象，优先返回源的深拷贝；否则返回目标的深拷贝
+            return source.DeepClone();
+        }
+
+        var result = (JsonObject)targetObj.DeepClone(); // 克隆以避免修改原始对象
+
+        foreach (var (key, sourceValue) in sourceObj) {
+            var targetValue = result[key];
+
+            if (sourceValue == null) {
+                // 忽略 null 值，保留目标值
+                continue;
+            }
+
+            if (sourceValue is JsonObject && targetValue is JsonObject) {
+                // 递归合并嵌套对象
+                result[key] = MergeJson(targetValue, sourceValue);
+            } else if (sourceValue is JsonArray sourceArray && targetValue is JsonArray targetArray) {
+                // 合并数组并去重
+                var uniqueValues = new HashSet<string>(StringComparer.Ordinal);
+                JsonArray mergedArray = [];
+
+                // 添加目标数组元素
+                foreach (var item in targetArray) {
+                    if (item == null) {
+                        continue;
+                    }
+                    var itemStr = item.ToJsonString();
+                    if (uniqueValues.Add(itemStr)) {
+                        mergedArray.Add(item.DeepClone());
+                    }
+                }
+
+                // 添加源数组元素（源覆盖目标）
+                foreach (var item in sourceArray) {
+                    if (item == null) {
+                        continue;
+                    }
+                    var itemStr = item.ToJsonString();
+                    if (uniqueValues.Add(itemStr)) {
+                        mergedArray.Add(item.DeepClone());
+                    }
+                }
+
+                result[key] = mergedArray;
+            } else {
+                // 直接覆盖（包括简单值、数组替换或其他类型）
+                result[key] = sourceValue.DeepClone();
+            }
+        }
+
+        return result;
     }
 }

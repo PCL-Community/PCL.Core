@@ -285,7 +285,7 @@ public class McInstance {
 
     #endregion
 
-    public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRange() {
+    public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRangeAsync() {
         await GetVersionJsonInJarAsync();
         return _instanceJavaHandler.GetCompatibleJavaVersionRange();
     }
@@ -382,8 +382,8 @@ public class McInstance {
 
     #region Check and Load
 
-    public async Task Check() {
-        if (!await CheckPermission() || !await CheckJson()) {
+    public async Task CheckAsync() {
+        if (!await CheckPermissionAsync() || !await CheckJsonAsync()) {
             DisplayType = McInstanceCardType.Error;
             Logo = System.IO.Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
         } else {
@@ -392,7 +392,7 @@ public class McInstance {
         }
     }
 
-    private async Task<bool> CheckPermission() {
+    private async Task<bool> CheckPermissionAsync() {
         if (!Directory.Exists(Path)) {
             Desc = $"未找到实例 {Name}";
             return false;
@@ -409,7 +409,7 @@ public class McInstance {
         return true;
     }
 
-    private async Task<bool> CheckJson() {
+    private async Task<bool> CheckJsonAsync() {
         await GetVersionJsonAsync();
         if (_versionJson == null) {
             LogWrapper.Warn($"实例 JSON 可用性检查失败（{Path}）");
@@ -438,7 +438,7 @@ public class McInstance {
         ConvertToPatches();
     }
 
-    public async Task Refresh() {
+    public async Task RefreshAsync() {
         await RefreshVersionJsonAsync();
 
         RefreshInstanceInfo();

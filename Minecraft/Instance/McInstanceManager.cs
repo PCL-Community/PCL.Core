@@ -50,7 +50,7 @@ public static class McInstanceManager {
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
                 var mcInstance = new McInstance(instance);
-                await mcInstance.Check();
+                await mcInstance.CheckAsync();
                 McInstanceList.Add(mcInstance);
             }
 

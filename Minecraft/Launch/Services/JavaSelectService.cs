@@ -16,7 +16,7 @@ public static class JavaSelectService {
     /// 根据版本要求选择最佳Java
     /// </summary>
     public static async Task<JavaInfo> SelectBestJavaAsync() {
-        var (minVer, maxVer) = await McInstanceManager.Current!.GetCompatibleJavaVersionRange();
+        var (minVer, maxVer) = await McInstanceManager.Current!.GetCompatibleJavaVersionRangeAsync();
         var javaManager = JavaService.JavaManager;
         var javaInfos = await javaManager.SelectSuitableJava(minVer, maxVer);
         var javaInfo = javaInfos.FirstOrDefault();

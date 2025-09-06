@@ -95,8 +95,7 @@ public class ConfigItem<TValue>(
 
     public bool SetValueNoType(object value, object? argument = null)
     {
-        if (value is TValue v) return SetValue(v, argument);
-        throw new InvalidCastException($"{value.GetType()} in incompatible with {typeof(TValue)}");
+        return SetValue((TValue)value, argument);
     }
 
     public bool SetDefaultValue(object? argument = null)
@@ -243,6 +242,13 @@ public interface ConfigItem
     public bool IsDefault(object? argument = null);
 
     /// <summary>
+    /// 将配置项的值设置为默认值，设置后 <see cref="IsDefault"/> 将返回 <c>false</c>。
+    /// </summary>
+    /// <param name="argument">上下文参数</param>
+    /// <returns>是否成功设置值，若成功则为 <c>true</c></returns>
+    public bool SetDefaultValue(object? argument = null);
+
+    /// <summary>
     /// 没有泛型的 <see cref="ConfigItem{T}.GetValue"/>。<br/>
     /// 我们都不想给非引用类型装箱，但是龙猫想。
     /// </summary>
@@ -253,13 +259,6 @@ public interface ConfigItem
     /// 我们都不想给非引用类型装箱，但是龙猫想。
     /// </summary>
     public bool SetValueNoType(object value, object? argument = null);
-
-    /// <summary>
-    /// 将配置项的值设置为默认值，设置后 <see cref="IsDefault"/> 将返回 <c>false</c>。
-    /// </summary>
-    /// <param name="argument">上下文参数</param>
-    /// <returns>是否成功设置值，若成功则为 <c>true</c></returns>
-    public bool SetDefaultValue(object? argument = null);
 
     /// <summary>
     /// 没有泛型的 <see cref="ConfigItem{T}.DefaultValue"/>。<br/>

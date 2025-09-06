@@ -173,7 +173,7 @@ public partial class MotdRenderer {
         _obfuscatedTextBlocks.Clear();
 
         var colorMap = isWhiteBackground ? _colorMapWithWhiteBackground : _colorMapWithBlackBackground;
-        var font = Config.Ui.Font; // Assuming Setup is a static class accessible in the project
+        var font = Config.UI.Font; // Assuming Setup is a static class accessible in the project
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
             : font);

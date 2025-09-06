@@ -6,14 +6,11 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils.OS;
 using STUN.Client;
-using STUN.StunResult;
 
 namespace PCL.Core.App;
 
@@ -91,9 +88,9 @@ public class TelemetryService : GeneralService
             .WithAuthentication(telemetryKey)
             .SendAsync().Result;
         if (response.IsSuccess)
-            LogWrapper.Info("Telemetry", "已发送调查数据");
+            Context.Info("已发送调查数据");
         else
-            LogWrapper.Error("Telemetry", "调查数据发送失败，请检查网络连接以及使用的版本");
+            Context.Error("调查数据发送失败，请检查网络连接以及使用的版本");
         Context.DeclareStopped();
     }
 }

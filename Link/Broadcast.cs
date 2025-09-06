@@ -22,7 +22,7 @@ public class Broadcast(string description, int localPort) : IDisposable
         _isRunning = true;
 
         // 启动 UDP 广播任务
-        _ = Task.Run(() => _RunUdpBroadcast(_cts.Token), _cts.Token);
+        _ = Task.Run(() => _RunUdpBroadcastAsync(_cts.Token), _cts.Token);
 
         Console.WriteLine($"开始向本地 Minecraft 客户端广播，端口: {localPort}");
     }
@@ -39,7 +39,7 @@ public class Broadcast(string description, int localPort) : IDisposable
         Console.WriteLine("停止向本地 Minecraft 客户端广播");
     }
 
-    private async Task _RunUdpBroadcast(CancellationToken cancellationToken)
+    private async Task _RunUdpBroadcastAsync(CancellationToken cancellationToken)
     {
         try
         {

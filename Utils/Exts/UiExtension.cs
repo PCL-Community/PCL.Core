@@ -1,6 +1,4 @@
-﻿using PCL.Core.Logging;
-
-namespace PCL.Core.Utils.Exts;
+﻿namespace PCL.Core.Utils.Exts;
 
 using System;
 using System.Windows;
@@ -26,9 +24,7 @@ public static class UiExtension {
             var bounds = transform.TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
             var windowRect = new Rect(0, 0, mainWindow.ActualWidth, mainWindow.ActualHeight);
             return windowRect.IntersectsWith(bounds);
-        } catch (InvalidOperationException ex) {
-            // 可能由于控件未附加到视觉树
-            LogWrapper.Warn(ex, $"无法检查控件可见性：{element.Name}");
+        } catch (InvalidOperationException) {
             return false;
         }
     }
@@ -54,8 +50,7 @@ public static class UiExtension {
                 );
 
             return formattedText.Width > textBlock.ActualWidth;
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, $"无法检查文本截断：{textBlock.Name}");
+        } catch (Exception) {
             return false;
         }
     }

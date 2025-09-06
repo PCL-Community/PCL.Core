@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
-using PCL.Core.Logging;
 
 namespace PCL.Core.UI;
 
@@ -40,8 +39,6 @@ public static class ImageLoaderHelper {
             SetFallbackImage(imageElement, fallbackImageUri);
             return;
         }
-        
-        LogWrapper.Debug("设置图像，Base64 字符串长度：" + base64String.Length);
 
         try {
             // 提取 Base64 数据部分
@@ -51,7 +48,6 @@ public static class ImageLoaderHelper {
 
             // 验证 Base64 字符串
             if (string.IsNullOrWhiteSpace(base64Data)) {
-                LogWrapper.Warn("Base64Data 为空，使用后备图像");
                 SetFallbackImage(imageElement, fallbackImageUri);
                 return;
             }
@@ -65,8 +61,7 @@ public static class ImageLoaderHelper {
             } else {
                 await imageElement.Dispatcher.InvokeAsync(() => imageElement.Source = bitmapImage);
             }
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "图标解析失败，使用默认图标");
+        } catch {
             SetFallbackImage(imageElement, fallbackImageUri);
         }
     }
@@ -106,7 +101,6 @@ public static class ImageLoaderHelper {
                 }
             } else {
                 // 如果没有提供后备图像，则清空 Source
-                LogWrapper.Warn("未提供后备图像 URI，清空图像源");
                 if (imageElement.Dispatcher.CheckAccess()) {
                     imageElement.Source = null;
                 }
@@ -116,7 +110,6 @@ public static class ImageLoaderHelper {
             }
         } catch {
             // 处理后备图像加载失败的情况
-            LogWrapper.Warn("设置后备图像失败，清空图像源");
             if (imageElement.Dispatcher.CheckAccess()) {
                 imageElement.Source = null;
             } else {
@@ -160,8 +153,7 @@ public static class ImageLoaderHelper {
             } else {
                 await imageElement.Dispatcher.InvokeAsync(() => imageElement.Source = bitmapImage);
             }
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "从文件加载图像失败，使用后备图像");
+        } catch {
             SetFallbackImage(imageElement, fallbackImageUri);
         }
     }

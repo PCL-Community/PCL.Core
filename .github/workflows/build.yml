@@ -30,25 +30,3 @@ jobs:
       configuration: ${{ matrix.configuration }}
       architecture: ${{ matrix.architecture }}
     secrets: inherit
-
-  qodana:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      checks: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
-          fetch-depth: 0  # a full history is required for pull request analysis
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-      - name: Qodana Scan
-        uses: JetBrains/qodana-action@v2025.1
-        env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}

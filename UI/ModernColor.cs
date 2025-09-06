@@ -31,7 +31,6 @@ public readonly record struct ModernColor {
     #endregion
 
     #region 构造函数
-
     /// <summary>
     /// 创建RGB颜色 (不透明)
     /// </summary>
@@ -41,11 +40,21 @@ public readonly record struct ModernColor {
     /// 创建ARGB颜色
     /// </summary>
     public ModernColor(double a, double r, double g, double b) {
-        A = Math.Clamp(a, 0, 255);
-        R = Math.Clamp(r, 0, 255);
-        G = Math.Clamp(g, 0, 255);
-        B = Math.Clamp(b, 0, 255);
+        A = a;
+        R = r;
+        G = g;
+        B = b;
     }
+    
+    /// <summary>
+    /// 从Alpha和SolidColorBrush创建
+    /// </summary>
+    public ModernColor(double a, SolidColorBrush brush) : this(a, brush.Color) {}
+    
+    /// <summary>
+    /// 从Alpha和Color创建
+    /// </summary>
+    public ModernColor(double a, Color color) : this(a, color.R, color.G, color.B) { }
 
     /// <summary>
     /// 从WPF Color创建
@@ -73,9 +82,15 @@ public readonly record struct ModernColor {
     /// <summary>
     /// 从SolidColorBrush创建
     /// </summary>
-    public ModernColor(SolidColorBrush brush) {
-        ArgumentNullException.ThrowIfNull(brush);
-        var color = brush.Color;
+    public ModernColor(SolidColorBrush brush) : this(brush.Color) {}
+    
+    /// <summary>
+    /// 从Brush创建
+    /// </summary>
+    public ModernColor(Brush brush) {
+        if (brush is not SolidColorBrush solidColorBrush)
+            throw new ArgumentException("Only SolidColorBrush is supported.", nameof(brush));
+        var color = solidColorBrush.Color;
         A = color.A;
         R = color.R;
         G = color.G;
@@ -111,16 +126,14 @@ public readonly record struct ModernColor {
     /// <param name="saturation">饱和度 (0-100)</param>
     /// <param name="lightness">亮度 (0-100)</param>
     public static ModernColor FromHsl(double hue, double saturation, double lightness) {
-        var converter = new HslConverter();
-        return converter.FromHsl(hue, saturation, lightness);
+        return HslConverter.FromHsl(hue, saturation, lightness);
     }
 
     /// <summary>
     /// 从HSL创建颜色 (改进版本，对特定色调进行亮度调整)
     /// </summary>
     public static ModernColor FromHslEnhanced(double hue, double saturation, double lightness) {
-        var converter = new HslConverter();
-        return converter.FromHslEnhanced(hue, saturation, lightness);
+        return HslConverter.FromHslEnhanced(hue, saturation, lightness);
     }
 
     /// <summary>
@@ -271,7 +284,7 @@ public sealed class HslConverter {
     /// <summary>
     /// 从HSL转换为RGB
     /// </summary>
-    public ModernColor FromHsl(double hue, double saturation, double lightness) {
+    public static ModernColor FromHsl(double hue, double saturation, double lightness) {
         // 参数验证和范围限制
         hue = ((hue % 360) + 360) % 360; // 确保在0-360范围内
         saturation = Math.Clamp(saturation, 0, 100);
@@ -300,7 +313,7 @@ public sealed class HslConverter {
     /// <summary>
     /// HSL转换的改进版本，对特定色调进行亮度调整
     /// </summary>
-    public ModernColor FromHslEnhanced(double hue, double saturation, double lightness) {
+    public static ModernColor FromHslEnhanced(double hue, double saturation, double lightness) {
         if (saturation == 0) {
             var gray = lightness * 2.55;
             return new ModernColor(gray, gray, gray);
@@ -408,4 +421,9 @@ public static class ColorExtensions {
     /// 为字符串添加颜色解析
     /// </summary>
     public static ModernColor AsColor(this string hexString) => new(hexString);
+    
+    /// <summary>
+    /// 为Brush添加颜色解析
+    /// </summary>
+    public static ModernColor AsColor(this Brush brush) => new(brush);
 }

@@ -4,9 +4,9 @@ using System.Text;
 using System.Threading;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.Utils.OS;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Logging;
 using PCL.Core.UI;
 
@@ -36,9 +36,9 @@ public static class NatayarkProfileManager
 
     private static bool _isGettingData = false;
     public static void GetNaidData(string token, bool isRefresh = false, bool isRetry = false)
-        => Task.Run(() => GetNaidDataSync(token, isRefresh, isRetry));
+        => Task.Run(() => GetNaidDataAsync(token, isRefresh, isRetry));
 
-    public static async Task GetNaidDataSync(string token, bool isRefresh = false, bool isRetry = false)
+    public static async Task GetNaidDataAsync(string token, bool isRefresh = false, bool isRetry = false)
     {
         if (_isGettingData) throw new InvalidOperationException("请勿重复操作");
         _isGettingData = true;
@@ -87,15 +87,15 @@ public static class NatayarkProfileManager
             NaidProfile.LastIp = userData["last_ip"]?.ToString() ?? string.Empty;
 
             // 保存数据
-            Setup.Link.NaidRefreshToken = NaidProfile.RefreshToken;
-            Setup.Link.NaidRefreshExpireTime = expiresAt;
+            Config.Link.NaidRefreshToken = NaidProfile.RefreshToken;
+            Config.Link.NaidRefreshExpireTime = expiresAt;
         }
         catch (Exception ex)
         {
             if (isRetry)
             {
                 NaidProfile = new NaidUser();
-                Setup.Link.NaidRefreshToken = string.Empty;
+                Config.Link.NaidRefreshToken = string.Empty;
                 WarnLog("获取 Natayark 用户数据失败，请尝试前往设置重新登录");
             }
             else
@@ -103,7 +103,7 @@ public static class NatayarkProfileManager
                 if(ex.Message.Contains("invalid access token"))
                 {
                     WarnLog("Naid Access Token 无效，尝试刷新登录");
-                    await GetNaidDataSync(Setup.Link.NaidRefreshToken, true, true);
+                    await GetNaidDataAsync(Config.Link.NaidRefreshToken, true, true);
                 }
                 else if (ex.Message.Contains("invalid_grant"))
                 {
@@ -112,13 +112,13 @@ public static class NatayarkProfileManager
                 else if (ex.Message.Contains("401"))
                 {
                     NaidProfile = new NaidUser();
-                    Setup.Link.NaidRefreshToken = string.Empty;
+                    Config.Link.NaidRefreshToken = string.Empty;
                     WarnLog("Natayark 账号信息已过期，请前往设置重新登录！");
                 }
                 else
                 {
                     NaidProfile = new NaidUser();
-                    Setup.Link.NaidRefreshToken = string.Empty;
+                    Config.Link.NaidRefreshToken = string.Empty;
                     WarnLog("Naid 登录失败，请尝试前往设置重新登录");
                 }
             }

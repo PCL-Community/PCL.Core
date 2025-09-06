@@ -51,7 +51,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     }
 
-    private async Task<FileVersionObjects[]> _GetAllTrackedObjects()
+    private async Task<FileVersionObjects[]> _GetAllTrackedObjectsAsync()
     {
         List<FileVersionObjects> scannedPaths = [];
         Queue<string> scanQueue = new();
@@ -109,7 +109,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             var nodeId = Guid.NewGuid().ToString("N");
 
             // 获取当前的文件信息
-            var allFiles = await _GetAllTrackedObjects();
+            var allFiles = await _GetAllTrackedObjectsAsync();
             LogWrapper.Info($"[SnapLite] 已获取到全部文件，总数量为 {allFiles.Length}");
             var newAddFiles = allFiles
                 .Distinct(FileVersionObjectsComparer.Instance)
@@ -130,7 +130,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                     try
                     {
                         LogWrapper.Info($"[SnapLite] 将 {filePath} 放入哈希仓库");
-                        await _storage.Put(filePath, x.Hash);
+                        await _storage.PutAsync(filePath, x.Hash);
                         LogWrapper.Info($"[SnapLite] 已完成 {filePath} 的存储");
                     }
                     catch (Exception e)
@@ -218,7 +218,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     {
         LogWrapper.Info($"[SnapLite] 开始应用 {nodeId} 的快照数据");
         var applyObjects = GetNodeObjects(nodeId) ?? throw new NullReferenceException("无法获取记录");
-        var currentObjects = await _GetAllTrackedObjects();
+        var currentObjects = await _GetAllTrackedObjectsAsync();
         LogWrapper.Info($"[SnapLite] 获取到 {nodeId} 的对象数为 {applyObjects.Count}，当前文件夹对象数为 {currentObjects.Length}");
         var curDict = currentObjects.ToDictionary(x => x.Path);
 
@@ -420,7 +420,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             try
             {
-                await _storage.Delete(x);
+                await _storage.DeleteAsync(x);
             }
             catch (Exception e)
             {

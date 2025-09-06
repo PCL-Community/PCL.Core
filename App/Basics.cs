@@ -11,6 +11,16 @@ namespace PCL.Core.App;
 public static class Basics
 {
     /// <summary>
+    /// 当前的版本名称
+    /// </summary>
+    public static string VersionName = "";
+
+    /// <summary>
+    /// 当前的版本号
+    /// </summary>
+    public static int VersionNumber = 0;
+
+    /// <summary>
     /// 当前进程实例。
     /// </summary>
     public static readonly Process CurrentProcess = Process.GetCurrentProcess();

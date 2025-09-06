@@ -84,7 +84,7 @@ public class McPing : IDisposable
             var buffer = new byte[4096];
             watcher.Start();
 
-            var totalLength = Convert.ToInt64(await VarIntHelper.ReadFromStream(stream, cts.Token));
+            var totalLength = Convert.ToInt64(await VarIntHelper.ReadFromStreamAsync(stream, cts.Token));
             watcher.Stop();
             LogWrapper.Debug("McPing", $"Total length: {totalLength}");
 

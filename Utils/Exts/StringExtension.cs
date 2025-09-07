@@ -203,4 +203,25 @@ public static class StringExtension
     {
         return str.All(c => c < 128);
     }
+    
+    public static bool StartsWithF(this string str, string prefix, bool ignoreCase = false)
+        => str.StartsWith(prefix, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static bool EndsWithF(this string str, string suffix, bool ignoreCase = false)
+        => str.EndsWith(suffix, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static bool ContainsF(this string str, string subStr, bool ignoreCase = false)
+        => str.Contains(subStr, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static int IndexOfF(this string str, string subStr, bool ignoreCase = false)
+        => str.IndexOf(subStr, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static int IndexOfF(this string str, string subStr, int startIndex, bool ignoreCase = false)
+        => str.IndexOf(subStr, startIndex, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static int LastIndexOfF(this string str, string subStr, bool ignoreCase = false)
+        => str.LastIndexOf(subStr, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static int LastIndexOfF(this string str, string subStr, int startIndex, bool ignoreCase = false)
+        => str.LastIndexOf(subStr, startIndex, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }

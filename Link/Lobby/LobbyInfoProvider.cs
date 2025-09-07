@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Numerics;
+using PCL.Core.App;
 using PCL.Core.Link.Natayark;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 
@@ -15,6 +15,7 @@ public static class LobbyInfoProvider
     public static bool AllowCustomName { get; set; } = false;
     public static bool RequiresLogin { get; set; } = true;
     public static bool RequiresRealName { get; set; } = true;
+    public static int ProtocolVersion { get; set; } = 4;
 
     public static Broadcast? McBroadcast { get; internal set; }
     public static TcpForward? McForward { get; internal set; }
@@ -123,6 +124,6 @@ public static class LobbyInfoProvider
     /// 获取用于联机显示的用户名
     /// </summary>
     public static string? GetUsername() => AllowCustomName
-        ? Setup.Link.Username.ReplaceNullOrEmpty(NatayarkProfileManager.NaidProfile.Username)
+        ? Config.Link.Username.ReplaceNullOrEmpty(NatayarkProfileManager.NaidProfile.Username)
         : NatayarkProfileManager.NaidProfile.Username;
 }

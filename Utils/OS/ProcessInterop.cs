@@ -1,11 +1,19 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using System.Management;
+using System.Security.Principal;
 
 namespace PCL.Core.Utils.OS;
 
 public class ProcessInterop
 {
+    /// <summary>
+    /// 检查当前程序是否以管理员权限运行。
+    /// </summary>
+    /// <returns>如果当前用户具有管理员权限，则返回 true；否则返回 false。</returns>
+    public static bool IsAdmin() =>
+        new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+    
     /// <summary>
     /// 获取指定进程 ID 的命令行参数。
     /// </summary>

@@ -98,10 +98,10 @@ public class DownloadItem(
         }
         seg.EndCallback += endCallback;
         segment = seg;
-        task = seg.Start(startPosition != 0, startPosition, cancelToken);
+        task = seg.StartAsync(startPosition != 0, startPosition, cancelToken);
     }
 
-    public async Task NewSegment(
+    public async Task NewSegmentAsync(
         long startPosition,
         long? endPosition,
         SegmentInterruptHandler errorCallback,
@@ -142,7 +142,7 @@ public class DownloadItem(
         await task;
     }
 
-    public async Task RestartSegment(
+    public async Task RestartSegmentAsync(
         LinkedListNode<DownloadSegment> node,
         bool isRetry = false)
     {

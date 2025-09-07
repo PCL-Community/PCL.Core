@@ -8,7 +8,7 @@ namespace PCL.Core.Utils.Hash;
 
 public class SHA256Provider : IHashProvider
 {
-    public static SHA256Provider Instance { get; } = new SHA256Provider();
+    public static SHA256Provider Instance { get; } = new();
     
     public string ComputeHash(Stream input)
     {

@@ -47,7 +47,7 @@ public class WebServer : IDisposable
         _listener.Start();
     }
 
-    private async Task ResponseOnce()
+    private async Task ResponseOnceAsync()
     {
         var context = await _listener.GetContextAsync();
         await Task.Run(() =>
@@ -68,11 +68,11 @@ public class WebServer : IDisposable
         });
     }
 
-    public async Task StartResponseOnce()
+    public async Task StartResponseOnceAsync()
     {
         if (_started) throw new InvalidOperationException("Server already started");
         _started = true;
-        await ResponseOnce();
+        await ResponseOnceAsync();
         _started = false;
     }
 
@@ -80,12 +80,12 @@ public class WebServer : IDisposable
     /// 开始响应客户端请求。
     /// </summary>
     /// <exception cref="InvalidOperationException">已开始响应，无法重复操作</exception>
-    public async Task StartResponse()
+    public async Task StartResponseAsync()
     {
         if (_started) throw new InvalidOperationException("Server already started");
         _started = true;
         _running = true;
-        while (_running) await ResponseOnce();
+        while (_running) await ResponseOnceAsync();
         _started = false;
     }
 

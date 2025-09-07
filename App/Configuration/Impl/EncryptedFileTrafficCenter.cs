@@ -43,8 +43,8 @@ public class EncryptedFileTrafficCenter(TrafficCenter source) : SyncTrafficCente
             // 反序列化
             TOutput? result;
             var type = typeof(TOutput);
-            if (type == typeof(string)) result = (TOutput)(object)output;
-            else if (type == typeof(bool)) result = (TOutput)(object)(output.ToLowerInvariant() is "true" or "1");
+            if (type == typeof(bool)) result = (TOutput)(object)(output.ToLowerInvariant() is "true" or "1");
+            else if (type == typeof(string) && string.IsNullOrWhiteSpace(output)) result = (TOutput)(object)output;
             else result = JsonSerializer.Deserialize<TOutput>(output, _SerializerOptions);
             e.SetOutput(result);
         }

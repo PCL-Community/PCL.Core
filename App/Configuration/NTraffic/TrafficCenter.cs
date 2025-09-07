@@ -25,6 +25,11 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
+#else
+    private static readonly JsonSerializerOptions _SerializerOptions = new()
+    {
+        Encoder = JavaScriptEncoder.Default
+    };
 #endif
 
     /// <summary>

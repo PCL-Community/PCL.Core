@@ -109,16 +109,21 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     public override void Sync()
     {
-        if (File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
+        if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
         var tmpFile = $"{FilePath}.tmp";
         var bakFile = $"{FilePath}.bak";
+        using (var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read))
+        using (var writer = new StreamWriter(stream, Encoding.UTF8))
         {
-            using var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read);
-            using var writer = new StreamWriter(stream, Encoding.UTF8);
             _Serializer.Serialize(writer, _rootNode);
             writer.Flush();
+            stream.Flush(true);
         }
-        File.Replace(tmpFile, FilePath, bakFile);
+
+        if (File.Exists(FilePath))
+            File.Replace(tmpFile, FilePath, bakFile);
+        else
+            File.Move(tmpFile, FilePath);
     }
 
     public IEnumerable<string> Keys => _rootNode.Select(pair => pair.Key.ToString());

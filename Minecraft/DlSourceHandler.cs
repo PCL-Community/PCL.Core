@@ -4,7 +4,7 @@ using PCL.Core.App.Tasks;
 namespace PCL.Core.Minecraft;
 
 public static class DlSourceHandler {
-    public static bool DlSourceNetworkPreferMojang = true;
+    public static bool DlSourceNetworkPreferMojang = false;
     
     public static bool DlSourcePreferMojang => Config.Tool.Download.FileSourceSolution == 2 
         ? true

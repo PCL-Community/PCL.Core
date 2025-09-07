@@ -12,7 +12,7 @@ using PCL.Core.Utils;
 namespace PCL.Core.Minecraft;
 
 public class ClientListManager {
-    private static async Task<DlClientListResult> DlClientListMojangMainAsync(TaskBase<DlClientListResult> loader, params object[] args) {
+    private static async Task<DlClientListResult> DlClientListMojangMainAsync(TaskBase<object> loader, params object[] args) {
         var input = args.Length > 0 ? (string) args[0] : string.Empty;
         var startTime = TimeUtils.GetTimeTick();
 
@@ -46,22 +46,22 @@ public class ClientListManager {
                     }
                     await Files.WriteFileAsync(cacheFilePath, await uvmcSourceResponse.AsStreamAsync());
                 } catch (Exception ex) {
-                    LogWrapper.Warn(ex, "[Download] 未列出的版本官方源下载失败");
+                    LogWrapper.Warn(ex, "未列出的版本官方源下载失败");
                 }
             }
 
             try {
-                JObject cachedJson = GetJson(File.ReadAllText(cacheFilePath));
-                versions.Merge(cachedJson["versions"]);
+                var cachedJson = (await JsonNode.ParseAsync(await Files.ReadFileToStreamOrEmptyAsync(cacheFilePath)))!.AsObject();
+                Files.MergeJson(versions, cachedJson["versions"]!);
             } catch (Exception ex) {
-                Log(ex, "[Download] UVMC 列表加载失败，忽略列表内容");
+                LogWrapper.Warn(ex, "UVMC 列表加载失败，忽略列表内容");
             }
 
             // 确定官方源是否可用
-            if (!DlPreferMojang) {
-                long deltaTime = TimeUtils.GetTimeTick() - startTime;
-                DlPreferMojang = deltaTime < 4000;
-                Log($"[Download] Mojang 官方源加载耗时：{deltaTime}ms，{(DlPreferMojang ? "可优先使用官方源" : "不优先使用官方源")}");
+            if (!DlSourceHandler.DlSourceNetworkPreferMojang) {
+                var deltaTime = TimeUtils.GetTimeTick() - startTime;
+                DlSourceHandler.DlSourceNetworkPreferMojang = deltaTime < 4000;
+                LogWrapper.Info($"Mojang 官方源加载耗时：{deltaTime}ms，{(DlSourceHandler.DlSourceNetworkPreferMojang ? "可优先使用官方源" : "不优先使用官方源")}");
             }
 
             // 返回结果

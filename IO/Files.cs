@@ -244,6 +244,29 @@ public static class Files {
     }
 
     /// <summary>
+    /// 异步读取文件到流。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）</param>
+    /// <param name="cancelToken">取消令牌</param>
+    /// <returns>包含文件内容的 MemoryStream，失败时返回空的 MemoryStream</returns>
+    public static async Task<MemoryStream> ReadFileToStreamOrEmptyAsync(string filePath, CancellationToken cancelToken = default) {
+        try {
+            var fullPath = GetFullPath(filePath);
+            if (!File.Exists(fullPath))
+                throw new FileNotFoundException(fullPath);
+
+            await using var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
+            var memoryStream = new MemoryStream();
+            await fileStream.CopyToAsync(memoryStream, cancelToken);
+            memoryStream.Position = 0; // 重置流位置以便后续读取
+            return memoryStream;
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, $"读取文件到流出错：{filePath}");
+            return new MemoryStream(); // 返回空的 MemoryStream
+        }
+    }
+
+    /// <summary>
     /// 写入字符串到文件，支持追加或覆盖，自动创建目录。
     /// </summary>
     /// <param name="filePath">文件路径（完整或相对）</param>

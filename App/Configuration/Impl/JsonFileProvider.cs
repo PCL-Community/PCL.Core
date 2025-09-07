@@ -104,11 +104,16 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     public override void Sync()
     {
-        if (File.Exists(FilePath)) File.Copy(FilePath, FilePath + ".bak", true);
-        else Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
-        using var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        using var writer = new Utf8JsonWriter(stream, _WriterOptions);
-        _rootElement.WriteTo(writer, _SerializerOptions);
+        if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
+        var tmpFile = $"{FilePath}.tmp";
+        var bakFile = $"{FilePath}.bak";
+        {
+            using var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read);
+            using var writer = new Utf8JsonWriter(stream, _WriterOptions);
+            _rootElement.WriteTo(writer, _SerializerOptions);
+            writer.Flush();
+        }
+        File.Replace(tmpFile, FilePath, bakFile);
     }
 
     public IEnumerable<string> Keys => _rootElement.Select(pair => pair.Key);

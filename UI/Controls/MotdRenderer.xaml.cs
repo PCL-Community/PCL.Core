@@ -1,4 +1,4 @@
-﻿using PCL.Core.ProgramSetup;
+﻿using PCL.Core.App;
 using PCL.Core.Utils;
 
 namespace PCL.Core.UI.Controls;
@@ -173,7 +173,7 @@ public partial class MotdRenderer {
         _obfuscatedTextBlocks.Clear();
 
         var colorMap = isWhiteBackground ? _colorMapWithWhiteBackground : _colorMapWithBlackBackground;
-        var font = Setup.Ui.Font; // Assuming Setup is a static class accessible in the project
+        var font = Config.UI.Font; // Assuming Setup is a static class accessible in the project
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
             : font);

@@ -16,7 +16,7 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
     /// <param name="hash">欲存储的文件的哈希，请确保与哈希存储库指定的哈希计算方法所用算法一致</param>
     /// <returns>成功返回文件的哈希，失败返回 null</returns>
     /// <exception cref="ArgumentNullException">提供的参数不正确</exception>
-    public async Task<string?> Put(string fromPath, string? hash = null)
+    public async Task<string?> PutAsync(string fromPath, string? hash = null)
     {
         //参数检查
         ArgumentNullException.ThrowIfNull(fromPath);
@@ -24,10 +24,10 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
         if (!File.Exists(filePath)) return null;
         //必要数据准备
         await using var originalFs = File.Open(fromPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return await Put(originalFs, hash);
+        return await PutAsync(originalFs, hash);
     }
 
-    public async Task<string?> Put(Stream input, string? hash = null)
+    public async Task<string?> PutAsync(Stream input, string? hash = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (hash is not null && hash.Length != hashProvider.Length) throw new ArgumentException("Provide hash is not correct", nameof(hash));
@@ -42,7 +42,7 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
         return fileHash;
     }
 
-    public async Task<bool> Delete(string hash)
+    public async Task<bool> DeleteAsync(string hash)
     {
         ArgumentNullException.ThrowIfNull(hash);
         var filePath = _getDestPath(hash);

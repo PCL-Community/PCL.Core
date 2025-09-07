@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using PCL.Core.App;
-using PCL.Core.ProgramSetup;
 
 namespace PCL.Core.Minecraft;
 
@@ -38,7 +37,7 @@ public sealed class JavaSerivce : GeneralService
             return;
         }
 
-        _javaManager.ScanJava().ContinueWith((_) =>
+        _javaManager.ScanJavaAsync().ContinueWith((_) =>
         {
             _SetCache(_javaManager.GetCache());
 
@@ -49,7 +48,7 @@ public sealed class JavaSerivce : GeneralService
 
     private static List<JavaLocalCache> _GetCaches()
     {
-        var raw = Setup.Launch.Javas;
+        var raw = Config.Launch.Javas;
         if (string.IsNullOrEmpty(raw))
         {
             return [];
@@ -62,6 +61,6 @@ public sealed class JavaSerivce : GeneralService
     private static void _SetCache(List<JavaLocalCache> caches)
     {
         var jsonContent = JsonSerializer.Serialize(caches);
-        Setup.Launch.Javas = jsonContent;
+        Config.Launch.Javas = jsonContent;
     }
 }

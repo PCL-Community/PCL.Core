@@ -29,11 +29,16 @@ jobs:
           git config user.name "PCL-Community-Bot"
           git config user.email "167983016+PCL-Community-Bot@users.noreply.github.com"
           git submodule update --init PCL.Core
-          git submodule update --remote PCL.Core
-          git add PCL.Core
-          if git diff --cached --quiet; then
-            echo "The submodule is already at the latest commit"
-          else
-            git commit -S -m "submodule: update to PCL-Community/PCL.Core@${{ github.sha }}"
+          cd PCL.Core
+          git fetch origin
+          LATEST_COMMIT=$(git rev-parse origin/main)
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          if [ "$LATEST_COMMIT" != "$CURRENT_COMMIT" ]; then
+            git checkout $LATEST_COMMIT
+            cd ..
+            git add PCL.Core
+            git commit -S -m "submodule: update to PCL-Community/PCL.Core@${LATEST_COMMIT}"
             git push origin dev
+          else
+            echo "The submodule is already at the latest commit"
           fi

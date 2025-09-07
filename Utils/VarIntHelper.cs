@@ -95,7 +95,7 @@ public static class VarIntHelper
     /// <returns>解码后的64位无符号整数</returns>
     /// <exception cref="EndOfStreamException">流提前结束</exception>
     /// <exception cref="FormatException">VarInt格式无效</exception>
-    public static async Task<ulong> ReadFromStream(Stream stream, CancellationToken cancellationToken = default)
+    public static async Task<ulong> ReadFromStreamAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         ulong result = 0;
         var shift = 0;
@@ -107,18 +107,18 @@ public static class VarIntHelper
             var readLength = await stream.ReadAsync(buffer, 0, 1, cancellationToken);
             if (readLength == 0)
                 throw new EndOfStreamException();
-            
+
             var b = buffer[0];
             bytesRead++;
-            
+
             if (bytesRead > maxBytes)
                 throw new FormatException("VarInt exceeds maximum length");
-            
+
             result |= (ulong)(b & 0x7F) << shift;
-            
+
             if ((b & 0x80) == 0)
                 return result;
-            
+
             shift += 7;
         }
     }
@@ -129,9 +129,9 @@ public static class VarIntHelper
     /// <param name="stream">输入流</param>
     /// <param name="cancellationToken"></param>
     /// <returns>解码后的32位无符号整数</returns>
-    public static async Task<uint> ReadUIntFromStream(Stream stream, CancellationToken cancellationToken = default)
+    public static async Task<uint> ReadUIntFromStreamAsync(Stream stream, CancellationToken cancellationToken = default)
     {
-        var result = await ReadFromStream(stream, cancellationToken);
+        var result = await ReadFromStreamAsync(stream, cancellationToken);
         if (result > uint.MaxValue)
             throw new OverflowException("Decoded value exceeds UInt32 range");
         return (uint)result;

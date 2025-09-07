@@ -1,12 +1,52 @@
 ﻿using PCL.Core.App;
+using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance;
 
 namespace PCL.Core.Minecraft.Launch.Services;
 
 public static class FileCompleteService {
     public static void FileComplete(McInstance instance, bool checkAssetHash, AssetsIndexExistsBehaviour assetsIndexBehaviour) {
-        
+        if (ShouldIgnoreFileCheck(instance.Path)) {
+            LogWrapper.Info("Completion", "已跳过所有 Libraries 检查");
+        } else {
+            LibrariesComplete(instance);
+        }
     }
+
+    private static void LibrariesComplete(McInstance instance) {
+        if (instance.IsPatchesFormatJson) {
+            LibrariesCompleteWithPatches(instance);
+        } else {
+            LibrariesCompleteWithoutPatches(instance);
+        }
+    }
+    
+    private static void LibrariesCompleteWithoutPatches(McInstance instance) {
+        foreach (var lib in instance.Libraries!) {
+            var path = lib.
+            if (path.Exists) {
+                if (ShouldIgnoreFileCheck(path.FullName)) {
+                    continue;
+                }
+
+                if (lib.Downloads?.Artifact != null) { }
+            }
+        }
+    }
+    
+    private static void LibrariesCompleteWithPatches(McInstance instance) {
+        foreach (var lib in instance.Libraries) {
+            var path = lib.GetPath(instance);
+            if (path.Exists) {
+                if (ShouldIgnoreFileCheck(path.FullName)) {
+                    continue;
+                }
+
+                if (lib.Downloads?.Artifact != null) { }
+            }
+        }
+    }
+
 
     private static bool ShouldIgnoreFileCheck(string path) {
         return Config.Instance.DisableAssetVerifyV2[path];

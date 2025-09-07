@@ -109,7 +109,7 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         return _result = await Task.Run(() => Run(objects));
     }
 
-    protected Task<TResult>? BackgroundTask;
+    public Task<TResult>? BackgroundTask;
 
     public virtual void RunBackground(params object[] objects)
         => (BackgroundTask = RunAsync(objects)).Start();

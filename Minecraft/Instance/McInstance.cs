@@ -198,6 +198,12 @@ public class McInstance {
         } catch {
             LogWrapper.Info("未识别到 LabyMod");
         }
+        
+        // Game
+        _instanceInfo!.Patchers.Add(new PatcherInfo {
+            Id = "game",
+            Version = _instanceInfo.McVersionStr
+        });
     }
 
     private void FindArgumentData(string argument, string id) {
@@ -466,8 +472,10 @@ public class McInstance {
 
     #region Libraries
 
+    public List<Library>? Libraries => _libraries ?? ParseLibrariesFromJson();
+
     // 从完整JSON中提取并反序列化libraries字段
-    public List<Library>? ParseLibrariesFromJson() {
+    private List<Library>? ParseLibrariesFromJson() {
         try {
             // 获取libraries字段
             var librariesNode = _versionJson!["libraries"];

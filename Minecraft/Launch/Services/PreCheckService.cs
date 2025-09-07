@@ -43,7 +43,7 @@ public static class PreCheckService {
         }
 
         // 检查路径中的特殊字符
-        if (McInstanceManager.Current!.IsolatedPath!.Contains('!') || McInstanceManager.Current.IsolatedPath.Contains(';')) {
+        if (McInstanceManager.Current.IsolatedPath!.Contains('!') || McInstanceManager.Current.IsolatedPath.Contains(';')) {
             throw new InvalidOperationException($"游戏路径中不可包含 ! 或 ;（{McInstanceManager.Current.IsolatedPath}）");
         }
 

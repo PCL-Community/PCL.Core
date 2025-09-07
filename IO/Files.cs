@@ -25,7 +25,7 @@ public static class Files {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true
     };
-    
+
     /// <summary>
     /// 在指定路径创建一个指向目标文件的 .lnk 快捷方式。
     /// </summary>
@@ -600,7 +600,7 @@ public static class Files {
     }
 
     #endregion
-    
+
     /// <summary>
     /// 从剪切板粘贴文件或文件夹
     /// </summary>
@@ -645,7 +645,7 @@ public static class Files {
 
         return count;
     }
-    
+
     /// <summary>
     /// 合并两个 JSON 对象，源 JSON 覆盖目标 JSON 的同名键，数组去重合并。
     /// </summary>
@@ -657,7 +657,7 @@ public static class Files {
         if (target == null && source == null) {
             throw new ArgumentNullException(nameof(target), "目标和源 JSON 不能同时为 null。");
         }
-        
+
         if (target == null) {
             return source.DeepClone();
         }
@@ -715,5 +715,80 @@ public static class Files {
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 检查文件。若成功则返回 null，失败则返回错误的描述文本，描述文本不以句号结尾。不会抛出错误。
+    /// </summary>
+    public static async Task<string?> CheckAsync(
+        string localPath,
+        long minSize = -1,
+        long actualSize = -1,
+        string? hash = null,
+        bool isJson = false) {
+        try {
+            LogWrapper.Debug("Checker", $"开始校验文件 {localPath}");
+            var info = new FileInfo(localPath);
+            if (!info.Exists) return $"文件不存在：{localPath}";
+
+            var fileSize = info.Length;
+            var errors = new StringBuilder();
+            var allowSizeMismatch = false; // 允许相信哈希正确但是大小不正确
+
+            if (!string.IsNullOrEmpty(hash)) {
+                var computedHash = hash.Length switch {
+                    < 35 => await GetFileMD5Async(localPath), // MD5
+                    64 => await GetFileSHA256Async(localPath), // SHA256
+                    _ => await GetFileSHA1Async(localPath) // SHA1 (40)
+                };
+
+                if (!string.Equals(hash, computedHash, StringComparison.OrdinalIgnoreCase)) {
+                    var hashType = hash.Length switch {
+                        < 35 => "MD5",
+                        64 => "SHA256",
+                        _ => "SHA1"
+                    };
+                    errors.AppendLine($"文件 {hashType} 应为 {hash}，实际为 {computedHash}");
+                } else {
+                    allowSizeMismatch = true;
+                }
+            }
+
+            // 检查实际大小
+            if (actualSize >= 0 && actualSize != fileSize && !allowSizeMismatch) {
+                var contentPreview = fileSize < 2000 ? await ReadAllTextOrEmptyAsync(localPath) : "";
+                errors.AppendLine($"文件大小应为 {actualSize} B，实际为 {fileSize} B" +
+                                  (string.IsNullOrEmpty(contentPreview) ? "" : $"，内容为 {contentPreview}"));
+            }
+
+            // 检查最小大小
+            if (minSize >= 0 && minSize > fileSize) {
+                var contentPreview = fileSize < 2000 ? await ReadAllTextOrEmptyAsync(localPath) : "";
+                errors.AppendLine($"文件大小应大于 {minSize} B，实际为 {fileSize} B" +
+                                  (string.IsNullOrEmpty(contentPreview) ? "" : $"，内容为 {contentPreview}"));
+            }
+
+            // JSON 检查
+            if (isJson) {
+                var content = await ReadAllTextOrEmptyAsync(localPath);
+                if (string.IsNullOrEmpty(content)) throw new Exception("读取到的文件为空");
+                try {
+                    using var document = JsonDocument.Parse(content);
+                    // 简单验证 JSON 有效性
+                } catch (JsonException ex) {
+                    throw new Exception("不是有效的 Json 文件", ex);
+                }
+            }
+
+            if (errors.Length > 0) {
+                errors.Insert(0, $"实际校验地址：{localPath}\n");
+                return errors.ToString().TrimEnd();
+            }
+
+            return null;
+        } catch (Exception ex) {
+            LogWrapper.Warn("Checker", $"检查文件出错: {ex}");
+            return ex.ToString();
+        }
     }
 }

@@ -24,7 +24,12 @@ public class EncryptedFileTrafficCenter(TrafficCenter source) : SyncTrafficCente
         if (e is { Access: TrafficAccess.Write, HasOutput: true }) // set
         {
             // 序列化
-            var output = JsonSerializer.Serialize(e.Output, _SerializerOptions);
+            var type = typeof(TOutput);
+            string output;
+            if (type == typeof(string))
+                output = e.Output?.ToString() ?? string.Empty;
+            else
+                output = JsonSerializer.Serialize(e.Output, _SerializerOptions);
             // 加密
             output = EncryptHelper.SecretEncrypt(output);
             // 设置加密值
@@ -44,7 +49,7 @@ public class EncryptedFileTrafficCenter(TrafficCenter source) : SyncTrafficCente
             TOutput? result;
             var type = typeof(TOutput);
             if (type == typeof(bool)) result = (TOutput)(object)(output.ToLowerInvariant() is "true" or "1");
-            else if (type == typeof(string) && string.IsNullOrWhiteSpace(output)) result = (TOutput)(object)output;
+            else if (type == typeof(string)) result = (TOutput)(object)output;
             else result = JsonSerializer.Deserialize<TOutput>(output, _SerializerOptions);
             e.SetOutput(result);
         }

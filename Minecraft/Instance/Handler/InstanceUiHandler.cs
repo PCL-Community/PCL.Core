@@ -32,6 +32,9 @@ public class InstanceUiHandler(string pathRef, McInstanceInfo? instanceInfoRef, 
         "你的故事，等待书写！"
     );
 
+    /// <summary>
+    /// 获得一个实例实际的描述文本
+    /// </summary>
     public string GetDescription() {
         return string.IsNullOrEmpty(Config.Instance.CustomInfo[Path])
             ? GetDefaultDescription()
@@ -39,7 +42,7 @@ public class InstanceUiHandler(string pathRef, McInstanceInfo? instanceInfoRef, 
     }
     
     /// <summary>
-    /// Gets the default description for the instance.
+    /// 获得一个实例的默认描述文本
     /// </summary>
     private string GetDefaultDescription() {
         if (CardType == McInstanceCardType.Error) {

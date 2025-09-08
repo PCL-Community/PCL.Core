@@ -11,6 +11,7 @@ using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
+using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Resources;
 using PCL.Core.Minecraft.Launch;
 using PCL.Core.Utils.Exts;
@@ -20,7 +21,7 @@ namespace PCL.Core.Minecraft.Instance;
 /// <summary>
 /// 管理实例基础信息
 /// </summary>
-public class McInstance {
+public class McInstance : IMcInstance {
     private JsonObject? _versionJson;
     private McInstanceInfo? _instanceInfo;
 
@@ -39,8 +40,8 @@ public class McInstance {
 
     /// <summary>
     /// 初始化 Minecraft 实例
-    /// 初始化后请一定要先运行 Check() 方法
-    /// 在你调用其他方法时，我们默认你已经调用了 Check() 并且通过了检查
+    /// 初始化后请一定要先运行 <c>CheckAsync()</c> 方法
+    /// 在你调用其他方法时，我们默认你已经调用了 <c>CheckAsync()</c> 并且通过了检查
     /// </summary>
     /// <param name="path"></param>
     public McInstance(string path) {
@@ -50,11 +51,10 @@ public class McInstance {
         _instanceUiHandler = new InstanceUiHandler(Path, _instanceInfo, _cachedDisplayType);
         _instanceJavaHandler = new InstanceJavaHandler(_instanceInfo, _versionJson, _versionJsonInJar);
     }
-
-    /// <summary>
-    /// 实例文件夹路径，以“\”结尾
-    /// </summary>
+    
     public string Path { get; }
+    
+    public string Name => InstanceBasicHandler.GetName(Path);
 
     /// <summary>
     /// 应用版本隔离后的 Minecraft 根文件夹路径，以“\”结尾
@@ -69,11 +69,6 @@ public class McInstance {
     }
 
     /// <summary>
-    /// 实例文件夹名称
-    /// </summary>
-    public string Name => string.IsNullOrEmpty(Path) ? "" : new DirectoryInfo(Path).Name;
-
-    /// <summary>
     /// 显示的描述文本
     /// </summary>
     public string Desc { get; set; } = "该实例未被加载，请向作者反馈此问题";
@@ -86,7 +81,31 @@ public class McInstance {
     /// <summary>
     /// 是否为收藏的实例
     /// </summary>
-    public bool IsFavorited { get; set; }
+    public bool IsStarred => InstanceBasicHandler.GetIsStarred(Path);
+    
+    /// <summary>
+    /// 异步获取 JSON 对象。
+    /// </summary>
+    /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
+    public async Task<JsonObject?> GetVersionJsonAsync() {
+        return _versionJson ?? await RefreshVersionJsonAsync();
+    }
+
+    public async Task<JsonObject?> RefreshVersionJsonAsync() {
+        _versionJson = await _instanceJsonHandler.RefreshVersionJsonAsync();
+        return _versionJson;
+    }
+    
+    /// <summary>
+    /// 异步获取 Jar 中的 JSON 对象。
+    /// </summary>
+    /// <returns>表示 Minecraft 实例的 Jar 中的 JSON 对象。</returns>
+    public async Task<JsonObject?> GetVersionJsonInJarAsync() => _versionJsonInJar ?? await RefreshVersionJsonAsync();
+
+    public async Task<JsonObject?> RefreshVersionJsonInJarAsync() {
+        _versionJsonInJar = await _instanceJsonHandler.RefreshVersionJsonInJarAsync();
+        return _versionJsonInJar;
+    }
 
     #region No Patches Compatibility
 
@@ -349,41 +368,10 @@ public class McInstance {
     }
 
     /// <summary>
-    /// 异步获取 JSON 对象。
-    /// </summary>
-    /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
-    public async Task<JsonObject?> GetVersionJsonAsync() {
-        return _versionJson ?? await RefreshVersionJsonAsync();
-    }
-
-    public async Task<JsonObject?> RefreshVersionJsonAsync() {
-        _versionJson = await _instanceJsonHandler.RefreshVersionJsonAsync();
-        return _versionJson;
-    }
-    
-    /// <summary>
-    /// 异步获取 Jar 中的 JSON 对象。
-    /// </summary>
-    /// <returns>表示 Minecraft 实例的 Jar 中的 JSON 对象。</returns>
-    public async Task<JsonObject?> GetVersionJsonInJarAsync() {
-        return _versionJsonInJar ?? await RefreshVersionJsonAsync();
-    }
-
-    public async Task<JsonObject?> RefreshVersionJsonInJarAsync() {
-        _versionJsonInJar = await _instanceJsonHandler.RefreshVersionJsonInJarAsync();
-        return _versionJsonInJar;
-    }
-
-    /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
     public bool IsOldJson => _versionJson!.ContainsKey("minecraftArguments");
-
-    /// <summary>
-    /// 是否为 Patches 格式 JSON
-    /// </summary>
-    public bool IsPatchesFormatJson => _versionJson!.ContainsKey("patches");
-
+    
     #endregion
 
     #region Check and Load
@@ -400,7 +388,7 @@ public class McInstance {
 
     private async Task<bool> CheckPermissionAsync() {
         if (!Directory.Exists(Path)) {
-            Desc = $"未找到实例 {Name}";
+            Desc = $"未找到实例 {this.Name}";
             return false;
         }
 
@@ -461,7 +449,6 @@ public class McInstance {
     private void SetDescriptiveInfo() {
         // 确定实例描述和状态
         Desc = _instanceUiHandler.GetDescription();
-        IsFavorited = Config.Instance.Starred[Path];
 
         // 写入缓存
         Config.Instance.Info[Path] = Desc;

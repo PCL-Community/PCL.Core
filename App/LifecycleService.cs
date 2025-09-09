@@ -31,7 +31,7 @@ public interface ILifecycleService
     /// 启动该服务。应由生命周期管理自动调用，若无特殊情况，请勿手动调用。
     /// </summary>
     public void Start();
-    
+
     /// <summary>
     /// 停止该服务。应由生命周期管理自动调用，若无特殊情况，请勿手动调用。
     /// </summary>
@@ -58,7 +58,7 @@ public record LifecycleLogItem(
     /// 创建该日志项的时间
     /// </summary>
     public DateTime Time { get; } = DateTime.Now;
-    
+
     /// <summary>
     /// 创建该日志项的线程名
     /// </summary>
@@ -103,7 +103,7 @@ public sealed class LifecycleServiceAttribute(LifecycleState startState) : Attri
     /// 指定该服务项应于何种生命周期状态启动。生命周期管理将在指定的状态按照 <see cref="Priority"/> 自动启动服务项。
     /// </summary>
     public LifecycleState StartState { get; } = startState;
-    
+
     /// <summary>
     /// 启动优先级。同一个生命周期状态有多个服务项需要启动时，将会按优先级数值<b>降序</b>启动，即数值越大越优先。<br/>
     /// 虽然这个值可以为任意 32 位整数，但是<b>非核心服务请勿使用较为极端的值，尤其是
@@ -123,14 +123,14 @@ public record LifecycleServiceInfo
     public string Name => _service.Name;
     public bool CanStartAsync => _service.SupportAsyncStart;
     public LifecycleState StartState { get; }
-    
+
     /// <summary>
     /// 服务开始运行的时间。初始值为调用 <c>Start()</c> 方法的时刻，在 <c>Start()</c> 方法结束之后会更新一次。
     /// </summary>
     public DateTime StartTime { get; init; } = DateTime.Now;
-    
+
     public string FullIdentifier => $"{StartState}/{Identifier}";
-    
+
     /// <summary>
     /// 本 record 应由生命周期管理自动构造，若无特殊情况，请勿手动调用。
     /// </summary>

@@ -1,6 +1,4 @@
-﻿using PCL.Core.IO;
-
-namespace PCL.Core.Utils.OS;
+﻿namespace PCL.Core.Utils.OS;
 
 using System;
 using System.Windows;

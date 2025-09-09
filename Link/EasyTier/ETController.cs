@@ -2,10 +2,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
+using PCL.Core.Utils.Secret;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
@@ -102,7 +103,7 @@ public static class ETController
 
             // 节点设置
             var relays = ETRelay.RelayList;
-            var customNodes = Setup.Link.RelayServer;
+            var customNodes = Config.Link.RelayServer;
             foreach (var node in customNodes.Split([';'], StringSplitOptions.RemoveEmptyEntries))
             {
                 if (node.Contains("tcp://") || node.Contains("udp://"))
@@ -121,7 +122,7 @@ public static class ETController
             }
             foreach (var relay in
                 from relay in relays
-                let serverType = Setup.Link.ServerType
+                let serverType = Config.Link.ServerType
                 where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
                 select relay)
             {
@@ -129,7 +130,7 @@ public static class ETController
             }
 
             // 中继行为设置
-            if (Setup.Link.RelayType == 1)
+            if (Config.Link.RelayType == 1)
             {
                 arguments.AddFlag("disable-p2p");
             }
@@ -139,16 +140,21 @@ public static class ETController
             arguments.AddFlag("enable-kcp-proxy");
             arguments.AddFlag("use-smoltcp");
             arguments.Add("encryption-algorithm", "chacha20");
+            arguments.Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLower());
+            arguments.AddFlagIf(!Config.Link.TryPunchSym, "disable-sym-hole-punching");
+            arguments.AddFlagIf(!Config.Link.EnableIPv6, "disable-ipv6");
 
             // 用户名与其他参数
-            arguments.AddFlagIf(Setup.Link.LatencyFirstMode, "latency-first");
+            arguments.AddFlagIf(Config.Link.LatencyFirstMode, "latency-first");
             arguments.Add("compression", "zstd");
             arguments.AddFlag("multi-thread");
+            arguments.Add("machine-id", Identify.LaunchId);
+
             // TODO: 等待玩家档案迁移以获取正在使用的档案名称
             var showName = "default";
-            if (AllowCustomName && !string.IsNullOrWhiteSpace(Setup.Link.Username))
+            if (AllowCustomName && !string.IsNullOrWhiteSpace(Config.Link.Username))
             {
-                showName = Setup.Link.Username;
+                showName = Config.Link.Username;
             }
             else if (!string.IsNullOrWhiteSpace(NaidProfile.Username))
             {

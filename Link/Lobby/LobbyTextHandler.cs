@@ -1,5 +1,4 @@
-﻿using System;
-using PCL.Core.Link.EasyTier;
+﻿using PCL.Core.Link.EasyTier;
 
 namespace PCL.Core.Link.Lobby;
 

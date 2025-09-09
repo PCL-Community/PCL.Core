@@ -43,7 +43,7 @@ namespace PCL.Core.UI
 
         public static void ForceRender(UIElement target)
         {
-            using DrawingContext drawingContext = _renderOpenMethod(target);
+            using var drawingContext = _renderOpenMethod(target);
 
             _onRenderMethod.Invoke(target, drawingContext);
         }
@@ -100,7 +100,7 @@ namespace PCL.Core.UI
             int maxDepth,
             bool throwExceptionIfParentArranging)
         {
-            bool selfInDesignMode = DesignerProperties.GetIsInDesignMode(self);
+            var selfInDesignMode = DesignerProperties.GetIsInDesignMode(self);
 
             var parent = VisualTreeHelper.GetParent(self) as UIElement;
             while (
@@ -165,7 +165,7 @@ namespace PCL.Core.UI
                 }
 
                 var childCount = VisualTreeHelper.GetChildrenCount(currentParent);
-                for (int i = 0; i < childCount; i++)
+                for (var i = 0; i < childCount; i++)
                 {
                     if (VisualTreeHelper.GetChild(currentParent, i) is not UIElement child)
                     {

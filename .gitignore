@@ -407,7 +407,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Generated Code
-App/LifecycleServiceTypes.g.cs
-ProgramSetup/SetupEntries.g.cs
-ProgramSetup/Setup.g.cs
-ProgramSetup/SetupListenerRegisterer.g.cs
+**/*.g.cs

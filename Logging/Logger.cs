@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Logging;
 
@@ -36,8 +36,8 @@ public sealed class Logger : IDisposable
     private void _CreateNewFile()
     {
         var nameFormat = (Configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
-        string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
-        string filePath = Path.Combine(Configuration.StoreFolder, filename);
+        var filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
+        var filePath = Path.Combine(Configuration.StoreFolder, filename);
         _files.Add(filePath);
         var lastWriter = _currentStream;
         var lastFile = _currentFile;
@@ -78,10 +78,6 @@ public sealed class Logger : IDisposable
         _logEvent.Set();
     }
 
-#if DEBUG
-    private static readonly Regex _PatternNewLine = new(@"\r\n|\n|\r");
-#endif
-
     private void _ProcessLogQueue(CancellationToken token)
     {
         const int maxBatchCount = 100;
@@ -93,19 +89,18 @@ public sealed class Logger : IDisposable
             {
                 while (true) // 循环一次从队列里拿一条待打印的日志
                 {
-                    _logEvent.Wait(millisecondsTimeout: 600);
+                    _logEvent.Wait(millisecondsTimeout: 600, cancellationToken: token);
                     if (!_logQueue.TryDequeue(out var message))
                     {
                         // 日志队列为空时
                         if (currentBatchCount != 0) // 有待写入的日志 => 写入一次
                             break;
                         _logEvent.Reset();
-                        if (token.IsCancellationRequested) // 已被 Dispose => 结束运行
-                            throw new OperationCanceledException();
+                        token.ThrowIfCancellationRequested(); // 已被 Dispose => 结束运行
                         continue; // 否则 => 接着等待下一次 Log() 调用
                     }
 #if DEBUG
-                    message = _PatternNewLine.Replace(message, "\r\n");
+                    message = message.ReplaceLineBreak("\r\n");
                     Console.WriteLine(message);
 #endif
                     batch.AppendLine(message);
@@ -148,7 +143,6 @@ public sealed class Logger : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        GC.SuppressFinalize(this);
         _disposed = true;
         _cts.Cancel();
         _logEvent.Set();

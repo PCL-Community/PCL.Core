@@ -47,9 +47,7 @@ public sealed class PromoteService : GeneralService
     /// <returns>是否添加成功，若在主进程中调用或已存在相同操作名，则为 <c>false</c></returns>
     public static bool AddOperationFunction(string name, Func<string?, string?> operation)
     {
-        if (!IsCurrentProcessPromoted || _OperationFunctions.ContainsKey(name)) return false;
-        _OperationFunctions[name] = operation;
-        return true;
+        return IsCurrentProcessPromoted && _OperationFunctions.TryAdd(name, operation);
     }
 
     /// <summary>

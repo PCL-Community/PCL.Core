@@ -7,16 +7,6 @@ namespace PCL.Core.Utils;
 public class SemVer(int major, int minor, int patch, string? prerelease = null, string? buildMetadata = null)
     : IComparable<SemVer>, IEquatable<SemVer>
 {
-    // 正则表达式模式（含可选 v 前缀）
-    private const string Pattern = @"^v?(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)" +
-                                   @"(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?" +
-                                   @"(?:\+(?<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$";
-
-    private static readonly Regex _SemVerRegex = new(
-        Pattern,
-        RegexOptions.Compiled | RegexOptions.ExplicitCapture
-    );
-
     public int Major => major;
     public int Minor => minor;
     public int Patch => patch;
@@ -40,7 +30,7 @@ public class SemVer(int major, int minor, int patch, string? prerelease = null, 
             return false;
         }
 
-        var match = _SemVerRegex.Match(version);
+        var match = RegexPatterns.SemVer.Match(version);
         if (!match.Success)
         {
             result = null;

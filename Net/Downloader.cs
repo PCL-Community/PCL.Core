@@ -203,7 +203,7 @@ public class Downloader(
         if (item.Status == DownloadItemStatus.Waiting)
         {
             // 开始第一个分片 (也可能只有这一个 即不分片)
-            task = item.NewSegment(0, null, ErrorCallback);
+            task = item.NewSegmentAsync(0, null, ErrorCallback);
         }
         else for (
             var currentNode = item.Segments.First;
@@ -216,7 +216,7 @@ public class Downloader(
             if (seg.CurrentChunkStartTime - DateTime.Now > Timeout)
             {
                 // 超时重试
-                task = item.RestartSegment(currentNode, true);
+                task = item.RestartSegmentAsync(currentNode, true);
                 break;
             }
             // 估计下载速度 防止重复下载同样的内容
@@ -225,7 +225,7 @@ public class Downloader(
             // 开始新的分片
             var start = (seg.NextPosition + seg.EndPosition) / 2;
             var end = seg.EndPosition;
-            task = item.NewSegment(start, end, ErrorCallback, currentNode);
+            task = item.NewSegmentAsync(start, end, ErrorCallback, currentNode);
             break;
         }
         if (task != null) _RunParallelTask(task);

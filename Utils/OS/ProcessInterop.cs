@@ -1,17 +1,25 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using System.Management;
+using System.Security.Principal;
 
 namespace PCL.Core.Utils.OS;
 
 public class ProcessInterop
 {
     /// <summary>
+    /// 检查当前程序是否以管理员权限运行。
+    /// </summary>
+    /// <returns>如果当前用户具有管理员权限，则返回 true；否则返回 false。</returns>
+    public static bool IsAdmin() =>
+        new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+    
+    /// <summary>
     /// 获取指定进程 ID 的命令行参数。
     /// </summary>
     /// <param name="processId">进程 ID</param>
     /// <returns>命令行参数文本</returns>
-    public static string GetCommandLine(int processId)
+    public static string? GetCommandLine(int processId)
     {
         var query = $"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {processId}";
         using var searcher = new ManagementObjectSearcher(query);

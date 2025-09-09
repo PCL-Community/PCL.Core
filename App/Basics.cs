@@ -5,12 +5,21 @@ using System.Linq;
 using System.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
 
-public class Basics
+public static class Basics
 {
+    /// <summary>
+    /// 当前的版本名称
+    /// </summary>
+    public static string VersionName = "";
+
+    /// <summary>
+    /// 当前的版本号
+    /// </summary>
+    public static int VersionNumber = 0;
+
     /// <summary>
     /// 当前进程实例。
     /// </summary>
@@ -24,12 +33,12 @@ public class Basics
     /// <summary>
     /// 当前进程可执行文件的绝对路径。
     /// </summary>
-    public static readonly string ExecutablePath = ProcessInterop.GetExecutablePath(CurrentProcess)!;
+    public static readonly string ExecutablePath = Environment.ProcessPath!;
 
     /// <summary>
     /// 当前进程可执行文件所在的目录。若有需求，请使用 <see cref="Path.Combine(string[])"/> 而不是自行拼接路径。
     /// </summary>
-    public static readonly string ExecutableDirectory = Path.GetDirectoryName(ExecutablePath) ?? Path.GetPathRoot(ExecutablePath);
+    public static readonly string ExecutableDirectory = GetParentPath(ExecutablePath) ?? CurrentDirectory;
 
     /// <summary>
     /// 当前进程可执行文件的名称，含扩展名。
@@ -52,7 +61,7 @@ public class Basics
     public static string CurrentDirectory => Environment.CurrentDirectory;
 
     /// <summary>
-    /// 在新的工作线程运行指定委托
+    /// 在新的工作线程运行指定委托。
     /// </summary>
     /// <param name="action">要运行的委托</param>
     /// <param name="name">线程名，默认为 <c>WorkerThread@[ThreadId]</c></param>
@@ -71,5 +80,42 @@ public class Basics
         thread.Name = threadName.Value;
         thread.Start();
         return thread;
+    }
+
+    /// <summary>
+    /// 获取某个路径的父路径/目录。
+    /// </summary>
+    /// <param name="path">路径文本</param>
+    /// <returns>父路径文本，可能为 <c>null</c></returns>
+    public static string? GetParentPath(string path) => Path.GetDirectoryName(path) ?? Path.GetPathRoot(path);
+
+    /// <summary>
+    /// 获取某个路径的父路径/目录。
+    /// </summary>
+    /// <param name="path">路径文本</param>
+    /// <returns>父路径文本，或空白</returns>
+    public static string GetParentPathOrEmpty(string path) => GetParentPath(path) ?? string.Empty;
+
+    /// <summary>
+    /// 获取某个路径的父路径/目录。
+    /// </summary>
+    /// <param name="path">路径文本</param>
+    /// <returns>父路径文本，或默认 (<see cref="CurrentDirectory"/>)</returns>
+    public static string GetParentPathOrDefault(string path) => GetParentPath(path) ?? CurrentDirectory;
+
+    /// <summary>
+    /// 以默认方式打开一个路径 (文件或目录)
+    /// </summary>
+    /// <param name="path">路径文本</param>
+    /// <param name="workingDirectory">执行工作目录</param>
+    public static void OpenPath(string path, string? workingDirectory = null)
+    {
+        var psi = new ProcessStartInfo(path)
+        {
+            WorkingDirectory = workingDirectory ?? CurrentDirectory,
+            UseShellExecute = true,
+            CreateNoWindow = true
+        };
+        Process.Start(psi);
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Management;
+using PCL.Core.App;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Secret;
@@ -30,9 +30,9 @@ public static class Identify
         try
         {
             using var searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor");
-            using ManagementObjectCollection collection = searcher.Get();
+            using var collection = searcher.Get();
 
-            foreach (ManagementBaseObject item in collection)
+            foreach (var item in collection)
             {
                 try
                 {
@@ -59,7 +59,7 @@ public static class Identify
         {
             LogWrapper.Error("Identify", $"COM异常: {ex.Message}. 请确保WMI服务正在运行");
         }
-        catch (System.UnauthorizedAccessException)
+        catch (UnauthorizedAccessException)
         {
             LogWrapper.Error("Identify", "访问被拒绝，请以管理员权限运行");
         }
@@ -80,17 +80,17 @@ public static class Identify
     {
         try
         {
-            if (string.IsNullOrEmpty(Setup.System.LaunchUuid)) Setup.System.LaunchUuid = GetGuid();
-            var hashCode = GetMachineId(Setup.System.LaunchUuid)
+            if (string.IsNullOrEmpty(Config.System.LaunchUuid)) Config.System.LaunchUuid = GetGuid();
+            var hashCode = GetMachineId(Config.System.LaunchUuid)
                 .Substring(6, 16)
                 .Insert(4, "-")
                 .Insert(9, "-")
                 .Insert(14, "-");
             return hashCode;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            LogWrapper.Error("Identify", $"无法获取短识别码");
+            LogWrapper.Error(ex, "Identify", "无法获取短识别码");
             return "PCL2-CECE-GOOD-2025";
         }
     }

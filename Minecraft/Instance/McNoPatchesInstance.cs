@@ -104,124 +104,14 @@ public class McNoPatchesInstance : IMcInstance {
     private async Task RefreshVersionJsonInJarAsync() {
         _versionJsonInJar = await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
     }
-
-    private readonly FrozenDictionary<string, string> _patcherIdNameMapping = new Dictionary<string, string> {
-            { "org.quiltmc:quilt-loader", "quilt" },
-            { "com.cleanroommc:cleanroom", "cleanroom" },
-            { "com.mumfrey:liteloader", "liteloader" },
+    
+    public McInstanceInfo? InstanceInfo {
+        get {
+            return _instanceInfo ??= RefreshInstanceInfo();
         }
-        .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
-
-    private void ConvertToPatches() {
-        ParseLibraryNamesAsHashSet();
-
-        // Quilt & Cleanroom & LiteLoader
-        foreach (var pair in _patcherIdNameMapping) {
-            var version = FindPatcherVersionsInHashSet(pair.Key);
-            if (version != null) {
-                _instanceInfo!.Patchers.Add(new PatcherInfo {
-                    Id = pair.Value,
-                    Version = version
-                });
-            }
+        set {
+            _instanceInfo = value;
         }
-
-        var hasNeoForge = true;
-
-        // NeoForge
-        if (FindPatcherVersionsInHashSet("net.neoforged.fancymodloader") != null) {
-            try {
-                if (_instanceInfo!.McVersionStr.IsNullOrEmpty()) {
-                    try {
-                        FindArgumentData("--fml.neoForgeVersion", "neoforge");
-                    } catch {
-                        FindArgumentData("--fml.forgeVersion", "neoforge");
-                    }
-                }
-                FindArgumentData(_instanceInfo!.McVersionStr == "1.20.1" ? "--fml.forgeVersion" : "--fml.neoForgeVersion", "neoforge");
-
-            } catch (Exception ex) {
-                hasNeoForge = false;
-                LogWrapper.Warn(ex, "识别 NeoForge 时出错");
-            }
-        } else {
-            hasNeoForge = false;
-        }
-
-        var hasFabric = false;
-        if (!hasNeoForge) {
-            // Fabric & LegacyFabric
-            var fabricVersion = FindPatcherVersionsInHashSet("net.fabricmc:fabric-loader");
-            if (fabricVersion != null) {
-                if (FindPatcherVersionsInHashSet("net.legacyfabric") != null) {
-                    _instanceInfo!.Patchers.Add(new PatcherInfo {
-                        Id = "legacyfabric",
-                        Version = fabricVersion
-                    });
-                } else {
-                    _instanceInfo!.Patchers.Add(new PatcherInfo {
-                        Id = "fabric",
-                        Version = fabricVersion
-                    });
-                }
-                hasFabric = true;
-            }
-        }
-
-        if (!hasNeoForge & !hasFabric) {
-            // Forge
-            try {
-                FindArgumentData("--fml.forgeVersion", "forge");
-            } catch (Exception ex) {
-                LogWrapper.Warn(ex, "识别 Forge 时出错");
-            }
-        }
-
-        // OptiFine
-        var optiFineVersion = FindPatcherVersionsInHashSet("optifine:OptiFine");
-        if (optiFineVersion != null) {
-            var parts = optiFineVersion.Split('_', 2);
-            if (parts.Length > 1) {
-                if (Version.TryParse(parts[0], out _)) {
-                    _instanceInfo!.Patchers.Add(new PatcherInfo {
-                        Id = "optifine",
-                        Version = parts[1]
-                    });
-                }
-            }
-        }
-
-        // LabyMod
-        try {
-            // 使用 FirstOrDefault() 查找符合条件的节点
-            var labyModNode = _versionJson!["arguments"]!["game"]!.AsArray()
-                .FirstOrDefault(node =>
-                    node!.GetValueKind() == JsonValueKind.String &&
-                    node.ToString().Contains("labymod", StringComparison.OrdinalIgnoreCase));
-            if (labyModNode != null) {
-                _instanceInfo!.Patchers.Add(new PatcherInfo {
-                    Id = "labymod"
-                });
-            }
-        } catch {
-            LogWrapper.Info("未识别到 LabyMod");
-        }
-        
-        // Game
-        _instanceInfo!.Patchers.Add(new PatcherInfo {
-            Id = "game",
-            Version = _instanceInfo.McVersionStr
-        });
-    }
-
-    private void FindArgumentData(string argument, string id) {
-        var args = _versionJson!["arguments"]!["game"]!.AsArray();
-        var index = args.IndexOf(argument);
-        var version = args[index + 1];
-        _instanceInfo!.Patchers.Add(new PatcherInfo {
-            Id = id,
-            Version = version!.ToString()
-        });
     }
 
     /// <summary>
@@ -233,15 +123,6 @@ public class McNoPatchesInstance : IMcInstance {
         return _libraryNameHashCache!.Where(name => name.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase))
             .Select(name => name[(prefix.Length + 1)..])
             .FirstOrDefault();
-    }
-
-    /// <summary>
-    /// 从 JSON 提取 libraries 的 name 属性为 HashSet
-    /// </summary>
-    private void ParseLibraryNamesAsHashSet() {
-        _libraryNameHashCache = _libraries!.Where(lib => lib.Name != null)
-            .Select(lib => lib.Name!)
-            .ToHashSet();
     }
 
     public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRangeAsync() {
@@ -260,8 +141,6 @@ public class McNoPatchesInstance : IMcInstance {
     /// 是否为旧版 JSON 格式
     /// </summary>
     public bool IsOldJson => _versionJson!.ContainsKey("minecraftArguments");
-
-    #region Check and Load
 
     public async Task CheckAsync() {
         if (!await CheckPermissionAsync() || !await CheckJsonAsync()) {

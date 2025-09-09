@@ -21,22 +21,16 @@ namespace PCL.Core.Minecraft.Instance;
 /// <summary>
 /// 管理实例基础信息
 /// </summary>
-public class McInstance : IMcInstance {
+public class McNoPatchesInstance : IMcInstance {
+    // 使用缓存以避免复杂属性的重复计算
     private JsonObject? _versionJson;
+    private JsonObject? _versionJsonInJar;
     private McInstanceInfo? _instanceInfo;
+    private McInstanceCardType _cachedCardType;
 
     private List<Library>? _libraries; // 依赖库列表
     private HashSet<string>? _libraryNameHashCache; // 依赖库哈希缓存
     private AssetIndex? _assetIndex;
-
-    private JsonObject? _versionJsonInJar;
-
-    private McInstanceCardType? _cachedDisplayType;
-
-    private readonly InstanceIsolationHandler _instanceIsolationHandler;
-    private readonly InstanceJsonHandler _instanceJsonHandler;
-    private readonly InstanceUiHandler _instanceUiHandler;
-    private readonly InstanceJavaHandler _instanceJavaHandler;
 
     /// <summary>
     /// 初始化 Minecraft 实例
@@ -44,86 +38,81 @@ public class McInstance : IMcInstance {
     /// 在你调用其他方法时，我们默认你已经调用了 <c>CheckAsync()</c> 并且通过了检查
     /// </summary>
     /// <param name="path"></param>
-    public McInstance(string path) {
-        Path = (path.Contains(':') ? "" : McFolderManager.PathMcFolder + "versions\\") + path + (path.EndsWith('\\') ? "" : "\\");
-        _instanceIsolationHandler = new InstanceIsolationHandler(Path, Name, _cachedDisplayType, _instanceInfo);
-        _instanceJsonHandler = new InstanceJsonHandler(Path, Name);
-        _instanceUiHandler = new InstanceUiHandler(Path, _instanceInfo, _cachedDisplayType);
-        _instanceJavaHandler = new InstanceJavaHandler(_instanceInfo, _versionJson, _versionJsonInJar);
+    public McNoPatchesInstance(string path) {
+        // 定义基础路径
+        var basePath = System.IO.Path.Combine(McFolderManager.PathMcFolder, "versions");
+
+        // 判断是否为绝对路径，并拼接正确的路径
+        Path = path.Contains(':') ? path : System.IO.Path.Combine(basePath, path);
     }
     
     public string Path { get; }
     
     public string Name => InstanceBasicHandler.GetName(Path);
-
-    /// <summary>
-    /// 应用版本隔离后的 Minecraft 根文件夹路径，以“\”结尾
-    /// </summary>
-    public string? IsolatedPath {
+    
+    public string IsolatedPath {
         get {
             if (_instanceInfo == null) {
                 GetInstanceInfo();
             }
-            return _instanceIsolationHandler.GetIsolatedPath();
+            return InstanceIsolationHandler.GetIsolatedPath(this);
         }
     }
-
-    /// <summary>
-    /// 显示的描述文本
-    /// </summary>
+    
     public string Desc { get; set; } = "该实例未被加载，请向作者反馈此问题";
 
-    /// <summary>
-    /// 显示的实例图标
-    /// </summary>
-    public string? Logo { get; set; }
-
-    /// <summary>
-    /// 是否为收藏的实例
-    /// </summary>
+    public string Logo { get; set; } = Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
+    
     public bool IsStarred => InstanceBasicHandler.GetIsStarred(Path);
+    
+    public McInstanceCardType CardType {
+        get {
+            if (!InstanceBasicHandler.HasCorrectCardType(_cachedCardType)) {
+                _cachedCardType = InstanceBasicHandler.RefreshInstanceCardType(this);
+            }
+            return _cachedCardType;
+        }
+        set {
+            if (InstanceBasicHandler.HasCorrectCardType(_cachedCardType)) {
+                return;
+            }
+            _cachedCardType = value;
+            Config.Instance.CardType[Path] = (int)value;
+        }
+    }
     
     /// <summary>
     /// 异步获取 JSON 对象。
     /// </summary>
     /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
-    public async Task<JsonObject?> GetVersionJsonAsync() {
-        return _versionJson ?? await RefreshVersionJsonAsync();
+    private async Task GetVersionJsonAsync() {
+        _versionJson ??= await InstanceJsonHandler.RefreshVersionJsonAsync(this);
     }
 
-    public async Task<JsonObject?> RefreshVersionJsonAsync() {
-        _versionJson = await _instanceJsonHandler.RefreshVersionJsonAsync();
-        return _versionJson;
+    private async Task RefreshVersionJsonAsync() {
+        _versionJson = await InstanceJsonHandler.RefreshVersionJsonAsync(this);
     }
-    
+
     /// <summary>
     /// 异步获取 Jar 中的 JSON 对象。
     /// </summary>
     /// <returns>表示 Minecraft 实例的 Jar 中的 JSON 对象。</returns>
-    public async Task<JsonObject?> GetVersionJsonInJarAsync() => _versionJsonInJar ?? await RefreshVersionJsonAsync();
-
-    public async Task<JsonObject?> RefreshVersionJsonInJarAsync() {
-        _versionJsonInJar = await _instanceJsonHandler.RefreshVersionJsonInJarAsync();
-        return _versionJsonInJar;
+    private async Task GetVersionJsonInJarAsync() {
+        _versionJsonInJar ??= await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
     }
 
-    #region No Patches Compatibility
+    private async Task RefreshVersionJsonInJarAsync() {
+        _versionJsonInJar = await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
+    }
 
     private readonly FrozenDictionary<string, string> _patcherIdNameMapping = new Dictionary<string, string> {
-            // { "net.fabricmc:fabric-loader", "fabric" }, 
             { "org.quiltmc:quilt-loader", "quilt" },
             { "com.cleanroommc:cleanroom", "cleanroom" },
             { "com.mumfrey:liteloader", "liteloader" },
-            // { "optifine:OptiFine", "optifine" },
-            // { "net.minecraftforge:forge", "forge" }
         }
         .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private void ConvertToPatches() {
-        if (IsPatchesFormatJson) {
-            return;
-        }
-
         ParseLibraryNamesAsHashSet();
 
         // Quilt & Cleanroom & LiteLoader
@@ -255,68 +244,11 @@ public class McInstance : IMcInstance {
             .ToHashSet();
     }
 
-    #endregion
-
-    #region Display Type
-
-    /// <summary>
-    /// 强制实例分类
-    /// </summary>
-    public McInstanceCardType DisplayType {
-        set => _cachedDisplayType = value;
-    }
-
-    public McInstanceCardType GetInstanceDisplayType() {
-        if (_cachedDisplayType == null) {
-            RefreshInstanceDisplayType();
-        }
-        return _cachedDisplayType!.Value;
-    }
-
-    /// <summary>
-    /// 实例分类
-    /// </summary>
-    private void RefreshInstanceDisplayType() {
-        var savedDisplayType = (McInstanceCardType)Config.Instance.DisplayType[Path];
-
-        // 如果不是自动分类，跳过以下分类流程
-        if (savedDisplayType != McInstanceCardType.Auto) {
-            _cachedDisplayType = savedDisplayType;
-            return;
-        }
-
-        var versionInfo = GetInstanceInfo();
-
-        // 判断各个可安装模组的实例
-        _cachedDisplayType = McInstanceUtils.RecognizeInstanceCardType(versionInfo!);
-
-        if (_cachedDisplayType != null) {
-            return;
-        }
-
-        if (versionInfo!.Patchers.Count > 0) {
-            _cachedDisplayType = McInstanceCardType.UnknownPatchers;
-        } else {
-            // 没有任何附加组件，按原版分类
-            _cachedDisplayType = versionInfo.VersionType switch {
-                McVersionType.Release => McInstanceCardType.Release,
-                McVersionType.Snapshot => McInstanceCardType.Snapshot,
-                McVersionType.Fool => McInstanceCardType.Fool,
-                McVersionType.Old => McInstanceCardType.Old,
-                _ => McInstanceCardType.UnknownPatchers
-            };
-        }
-    }
-
-    #endregion
-
     public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRangeAsync() {
         await GetVersionJsonInJarAsync();
         return _instanceJavaHandler.GetCompatibleJavaVersionRange();
     }
-
-    #region Version Json Info
-
+    
     /// <summary>
     /// 实例信息
     /// </summary>
@@ -324,55 +256,10 @@ public class McInstance : IMcInstance {
         return _instanceInfo ??= RefreshInstanceInfo();
     }
 
-    private McInstanceInfo? RefreshInstanceInfo() {
-        var instanceInfo = new McInstanceInfo();
-        if (_cachedDisplayType == McInstanceCardType.Error) {
-            return null;
-        }
-
-        // 获取 MC 版本
-        var version = McInstanceUtils.RecognizeMcVersion(_versionJson!);
-
-        if (version != null) {
-            instanceInfo.McVersionStr = version;
-        } else {
-            LogWrapper.Warn("识别 Minecraft 版本时出错");
-            instanceInfo.McVersionStr = "Unknown";
-            Desc = "无法识别 Minecraft 版本";
-        }
-
-        // 获取发布时间
-        var releaseTime = McInstanceUtils.RecognizeReleaseTime(_versionJson!);
-        instanceInfo.ReleaseTime = releaseTime;
-
-        // 获取版本类型
-        instanceInfo.VersionType = McInstanceUtils.RecognizeVersionType(_versionJson!, releaseTime);
-        
-        try {
-            if (IsPatchesFormatJson) {
-                foreach (var patch in _versionJson!["patches"]!.AsArray()) {
-                    var patcherInfo = patch.Deserialize<PatcherInfo>(Files.PrettierJsonOptions);
-                    if (patcherInfo != null) {
-                        instanceInfo.Patchers.Add(patcherInfo);
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "识别 Minecraft 版本时出错");
-            instanceInfo.McVersionStr = "Unknown";
-            Desc = $"无法识别：{ex.Message}";
-        }
-        _instanceInfo = instanceInfo;
-
-        return _instanceInfo;
-    }
-
     /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
     public bool IsOldJson => _versionJson!.ContainsKey("minecraftArguments");
-    
-    #endregion
 
     #region Check and Load
 
@@ -454,8 +341,6 @@ public class McInstance : IMcInstance {
         Config.Instance.Info[Path] = Desc;
         Config.Instance.LogoPath[Path] = Logo!;
     }
-
-    #endregion
 
     #region Libraries
 

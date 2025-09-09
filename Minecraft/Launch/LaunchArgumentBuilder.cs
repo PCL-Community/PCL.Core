@@ -7,13 +7,13 @@ using PCL.Core.UI;
 namespace PCL.Core.Minecraft.Launch;
 
 public class LaunchArgumentBuilder {
-    private readonly McInstance _instance;
+    private readonly McNoPatchesInstance _noPatchesInstance;
     private readonly JavaInfo _selectedJavaInfo;
     private readonly McLoginResult _loginResult;
         
-    public LaunchArgumentBuilder(McInstance instance, JavaInfo selectedJavaInfo, McLoginResult loginResult)
+    public LaunchArgumentBuilder(McNoPatchesInstance noPatchesInstance, JavaInfo selectedJavaInfo, McLoginResult loginResult)
     {
-        _instance = instance;
+        _noPatchesInstance = noPatchesInstance;
         _selectedJavaInfo = selectedJavaInfo;
         _loginResult = loginResult;
     }

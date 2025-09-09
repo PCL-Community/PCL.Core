@@ -3,35 +3,33 @@ using System.Linq;
 using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
+using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance.Handler;
 
-public class InstanceIsolationHandler(string pathRef, string nameRef, McInstanceCardType? cardTypeRef, McInstanceInfo? instanceInfoRef) {
-    private string Path => pathRef;
-    private string Name => nameRef;
-    private McInstanceCardType? CardType => cardTypeRef;
-    private McInstanceInfo? InstanceInfo => instanceInfoRef;
-    
+public static class InstanceIsolationHandler {
     /// <summary>
     /// 获取实例的隔离路径，根据全局设置和实例特性决定是否使用独立文件夹。
     /// </summary>
     /// <returns>隔离后的路径，以“\”结尾</returns>
-    public string? GetIsolatedPath() {
-        if (CardType == McInstanceCardType.Error) {
-            return null;
+    public static string GetIsolatedPath(IMcInstance instance) {
+        if (instance.CardType == McInstanceCardType.Error) {
+            return "";
         }
         
-        if (!Config.Instance.IndieV2[Path]) {
-            var shouldBeIndie = ShouldBeIndie();
-            Config.Instance.IndieV2[Path] = shouldBeIndie;
+        if (Config.Instance.IndieV2[instance.Path]) {
+            return Config.Instance.IndieV2[instance.Path] ? instance.Path : McFolderManager.PathMcFolder;
         }
-        return Config.Instance.IndieV2[Path] ? Path : McFolderManager.PathMcFolder;
+
+        var shouldBeIndie = ShouldBeIndie(instance);
+        Config.Instance.IndieV2[instance.Path] = shouldBeIndie;
+        return Config.Instance.IndieV2[instance.Path] ? instance.Path : McFolderManager.PathMcFolder;
     }
 
-    private bool ShouldBeIndie() {
+    private static bool ShouldBeIndie(IMcInstance instance) {
         // 若存在 mods 或 saves 文件夹，自动开启隔离
-        var modFolder = new DirectoryInfo(Path + "mods\\");
-        var saveFolder = new DirectoryInfo(Path + "saves\\");
+        var modFolder = new DirectoryInfo(instance.Path + "mods\\");
+        var saveFolder = new DirectoryInfo(instance.Path + "saves\\");
         if ((modFolder.Exists && modFolder.EnumerateFiles().Any()) ||
             (saveFolder.Exists && saveFolder.EnumerateDirectories().Any())) {
             LogWrapper.Info("Isolation", $"版本隔离初始化（{Name}）：存在 mods 或 saves 文件夹，自动开启");

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -14,7 +15,7 @@ namespace PCL.Core.Minecraft.Instance;
 public class McInstanceInfo {
     private Version? _mcVersion;
 
-    private static readonly ImmutableDictionary<string, string> LoaderImageMap =
+    private static readonly FrozenDictionary<string, string> PatchersImageMap =
         new Dictionary<string, string> {
             { "neoforge", "Blocks/NeoForge.png" },
             { "fabric", "Blocks/Fabric.png" },
@@ -25,7 +26,7 @@ public class McInstanceInfo {
             { "cleanroom", "Blocks/Cleanroom.png" },
             { "labymod", "Blocks/LabyMod.png" },
             { "optifine", "Blocks/OptiFine.png" }
-        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// 指示实例的 API 信息是否已加载。
@@ -82,8 +83,6 @@ public class McInstanceInfo {
     /// </summary>
     public int? McVersionBuild => McVersion?.Build;
 
-    #region Patchers
-
     public List<PatcherInfo> Patchers { get; } = [];
 
     public bool IsModded => HasAnyPatcher([
@@ -108,8 +107,6 @@ public class McInstanceInfo {
         return Patchers.FirstOrDefault(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
     }
 
-    #endregion
-
     public string GetLogo() {
         switch (VersionType) {
             case McVersionType.Fool:
@@ -127,33 +124,13 @@ public class McInstanceInfo {
         // 其次判断加载器等
         foreach (var loader in new[] { "neoforge", "fabric", "legacyFabric", "forge", "liteloader", "quilt", "cleanroom", "labymod", "optifine" }) {
             if (Patchers.Any(p => p.Id!.Equals(loader, StringComparison.OrdinalIgnoreCase))) {
-                return Path.Combine(Basics.ImagePath, LoaderImageMap[loader]);
+                return Path.Combine(Basics.ImagePath, PatchersImageMap[loader]);
             }
         }
 
         // 正常版本
         return Path.Combine(Basics.ImagePath, "Blocks/Grass.png");
     }
-
-    /*
-    /// <summary>
-    /// 生成用户友好的实例信息描述字符串。
-    /// </summary>
-    public override string ToString() {
-        string result = string.Empty;
-        if (HasForge) result += $", Forge{(ForgeVersion == "未知版本" ? "" : " " + ForgeVersion)}";
-        if (HasNeoForge) result += $", NeoForge{(NeoForgeVersion == "未知版本" ? "" : " " + NeoForgeVersion)}";
-        if (HasCleanroom) result += $", Cleanroom{(CleanroomVersion == "未知版本" ? "" : " " + CleanroomVersion)}";
-        if (HasFabric) result += $", Fabric{(FabricVersion == "未知版本" ? "" : " " + FabricVersion)}";
-        if (HasLegacyFabric) result += $", LegacyFabric{(LegacyFabricVersion == "未知版本" ? "" : " " + LegacyFabricVersion)}";
-        if (HasQuilt) result += $", Quilt{(QuiltVersion == "未知版本" ? "" : " " + QuiltVersion)}";
-        if (HasLabyMod) result += $", LabyMod{(LabyModVersion == "未知版本" ? "" : " " + LabyModVersion)}";
-        if (HasOptiFine) result += $", OptiFine{(OptiFineVersion == "未知版本" ? "" : " " + OptiFineVersion)}";
-        if (HasLiteLoader) result += ", LiteLoader";
-
-        return result == string.Empty ? $"原版 {McVersion}" : $"{McVersion}{result}";
-    }
-    */
 }
 
 public enum McVersionType {

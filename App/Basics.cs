@@ -64,7 +64,7 @@ public static class Basics
     /// <summary>
     /// 程序内嵌图片文件夹路径，以“/”结尾。
     /// </summary>
-    public static readonly string ImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
+    public const string ImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
 
     /// <summary>
     /// 在新的工作线程运行指定委托。
@@ -139,4 +139,6 @@ public static class Basics
         var resourceInfo = Application.GetResourceStream(new Uri($"pack://application:,,,/{path}", UriKind.Absolute));
         return resourceInfo?.Stream;
     }
+    
+    public static string GetAppImagePath(string imageName) => Path.Combine(ImagePath, imageName);
 }

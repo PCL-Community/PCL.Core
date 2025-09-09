@@ -5,24 +5,24 @@ using PCL.Core.Minecraft.Instance;
 namespace PCL.Core.Minecraft.Launch.Services;
 
 public static class FileCompleteService {
-    public static void FileComplete(McInstance instance, bool checkAssetHash, AssetsIndexExistsBehaviour assetsIndexBehaviour) {
-        if (ShouldIgnoreFileCheck(instance.Path)) {
+    public static void FileComplete(McNoPatchesInstance noPatchesInstance, bool checkAssetHash, AssetsIndexExistsBehaviour assetsIndexBehaviour) {
+        if (ShouldIgnoreFileCheck(noPatchesInstance.Path)) {
             LogWrapper.Info("Completion", "已跳过所有 Libraries 检查");
         } else {
-            LibrariesComplete(instance);
+            LibrariesComplete(noPatchesInstance);
         }
     }
 
-    private static void LibrariesComplete(McInstance instance) {
-        if (instance.IsPatchesFormatJson) {
-            LibrariesCompleteWithPatches(instance);
+    private static void LibrariesComplete(McNoPatchesInstance noPatchesInstance) {
+        if (noPatchesInstance.IsPatchesFormatJson) {
+            LibrariesCompleteWithPatches(noPatchesInstance);
         } else {
-            LibrariesCompleteWithoutPatches(instance);
+            LibrariesCompleteWithoutPatches(noPatchesInstance);
         }
     }
     
-    private static void LibrariesCompleteWithoutPatches(McInstance instance) {
-        foreach (var lib in instance.Libraries!) {
+    private static void LibrariesCompleteWithoutPatches(McNoPatchesInstance noPatchesInstance) {
+        foreach (var lib in noPatchesInstance.Libraries!) {
             var path = lib.
             if (path.Exists) {
                 if (ShouldIgnoreFileCheck(path.FullName)) {
@@ -34,9 +34,9 @@ public static class FileCompleteService {
         }
     }
     
-    private static void LibrariesCompleteWithPatches(McInstance instance) {
-        foreach (var lib in instance.Libraries) {
-            var path = lib.GetPath(instance);
+    private static void LibrariesCompleteWithPatches(McNoPatchesInstance noPatchesInstance) {
+        foreach (var lib in noPatchesInstance.Libraries) {
+            var path = lib.GetPath(noPatchesInstance);
             if (path.Exists) {
                 if (ShouldIgnoreFileCheck(path.FullName)) {
                     continue;

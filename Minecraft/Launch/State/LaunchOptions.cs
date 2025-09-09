@@ -8,7 +8,7 @@ public record LaunchOptions (
     string? ServerIp,
     string? WorldName,
     string? SaveBatch,
-    McInstance? Version,
+    McNoPatchesInstance? Version,
     List<string> ExtraArgs,
     bool Test
 );

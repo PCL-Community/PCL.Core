@@ -53,13 +53,13 @@ public static class LaunchEnvironmentManager {
         sourceStream.CopyTo(fileStream);
     }
 
-    private static bool McLaunchNeedsRetroWrapper(McInstance mcInstance) {
-        var versionInfo = mcInstance.GetInstanceInfo();
+    private static bool McLaunchNeedsRetroWrapper(McNoPatchesInstance mcNoPatchesInstance) {
+        var versionInfo = mcNoPatchesInstance.GetInstanceInfo();
         if (versionInfo == null) return false;
 
         var isOldVersion = versionInfo.McVersionMinor < 6 && versionInfo.McVersionMinor != 99;
         var isSpecificVersion = versionInfo.ReleaseTime >= new DateTime(2013, 6, 25) && versionInfo.McVersionMinor == 99;
-        var isRwEnabled = !Config.Launch.DisableRw && !Config.Instance.DisableRw[mcInstance.Path];
+        var isRwEnabled = !Config.Launch.DisableRw && !Config.Instance.DisableRw[mcNoPatchesInstance.Path];
 
         return (isOldVersion || isSpecificVersion) && isRwEnabled;
     }

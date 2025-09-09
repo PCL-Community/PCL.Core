@@ -294,7 +294,7 @@ public static partial class Config
         [ConfigItem<bool>("VersionServerLoginLock", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> AuthTypeLucked { get; }
         [ConfigItem<int>("VersionLaunchCount", 0, ConfigSource.GameInstance)] public partial ArgConfig<int> LaunchCount { get; }
         [ConfigItem<bool>("IsStar", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> Starred { get; }
-        [ConfigItem<int>("DisplayType", 0, ConfigSource.GameInstance)] public partial ArgConfig<int> DisplayType { get; }
+        [ConfigItem<int>("DisplayType", 0, ConfigSource.GameInstance)] public partial ArgConfig<int> CardType { get; }
         [ConfigItem<string>("Logo", "", ConfigSource.GameInstance)] public partial ArgConfig<string> LogoPath { get; }
         [ConfigItem<bool>("LogoCustom", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> IsLogoCustom { get; }
         [ConfigItem<string>("CustomInfo", "", ConfigSource.GameInstance)] public partial ArgConfig<string> CustomInfo { get; }

@@ -43,17 +43,16 @@ public class McPing : IDisposable
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NullReferenceException">获取的结果出现字段缺失时</exception>
-    public async Task<McPingResult?> PingAsync()
+    public async Task<McPingResult?> PingAsync(CancellationToken cancellationToken = default) 
     {
         using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        using var cts = new CancellationTokenSource();
-        cts.CancelAfter(_timeout);
+        using var timeoutCts = new CancellationTokenSource(_timeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        // 从这里开始，所有异步操作都使用 cts.Token
         try
         {
             LogWrapper.Debug("McPing", $"Connecting to {_endpoint}");
-            await so.ConnectAsync(_endpoint.Address, _endpoint.Port, cts.Token);
+            await so.ConnectAsync(_endpoint.Address, _endpoint.Port, linkedCts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -75,25 +74,25 @@ public class McPing : IDisposable
         var watcher = new Stopwatch();
         try
         {
-            await stream.WriteAsync(handshakePacket, cts.Token);
+            await stream.WriteAsync(handshakePacket, linkedCts.Token);
             LogWrapper.Debug("McPing", $"Handshake sent, packet length: {handshakePacket.Length}");
 
-            await stream.WriteAsync(statusPacket, cts.Token);
+            await stream.WriteAsync(statusPacket, linkedCts.Token);
             LogWrapper.Debug("McPing", $"Status sent, packet length: {statusPacket.Length}");
 
             var buffer = new byte[4096];
             watcher.Start();
 
-            var totalLength = Convert.ToInt64(await VarIntHelper.ReadFromStreamAsync(stream, cts.Token));
+            var totalLength = Convert.ToInt64(await VarIntHelper.ReadFromStreamAsync(stream, linkedCts.Token));
             watcher.Stop();
             LogWrapper.Debug("McPing", $"Total length: {totalLength}");
 
             long readLength = 0;
             while (readLength < totalLength)
             {
-                var curReaded = await stream.ReadAsync(buffer, cts.Token);
+                var curReaded = await stream.ReadAsync(buffer, linkedCts.Token);
                 readLength += curReaded;
-                await res.WriteAsync(buffer, 0, curReaded, cts.Token);
+                await res.WriteAsync(buffer, 0, curReaded, linkedCts.Token);
             }
         }
         catch (OperationCanceledException)
@@ -108,37 +107,30 @@ public class McPing : IDisposable
         }
         finally
         {
-            // 确保 socket 在所有情况下都被关闭
             if (so.Connected) so.Shutdown(SocketShutdown.Both);
         }
 
-        so.Close(); // 使用 using 块，这行其实可以移除，但保留也无妨
+        so.Close();
 
         var retBinary = res.ToArray();
-        var dataLength =
-            Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
+        var dataLength = Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
         LogWrapper.Debug("McPing", $"ServerDataLength: {dataLength}");
         if (dataLength > retBinary.Length) throw new Exception("The server data is too large");
-        var retCtx = Encoding.UTF8.GetString([.. retBinary.Skip(1 + packDataHeaderLength).Take(dataLength)]);
+        var retCtx = Encoding.UTF8.GetString(retBinary.Skip(1 + packDataHeaderLength).Take(dataLength).ToArray());
 
-        // 反实例化
         var retJson = JsonNode.Parse(retCtx) ?? throw new NullReferenceException("服务器返回了错误的信息");
-#if DEBUG
+    #if DEBUG
         var resJsonDebug = retJson.DeepClone();
-        // 检查根节点是否为 JSON 对象，并且包含 "favicon" 属性
         if (resJsonDebug is JsonObject jsonObject && jsonObject.ContainsKey("favicon"))
         {
-            // 将 "favicon" 属性的值替换为省略号
             jsonObject["favicon"] = "...";
         }
-
         LogWrapper.Debug("McPing", resJsonDebug.ToJsonString());
-#endif
+    #endif
         var versionNode = retJson["version"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失: version");
         var playersNode = retJson["players"] ?? new JsonObject();
         var descNode = _convertJNodeToMcString(retJson["description"] ?? new JsonObject());
         var modInfoNode = retJson["modinfo"];
-        // 写完后发现可以先修改 description 到纯文本后再直接实例化，事已至此，先推送吧 :\
         var ret = new McPingResult(
             new McPingVersionResult(
                 versionNode["name"]?.ToString() ?? "未知服务端版本名",
@@ -160,7 +152,7 @@ public class McPing : IDisposable
                         x!["modid"]?.ToString() ?? string.Empty,
                         x["version"]?.ToString() ?? string.Empty))
                     .ToList())
-            );
+        );
         return ret;
     }
 

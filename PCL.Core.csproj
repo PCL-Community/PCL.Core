@@ -27,6 +27,7 @@
         <WarningLevel>4</WarningLevel>
         <OutputPath>bin\$(Configuration)-$(Platform)\</OutputPath>
         <PlatformTarget>$(Platform)</PlatformTarget>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     </PropertyGroup>
     <!-- 构建配置 -->
     <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'CI' Or '$(Configuration)' == 'DebugCI'">
@@ -70,10 +71,19 @@
         <Page Include="**\*.xaml" Exclude="bin\**;obj\**;publish\**" />
         <Resource Include="UI\Assets\*" />
         <Resource Include="UI\Assets\Shaders\*.ps" />
+		<CompilerVisibleProperty Include="PCL_WRITE_SECRET" />
+		<CompilerVisibleProperty Include="PCL_MS_CLIENT_ID" />
+		<CompilerVisibleProperty Include="PCL_CURSEFORGE_API_KEY" />
+		<CompilerVisibleProperty Include="PCL_TELEMETRY_KEY" />
+		<CompilerVisibleProperty Include="PCL_NAID_CLIENT_ID" />
+		<CompilerVisibleProperty Include="PCL_NAID_CLIENT_SECRET" />
+		<CompilerVisibleProperty Include="PCL_LINK_SERVER_ROOT" />
+		<CompilerVisibleProperty Include="PCL_LOBBY_DEFAULT_SECRET" />
+		<CompilerVisibleProperty Include="PCL_GITHUB_SHA" />
     </ItemGroup>
     <!-- 源代码生成器 -->
     <ItemGroup>
         <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Properties="Platform=AnyCPU" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 </Project>

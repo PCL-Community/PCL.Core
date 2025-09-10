@@ -25,17 +25,17 @@ public interface IMcInstance {
     /// <summary>
     /// 实例卡片类型
     /// </summary>
-    McInstanceCardType CardType { get; set; }
+    McInstanceCardType CardType { get; }
     
     /// <summary>
     /// 显示的实例描述文本
     /// </summary>
-    string Desc { get; set; }
+    string Desc { get; }
     
     /// <summary>
     /// 显示的实例图标路径
     /// </summary>
-    string Logo { get; set; }
+    string Logo { get; }
     
     /// <summary>
     /// 实例是否被收藏
@@ -45,5 +45,5 @@ public interface IMcInstance {
     /// <summary>
     /// 实例由版本 JSON 分析得到的信息
     /// </summary>
-    McInstanceInfo InstanceInfo { get; set; }
+    IMcInstanceInfo InstanceInfo { get; }
 }

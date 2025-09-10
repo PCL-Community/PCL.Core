@@ -9,8 +9,8 @@ using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance.Handler.JsonBased;
 
-public static class InstanceInfoHandler {
-    private readonly FrozenDictionary<string, string> _patcherIdNameMapping = new Dictionary<string, string> {
+public static class InstanceJsonHandler {
+    private static readonly FrozenDictionary<string, string> PatcherIdNameMapping = new Dictionary<string, string> {
             { "org.quiltmc:quilt-loader", "quilt" },
             { "com.cleanroommc:cleanroom", "cleanroom" },
             { "com.mumfrey:liteloader", "liteloader" },
@@ -67,7 +67,7 @@ public static class InstanceInfoHandler {
         ParseLibraryNamesAsHashSet();
 
         // Quilt & Cleanroom & LiteLoader
-        foreach (var pair in _patcherIdNameMapping) {
+        foreach (var pair in PatcherIdNameMapping) {
             var version = FindPatcherVersionsInHashSet(pair.Key);
             if (version != null) {
                 _instanceInfo!.Patchers.Add(new PatcherInfo {

@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using PCL.Core.App;
-using PCL.Core.Utils;
+using PCL.Core.Minecraft.Instance.Handler;
+using PCL.Core.Minecraft.Instance.Interface;
 
-namespace PCL.Core.Minecraft.Instance;
+namespace PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patches;
 
 /// <summary>
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。
 /// </summary>
-public class McInstanceInfo {
+public class PatcherInstanceInfo : IMcInstanceInfo {
     private Version? _mcVersion;
 
     private static readonly FrozenDictionary<string, string> PatchersImageMap =
@@ -27,46 +27,20 @@ public class McInstanceInfo {
             { "labymod", "Blocks/LabyMod.png" },
             { "optifine", "Blocks/OptiFine.png" }
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// 指示实例的 API 信息是否已加载。
-    /// </summary>
-    public bool IsApiLoaded { get; set; }
-
-    /// <summary>
-    /// 实例发布时间
-    /// </summary>
+    
     public DateTime ReleaseTime { get; set; } = DateTime.MinValue;
 
-    /// <summary>
-    /// 原版版本名，如 "1.12.2" 或 "16w01a"。
-    /// </summary>
-    public string McVersionStr { get; set; } = string.Empty;
+    public string McVersionStr { get; } = Patchers.Find(p => p.Id == "game")!.Version!;
 
-    /// <summary>
-    /// 可读的版本名
-    /// </summary>
-    public string FormattedVersion => McVersionStr == string.Empty ? "未知版本" : McFormatter.FormatVersion(McVersionStr);
+    public string FormattedVersion => InstanceInfoHandler.GetFormattedVersion(McVersionStr);
 
-    /// <summary>
-    /// 是否为正常版本号格式的版本
-    /// </summary>
-    public bool IsNormalVersion => RegexPatterns.McNormalVersion.IsMatch(McVersionStr);
-
-    /// <summary>
-    /// MC 版本类型
-    /// </summary>
-    public McVersionType VersionType = McVersionType.Release;
-
-    /// <summary>
-    /// 标准的原版版本号。若为快照版或无效版本号，返回 0.0.0。
-    /// </summary>
-    // 私有支持字段，用于缓存解析结果
-
+    public bool IsNormalVersion => InstanceInfoHandler.IsNormalVersion(McVersionStr);
+    
+    public McVersionType VersionType { get; set; } = McVersionType.Release;
+    
     public Version? McVersion {
-        get {
-            return _mcVersion ??= RefreshMcVersion();
-        }
+        get => _mcVersion ??= RefreshMcVersion();
+        set => _mcVersion = value;
     }
 
     private Version? RefreshMcVersion() {
@@ -83,7 +57,7 @@ public class McInstanceInfo {
     /// </summary>
     public int? McVersionBuild => McVersion?.Build;
 
-    public List<PatcherInfo> Patchers { get; } = [];
+    private static List<PatcherInfo> Patchers { get; } = [];
 
     public bool IsModded => HasAnyPatcher([
         "cleanroom", "liteloader", "forge", "neoforge", "fabric", "legacyfabric", "quilt"
@@ -95,7 +69,11 @@ public class McInstanceInfo {
 
     // 检查是否包含特定加载器
     public bool HasPatcher(string patcherId) {
-        return Patchers.Any(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+        return Patchers.Any(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+    }
+    
+    public string GetPatcherVersion(string id) {
+        return Patchers.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.Version ?? string.Empty;
     }
 
     // 检查是否包含一组加载器中的任意一个
@@ -123,7 +101,7 @@ public class McInstanceInfo {
 
         // 其次判断加载器等
         foreach (var loader in new[] { "neoforge", "fabric", "legacyFabric", "forge", "liteloader", "quilt", "cleanroom", "labymod", "optifine" }) {
-            if (Patchers.Any(p => p.Id!.Equals(loader, StringComparison.OrdinalIgnoreCase))) {
+            if (Patchers.Any(p => p.Id.Equals(loader, StringComparison.OrdinalIgnoreCase))) {
                 return Path.Combine(Basics.ImagePath, PatchersImageMap[loader]);
             }
         }
@@ -133,9 +111,3 @@ public class McInstanceInfo {
     }
 }
 
-public enum McVersionType {
-    Fool,
-    Release,
-    Snapshot,
-    Old
-}

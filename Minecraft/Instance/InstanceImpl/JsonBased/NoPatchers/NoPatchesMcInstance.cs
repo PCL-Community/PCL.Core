@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,19 +12,17 @@ using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Resources;
-using PCL.Core.Minecraft.Launch;
-using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.Minecraft.Instance;
+namespace PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.NoPatchers;
 
 /// <summary>
 /// 管理实例基础信息
 /// </summary>
-public class McNoPatchesInstance : IMcInstance {
+public class NoPatchesMcInstance : IMcInstance{
     // 使用缓存以避免复杂属性的重复计算
     private JsonObject? _versionJson;
     private JsonObject? _versionJsonInJar;
-    private McInstanceInfo? _instanceInfo;
+    private NoPatchesMcInstance? _instanceInfo;
     private McInstanceCardType _cachedCardType;
 
     private List<Library>? _libraries; // 依赖库列表
@@ -38,7 +35,7 @@ public class McNoPatchesInstance : IMcInstance {
     /// 在你调用其他方法时，我们默认你已经调用了 <c>CheckAsync()</c> 并且通过了检查
     /// </summary>
     /// <param name="path"></param>
-    public McNoPatchesInstance(string path) {
+    public NoPatchesMcInstance(string path) {
         // 定义基础路径
         var basePath = System.IO.Path.Combine(McFolderManager.PathMcFolder, "versions");
 

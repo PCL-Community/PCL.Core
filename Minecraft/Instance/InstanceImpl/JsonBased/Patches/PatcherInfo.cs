@@ -10,7 +10,7 @@ public class PatcherInfo {
     /// <summary>
     /// 附加组件的 identifier，例如 "optiFine" 或 "forge"。
     /// </summary>
-    public string? Id { get; set; }
+    public required string Id { get; set; }
 
     /// <summary>
     /// 附加组件的名称，例如 "OptiFine" 或 "Forge"。
@@ -25,7 +25,7 @@ public class PatcherInfo {
     /// <summary>
     /// 加载的优先级
     /// </summary>
-    public int Priority { get; set; }
+    public int? Priority { get; set; }
 
     /// <summary>
     /// 覆盖性的游戏启动参数

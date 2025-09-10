@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Minecraft.Instance;
+﻿namespace PCL.Core.Minecraft.Instance.Interface;
 
 
 public enum McInstanceCardType {

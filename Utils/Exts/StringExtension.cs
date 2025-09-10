@@ -7,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace PCL.Core.Utils.Exts;
 
@@ -41,7 +42,7 @@ public static class StringExtension
 
         if (targetType.IsEnum) return Enum.Parse(targetType, value, ignoreCase: true);
 
-        var parse = targetType.GetMethod("Parse", 
+        var parse = targetType.GetMethod("Parse",
             BindingFlags.Public | BindingFlags.Static,
             binder: null, types: [typeof(string)], modifiers: null);
         if (parse is not null) return parse.Invoke(null, [value]);
@@ -203,7 +204,7 @@ public static class StringExtension
     {
         return str.All(c => c < 128);
     }
-    
+
     public static bool StartsWithF(this string str, string prefix, bool ignoreCase = false)
         => str.StartsWith(prefix, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
@@ -224,4 +225,9 @@ public static class StringExtension
 
     public static int LastIndexOfF(this string str, string subStr, int startIndex, bool ignoreCase = false)
         => str.LastIndexOf(subStr, startIndex, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    public static string Capitalize(this string text)
+        => Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(text);
+
+
 }

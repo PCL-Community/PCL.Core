@@ -13,16 +13,16 @@ using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Resources;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.NoPatchers;
+namespace PCL.Core.Minecraft.Instance.InstanceImpl;
 
 /// <summary>
 /// 管理实例基础信息
 /// </summary>
-public class NoPatchesMcInstance : IMcInstance{
+public class MergeInstance : IMcInstance{
     // 使用缓存以避免复杂属性的重复计算
     private JsonObject? _versionJson;
     private JsonObject? _versionJsonInJar;
-    private NoPatchesMcInstance? _instanceInfo;
+    private MergeInstance? _instanceInfo;
     private McInstanceCardType _cachedCardType;
 
     private List<Library>? _libraries; // 依赖库列表
@@ -35,7 +35,7 @@ public class NoPatchesMcInstance : IMcInstance{
     /// 在你调用其他方法时，我们默认你已经调用了 <c>CheckAsync()</c> 并且通过了检查
     /// </summary>
     /// <param name="path"></param>
-    public NoPatchesMcInstance(string path) {
+    public MergeInstance(string path) {
         // 定义基础路径
         var basePath = System.IO.Path.Combine(McFolderManager.PathMcFolder, "versions");
 
@@ -109,17 +109,6 @@ public class NoPatchesMcInstance : IMcInstance{
         set {
             _instanceInfo = value;
         }
-    }
-
-    /// <summary>
-    /// 从 HashSet 中查找以指定前缀开头的 name 并提取版本号
-    /// </summary>
-    /// <param name="prefix">目标前缀</param>
-    /// <returns>匹配的版本号或如果未找到</returns>
-    private string? FindPatcherVersionsInHashSet(string prefix) {
-        return _libraryNameHashCache!.Where(name => name.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase))
-            .Select(name => name[(prefix.Length + 1)..])
-            .FirstOrDefault();
     }
 
     public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRangeAsync() {

@@ -253,7 +253,7 @@ public static class McInstanceManager {
 
     private static bool IsIgnoredType(McInstanceCardType type) => type == McInstanceCardType.Error;
 
-    private static (McInstanceCardType, PatcherInfo) GetSortKey(McNoPatchesInstance noPatchesInstance, McInstanceCardType type) {
+    private static (McInstanceCardType, PatchInfo) GetSortKey(McNoPatchesInstance noPatchesInstance, McInstanceCardType type) {
         var patcherId = PatcherIds[type];
         return (type, noPatchesInstance.GetInstanceInfo()!.GetPatcher(patcherId)!);
     }

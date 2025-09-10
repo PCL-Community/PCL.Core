@@ -354,7 +354,7 @@ public class OptiFineVersionComparer : IComparer<string> {
 }
 
 // This class acts as a dispatcher to the correct comparer based on type.
-public class PatcherVersionComparer : IComparer<(McInstanceCardType, PatcherInfo)> {
+public class PatcherVersionComparer : IComparer<(McInstanceCardType, PatchInfo)> {
     private static readonly Dictionary<McInstanceCardType, IComparer<string>> Comparers = new() {
         { McInstanceCardType.Release, McVersionComparerFactory.ReleaseVersionComparer },
         { McInstanceCardType.Snapshot, McVersionComparerFactory.SnapshotVersionComparer },
@@ -371,7 +371,7 @@ public class PatcherVersionComparer : IComparer<(McInstanceCardType, PatcherInfo
         { McInstanceCardType.LabyMod, McVersionComparerFactory.ReleaseVersionComparer },
     };
 
-    public int Compare((McInstanceCardType, PatcherInfo) x, (McInstanceCardType, PatcherInfo) y) {
+    public int Compare((McInstanceCardType, PatchInfo) x, (McInstanceCardType, PatchInfo) y) {
         var (xType, xInfo) = x;
         var (_, yInfo) = y;
 
@@ -392,7 +392,7 @@ public class PatcherVersionComparer : IComparer<(McInstanceCardType, PatcherInfo
 
 // This static factory provides singleton instances of each comparer.
 public static class McVersionComparerFactory {
-    public static IComparer<(McInstanceCardType, PatcherInfo)> PatcherVersionComparer { get; } = new PatcherVersionComparer();
+    public static IComparer<(McInstanceCardType, PatchInfo)> PatcherVersionComparer { get; } = new PatcherVersionComparer();
 
     public static IComparer<string> ReleaseVersionComparer { get; } = new ReleaseVersionComparer();
     public static IComparer<string> SnapshotVersionComparer { get; } = new SnapshotVersionComparer();

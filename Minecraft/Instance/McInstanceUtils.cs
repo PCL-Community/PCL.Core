@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance;
 
@@ -47,6 +48,9 @@ public static class McInstanceUtils {
         return VariantSuffixes.FirstOrDefault(s => name.EndsWith((string)s.Key)).Value ?? "";
     }
     
+    /// <summary>
+    /// 解析 MC 版本号，如果无法识别则返回 null。
+    /// </summary>
     public static string? RecognizeMcVersion(JsonObject versionJson) {
         // Get version from patches
         if (versionJson.TryGetPropertyValue("patches", out var patchesElement) &&
@@ -71,15 +75,13 @@ public static class McInstanceUtils {
     }
     
     /// <summary>
-    /// 异步获取版本的发布日期时间，如果无法获取或解析失败，则返回默认时间（1970-01-01 15:00:00）。
+    /// 异步获取版本的发布日期时间，如果无法获取或解析失败，则返回 null。
     /// </summary>
-    /// <returns>版本的发布日期时间，或默认时间。</returns>
-    public static DateTime RecognizeReleaseTime(JsonObject jsonObject) {
+    public static DateTime? RecognizeReleaseTime(JsonObject jsonObject) {
         if (!jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode) || 
             releaseTimeNode == null || 
-            !DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime))
-        {
-            return DateTime.MinValue;
+            !DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime)) {
+            return null;
         }
 
         return releaseTime;

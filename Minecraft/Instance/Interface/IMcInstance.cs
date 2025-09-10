@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json.Nodes;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance.Handler;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 
 namespace PCL.Core.Minecraft.Instance.Interface;
 
@@ -25,17 +26,17 @@ public interface IMcInstance {
     /// <summary>
     /// 实例卡片类型
     /// </summary>
-    McInstanceCardType CardType { get; }
+    McInstanceCardType CardType { get; set; }
     
     /// <summary>
     /// 显示的实例描述文本
     /// </summary>
-    string Desc { get; }
+    string Desc { get; set; }
     
     /// <summary>
     /// 显示的实例图标路径
     /// </summary>
-    string Logo { get; }
+    string Logo { get; set;  }
     
     /// <summary>
     /// 实例是否被收藏
@@ -45,5 +46,5 @@ public interface IMcInstance {
     /// <summary>
     /// 实例由版本 JSON 分析得到的信息
     /// </summary>
-    IMcInstanceInfo InstanceInfo { get; }
+    PatchInstanceInfo InstanceInfo { get; set; }
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Merge;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance;
@@ -15,8 +17,8 @@ public static class McInstanceFactory {
 
     public static IMcInstance CloneInstance(IMcInstance original) {
         return original switch {
-            McNoPatchesInstance noPatchesInstance => CopyCommonProperties(noPatchesInstance, new McNoPatchesInstance(noPatchesInstance.Path)),
-            McPatchesInstance patchesInstance => CopyCommonProperties(patchesInstance, new McPatchesInstance(patchesInstance.Path)),
+            MergeInstance noPatchesInstance => CopyCommonProperties(noPatchesInstance, new MergeInstance(noPatchesInstance.Path)),
+            PatchInstance patchesInstance => CopyCommonProperties(patchesInstance, new PatchInstance(patchesInstance.Path)),
             _ => throw new NotSupportedException("不支持的实例类型")
         };
     }

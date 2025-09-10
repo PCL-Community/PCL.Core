@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PCL.Core.Minecraft.Instance;
+namespace PCL.Core.Minecraft.Instance.InstanceImpl;
 
 /// <summary>
 /// 表示 Minecraft 实例中附加组件（如 OptiFine、Forge 等）的版本信息和安装状态。
 /// </summary>
-public class PatcherInfo {
+public class PatchInfo {
     /// <summary>
     /// 附加组件的 identifier，例如 "optiFine" 或 "forge"。
     /// </summary>

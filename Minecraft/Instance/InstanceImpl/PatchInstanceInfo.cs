@@ -7,12 +7,12 @@ using PCL.Core.App;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patches;
+namespace PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 
 /// <summary>
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。
 /// </summary>
-public class PatcherInstanceInfo : IMcInstanceInfo {
+public class PatchInstanceInfo {
     private Version? _mcVersion;
 
     private static readonly FrozenDictionary<string, string> PatchersImageMap =
@@ -30,7 +30,7 @@ public class PatcherInstanceInfo : IMcInstanceInfo {
     
     public DateTime ReleaseTime { get; set; } = DateTime.MinValue;
 
-    public string McVersionStr { get; } = Patchers.Find(p => p.Id == "game")!.Version!;
+    public string? McVersionStr => Patchers.Find(p => p.Id == "game")?.Version;
 
     public string FormattedVersion => InstanceInfoHandler.GetFormattedVersion(McVersionStr);
 
@@ -57,7 +57,7 @@ public class PatcherInstanceInfo : IMcInstanceInfo {
     /// </summary>
     public int? McVersionBuild => McVersion?.Build;
 
-    private static List<PatcherInfo> Patchers { get; } = [];
+    public List<PatchInfo> Patchers { get; } = [];
 
     public bool IsModded => HasAnyPatcher([
         "cleanroom", "liteloader", "forge", "neoforge", "fabric", "legacyfabric", "quilt"
@@ -81,7 +81,7 @@ public class PatcherInstanceInfo : IMcInstanceInfo {
         return patcherIds.Any(id => Patchers.Any(p => p.Id!.Equals(id, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public PatcherInfo? GetPatcher(string patcherId) {
+    public PatchInfo? GetPatcher(string patcherId) {
         return Patchers.FirstOrDefault(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
     }
 

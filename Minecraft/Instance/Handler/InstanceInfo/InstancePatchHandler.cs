@@ -1,0 +1,34 @@
+﻿using System;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using PCL.Core.IO;
+using PCL.Core.Logging;
+using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
+using PCL.Core.Minecraft.Instance.Interface;
+
+namespace PCL.Core.Minecraft.Instance.Handler.InstanceInfo;
+
+public static class InstancePatchHandler {
+    /// <summary>
+    /// 将 Patch 类型 JSON 转化为对应的 InstanceInfo
+    /// </summary>
+    public static IMcInstance RefreshPatchInstanceInfo(IMcInstance instance, JsonObject versionJson, JsonObject libraries) {
+        var clonedInstance = McInstanceFactory.CloneInstance(instance);
+        var instanceInfo = new PatchInstanceInfo();
+        try {
+            foreach (var patch in versionJson["patches"]!.AsArray()) {
+                var patcherInfo = patch.Deserialize<PatchInfo>(Files.PrettierJsonOptions);
+                if (patcherInfo != null) {
+                    instanceInfo.Patchers.Add(patcherInfo);
+                }
+            }
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "识别 Patches 字段时出错");
+            clonedInstance.Desc = $"无法识别：{ex.Message}";
+        }
+        
+        clonedInstance.InstanceInfo = instanceInfo;
+        return clonedInstance;
+    }
+}

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
 

@@ -11,4 +11,5 @@ public interface IClient
     static abstract Task UpdateVersionIndexAsync();
     static abstract List<DownloadItem> AnalysisLibrary(JsonNode versionJson);
     static abstract Task<string> GetJsonAsync(string version,string exceptHash);
+    static abstract Task StartClientInstallAsync(string version,string path);
 }

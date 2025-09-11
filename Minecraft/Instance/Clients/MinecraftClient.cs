@@ -13,6 +13,7 @@ using System;
 using System.Runtime.InteropServices;
 using PCL.Core.Utils.Exts;
 using PCL.Core.Minecraft.Instance;
+using PCL.Core.IO;
 
 namespace PCL.Core.Minecraft.Instance.Clients;
 
@@ -71,6 +72,7 @@ public class MinecraftClient : IClient
             {
                 var response = await HttpRequestBuilder.Create(source, HttpMethod.Get).SendAsync(true);
                 var content = await response.AsStringAsync();
+                exceptHash ??= version["sha1"]?.ToString();
                 if (!string.IsNullOrEmpty(exceptHash))
                 {
                     var hashResult = SHA1Provider.Instance.ComputeHash(content);
@@ -85,9 +87,9 @@ public class MinecraftClient : IClient
         }
         throw new HttpRequestException("Failed to download version json:All of source unavailable");
     }
-    public static List<DownloadItem> AnalysisLibrary(JsonNode versionJson)
+    public static List<NetFile> AnalysisLibrary(JsonNode versionJson)
     {
-        var list = new List<DownloadItem>();
+        var list = new List<NetFile>();
         foreach (var library in versionJson["libraries"]!.AsArray())
         {
             var rules = library?["rules"];
@@ -118,7 +120,14 @@ public class MinecraftClient : IClient
             var classifiers = library?["downloads"]?["classifiers"];
             if (artifact is not null)
             {
-                list.Add(new DownloadItem())
+                list.Add(new NetFile()
+                {
+                    Path = "",
+                    Url = [""],
+                    Size = 0,
+                    Algorithm = HashAlgorithm.sha1,
+                    Hash = ""
+                });
             }
             if (classifiers is not null)
             {
@@ -131,5 +140,26 @@ public class MinecraftClient : IClient
             }
         }
         return list;
+    }
+    public static async Task StartClientInstallAsync(string mcVersion, string path)
+    {
+        var versionJson = await GetJsonAsync(mcVersion);
+        var versionJsonNode = JsonNode.Parse(versionJson);
+        ArgumentNullException.ThrowIfNull(versionJsonNode);
+        var libraryList = AnalysisLibrary(versionJsonNode);
+        var downloader = new Downloader();
+        foreach (var library in libraryList)
+        {
+            foreach (var item in library.GetDownloadItem())
+            {
+                downloader.AddItem(item);
+            }
+        }
+        downloader.Start();
+
+    }
+    public static async Task<List<NetFile>?> AnalysisAssets(JsonNode versionJson)
+    {
+        return null;
     }
 }

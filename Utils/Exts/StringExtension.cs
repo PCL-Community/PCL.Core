@@ -228,6 +228,6 @@ public static class StringExtension
 
     public static string Capitalize(this string text)
         => Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(text);
-
+    public static Uri ToUri(this string url) => new Uri(url);
 
 }

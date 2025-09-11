@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using PCL.Core.Net;
+using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.IO;
@@ -10,7 +13,8 @@ public class NetFile
     public int Size = -1;
     public HashAlgorithm Algorithm = HashAlgorithm.sha1;
     public string Hash = "";
-
+    public required string[] Url { get; set; }
+    
     public bool CheckFile()
     {
         if (!File.Exists(Path)) return false;
@@ -28,6 +32,22 @@ public class NetFile
             return hash == Hash;
         }
         return true;
+    }
+    // 这个方法存在的意义就是为了让 Downloader 支持换源重试
+    /// <summary>
+    /// 获取当前对象的 DownloadItem 列表。
+    /// </summary>
+    /// <returns></returns>
+    public List<DownloadItem> GetDownloadItem()
+    {
+        var list = new List<DownloadItem>();
+        foreach (var url in Url)
+        {
+            var item = new DownloadItem(url.ToUri(), Path);
+            item.Finished += () => CheckFile();
+            list.Add(item);
+        }
+        return list;
     }
 }
 

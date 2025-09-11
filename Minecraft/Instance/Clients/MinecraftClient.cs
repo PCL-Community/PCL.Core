@@ -12,13 +12,13 @@ using System.Management;
 using System;
 using System.Runtime.InteropServices;
 using PCL.Core.Utils.Exts;
+using PCL.Core.Minecraft.Instance;
 
-namespace PCL.Core.Minecraft.Instance;
+namespace PCL.Core.Minecraft.Instance.Clients;
 
-public static class MinecraftClient
+public class MinecraftClient : IClient
 {
     public static JsonNode? VersionList;
-
     private const string Official = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
     private const string BmclApi = "https://bmclapi2.bangbang93.com/mc/game/version_manifest_v2.json";
     private static string[] _GetVersionSource() => Config.ToolConfigGroup.DownloadConfigGroup.VersionSourceSolution switch
@@ -61,7 +61,7 @@ public static class MinecraftClient
             }
         }
     }
-    public static async Task<string> DownloadJsonAsync(string mcVersion, string? exceptHash = null)
+    public static async Task<string> GetJsonAsync(string mcVersion, string? exceptHash = null)
     {
         var version = await GetVersionInfoAsync(mcVersion);
         if (version is null) throw new VersionNotFoundException($"Version not found: {mcVersion}");
@@ -85,7 +85,7 @@ public static class MinecraftClient
         }
         throw new HttpRequestException("Failed to download version json:All of source unavailable");
     }
-    public static async List<DownloadItem> AnalysisLibrary(JsonNode versionJson)
+    public static List<DownloadItem> AnalysisLibrary(JsonNode versionJson)
     {
         var list = new List<DownloadItem>();
         foreach (var library in versionJson["libraries"]!.AsArray())
@@ -104,7 +104,7 @@ public static class MinecraftClient
                             if (!string.IsNullOrEmpty(osName) &&
                                 RuntimeInformation.IsOSPlatform(OSPlatform.Create(osName.ToUpper()))) continue;
                             var currentArchitecture = Architecture.X86;
-                            
+
                             if (!Enum.TryParse(arch!.Capitalize(), out currentArchitecture)) continue;
                             if (!string.IsNullOrEmpty(arch) &&
                                 RuntimeInformation.OSArchitecture == currentArchitecture) continue;
@@ -118,7 +118,7 @@ public static class MinecraftClient
             var classifiers = library?["downloads"]?["classifiers"];
             if (artifact is not null)
             {
-                // list.Add(new DownloadItem())
+                list.Add(new DownloadItem())
             }
             if (classifiers is not null)
             {
@@ -129,7 +129,7 @@ public static class MinecraftClient
                     nativeKey = nativeKey.Replace("${arch}", $"{(RuntimeInformation.OSArchitecture == Architecture.X86 ? "86" : "64")}");
 
             }
-
         }
+        return list;
     }
 }

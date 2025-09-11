@@ -8,6 +8,7 @@ using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
+using PCL.Core.Minecraft.Instance.Resources;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance.Handler.InstanceInfo;
@@ -28,7 +29,7 @@ public static class InstanceMergeHandler {
     /// <summary>
     /// 将 Merge 类型 JSON 转化为对应的 InstanceInfo
     /// </summary>
-    private static IMcInstance RefreshMergeInstanceInfo(IMcInstance instance, in JsonObject versionJson, JsonObject libraries) {
+    public static IMcInstance RefreshMergeInstanceInfo(IMcInstance instance, in JsonObject versionJson, List<Library> libraries) {
         var clonedInstance = McInstanceFactory.CloneInstance(instance);
 
         var instanceInfo = new PatchInstanceInfo();
@@ -47,18 +48,18 @@ public static class InstanceMergeHandler {
         });
         
         // 添加其它补丁信息
-        instanceInfo.Patchers.AddRange(GetPatchInfos(instanceInfo, versionJson));
+        instanceInfo.Patchers.AddRange(GetPatchInfos(instanceInfo, versionJson, libraries));
 
         clonedInstance.InstanceInfo = instanceInfo;
 
         return clonedInstance;
     }
 
-    private static List<PatchInfo> GetPatchInfos(PatchInstanceInfo patchInstanceInfo, in JsonObject versionJson) {
+    private static List<PatchInfo> GetPatchInfos(PatchInstanceInfo patchInstanceInfo, in JsonObject versionJson, in List<Library> libraries) {
         var patchInfos = new List<PatchInfo>();
         
         // 从 JSON 提取 libraries 的 name 属性为 HashSet
-        _libraryNameHashCache = _libraries!.Where(lib => lib.Name != null)
+        _libraryNameHashCache = libraries.Where(lib => lib.Name != null)
             .Select(lib => lib.Name!)
             .ToHashSet();
 
@@ -152,6 +153,16 @@ public static class InstanceMergeHandler {
         } catch {
             LogWrapper.Info("未识别到 LabyMod");
         }
+        
+        // 原版
+        var mcVersion = RecognizeMcVersion(versionJson);
+        var releaseTime = RecognizeReleaseTime(versionJson);
+        
+        var patchInfo = new PatchInfo { Id = "game" };
+        if (mcVersion != null) patchInfo.Version = mcVersion;
+        if (releaseTime != null) patchInfo.ReleaseTime = releaseTime;
+
+        patchInfos.Add(patchInfo);
 
         return patchInfos;
     }
@@ -195,8 +206,7 @@ public static class InstanceMergeHandler {
             .FirstOrDefault();
     }
 
-    public static string? RecognizeMcVersion(JsonObject versionJson) {
-        // Get version from patches
+    private static string? RecognizeMcVersion(JsonObject versionJson) {
         if (versionJson.TryGetPropertyValue("patches", out var patchesElement) &&
             patchesElement?.GetValueKind() == JsonValueKind.Array) {
             var patchesArray = (JsonArray)patchesElement;
@@ -222,17 +232,17 @@ public static class InstanceMergeHandler {
     /// 异步获取版本的发布日期时间，如果无法获取或解析失败，则返回默认时间（1970-01-01 15:00:00）。
     /// </summary>
     /// <returns>版本的发布日期时间，或默认时间。</returns>
-    public static DateTime RecognizeReleaseTime(JsonObject jsonObject) {
+    private static DateTime? RecognizeReleaseTime(JsonObject jsonObject) {
         if (!jsonObject.TryGetPropertyValue("releaseTime", out var releaseTimeNode) ||
             releaseTimeNode == null ||
             !DateTime.TryParse(releaseTimeNode.GetValue<string>(), out var releaseTime)) {
-            return DateTime.MinValue;
+            return null;
         }
 
         return releaseTime;
     }
 
-    public static McVersionType RecognizeVersionType(JsonObject versionJson, DateTime releaseTime) {
+    private static McVersionType RecognizeVersionType(JsonObject versionJson, DateTime releaseTime) {
         if (releaseTime is { Month: 4, Day: 1 }) {
             return McVersionType.Fool;
         }

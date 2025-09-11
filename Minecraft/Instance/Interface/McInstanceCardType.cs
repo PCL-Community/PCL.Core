@@ -29,6 +29,8 @@ public enum McInstanceCardType {
     Fool,
     Old,
 
-    UnknownPatchers
+    UnknownPatchers,
+    
+    Error
 }
 

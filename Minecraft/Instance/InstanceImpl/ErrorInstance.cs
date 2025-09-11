@@ -1,7 +1,41 @@
-﻿using PCL.Core.Minecraft.Instance.Interface;
+﻿using System.DirectoryServices.ActiveDirectory;
+using System.Dynamic;
+using PCL.Core.App;
+using PCL.Core.Minecraft.Folder;
+using PCL.Core.Minecraft.Instance.Handler;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
+using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance.InstanceImpl;
 
 public class ErrorInstance : IMcInstance {
+    /// <summary>
+    /// 初始化错误的 Minecraft 实例
+    /// </summary>
+    public ErrorInstance(string path, string? desc = null, string? logo = null) {
+        // 定义基础路径
+        var basePath = System.IO.Path.Combine(McFolderManager.PathMcFolder, "versions");
+
+        // 判断是否为绝对路径，并拼接正确的路径
+        Path = path.Contains(':') ? path : System.IO.Path.Combine(basePath, path);
+        
+        Desc = desc ?? "该实例未被加载，请向作者反馈此问题";
+        Logo = logo ?? Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
+    }
     
+    public string Path { get; }
+
+    public string IsolatedPath { get; } = string.Empty;
+
+    public string Name => InstanceBasicHandler.GetName(Path);
+    
+    public McInstanceCardType CardType { get; set; } = McInstanceCardType.Error;
+    
+    public string Desc { get; set; }
+
+    public string Logo { get; set; }
+
+    public bool IsStarred { get; } = false;
+    
+    public PatchInstanceInfo InstanceInfo { get; set; } = new PatchInstanceInfo();
 }

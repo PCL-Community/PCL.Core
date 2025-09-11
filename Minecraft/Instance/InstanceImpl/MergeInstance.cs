@@ -10,6 +10,8 @@ using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
+using PCL.Core.Minecraft.Instance.Handler.InstanceInfo;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Resources;
 
@@ -22,25 +24,23 @@ public class MergeInstance : IMcInstance{
     // 使用缓存以避免复杂属性的重复计算
     private JsonObject? _versionJson;
     private JsonObject? _versionJsonInJar;
-    private MergeInstance? _instanceInfo;
+    private PatchInstanceInfo? _instanceInfo;
     private McInstanceCardType _cachedCardType;
 
     private List<Library>? _libraries; // 依赖库列表
-    private HashSet<string>? _libraryNameHashCache; // 依赖库哈希缓存
     private AssetIndex? _assetIndex;
 
     /// <summary>
-    /// 初始化 Minecraft 实例
-    /// 初始化后请一定要先运行 <c>CheckAsync()</c> 方法
-    /// 在你调用其他方法时，我们默认你已经调用了 <c>CheckAsync()</c> 并且通过了检查
+    /// 初始化 Merge JSON 类型的 Minecraft 实例
     /// </summary>
-    /// <param name="path"></param>
-    public MergeInstance(string path) {
+    public MergeInstance(string path, string? logo) {
         // 定义基础路径
         var basePath = System.IO.Path.Combine(McFolderManager.PathMcFolder, "versions");
 
         // 判断是否为绝对路径，并拼接正确的路径
         Path = path.Contains(':') ? path : System.IO.Path.Combine(basePath, path);
+        
+        Logo = logo ?? Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
     }
     
     public string Path { get; }
@@ -49,16 +49,13 @@ public class MergeInstance : IMcInstance{
     
     public string IsolatedPath {
         get {
-            if (_instanceInfo == null) {
-                GetInstanceInfo();
-            }
             return InstanceIsolationHandler.GetIsolatedPath(this);
         }
     }
     
     public string Desc { get; set; } = "该实例未被加载，请向作者反馈此问题";
 
-    public string Logo { get; set; } = Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
+    public string Logo { get; set; }
     
     public bool IsStarred => InstanceBasicHandler.GetIsStarred(Path);
     
@@ -102,76 +99,21 @@ public class MergeInstance : IMcInstance{
         _versionJsonInJar = await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
     }
     
-    public McInstanceInfo? InstanceInfo {
+    public PatchInstanceInfo InstanceInfo {
         get {
-            return _instanceInfo ??= RefreshInstanceInfo();
+            if (_instanceInfo == null) {
+                McInstanceFactory.UpdateFromClonedInstance(this, InstanceMergeHandler.RefreshMergeInstanceInfo(this, _versionJson!, Libraries!));
+            }
+            return _instanceInfo!;
         }
-        set {
-            _instanceInfo = value;
-        }
-    }
-
-    public async Task<(Version MinVer, Version MaxVer)> GetCompatibleJavaVersionRangeAsync() {
-        await GetVersionJsonInJarAsync();
-        return _instanceJavaHandler.GetCompatibleJavaVersionRange();
-    }
-    
-    /// <summary>
-    /// 实例信息
-    /// </summary>
-    public McInstanceInfo? GetInstanceInfo() {
-        return _instanceInfo ??= RefreshInstanceInfo();
+        set => _instanceInfo = value;
     }
 
     /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
     public bool IsOldJson => _versionJson!.ContainsKey("minecraftArguments");
-
-    public async Task CheckAsync() {
-        if (!await CheckPermissionAsync() || !await CheckJsonAsync()) {
-            DisplayType = McInstanceCardType.Error;
-            Logo = System.IO.Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
-        } else {
-            // 确定实例图标
-            Logo = _instanceUiHandler.GetLogo();
-        }
-    }
-
-    private async Task<bool> CheckPermissionAsync() {
-        if (!Directory.Exists(Path)) {
-            Desc = $"未找到实例 {this.Name}";
-            return false;
-        }
-
-        try {
-            Directory.CreateDirectory(Path + "PCL\\");
-            await Directories.CheckPermissionWithExceptionAsync(Path + "PCL\\");
-        } catch (Exception ex) {
-            Desc = "PCL 没有对该文件夹的访问权限，请以管理员身份运行";
-            LogWrapper.Warn(ex, "没有访问实例文件夹的权限");
-            return false;
-        }
-        return true;
-    }
-
-    private async Task<bool> CheckJsonAsync() {
-        await GetVersionJsonAsync();
-        if (_versionJson == null) {
-            LogWrapper.Warn($"实例 JSON 可用性检查失败（{Path}）");
-            Desc = "实例 JSON 不存在或无法解析";
-            return false;
-        }
-        
-        GetInstanceInfo();
-        if (_instanceInfo == null) {
-            LogWrapper.Warn($"实例信息检查失败（{Path}）");
-            Desc = "无法识别实例信息";
-            return false;
-        }
-
-        return true;
-    }
+    
 
     public void Load() {
         GetInstanceDisplayType();

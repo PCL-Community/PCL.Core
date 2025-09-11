@@ -8,10 +8,10 @@ namespace PCL.Core.Link.Scaffolding;
 
 public class ClientPacket
 {
-    public byte PacketTypeLength {get; private set;}
+    public byte PacketTypeLength {get; set;}
     public required string PacketType {get; set;}
 
-    public uint BodyLength {get; private set;}
+    public uint BodyLength {get; set;}
     public required byte[] Body {get; set;}
 
     public static ClientPacket From(byte[] data) => From(data.AsSpan());

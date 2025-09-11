@@ -6,6 +6,7 @@ using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils;
+using PCL.Core.Utils.Secret;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
@@ -139,11 +140,16 @@ public static class ETController
             arguments.AddFlag("enable-kcp-proxy");
             arguments.AddFlag("use-smoltcp");
             arguments.Add("encryption-algorithm", "chacha20");
+            arguments.Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLower());
+            arguments.AddFlagIf(!Config.Link.TryPunchSym, "disable-sym-hole-punching");
+            arguments.AddFlagIf(!Config.Link.EnableIPv6, "disable-ipv6");
 
             // 用户名与其他参数
             arguments.AddFlagIf(Config.Link.LatencyFirstMode, "latency-first");
             arguments.Add("compression", "zstd");
             arguments.AddFlag("multi-thread");
+            arguments.Add("machine-id", Identify.LaunchId);
+
             // TODO: 等待玩家档案迁移以获取正在使用的档案名称
             var showName = "default";
             if (AllowCustomName && !string.IsNullOrWhiteSpace(Config.Link.Username))

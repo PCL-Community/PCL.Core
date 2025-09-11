@@ -1,4 +1,5 @@
-﻿using PCL.Core.Logging;
+﻿using System.Threading;
+using PCL.Core.Logging;
 using PCL.Core.Net;
 
 namespace PCL.Core.Minecraft;
@@ -15,10 +16,11 @@ public static class ServerAddressResolver {
     /// 解析服务器地址并获取其可达的IP和端口。
     /// </summary>
     /// <param name="address">服务器地址，可以是IP、IP:端口或域名。</param>
+    /// <param name="cancelToken">取消令牌。</param>
     /// <returns>包含IP和端口的元组。</returns>
     /// <exception cref="ArgumentException">地址为空或无效。</exception>
     /// <exception cref="FormatException">端口格式无效或SRV记录格式无效。</exception>
-    public static async Task<(string Ip, int Port)> GetReachableAddressAsync(string address) {
+    public static async Task<(string Ip, int Port)> GetReachableAddressAsync(string address, CancellationToken cancelToken = default) {
         // 输入验证
         if (string.IsNullOrWhiteSpace(address)) {
             throw new ArgumentException("服务器地址不能为空", nameof(address));
@@ -47,7 +49,7 @@ public static class ServerAddressResolver {
             LogWrapper.Info($"尝试SRV查询: _minecraft._tcp.{address}");
         
             // 关键修复：使用 .ToList() 将可枚举的集合转换为列表，确保只枚举一次。
-            var srvRecords = (await _ResolveSrvRecordsAsync(address)).ToList();
+            var srvRecords = (await _ResolveSrvRecordsAsync(address, cancelToken)).ToList();
 
             if (srvRecords.Count > 0) {
                 var ret = _ParseSrvRecord(srvRecords.First());
@@ -63,14 +65,14 @@ public static class ServerAddressResolver {
         return (address, 25565);
     }
 
-    private static async Task<IEnumerable<string>> _ResolveSrvRecordsAsync(string domain) {
+    private static async Task<IEnumerable<string>> _ResolveSrvRecordsAsync(string domain, CancellationToken cancelToken = default) {
         return await Task.Run(() => {
             try {
                 return NDnsQuery.GetSRVRecords($"_minecraft._tcp.{domain}");
             } catch {
                 return Enumerable.Empty<string>();
             }
-        });
+        }, cancelToken);
     }
 
     private static (string Host, int Port) _ParseSrvRecord(string record) {

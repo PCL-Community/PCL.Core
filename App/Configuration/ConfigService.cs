@@ -278,7 +278,7 @@ public sealed partial class ConfigService : GeneralService
             var currentSection = _isConfigItemsInitialized ? "OBSERVER" : _isProvidersInitialized ? "CONFIG_ITEM" : "PROVIDER";
             var msg = $"配置初始化失败，当前位于 {currentSection} 阶段。";
 #if DEBUG
-            msg += "\n\n嘻嘻，连配置系统都搞不明白...真是杂鱼呢~ 快修好故障重新启动吧，杂鱼杂鱼~";
+            msg += "\n\n嘻嘻，连配置系统都搞不明白...真是杂鱼呢~❤️ 快修好故障重新启动吧，杂鱼~❤️杂鱼~❤️";
 #else
             if (ex is FileInitException e)
             {

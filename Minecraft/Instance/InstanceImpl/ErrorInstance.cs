@@ -24,10 +24,10 @@ public class ErrorInstance : IMcInstance {
     }
     
     public string Path { get; }
-
-    public string IsolatedPath { get; } = string.Empty;
-
+    
     public string Name => InstanceBasicHandler.GetName(Path);
+    
+    public string IsolatedPath => string.Empty;
     
     public McInstanceCardType CardType { get; set; } = McInstanceCardType.Error;
     
@@ -35,7 +35,7 @@ public class ErrorInstance : IMcInstance {
 
     public string Logo { get; set; }
 
-    public bool IsStarred { get; } = false;
+    public bool IsStarred => false;
     
     public PatchInstanceInfo InstanceInfo { get; set; } = new PatchInstanceInfo();
 }

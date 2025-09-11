@@ -11,9 +11,9 @@ using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Resources;
 using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.Minecraft.Instance.Handler.InstanceInfo;
+namespace PCL.Core.Minecraft.Instance.Handler.Info;
 
-public static class InstanceMergeHandler {
+public static class InfoMergeHandler {
     /// <summary>
     /// 依赖库哈希缓存，便于在 Merge 类型 JSON 中识别补丁类型和版本
     /// </summary>

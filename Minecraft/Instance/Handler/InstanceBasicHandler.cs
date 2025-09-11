@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using PCL.Core.App;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance.Handler;
@@ -54,7 +55,7 @@ public static class InstanceBasicHandler {
     /// <summary>
     /// 从实例信息中识别实例的卡片类型
     /// </summary>
-    private static McInstanceCardType RecognizeInstanceCardType(McInstanceInfo instanceInfo) {
+    private static McInstanceCardType RecognizeInstanceCardType(PatchInstanceInfo instanceInfo) {
         var cachedCardType = McInstanceCardType.Auto;
         
         if (instanceInfo.HasPatcher("NeoForge")) {

@@ -2,35 +2,31 @@
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using PCL.Core.IO;
-using PCL.Core.Logging;
+using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Net;
 
-namespace PCL.Core.Minecraft.Instance.Handler;
+namespace PCL.Core.Minecraft.Instance.Service;
 
-public class InstanceLaunchHandler(string pathRef, string nameRef, JsonObject? versionJsonRef) {
-    private string Path => pathRef;
-    private string Name => nameRef;
-    private JsonObject? VersionJson => versionJsonRef;
-
+public static class InstanceLaunchService {
     /// <summary>
     /// Retrieves download information for the vanilla main JAR file of a specific Minecraft version.
     /// Requires the corresponding dependency instance to exist.
     /// Throws an exception on failure, returns null if no download is needed.
     /// </summary>
-    public async Task<DownloadItem?> CheckClientJarAsync(bool returnNullOnFileUsable) {
+    public static async Task<DownloadItem?> CheckClientJarAsync(IMcInstance instance, JsonObject versionJson, bool returnNullOnFileUsable) {
         // Check if JSON is valid
-        if (VersionJson?["downloads"]?["client"]?["url"] is null) {
-            throw new Exception($"Base instance {Name} lacks JAR file download information");
+        if (versionJson["downloads"]?["client"]?["url"] is null) {
+            throw new Exception($"Base instance {instance.Name} lacks JAR file download information");
         }
 
         // Check file
         var checkRes = await Files.CheckAsync(
-            System.IO.Path.Combine(Path, $"{Name}.jar"),
+            System.IO.Path.Combine(instance.Path, $"{instance.Name}.jar"),
             minSize: 1024,
-            actualSize: VersionJson!["downloads"]!["client"]!.AsObject().TryGetPropertyValue("size", out var sizeNode) 
+            actualSize: versionJson["downloads"]!["client"]!.AsObject().TryGetPropertyValue("size", out var sizeNode) 
                 ? Int32.TryParse(sizeNode!.ToString(), out var size) ? size : -1 
                 : -1,
-            hash: VersionJson["downloads"]!["client"]!["sha1"]?.ToString()
+            hash: versionJson["downloads"]!["client"]!["sha1"]?.ToString()
             );
 
         if (returnNullOnFileUsable && checkRes is null) {
@@ -38,7 +34,7 @@ public class InstanceLaunchHandler(string pathRef, string nameRef, JsonObject? v
         }
 
         // Return download information
-        var jarUrl = VersionJson["downloads"]!["client"]!["url"]!.ToString();
+        var jarUrl = versionJson["downloads"]!["client"]!["url"]!.ToString();
         return new DownloadItem(DlSourceLauncherOrMetaGet(jarUrl), $"{version.Path}{version.Name}.jar", checker);
     }
 }

@@ -7,9 +7,9 @@ using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
 
-namespace PCL.Core.Minecraft.Instance.Handler.InstanceInfo;
+namespace PCL.Core.Minecraft.Instance.Handler.Info;
 
-public static class InstancePatchHandler {
+public static class InfoPatchHandler {
     /// <summary>
     /// 将 Patch 类型 JSON 转化为对应的 InstanceInfo
     /// </summary>

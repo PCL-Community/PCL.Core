@@ -5,30 +5,28 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
+using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Launch;
 
-namespace PCL.Core.Minecraft.Instance.Handler;
+namespace PCL.Core.Minecraft.Instance.Service;
 
-public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? versionJsonRef, JsonObject? versionJsonInJarRef) {
-    private McInstanceInfo? InstanceInfo => instanceInfoRef;
-    private JsonObject? VersionJson => versionJsonRef;
-    private JsonObject? VersionJsonInJar => versionJsonInJarRef;
-    
-    public (Version MinVer, Version MaxVer) GetCompatibleJavaVersionRange() {
+public static class InstanceJavaService {
+    public static (Version MinVer, Version MaxVer) GetCompatibleJavaVersionRange(IMcInstance instance, JsonObject versionJson, JsonObject? versionJsonInJar) {
         var minVer = new Version(0, 0, 0, 0);
         var maxVer = new Version(999, 999, 999, 999);
 
-        CheckJavaVersion(out var minVerVanilla, out var maxVerVanilla);
+        CheckJavaVersion(instance, out var minVerVanilla, out var maxVerVanilla);
         minVer = minVerVanilla ?? minVer;
         maxVer = maxVerVanilla ?? maxVer;
 
-        if (!InstanceInfo!.IsNormalVersion) {
+        if (!instance.InstanceInfo.IsNormalVersion) {
             return (minVer, maxVer);
         }
 
         // Minecraft jar recommendations
-        if (VersionJsonInJar != null) {
-            if (VersionJsonInJar.TryGetPropertyValue("java_version", out var javaVersionNodeInJar) &&
+        if (versionJsonInJar != null) {
+            if (versionJsonInJar.TryGetPropertyValue("java_version", out var javaVersionNodeInJar) &&
                 javaVersionNodeInJar?.GetValueKind() == JsonValueKind.Number) {
                 var recommendedJava = javaVersionNodeInJar.GetValue<int>();
                 McLaunchUtils.Log($"Mojang (in JAR) recommends Java {recommendedJava}");
@@ -39,11 +37,11 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
         }
 
         // OptiFine adjustments
-        if (InstanceInfo.HasPatcher("optifine")) {
-            if (InstanceInfo.McVersion < new Version(1, 7) || InstanceInfo.McVersionMinor == 12) {
+        if (instance.InstanceInfo.HasPatcher("optifine")) {
+            if (instance.InstanceInfo.McVersion < new Version(1, 7) || instance.InstanceInfo.McVersionMinor == 12) {
                 maxVer = UpdateMaxAndLog(maxVer, new Version(8, 999, 999, 999),
                     "OptiFine <1.7 / 1.12 requires max Java 8");
-            } else if (InstanceInfo.McVersion >= new Version(1, 8) && InstanceInfo.McVersion < new Version(1, 12)) {
+            } else if (instance.InstanceInfo.McVersion >= new Version(1, 8) && instance.InstanceInfo.McVersion < new Version(1, 12)) {
                 LogWrapper.Debug("Launch", "OptiFine 1.8 - 1.11 requires exactly Java 8");
                 minVer = UpdateMin(minVer, new Version(1, 8, 0, 0));
                 maxVer = UpdateMax(maxVer, new Version(8, 999, 999, 999));
@@ -51,15 +49,15 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
         }
 
         // LiteLoader adjustments
-        if (InstanceInfo.HasPatcher("liteloader")) {
+        if (instance.InstanceInfo.HasPatcher("liteloader")) {
             maxVer = UpdateMaxAndLog(maxVer, new Version(8, 999, 999, 999),
                 "LiteLoader requires max Java 8");
         }
 
         // Forge adjustments
-        if (InstanceInfo.HasPatcher("forge")) {
-            var mcMinor = InstanceInfo.McVersionMinor;
-            var mcVersion = InstanceInfo.McVersion;
+        if (instance.InstanceInfo.HasPatcher("forge")) {
+            var mcMinor = instance.InstanceInfo.McVersionMinor;
+            var mcVersion = instance.InstanceInfo.McVersion;
 
             if (mcVersion >= new Version(1, 6, 1) && mcVersion <= new Version(1, 7, 2)) {
                 LogWrapper.Debug("Launch", "1.6.1 - 1.7.2 Forge requires exactly Java 7");
@@ -70,11 +68,11 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
                     <= 12 => ("<=1.12 Forge requires Java 8", null, new Version(8, 999, 999, 999)),
                     <= 14 => ("1.13 - 1.14 Forge requires Java 8 - 10", new Version(1, 8, 0, 0), new Version(10, 999, 999, 999)),
                     15 => ("1.15 Forge requires Java 8 - 15", new Version(1, 8, 0, 0), new Version(15, 999, 999, 999)),
-                    16 when Version.TryParse(InstanceInfo.GetPatcher("forge")?.Version, out var forgeVersion)
+                    16 when Version.TryParse(instance.InstanceInfo.GetPatcher("forge")?.Version, out var forgeVersion)
                             && forgeVersion > new Version(34, 0, 0)
                             && forgeVersion < new Version(36, 2, 25) =>
                         ("1.16 Forge 34.X - 36.2.25 requires max Java 8u321", null, new Version(1, 8, 0, 321)),
-                    18 when InstanceInfo.HasPatcher("optifine") =>
+                    18 when instance.InstanceInfo.HasPatcher("optifine") =>
                         ("1.18 Forge + OptiFine requires max Java 18", null, new Version(18, 999, 999, 999)),
                     _ => (null, null, null) // 默认情况，不匹配任何规则
                 };
@@ -92,14 +90,14 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
         }
 
         // Cleanroom adjustments
-        if (InstanceInfo.HasPatcher("cleanroom")) {
+        if (instance.InstanceInfo.HasPatcher("cleanroom")) {
             minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0),
                 "Cleanroom requires min Java 21");
         }
 
         // Fabric adjustments
-        if (InstanceInfo.HasPatcher("fabric")) {
-            var mcMinor = InstanceInfo.McVersionMinor;
+        if (instance.InstanceInfo.HasPatcher("fabric")) {
+            var mcMinor = instance.InstanceInfo.McVersionMinor;
             // 根据 mcMinor 版本号，使用 switch 表达式确定最低 Java 版本
             minVer = mcMinor switch {
                 >= 15 and <= 16 => UpdateMinAndLog(minVer, new Version(1, 8, 0, 0),
@@ -111,15 +109,14 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
         }
 
         // LabyMod adjustments
-        if (InstanceInfo.HasPatcher("labymod")) {
+        if (instance.InstanceInfo.HasPatcher("labymod")) {
             minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0),
                 "LabyMod requires min Java 21");
             maxVer = new Version(999, 999, 999, 999); // Reset max if needed, but already high
         }
 
         // JSON recommended version
-        if (VersionJson is null ||
-            !VersionJson.TryGetPropertyValue("javaVersion", out var javaVersionNode) ||
+        if (!versionJson.TryGetPropertyValue("javaVersion", out var javaVersionNode) ||
             javaVersionNode?.GetValueKind() != JsonValueKind.Object ||
             !javaVersionNode.AsObject().TryGetPropertyValue("majorVersion", out var majorVersionElement) ||
             majorVersionElement?.GetValueKind() != JsonValueKind.Number) {
@@ -155,7 +152,7 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
     }
 
     // 定义 Java 版本要求规则
-    private static readonly List<(Func<McInstanceInfo, bool> Condition, Version MinVer, Version? MaxVer, string LogMessage)> VanillaJavaVersionRules = [
+    private static readonly List<(Func<PatchInstanceInfo, bool> Condition, Version MinVer, Version? MaxVer, string LogMessage)> VanillaJavaVersionRules = [
         // 1.20.5+ (24w14a+)：至少 Java 21
         (
             info => !info.IsNormalVersion && info.ReleaseTime >= new DateTime(2024, 4, 2) ||
@@ -199,12 +196,13 @@ public class InstanceJavaHandler(McInstanceInfo? instanceInfoRef, JsonObject? ve
     /// <summary>
     /// 检查 Minecraft 版本所需的 Java 版本
     /// </summary>
+    /// <param name="instance">MC 实例</param>
     /// <param name="minVer">输出：所需最低 Java 版本</param>
     /// <param name="maxVer">输出：所需最高 Java 版本（可能为 null）</param>
     /// <returns>返回 true 表示找到匹配规则，false 表示未匹配</returns>
-    private void CheckJavaVersion(out Version? minVer, out Version? maxVer) {
+    private static void CheckJavaVersion(IMcInstance instance, out Version? minVer, out Version? maxVer) {
         // 使用 FirstOrDefault 查找第一个匹配的规则
-        var matchedRule = VanillaJavaVersionRules.FirstOrDefault(rule => rule.Condition(InstanceInfo!));
+        var matchedRule = VanillaJavaVersionRules.FirstOrDefault(rule => rule.Condition(instance.InstanceInfo));
 
         // 检查元组中的 Condition 委托是否为 null，来判断是否找到了匹配项
         if (matchedRule.Condition != null) {

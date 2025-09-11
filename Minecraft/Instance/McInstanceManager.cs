@@ -8,28 +8,30 @@ using PCL.Core.App;
 using PCL.Core.App.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance;
 
 public static class McInstanceManager {
-    private static McNoPatchesInstance? _current;
+    private static MergeInstance? _current;
     private static object? _mcInstanceLast;
 
     /// <summary>
     /// List of current Minecraft folders.
     /// </summary>
-    public static List<McNoPatchesInstance> McInstanceList { get; } = [];
+    public static List<IMcInstance> McInstanceList { get; } = [];
 
     /// <summary>
     /// 用作 UI 显示被排序过的实例字典
     /// </summary>
-    public static Dictionary<McInstanceCardType, List<McNoPatchesInstance>> McInstanceUiDict { get; set; } = [];
+    public static Dictionary<McInstanceCardType, List<MergeInstance>> McInstanceUiDict { get; set; } = [];
 
     /// <summary>
     /// 当前的 Minecraft 实例
     /// </summary>
-    public static McNoPatchesInstance? Current {
+    public static MergeInstance? Current {
         get => _current;
         set {
             if (ReferenceEquals(_mcInstanceLast, value)) return;
@@ -49,8 +51,7 @@ public static class McInstanceManager {
 
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
-                var mcInstance = new McNoPatchesInstance(instance);
-                await mcInstance.CheckAsync();
+                var mcInstance = await McInstanceFactory.CreateInstanceAsync(instance);
                 McInstanceList.Add(mcInstance);
             }
 
@@ -160,7 +161,7 @@ public static class McInstanceManager {
         { McInstanceCardType.LabyMod, "LabyMod" }
     };
 
-    private static List<IGrouping<McInstanceCardType, McNoPatchesInstance>> GroupAndSortWithoutDetailedClassification() {
+    private static List<IGrouping<McInstanceCardType, MergeInstance>> GroupAndSortWithoutDetailedClassification() {
         var moddedTypes = new[] {
             McInstanceCardType.NeoForge, McInstanceCardType.Fabric, McInstanceCardType.Forge,
             McInstanceCardType.Quilt, McInstanceCardType.LegacyFabric,
@@ -174,7 +175,7 @@ public static class McInstanceManager {
             .ToList();
 
         // 处理每个分组，忽略类型的分组不排序
-        var sortedGroups = new List<IGrouping<McInstanceCardType, McNoPatchesInstance>>();
+        var sortedGroups = new List<IGrouping<McInstanceCardType, MergeInstance>>();
         foreach (var type in SortableTypes) {
             var group = groupedInstances.FirstOrDefault(g => g.Key == type);
             var instances = group?.ToList() ?? [];
@@ -234,7 +235,7 @@ public static class McInstanceManager {
         return sortedGroups;
     }
 
-    private static IEnumerable<IGrouping<McInstanceCardType, McNoPatchesInstance>> GroupAndSortWithDetailedClassification() {
+    private static IEnumerable<IGrouping<McInstanceCardType, MergeInstance>> GroupAndSortWithDetailedClassification() {
         return McInstanceList
             .GroupBy(instance => instance.GetInstanceDisplayType()) // 先分组，保留所有 McInstanceCardType
             .Select(g => {
@@ -253,16 +254,16 @@ public static class McInstanceManager {
 
     private static bool IsIgnoredType(McInstanceCardType type) => type == McInstanceCardType.Error;
 
-    private static (McInstanceCardType, PatchInfo) GetSortKey(McNoPatchesInstance noPatchesInstance, McInstanceCardType type) {
+    private static (McInstanceCardType, PatchInfo) GetSortKey(MergeInstance noPatchesInstance, McInstanceCardType type) {
         var patcherId = PatcherIds[type];
         return (type, noPatchesInstance.GetInstanceInfo()!.GetPatcher(patcherId)!);
     }
 
     // 辅助类实现 IGrouping
-    private class Grouping(McInstanceCardType key, IEnumerable<McNoPatchesInstance> elements) : IGrouping<McInstanceCardType, McNoPatchesInstance> {
+    private class Grouping(McInstanceCardType key, IEnumerable<MergeInstance> elements) : IGrouping<McInstanceCardType, MergeInstance> {
         public McInstanceCardType Key { get; } = key;
 
-        public IEnumerator<McNoPatchesInstance> GetEnumerator() => elements.GetEnumerator();
+        public IEnumerator<MergeInstance> GetEnumerator() => elements.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

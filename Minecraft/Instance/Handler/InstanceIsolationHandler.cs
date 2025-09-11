@@ -30,21 +30,21 @@ public static class InstanceIsolationHandler {
         // 若存在 mods 或 saves 文件夹，自动开启隔离
         var modFolder = new DirectoryInfo(instance.Path + "mods\\");
         var saveFolder = new DirectoryInfo(instance.Path + "saves\\");
-        if ((modFolder.Exists && modFolder.EnumerateFiles().Any()) ||
-            (saveFolder.Exists && saveFolder.EnumerateDirectories().Any())) {
-            LogWrapper.Info("Isolation", $"版本隔离初始化（{Name}）：存在 mods 或 saves 文件夹，自动开启");
+        if (modFolder.Exists && modFolder.EnumerateFiles().Any() ||
+            saveFolder.Exists && saveFolder.EnumerateDirectories().Any()) {
+            LogWrapper.Info("Isolation", $"版本隔离初始化（{instance.Name}）：存在 mods 或 saves 文件夹，自动开启");
             return true;
         }
 
-        var isModded = InstanceInfo!.IsModded;
-        var isRelease = InstanceInfo.VersionType == McVersionType.Release;
-        LogWrapper.Info("Isolation", $"版本隔离初始化({Name}): 全局设置({Config.Launch.IndieSolutionV2})");
+        var isModded = instance.InstanceInfo.IsModded;
+        var isRelease = instance.InstanceInfo.VersionType == McVersionType.Release;
+        LogWrapper.Info("Isolation", $"版本隔离初始化({instance.Name}): 全局设置({Config.Launch.IndieSolutionV2})");
         
         return Config.Launch.IndieSolutionV2 switch {
             0 => false,
-            1 => InstanceInfo.HasPatcher("labymod") || isModded,
+            1 => instance.InstanceInfo.HasPatcher("labymod") || isModded,
             2 => !isRelease,
-            3 => InstanceInfo.HasPatcher("labymod") || isModded || !isRelease,
+            3 => instance.InstanceInfo.HasPatcher("labymod") || isModded || !isRelease,
             _ => true
         };
     }

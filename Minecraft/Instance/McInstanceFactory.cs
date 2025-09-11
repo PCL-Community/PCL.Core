@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.Handler;
@@ -37,17 +35,26 @@ public static class McInstanceFactory {
         instance.InstanceInfo = clonedInstance.InstanceInfo;
     }
 
-    public static async Task<IMcInstance> CreateInstanceAsync(string path) {
-        if (!await CheckPermissionAsync() || !await CheckJsonAsync()) {
-            return new MergeInstance()
-            Logo = Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
-        } else {
-            // 确定实例图标
-            Logo = _instanceUiHandler.GetLogo();
+    public static async Task<IMcInstance?> CreateInstanceAsync(string path) {
+        try {
+            var instance = await CheckPermissionAsync(path);
+            if (instance != null) {
+                return instance;
+            }
+            
+            return await CheckJsonAsync(path);
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "创建实例类时出错");
+            return null;
         }
     }
 
-    private async Task<IMcInstance?> CheckPermissionAsync(string path) {
+    /// <summary>
+    /// 检查对实例文件夹的访问权限
+    /// </summary>
+    /// <returns>在有问题时返回 <c>ErrorInstance</c>, 没问题时返回 null。</returns>
+    /// <exception cref="DirectoryNotFoundException">在实例文件夹不存在时抛出</exception>
+    private static async Task<IMcInstance?> CheckPermissionAsync(string path) {
         if (!Directory.Exists(path)) {
             throw new DirectoryNotFoundException("实例文件夹不存在");
         }
@@ -59,22 +66,29 @@ public static class McInstanceFactory {
             LogWrapper.Warn(ex, $"没有访问实例文件夹的权限：{path}");
             return new ErrorInstance(path, desc: "PCL 没有对该文件夹的访问权限，请以管理员身份运行");
         }
-        return true;
+        
+        return null;
     }
 
-    private async Task<IMcInstance?> CheckJsonAsync(string path) {
+    /// <summary>
+    /// 检查实例 JSON 的可用性并返回对应的实例类型
+    /// </summary>
+    private static async Task<IMcInstance> CheckJsonAsync(string path) {
         var versionJson = await InstanceJsonHandler.RefreshVersionJsonAsync(new ErrorInstance(path));
         if (versionJson == null) {
             LogWrapper.Warn($"实例 JSON 可用性检查失败（{path}）");
             return new ErrorInstance(path, desc: "实例 JSON 不存在或无法解析");
         }
-        
-        if (_instanceInfo == null) {
-            LogWrapper.Warn($"实例信息检查失败（{Path}）");
-            Desc = "无法识别实例信息";
-            return false;
-        }
 
-        return true;
+        if (versionJson.ContainsKey("patchers")) {
+            return new PatchInstance(path, versionJson: versionJson);
+        } 
+        
+        if (versionJson.ContainsKey("libraries")) {
+            return new MergeInstance(path, versionJson: versionJson);
+        }
+        
+        LogWrapper.Warn($"实例信息检查失败（{path}）");
+        return new ErrorInstance(path, desc: "无法识别实例信息");
     }
 }

@@ -157,24 +157,3 @@ public class Os {
     public string? Arch { get; set; }
 }
 
-// Deserialization method
-public static class LibraryDeserializer {
-    public static Library? DeserializeLibrary(JsonNode? json) {
-        try {
-            return json.Deserialize<Library>(Files.PrettierJsonOptions);
-        } catch (JsonException ex) {
-            LogWrapper.Warn($"依赖库反序列化错误: {ex.Message}");
-            return null;
-        }
-    }
-
-    // 反序列化依赖库列表
-    public static List<Library>? DeserializeLibraries(JsonNode? json) {
-        try {
-            return json.Deserialize<List<Library>>(Files.PrettierJsonOptions);
-        } catch (JsonException ex) {
-            LogWrapper.Warn($"依赖库列表反序列化错误: {ex.Message}");
-            return null;
-        }
-    }
-}

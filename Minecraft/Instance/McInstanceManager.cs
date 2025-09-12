@@ -15,9 +15,6 @@ using PCL.Core.Utils.Exts;
 namespace PCL.Core.Minecraft.Instance;
 
 public static class McInstanceManager {
-    private static MergeInstance? _current;
-    private static object? _mcInstanceLast;
-
     /// <summary>
     /// List of current Minecraft folders.
     /// </summary>
@@ -26,19 +23,12 @@ public static class McInstanceManager {
     /// <summary>
     /// 用作 UI 显示被排序过的实例字典
     /// </summary>
-    public static Dictionary<McInstanceCardType, List<MergeInstance>> McInstanceUiDict { get; set; } = [];
+    public static Dictionary<McInstanceCardType, List<IMcInstance>> McInstanceUiDict { get; set; } = [];
 
     /// <summary>
     /// 当前的 Minecraft 实例
     /// </summary>
-    public static MergeInstance? Current {
-        get => _current;
-        set {
-            if (ReferenceEquals(_mcInstanceLast, value)) return;
-            _current = value;
-            _mcInstanceLast = value;
-        }
-    }
+    public static IMcInstance? Current { get; set; }
 
     public static readonly TaskBase<object> McInstanceListLoadTask = new("单个文件夹中实例加载任务", 
         new Func<TaskBase<object>, string, Task<object>>(async (_, path) => await McInstanceListLoadAsync(path))
@@ -52,7 +42,9 @@ public static class McInstanceManager {
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
                 var mcInstance = await McInstanceFactory.CreateInstanceAsync(instance);
-                McInstanceList.Add(mcInstance);
+                if (mcInstance != null) {
+                    McInstanceList.Add(mcInstance);
+                }
             }
 
             SelectInstanceAsync();
@@ -78,16 +70,16 @@ public static class McInstanceManager {
     private static void SelectInstanceAsync() {
         var savedSelection = Config.Launch.SelectedInstance;
 
-        if (McInstanceList.Any(kvp => kvp.GetInstanceDisplayType() != McInstanceCardType.Error)) {
+        if (McInstanceList.Any(instance => instance.CardType != McInstanceCardType.Error)) {
             var selectedInstance = McInstanceList
-                .FirstOrDefault(instance => instance.Name == savedSelection && instance.GetInstanceDisplayType() != McInstanceCardType.Error);
+                .FirstOrDefault(instance => instance.Name == savedSelection && instance.CardType != McInstanceCardType.Error);
 
             if (selectedInstance != null) {
                 Current = selectedInstance;
                 LogWrapper.Warn($"选择保存的 Minecraft 实例：{Current.Path}");
             } else {
                 selectedInstance = McInstanceList
-                    .FirstOrDefault(instance => instance.GetInstanceDisplayType() != McInstanceCardType.Error);
+                    .FirstOrDefault(instance => instance.CardType != McInstanceCardType.Error);
 
                 if (selectedInstance != null) {
                     Current = selectedInstance;
@@ -161,7 +153,7 @@ public static class McInstanceManager {
         { McInstanceCardType.LabyMod, "LabyMod" }
     };
 
-    private static List<IGrouping<McInstanceCardType, MergeInstance>> GroupAndSortWithoutDetailedClassification() {
+    private static List<IGrouping<McInstanceCardType, IMcInstance>> GroupAndSortWithoutDetailedClassification() {
         var moddedTypes = new[] {
             McInstanceCardType.NeoForge, McInstanceCardType.Fabric, McInstanceCardType.Forge,
             McInstanceCardType.Quilt, McInstanceCardType.LegacyFabric,
@@ -171,11 +163,11 @@ public static class McInstanceManager {
 
         // 先按类型分组，保留所有 McInstanceCardType
         var groupedInstances = McInstanceList
-            .GroupBy(instance => instance.GetInstanceDisplayType())
+            .GroupBy(instance => instance.CardType)
             .ToList();
 
         // 处理每个分组，忽略类型的分组不排序
-        var sortedGroups = new List<IGrouping<McInstanceCardType, MergeInstance>>();
+        var sortedGroups = new List<IGrouping<McInstanceCardType, IMcInstance>>();
         foreach (var type in SortableTypes) {
             var group = groupedInstances.FirstOrDefault(g => g.Key == type);
             var instances = group?.ToList() ?? [];
@@ -200,7 +192,7 @@ public static class McInstanceManager {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in moddedTypes) {
-                    var patcher = instance.GetInstanceInfo()!.GetPatcher(PatcherIds[t]);
+                    var patcher = instance.InstanceInfo.GetPatcher(PatcherIds[t]);
                     if (patcher != null)
                         return (Array.IndexOf(SortableTypes, t), patcher.Version);
                 }
@@ -213,7 +205,7 @@ public static class McInstanceManager {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in clientTypes) {
-                    var patcher = instance.GetInstanceInfo()!.GetPatcher(PatcherIds[t]);
+                    var patcher = instance.InstanceInfo.GetPatcher(PatcherIds[t]);
                     if (patcher != null)
                         return (Array.IndexOf(SortableTypes, t), patcher.Version);
                 }
@@ -235,15 +227,15 @@ public static class McInstanceManager {
         return sortedGroups;
     }
 
-    private static IEnumerable<IGrouping<McInstanceCardType, MergeInstance>> GroupAndSortWithDetailedClassification() {
+    private static IEnumerable<IGrouping<McInstanceCardType, IMcInstance>> GroupAndSortWithDetailedClassification() {
         return McInstanceList
-            .GroupBy(instance => instance.GetInstanceDisplayType()) // 先分组，保留所有 McInstanceCardType
+            .GroupBy(instance => instance.CardType) // 先分组，保留所有 McInstanceCardType
             .Select(g => {
                 var instances = g.ToList(); // 转换为 List 以便操作
                 if (!IsIgnoredType(g.Key)) {
                     // 对非忽略类型的分组进行排序
                     instances = instances
-                        .OrderBy(instance => GetSortKey(instance, g.Key),
+                        .OrderBy<IMcInstance, (McInstanceCardType, PatchInfo)>(instance => GetSortKey(instance, g.Key),
                             McVersionComparerFactory.PatcherVersionComparer)
                         .ToList();
                 }
@@ -254,16 +246,16 @@ public static class McInstanceManager {
 
     private static bool IsIgnoredType(McInstanceCardType type) => type == McInstanceCardType.Error;
 
-    private static (McInstanceCardType, PatchInfo) GetSortKey(MergeInstance noPatchesInstance, McInstanceCardType type) {
+    private static (McInstanceCardType, PatchInfo) GetSortKey(IMcInstance instance, McInstanceCardType type) {
         var patcherId = PatcherIds[type];
-        return (type, noPatchesInstance.GetInstanceInfo()!.GetPatcher(patcherId)!);
+        return (type, instance.InstanceInfo.GetPatcher(patcherId)!);
     }
 
     // 辅助类实现 IGrouping
-    private class Grouping(McInstanceCardType key, IEnumerable<MergeInstance> elements) : IGrouping<McInstanceCardType, MergeInstance> {
+    private class Grouping(McInstanceCardType key, IEnumerable<IMcInstance> elements) : IGrouping<McInstanceCardType, IMcInstance> {
         public McInstanceCardType Key { get; } = key;
 
-        public IEnumerator<MergeInstance> GetEnumerator() => elements.GetEnumerator();
+        public IEnumerator<IMcInstance> GetEnumerator() => elements.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

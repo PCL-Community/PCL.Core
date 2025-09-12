@@ -3,6 +3,7 @@ using PCL.Core.App.Tasks;
 
 namespace PCL.Core.Minecraft;
 
+/*
 public static class DlSourceHandler {
     public static bool DlSourceNetworkPreferMojang = false;
     
@@ -18,3 +19,4 @@ public static class DlSourceHandler {
         task.
     }
 }
+*/

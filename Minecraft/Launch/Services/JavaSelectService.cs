@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using PCL.Core.App.Tasks;
 using PCL.Core.Minecraft.Instance;
+using PCL.Core.Minecraft.Instance.Service;
 using PCL.Core.Minecraft.Launch.State;
 using PCL.Core.UI;
 
@@ -16,7 +17,7 @@ public static class JavaSelectService {
     /// 根据版本要求选择最佳Java
     /// </summary>
     public static async Task<JavaInfo> SelectBestJavaAsync() {
-        var (minVer, maxVer) = await McInstanceManager.Current!.GetCompatibleJavaVersionRangeAsync();
+        var (minVer, maxVer) = await InstanceJavaService.GetCompatibleJavaVersionRange(McInstanceManager.Current);
         var javaManager = JavaService.JavaManager;
         var javaInfos = await javaManager.SelectSuitableJava(minVer, maxVer);
         var javaInfo = javaInfos.FirstOrDefault();

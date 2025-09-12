@@ -4,6 +4,8 @@ using PCL.Core.Minecraft.Instance;
 
 namespace PCL.Core.Minecraft.Launch.Services;
 
+// TODO: 实例下载
+/*
 public static class FileCompleteService {
     public static void FileComplete(McNoPatchesInstance noPatchesInstance, bool checkAssetHash, AssetsIndexExistsBehaviour assetsIndexBehaviour) {
         if (ShouldIgnoreFileCheck(noPatchesInstance.Path)) {
@@ -69,3 +71,4 @@ public enum AssetsIndexExistsBehaviour {
     /// </summary>
     AlwaysDownload
 }
+*/

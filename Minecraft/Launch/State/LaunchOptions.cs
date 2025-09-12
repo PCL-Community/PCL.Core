@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using PCL.Core.Minecraft.Instance;
+using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Launch.State;
 
@@ -8,7 +9,7 @@ public record LaunchOptions (
     string? ServerIp,
     string? WorldName,
     string? SaveBatch,
-    McNoPatchesInstance? Version,
+    IMcInstance? Version,
     List<string> ExtraArgs,
     bool Test
 );

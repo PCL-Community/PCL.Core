@@ -1,26 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using PCL.Core.App;
-using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Handler.Info;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
-using PCL.Core.Minecraft.Instance.Resources;
 
 namespace PCL.Core.Minecraft.Instance.InstanceImpl;
 
 /// <summary>
 /// 管理以 Patch 类型 JSON 为基础的实例基础信息
 /// </summary>
-public class PatchInstance : IMcInstance {
+public class PatchInstance : IMcInstance, IJsonBasedInstance {
     // 使用缓存以避免复杂属性的重复计算
-    private JsonObject? _versionJson;
-    private JsonObject? _versionJsonInJar;
     private PatchInstanceInfo? _instanceInfo;
     private McInstanceCardType _cachedCardType;
 
@@ -38,7 +31,7 @@ public class PatchInstance : IMcInstance {
         
         Desc = desc ?? "该实例未被加载，请向作者反馈此问题";
         
-        _versionJson = versionJson;
+        VersionJson = versionJson;
     }
     
     public string Path { get; }
@@ -74,29 +67,33 @@ public class PatchInstance : IMcInstance {
     /// </summary>
     /// <returns>表示 Minecraft 实例的 JSON 对象。</returns>
     private async Task GetVersionJsonAsync() {
-        _versionJson ??= await InstanceJsonHandler.RefreshVersionJsonAsync(this);
+        VersionJson ??= await InstanceJsonHandler.RefreshVersionJsonAsync(this);
     }
 
     private async Task RefreshVersionJsonAsync() {
-        _versionJson = await InstanceJsonHandler.RefreshVersionJsonAsync(this);
+        VersionJson = await InstanceJsonHandler.RefreshVersionJsonAsync(this);
     }
+    
+    public JsonObject? VersionJson { get; private set; }
 
     /// <summary>
     /// 异步获取 Jar 中的 JSON 对象。
     /// </summary>
     /// <returns>表示 Minecraft 实例的 Jar 中的 JSON 对象。</returns>
     private async Task GetVersionJsonInJarAsync() {
-        _versionJsonInJar ??= await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
+        VersionJsonInJar ??= await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
     }
 
     private async Task RefreshVersionJsonInJarAsync() {
-        _versionJsonInJar = await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
+        VersionJsonInJar = await InstanceJsonHandler.RefreshVersionJsonInJarAsync(this);
     }
+    
+    public JsonObject? VersionJsonInJar { get; private set; }
     
     public PatchInstanceInfo InstanceInfo {
         get {
             if (_instanceInfo == null) {
-                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, _versionJson!));
+                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, VersionJson!));
             }
             return _instanceInfo!;
         }
@@ -106,7 +103,7 @@ public class PatchInstance : IMcInstance {
     /// <summary>
     /// 是否为旧版 JSON 格式
     /// </summary>
-    public bool IsOldJson => _versionJson!.ContainsKey("minecraftArguments");
+    public bool IsOldJson => VersionJson!.ContainsKey("minecraftArguments");
 
     public void Load() {
         SetDescriptiveInfo();

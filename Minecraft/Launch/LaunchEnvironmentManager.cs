@@ -4,6 +4,7 @@ using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance;
+using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Launch;
 
@@ -53,9 +54,8 @@ public static class LaunchEnvironmentManager {
         sourceStream.CopyTo(fileStream);
     }
 
-    private static bool McLaunchNeedsRetroWrapper(McNoPatchesInstance mcNoPatchesInstance) {
-        var versionInfo = mcNoPatchesInstance.GetInstanceInfo();
-        if (versionInfo == null) return false;
+    private static bool McLaunchNeedsRetroWrapper(IMcInstance mcNoPatchesInstance) {
+        var versionInfo = mcNoPatchesInstance.InstanceInfo;
 
         var isOldVersion = versionInfo.McVersionMinor < 6 && versionInfo.McVersionMinor != 99;
         var isSpecificVersion = versionInfo.ReleaseTime >= new DateTime(2013, 6, 25) && versionInfo.McVersionMinor == 99;

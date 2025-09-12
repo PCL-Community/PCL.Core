@@ -47,4 +47,9 @@ public interface IMcInstance {
     /// 实例由版本 JSON 分析得到的信息
     /// </summary>
     PatchInstanceInfo InstanceInfo { get; set; }
+
+    /// <summary>
+    /// 加载实例方法
+    /// </summary>
+    void Load();
 }

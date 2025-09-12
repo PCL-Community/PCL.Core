@@ -1,6 +1,4 @@
-﻿using System.DirectoryServices.ActiveDirectory;
-using System.Dynamic;
-using PCL.Core.App;
+﻿using PCL.Core.App;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
@@ -18,24 +16,26 @@ public class ErrorInstance : IMcInstance {
 
         // 判断是否为绝对路径，并拼接正确的路径
         Path = path.Contains(':') ? path : System.IO.Path.Combine(basePath, path);
-        
+
         Desc = desc ?? "该实例未被加载，请向作者反馈此问题";
         Logo = logo ?? Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
     }
-    
+
     public string Path { get; }
-    
+
     public string Name => InstanceBasicHandler.GetName(Path);
-    
+
     public string IsolatedPath => string.Empty;
-    
+
     public McInstanceCardType CardType { get; set; } = McInstanceCardType.Error;
-    
+
     public string Desc { get; set; }
 
     public string Logo { get; set; }
 
     public bool IsStarred => false;
-    
+
     public PatchInstanceInfo InstanceInfo { get; set; } = new PatchInstanceInfo();
+
+    public void Load() {}
 }

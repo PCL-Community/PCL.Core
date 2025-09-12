@@ -11,6 +11,7 @@ using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft;
 
+/*
 public class ClientListManager {
     private static async Task<DlClientListResult> DlClientListMojangMainAsync(TaskBase<object> loader, params object[] args) {
         var input = args.Length > 0 ? (string) args[0] : string.Empty;
@@ -147,3 +148,4 @@ public class ClientListManager {
         }
     }
 }
+*/

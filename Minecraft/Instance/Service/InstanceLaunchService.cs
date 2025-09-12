@@ -7,6 +7,8 @@ using PCL.Core.Net;
 
 namespace PCL.Core.Minecraft.Instance.Service;
 
+// TODO: 交给实例下载负责人来做
+/*
 public static class InstanceLaunchService {
     /// <summary>
     /// Retrieves download information for the vanilla main JAR file of a specific Minecraft version.
@@ -38,3 +40,4 @@ public static class InstanceLaunchService {
         return new DownloadItem(DlSourceLauncherOrMetaGet(jarUrl), $"{version.Path}{version.Name}.jar", checker);
     }
 }
+*/

@@ -160,6 +160,6 @@ public class MinecraftClient : IClient
     }
     public static async Task<List<NetFile>?> AnalysisAssets(JsonNode versionJson)
     {
-        return null;
+        
     }
 }

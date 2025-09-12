@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using PCL.Core.App;
@@ -19,6 +18,7 @@ public class HttpRequestBuilder
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
     private bool _addLauncherHeader = true;
     private bool _doLog = true;
+    private Version _requestVersion = HttpVersion.Version30;
 
     public HttpRequestBuilder(string url, HttpMethod method)
     {
@@ -157,6 +157,12 @@ public class HttpRequestBuilder
         return this;
     }
 
+    public HttpRequestBuilder WithHttpVersionOption(Version httpVersion)
+    {
+        _requestVersion = httpVersion;
+        return this;
+    }
+
     public HttpRequestBuilder WithLoggingOptions(bool doLog)
     {
         _doLog = doLog;
@@ -203,7 +209,7 @@ public class HttpRequestBuilder
         }
 
         var client = NetworkService.GetClient();
-        _request.Version = HttpVersion.Version30;
+        _request.Version = _requestVersion;
         _request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)

@@ -6,6 +6,11 @@ namespace PCL.Core.App.Tasks;
 
 public struct VoidResult;
 
+/// <summary>
+/// 任务原型。<br/>
+/// 传入的委托第一个参数必须为 <see cref="Task{TResult}"/>。
+/// </summary>
+/// <typeparam name="TResult">返回类型</typeparam>
 public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgressSource
 {
     public TaskBase() 
@@ -44,6 +49,9 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
     public event StateChangedHandler<TaskState>? StateChanged;
 
     private double _progress = 0;
+    /// <summary>
+    /// 任务处理进度
+    /// </summary>
     public double Progress {
         get => _progress; 
         set 

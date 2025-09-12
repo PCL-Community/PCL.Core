@@ -28,6 +28,7 @@
         <OutputPath>bin\$(Configuration)-$(Platform)\</OutputPath>
         <PlatformTarget>$(Platform)</PlatformTarget>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <NoWarn>$(NoWarn);VSTHRD110</NoWarn>
     </PropertyGroup>
     <!-- 构建配置 -->
     <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'CI' Or '$(Configuration)' == 'DebugCI'">

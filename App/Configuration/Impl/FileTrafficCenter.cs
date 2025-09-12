@@ -35,7 +35,7 @@ public sealed class FileTrafficCenter(IKeyValueFileProvider provider) : AsyncTra
         }
     };
 
-    protected override bool CanAsync<TInput, TOutput>(TrafficEventArgs<TInput, TOutput> e)
+    protected override bool OnAsyncCheck<TInput, TOutput>(TrafficEventArgs<TInput, TOutput> e)
         => e.Access == TrafficAccess.Write;
 
     protected override void OnTrafficSync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e)

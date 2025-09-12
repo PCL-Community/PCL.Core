@@ -9,7 +9,7 @@ using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance;
 
-public static class McInstanceFactory {
+public static class InstanceFactory {
     private static T CopyCommonProperties<T>(T source, T destination) where T: class, IMcInstance {
         destination.CardType = source.CardType;
         destination.Desc = source.Desc;

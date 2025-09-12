@@ -5,6 +5,7 @@ using System.Text.Json;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance;
 using PCL.Core.Minecraft.Instance.Interface;
+using PCL.Core.Minecraft.Instance.Service;
 using PCL.Core.UI;
 using PCL.Core.Utils.Exts;
 
@@ -17,17 +18,17 @@ public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo sele
     public LaunchArgumentBuilder AddJvmArguments() {
         var arguments = "";
         
-        var jsonBasedInstance = McInstanceManager.Current as IJsonBasedInstance;
+        var jsonBasedInstance = InstanceManager.Current as IJsonBasedInstance;
         if (jsonBasedInstance!.VersionJson!.TryGetPropertyValue("arguments", out var argumentNode) &&
             argumentNode!.GetValueKind() == JsonValueKind.Object &&
             argumentNode.AsObject().TryGetPropertyValue("jvm", out var jvmNode)) {
             McLaunchUtils.Log("获取新版 JVM 参数");
-            arguments = McLaunchArgumentsJvmNew(McInstanceManager.Current);
+            arguments = McLaunchArgumentsJvmNew(InstanceManager.Current);
             McLaunchUtils.Log("新版 JVM 参数获取成功：");
             McLaunchUtils.Log(arguments);
         } else {
             McLaunchUtils.Log("获取旧版 JVM 参数");
-            arguments = McLaunchArgumentsJvmOld(McInstanceManager.Current);
+            arguments = McLaunchArgumentsJvmOld(InstanceManager.Current);
             McLaunchUtils.Log("旧版 JVM 参数获取成功：");
             McLaunchUtils.Log(arguments);
         }
@@ -62,22 +63,22 @@ public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo sele
     }
     
     private void McLaunchArgumentMain(string a) {
-        if (McInstanceManager.Current == null) return;
+        if (InstanceManager.Current == null) return;
         
         McLaunchUtils.Log("开始获取 Minecraft 启动参数");
         // 获取基准字符串与参数信息
 
-        if (!string.IsNullOrEmpty(McInstanceManager.Current._versionJson["minecraftArguments"]?.ToString())) {
+        if (!string.IsNullOrEmpty(InstanceManager.Current._versionJson["minecraftArguments"]?.ToString())) {
             McLaunchUtils.Log("获取旧版 Game 参数");
-            arguments += " " + McLaunchArgumentsGameOld(McInstanceManager.Current);
+            arguments += " " + McLaunchArgumentsGameOld(InstanceManager.Current);
             McLaunchUtils.Log("旧版 Game 参数获取成功");
         }
 
-        if (McInstanceManager.Current._versionJson!.TryGetPropertyValue("arguments", out var argumentNode2) &&
+        if (InstanceManager.Current._versionJson!.TryGetPropertyValue("arguments", out var argumentNode2) &&
             argumentNode2!.GetValueKind() == JsonValueKind.Object &&
             argumentNode2.AsObject().TryGetPropertyValue("game", out var gameNode)) {
             McLaunchUtils.Log("获取新版 Game 参数");
-            arguments += " " + McLaunchArgumentsGameNew(McInstanceManager.Current);
+            arguments += " " + McLaunchArgumentsGameNew(InstanceManager.Current);
             McLaunchUtils.Log("新版 Game 参数获取成功");
         }
 
@@ -102,11 +103,11 @@ public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo sele
         }
 
         // 自定义参数
-        var argumentGame = Config.Instance.GameArgs[McInstanceManager.Current.Path];
+        var argumentGame = Config.Instance.GameArgs[InstanceManager.Current.Path];
         arguments += " " + (string.IsNullOrEmpty(argumentGame) ? Setup.Get("LaunchAdvanceGame") : argumentGame);
 
         // 替换参数
-        var replaceArguments = McLaunchArgumentsReplace(McInstanceManager.Current, loader);
+        var replaceArguments = McLaunchArgumentsReplace(InstanceManager.Current, loader);
         if (string.IsNullOrWhiteSpace(replaceArguments["${version_type}"])) {
             arguments = arguments.Replace(" --versionType ${version_type}", "");
             replaceArguments["${version_type}"] = "\"\"";
@@ -133,10 +134,10 @@ public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo sele
 
         // 进服
         string server = string.IsNullOrEmpty(CurrentLaunchOptions.ServerIp)
-            ? Config.Instance.ServerToEnter[McInstanceManager.Current.Path]
+            ? Config.Instance.ServerToEnter[InstanceManager.Current.Path]
             : CurrentLaunchOptions.ServerIp;
         if (string.IsNullOrWhiteSpace(worldName) && !string.IsNullOrWhiteSpace(server)) {
-            if (McInstanceManager.Current.ReleaseTime > new DateTime(2023, 4, 4)) {
+            if (InstanceManager.Current.ReleaseTime > new DateTime(2023, 4, 4)) {
                 finalArguments += $" --quickPlayMultiplayer \"{server}\"";
             } else {
                 if (server.Contains(":")) {
@@ -145,7 +146,7 @@ public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo sele
                 } else {
                     finalArguments += $" --server {server} --port 25565";
                 }
-                if (McInstanceManager.Current.HasPatcher("OptiFine")) {
+                if (InstanceManager.Current.HasPatcher("OptiFine")) {
                     HintWrapper.Show("OptiFine 与自动进入服务器可能不兼容，有概率导致材质丢失甚至游戏崩溃！", HintTheme.Error);
                 }
             }
@@ -180,7 +181,7 @@ public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo sele
         dataList.Insert(0, argumentJvm);
 
         // 设置内存参数
-        double ram = PageInstanceSetup.GetRam(instance, !McLaunchJavaSelected.Is64Bit) * 1024;
+        double ram = InstanceRamService.GetInstanceMemoryAllocation(instance, !McLaunchJavaSelected.Is64Bit) * 1024;
         dataList.Add($"-Xmn{(int)(ram * 0.15)}m");
         dataList.Add($"-Xmx{(int)ram}m");
 

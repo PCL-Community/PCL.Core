@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Threading.Tasks;
 using PCL.Core.Minecraft.Launch.State;
 
@@ -177,3 +178,4 @@ public class AuthlibInjectorProvider : AuthenticationProviderBase {
         throw new NotImplementedException("需要实现网络请求逻辑");
     }
 }
+*/

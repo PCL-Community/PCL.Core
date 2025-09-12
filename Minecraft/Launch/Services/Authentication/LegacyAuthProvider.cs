@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿/*
+using System.Threading.Tasks;
 using PCL.Core.Minecraft.Launch.State;
 
 namespace PCL.Core.Minecraft.Launch.Services.Authentication;
@@ -154,3 +155,4 @@ public class LegacyAuthProvider : AuthenticationProviderBase {
         throw new NotImplementedException("需要实现基于AccessToken的认证逻辑");
     }
 }
+*/

@@ -93,7 +93,7 @@ public class MergeInstance : IMcInstance, IJsonBasedInstance {
     public PatchInstanceInfo InstanceInfo {
         get {
             if (_instanceInfo == null) {
-                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, VersionJson!));
+                InstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, VersionJson!));
             }
             return _instanceInfo!;
         }

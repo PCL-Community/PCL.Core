@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
@@ -12,7 +14,7 @@ using PCL.Core.Minecraft.Launch;
 namespace PCL.Core.Minecraft.Instance.Service;
 
 public static class InstanceJavaService {
-    public static (Version MinVer, Version MaxVer) GetCompatibleJavaVersionRange(IMcInstance instance, JsonObject versionJson, JsonObject? versionJsonInJar) {
+    public static (Version MinVer, Version MaxVer) GetCompatibleJavaVersionRange(IMcInstance instance, in JsonObject versionJson, in JsonObject? versionJsonInJar) {
         var minVer = new Version(0, 0, 0, 0);
         var maxVer = new Version(999, 999, 999, 999);
 

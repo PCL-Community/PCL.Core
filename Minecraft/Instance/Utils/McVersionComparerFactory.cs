@@ -6,7 +6,7 @@ using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils;
 
-namespace PCL.Core.Minecraft.Instance;
+namespace PCL.Core.Minecraft.Instance.Utils;
 
 // Comparer for standard "1.12.2" style versions
 public class ReleaseVersionComparer : IComparer<string> {

@@ -8,7 +8,6 @@ using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
-using PCL.Core.Minecraft.Instance.Resources;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance.Handler.Info;
@@ -30,15 +29,15 @@ public static class InfoMergeHandler {
     /// 将 Merge 类型 JSON 转化为对应的 InstanceInfo
     /// </summary>
     public static IMcInstance RefreshMergeInstanceInfo(IMcInstance instance, in JsonObject versionJson) {
-        var clonedInstance = McInstanceFactory.CloneInstance(instance);
+        var clonedInstance = InstanceFactory.CloneInstance(instance);
 
         var instanceInfo = new PatchInstanceInfo();
 
         // 获取 MC 版本
-        var version = McInstanceUtils.RecognizeMcVersion(versionJson);
+        var version = RecognizeMcVersion(versionJson);
 
         // 获取发布时间
-        var releaseTime = McInstanceUtils.RecognizeReleaseTime(versionJson);
+        var releaseTime = RecognizeReleaseTime(versionJson);
         
         // 添加 MC 本体补丁信息
         instanceInfo.Patchers.Add(new PatchInfo {

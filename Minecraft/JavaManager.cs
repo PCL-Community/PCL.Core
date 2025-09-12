@@ -105,7 +105,7 @@ public class JavaManager
     /// </summary>
     /// <returns>如果有设置为 Java 实例，否则为 null</returns>
     public static JavaInfo? GetVersionUserSetJava() {
-        var instanceSelectedJava = Config.Instance.SelectedJava[McInstanceManager.Current!.Path];
+        var instanceSelectedJava = Config.Instance.SelectedJava[InstanceManager.Current!.Path];
         return instanceSelectedJava == "使用全局设置" ? null : JavaInfo.Parse(instanceSelectedJava);
     }
 

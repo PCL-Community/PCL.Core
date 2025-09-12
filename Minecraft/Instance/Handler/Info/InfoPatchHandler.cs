@@ -14,7 +14,7 @@ public static class InfoPatchHandler {
     /// 将 Patch 类型 JSON 转化为对应的 InstanceInfo
     /// </summary>
     public static IMcInstance RefreshPatchInstanceInfo(IMcInstance instance, JsonObject versionJson, JsonObject libraries) {
-        var clonedInstance = McInstanceFactory.CloneInstance(instance);
+        var clonedInstance = InstanceFactory.CloneInstance(instance);
         var instanceInfo = new PatchInstanceInfo();
         try {
             foreach (var patch in versionJson["patches"]!.AsArray()) {

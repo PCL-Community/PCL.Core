@@ -1,4 +1,6 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils;
@@ -6,6 +8,27 @@ using PCL.Core.Utils;
 namespace PCL.Core.Minecraft.Instance.Handler;
 
 public static class InstanceUiHandler {
+    private static readonly ImmutableDictionary<string, (int Year, string Description)> FoolVersionDescriptions =
+        ImmutableDictionary.CreateRange(new Dictionary<string, (int Year, string Description)>
+        {
+            { "15w14a", (2015, "作为一款全年龄向的游戏，我们需要和平，需要爱与拥抱。") },
+            { "1.rv-pre1", (2016, "是时候将现代科技带入 Minecraft 了！") },
+            { "3d shareware v1.34", (2019, "我们从地下室的废墟里找到了这个开发于 1994 年的杰作！") },
+            { "20w14∞", (2020, "我们加入了 20 亿个新的维度，让无限的想象变成了现实！") },
+            { "22w13oneblockatatime", (2022, "一次一个方块更新！迎接全新的挖掘、合成与骑乘玩法吧！") },
+            { "23w13a_or_b", (2023, "研究表明：玩家喜欢作出选择——越多越好！") },
+            { "24w14potato", (2024, "毒马铃薯一直都被大家忽视和低估，于是我们超级加强了它！") },
+            { "25w14craftmine", (2025, "你可以合成任何东西——包括合成你的世界！") }
+        });
+
+    private static readonly ImmutableDictionary<string, string> VariantSuffixes =
+        ImmutableDictionary.CreateRange(new Dictionary<string, string>
+        {
+            { "red", "（红色版本）" },
+            { "blue", "（蓝色版本）" },
+            { "purple", "（紫色版本）" }
+        });
+    
     private static readonly ImmutableArray<string> DescStrings = [
         "开启一段全新的冒险之旅！",
         "创造属于你的独特世界。",
@@ -45,7 +68,25 @@ public static class InstanceUiHandler {
         if (instance.CardType == McInstanceCardType.Error) {
             return "";
         }
-        return instance.InstanceInfo.VersionType == McVersionType.Fool ? McInstanceUtils.GetMcFoolVersionDesc(instance.InstanceInfo.McVersionStr!) : RandomUtils.PickRandom(DescStrings);
+        return instance.InstanceInfo.VersionType == McVersionType.Fool ? GetMcFoolVersionDesc(instance.InstanceInfo.McVersionStr!) : RandomUtils.PickRandom(DescStrings);
+    }
+    
+    public static string GetMcFoolVersionDesc(string name) {
+        name = name.ToLowerInvariant();
+
+        // 精确匹配
+        if (FoolVersionDescriptions.TryGetValue(name, out var match))
+            return $"{match.Year} | {match.Description}";
+
+        // 前缀匹配
+        if (name.StartsWith("2.0") || name.StartsWith("2point0"))
+            return $"2013 | 这个秘密计划了两年的更新将游戏推向了一个新高度！{GetVariantSuffix(name)}";
+
+        return "";
+    }
+    
+    private static string GetVariantSuffix(string name) {
+        return VariantSuffixes.FirstOrDefault(s => name.EndsWith(s.Key)).Value ?? "";
     }
     
     public static string GetLogo(IMcInstance instance) {

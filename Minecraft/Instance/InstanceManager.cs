@@ -10,38 +10,38 @@ using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.Interface;
+using PCL.Core.Minecraft.Instance.Utils;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance;
 
-public static class McInstanceManager {
+public class InstanceManager {
     /// <summary>
     /// List of current Minecraft folders.
     /// </summary>
-    public static List<IMcInstance> McInstanceList { get; } = [];
+    public List<IMcInstance> McInstanceList { get; } = [];
 
     /// <summary>
     /// 用作 UI 显示被排序过的实例字典
     /// </summary>
-    public static Dictionary<McInstanceCardType, List<IMcInstance>> McInstanceUiDict { get; set; } = [];
+    public Dictionary<McInstanceCardType, List<IMcInstance>> McInstanceUiDict { get; set; } = [];
 
     /// <summary>
     /// 当前的 Minecraft 实例
     /// </summary>
-    public static IMcInstance? Current { get; set; }
+    public IMcInstance? Current { get; set; }
+    
+    public IJsonBasedInstance CurrentJsonBased => Current as IJsonBasedInstance 
+        ?? throw new InvalidOperationException("当前实例不是基于 JSON 的实例，无法进行此操作。");
 
-    public static readonly TaskBase<object> McInstanceListLoadTask = new("单个文件夹中实例加载任务", 
-        new Func<TaskBase<object>, string, Task<object>>(async (_, path) => await McInstanceListLoadAsync(path))
-    );
-
-    public static async Task<object> McInstanceListLoadAsync(string path, CancellationToken cancelToken = default) {
+    public async Task<object> McInstanceListLoadAsync(string path, CancellationToken cancelToken = default) {
         try {
             // Get version folders
             var versionPath = Path.Combine(path, "versions");
 
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
-                var mcInstance = await McInstanceFactory.CreateInstanceAsync(instance);
+                var mcInstance = await InstanceFactory.CreateInstanceAsync(instance);
                 if (mcInstance != null) {
                     McInstanceList.Add(mcInstance);
                 }
@@ -67,7 +67,7 @@ public static class McInstanceManager {
         return new VoidResult();
     }
 
-    private static void SelectInstanceAsync() {
+    private void SelectInstanceAsync() {
         var savedSelection = Config.Launch.SelectedInstance;
 
         if (McInstanceList.Any(instance => instance.CardType != McInstanceCardType.Error)) {
@@ -100,18 +100,18 @@ public static class McInstanceManager {
         }
     }
 
-    private static void SortInstance() {
+    private void SortInstance() {
         var groupedInstances = Config.UI.DetailedInstanceClassification
             ? GroupAndSortWithDetailedClassification()
             : GroupAndSortWithoutDetailedClassification();
 
         McInstanceUiDict = groupedInstances
-            .OrderBy(g => Array.IndexOf(SortableTypes, g.Key))
+            .OrderBy(g => Array.IndexOf(_sortableTypes, g.Key))
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
     // 需要排序的 McInstanceCardType
-    private static readonly McInstanceCardType[] SortableTypes = [
+    private readonly McInstanceCardType[] _sortableTypes = [
         // 收藏和自定义分类
         McInstanceCardType.Star, McInstanceCardType.Custom,
         // 模组加载器和细分分类
@@ -129,7 +129,7 @@ public static class McInstanceManager {
     ];
 
     // PatcherId 映射
-    private static readonly Dictionary<McInstanceCardType, string> PatcherIds = new() {
+    private readonly Dictionary<McInstanceCardType, string> _patcherIds = new() {
         // Game
         { McInstanceCardType.Release, "game" },
         { McInstanceCardType.Snapshot, "game" },
@@ -153,7 +153,7 @@ public static class McInstanceManager {
         { McInstanceCardType.LabyMod, "LabyMod" }
     };
 
-    private static List<IGrouping<McInstanceCardType, IMcInstance>> GroupAndSortWithoutDetailedClassification() {
+    private List<IGrouping<McInstanceCardType, IMcInstance>> GroupAndSortWithoutDetailedClassification() {
         var moddedTypes = new[] {
             McInstanceCardType.NeoForge, McInstanceCardType.Fabric, McInstanceCardType.Forge,
             McInstanceCardType.Quilt, McInstanceCardType.LegacyFabric,
@@ -168,7 +168,7 @@ public static class McInstanceManager {
 
         // 处理每个分组，忽略类型的分组不排序
         var sortedGroups = new List<IGrouping<McInstanceCardType, IMcInstance>>();
-        foreach (var type in SortableTypes) {
+        foreach (var type in _sortableTypes) {
             var group = groupedInstances.FirstOrDefault(g => g.Key == type);
             var instances = group?.ToList() ?? [];
 
@@ -192,9 +192,9 @@ public static class McInstanceManager {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in moddedTypes) {
-                    var patcher = instance.InstanceInfo.GetPatcher(PatcherIds[t]);
+                    var patcher = instance.InstanceInfo.GetPatcher(_patcherIds[t]);
                     if (patcher != null)
-                        return (Array.IndexOf(SortableTypes, t), patcher.Version);
+                        return (Array.IndexOf(_sortableTypes, t), patcher.Version);
                 }
                 return (int.MaxValue, "");
             })
@@ -205,9 +205,9 @@ public static class McInstanceManager {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in clientTypes) {
-                    var patcher = instance.InstanceInfo.GetPatcher(PatcherIds[t]);
+                    var patcher = instance.InstanceInfo.GetPatcher(_patcherIds[t]);
                     if (patcher != null)
-                        return (Array.IndexOf(SortableTypes, t), patcher.Version);
+                        return (Array.IndexOf(_sortableTypes, t), patcher.Version);
                 }
                 return (int.MaxValue, "");
             })
@@ -227,7 +227,7 @@ public static class McInstanceManager {
         return sortedGroups;
     }
 
-    private static IEnumerable<IGrouping<McInstanceCardType, IMcInstance>> GroupAndSortWithDetailedClassification() {
+    private IEnumerable<IGrouping<McInstanceCardType, IMcInstance>> GroupAndSortWithDetailedClassification() {
         return McInstanceList
             .GroupBy(instance => instance.CardType) // 先分组，保留所有 McInstanceCardType
             .Select(g => {
@@ -244,10 +244,10 @@ public static class McInstanceManager {
             });
     }
 
-    private static bool IsIgnoredType(McInstanceCardType type) => type == McInstanceCardType.Error;
+    private bool IsIgnoredType(McInstanceCardType type) => type == McInstanceCardType.Error;
 
-    private static (McInstanceCardType, PatchInfo) GetSortKey(IMcInstance instance, McInstanceCardType type) {
-        var patcherId = PatcherIds[type];
+    private (McInstanceCardType, PatchInfo) GetSortKey(IMcInstance instance, McInstanceCardType type) {
+        var patcherId = _patcherIds[type];
         return (type, instance.InstanceInfo.GetPatcher(patcherId)!);
     }
 

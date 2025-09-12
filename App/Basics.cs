@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
-using Microsoft.VisualStudio.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 

@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using PCL.Core.App;
-using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Handler.Info;
-using PCL.Core.Minecraft.Instance.Handler.Libraries;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 using PCL.Core.Minecraft.Instance.Interface;
-using PCL.Core.Minecraft.Instance.Resources;
 
 namespace PCL.Core.Minecraft.Instance.InstanceImpl;
 
@@ -24,9 +18,6 @@ public class MergeInstance : IMcInstance {
     private JsonObject? _versionJsonInJar;
     private PatchInstanceInfo? _instanceInfo;
     private McInstanceCardType _cachedCardType;
-
-    private List<Library>? _libraries; // 依赖库列表
-    private AssetIndex? _assetIndex;
 
     /// <summary>
     /// 初始化以 Merge JSON 为基础的 Minecraft 实例
@@ -100,7 +91,7 @@ public class MergeInstance : IMcInstance {
     public PatchInstanceInfo InstanceInfo {
         get {
             if (_instanceInfo == null) {
-                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, _versionJson!, Libraries!));
+                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, _versionJson!));
             }
             return _instanceInfo!;
         }
@@ -114,19 +105,12 @@ public class MergeInstance : IMcInstance {
 
     public void Load() {
         SetDescriptiveInfo();
-
-        ParseLibrariesFromJson();
     }
 
     public async Task RefreshAsync() {
         await RefreshVersionJsonAsync();
 
-        // RefreshInstanceInfo();
-        // RefreshInstanceDisplayType();
-
         SetDescriptiveInfo();
-
-        ParseLibrariesFromJson();
     }
 
     private void SetDescriptiveInfo() {
@@ -138,6 +122,4 @@ public class MergeInstance : IMcInstance {
         Config.Instance.Info[Path] = Desc;
         Config.Instance.LogoPath[Path] = Logo;
     }
-
-    public List<Library>? Libraries => _libraries ?? LibrariesMergeHandler.ParseLibrariesFromJson(this, _versionJson!);
 }

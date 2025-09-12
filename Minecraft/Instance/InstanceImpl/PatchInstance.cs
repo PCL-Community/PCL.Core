@@ -24,9 +24,6 @@ public class PatchInstance : IMcInstance {
     private PatchInstanceInfo? _instanceInfo;
     private McInstanceCardType _cachedCardType;
 
-    private List<Library>? _libraries; // 依赖库列表
-    private AssetIndex? _assetIndex;
-
     /// <summary>
     /// 初始化以 Patch 类型 JSON 为基础的 Minecraft 实例
     /// </summary>
@@ -99,7 +96,7 @@ public class PatchInstance : IMcInstance {
     public PatchInstanceInfo InstanceInfo {
         get {
             if (_instanceInfo == null) {
-                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, _versionJson!, Libraries!));
+                McInstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, _versionJson!));
             }
             return _instanceInfo!;
         }
@@ -113,21 +110,13 @@ public class PatchInstance : IMcInstance {
 
     public void Load() {
         SetDescriptiveInfo();
-
-        ParseLibrariesFromJson();
-        ParseAssetIndexFromJson();
+        
     }
 
     public async Task RefreshAsync() {
         await RefreshVersionJsonAsync();
 
-        // RefreshInstanceInfo();
-        // RefreshInstanceDisplayType();
-
         SetDescriptiveInfo();
-
-        ParseLibrariesFromJson();
-        ParseAssetIndexFromJson();
     }
 
     private void SetDescriptiveInfo() {

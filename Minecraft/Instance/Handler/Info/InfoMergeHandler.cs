@@ -29,7 +29,7 @@ public static class InfoMergeHandler {
     /// <summary>
     /// 将 Merge 类型 JSON 转化为对应的 InstanceInfo
     /// </summary>
-    public static IMcInstance RefreshMergeInstanceInfo(IMcInstance instance, in JsonObject versionJson, List<Library> libraries) {
+    public static IMcInstance RefreshMergeInstanceInfo(IMcInstance instance, in JsonObject versionJson) {
         var clonedInstance = McInstanceFactory.CloneInstance(instance);
 
         var instanceInfo = new PatchInstanceInfo();
@@ -48,19 +48,19 @@ public static class InfoMergeHandler {
         });
         
         // 添加其它补丁信息
-        instanceInfo.Patchers.AddRange(GetPatchInfos(instanceInfo, versionJson, libraries));
+        instanceInfo.Patchers.AddRange(GetPatchInfos(instanceInfo, versionJson));
 
         clonedInstance.InstanceInfo = instanceInfo;
 
         return clonedInstance;
     }
 
-    private static List<PatchInfo> GetPatchInfos(PatchInstanceInfo patchInstanceInfo, in JsonObject versionJson, in List<Library> libraries) {
+    private static List<PatchInfo> GetPatchInfos(PatchInstanceInfo patchInstanceInfo, in JsonObject versionJson) {
         var patchInfos = new List<PatchInfo>();
         
         // 从 JSON 提取 libraries 的 name 属性为 HashSet
-        _libraryNameHashCache = libraries.Where(lib => lib.Name != null)
-            .Select(lib => lib.Name!)
+        _libraryNameHashCache = versionJson["libraries"]!.AsArray().Where(lib => lib!["name"] != null)
+            .Select(lib => lib!["name"]!.GetValue<string>())
             .ToHashSet();
 
         // Quilt & Cleanroom & LiteLoader

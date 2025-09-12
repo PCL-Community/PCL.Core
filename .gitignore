@@ -408,7 +408,3 @@ FodyWeavers.xsd
 
 # Generated Code
 **/*.g.cs
-
-# Duplicate Project File
-
-PCL.Core.sln

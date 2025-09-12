@@ -22,6 +22,7 @@ public class MinecraftClient : IClient
     public static JsonNode? VersionList;
     private const string Official = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
     private const string BmclApi = "https://bmclapi2.bangbang93.com/mc/game/version_manifest_v2.json";
+    private const string AssetsBaseUri = "https://resources.download.minecraft.net";
     private static string[] _GetVersionSource() => Config.ToolConfigGroup.DownloadConfigGroup.VersionSourceSolution switch
     {
         0 => [Official, Official, BmclApi],
@@ -33,7 +34,8 @@ public class MinecraftClient : IClient
         var mirror = uri
         .Replace("piston-meta.mojang.com", "bmclapi2.bangbang93.com")
         .Replace("libraries.minecraft.net", "bmclapi2.bangbang93.com/maven")
-        .Replace("pistom-data.mojang.com", "bmclapi2.bangbang93.com");
+        .Replace("pistom-data.mojang.com", "bmclapi2.bangbang93.com")
+        .Replace(AssetsBaseUri,"https://bmclapi2.bangbang93.com/assets");
         return Config.ToolConfigGroup.DownloadConfigGroup.VersionSourceSolution switch
         {
             0 => [uri, uri, mirror],
@@ -141,6 +143,19 @@ public class MinecraftClient : IClient
         }
         return list;
     }
+    public static async Task<List<NetFile>?> AnalysisAssets(JsonNode versionJson)
+    {
+        var list = new List<NetFile>();
+        foreach (var asset in versionJson["object"])
+        {
+            var hash = asset["hash"].ToString();
+            var size = asset["size"].GetValue<int>();
+            var pathSuffix = $"{hash.SubString(0, 1)}/{hash}";
+            var assetUri = $"{AssetsBaseUri}/{pathSuffix}";
+            var path = $"assets/objects/{pathSuffix}";
+
+        }
+    }
     public static async Task StartClientInstallAsync(string mcVersion, string path)
     {
         var versionJson = await GetJsonAsync(mcVersion);
@@ -158,8 +173,5 @@ public class MinecraftClient : IClient
         downloader.Start();
 
     }
-    public static async Task<List<NetFile>?> AnalysisAssets(JsonNode versionJson)
-    {
-        
-    }
+    
 }

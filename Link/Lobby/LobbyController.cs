@@ -20,8 +20,9 @@ namespace PCL.Core.Link.Lobby;
 
 public static class LobbyController
 {
-    public static int Launch(bool isHost, LobbyInfo lobbyInfo, string? playerName = null)
+    public static int Launch(bool isHost, string? playerName = null)
     {
+        if (TargetLobby == null) { return 1; }
         LogWrapper.Info("Link", "开始发送联机数据");
         var servers = Config.Link.RelayServer;
         var serverType = Config.Link.ServerType;
@@ -41,7 +42,7 @@ public static class LobbyController
             ["NaidEmail"] = NaidProfile.Email,
             ["NaidLastIp"] = NaidProfile.LastIp,
             ["CustomName"] = Config.Link.Username,
-            ["NetworkName"] = lobbyInfo.NetworkName,
+            ["NetworkName"] = TargetLobby.NetworkName,
             ["Servers"] = servers,
             ["IsHost"] = isHost
         };
@@ -105,7 +106,7 @@ public static class LobbyController
             LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
         }
 
-        var etResult = ETController.Launch(isHost, lobbyInfo.NetworkName, lobbyInfo.NetworkSecret, port: lobbyInfo.Port, hostname: playerName);
+        var etResult = ETController.Launch(isHost, hostname: playerName);
         if (etResult == 1)
         {
             return 1;
@@ -116,7 +117,7 @@ public static class LobbyController
             Task.Delay(800).GetAwaiter().GetResult();
         }
 
-        if (isHost || lobbyInfo.Ip is null) return 0;
+        if (isHost || TargetLobby.Ip is null) return 0;
         string desc;
         var hostInfo = GetPlayerList().Item1?[0];
         if (hostInfo == null)

@@ -52,8 +52,60 @@ public enum ChunkStatus
 }
 
 /// <summary>
+/// 速度限制控制器
+/// </summary>
+public class SpeedLimiter
+{
+    private readonly long _speedLimitBytesPerSecond;
+    private readonly object _lockObject = new();
+    private DateTime _lastResetTime = DateTime.Now;
+    private long _bytesInCurrentSecond = 0;
+    
+    public SpeedLimiter(long speedLimitBytesPerSecond)
+    {
+        _speedLimitBytesPerSecond = speedLimitBytesPerSecond;
+    }
+    
+    public async Task WaitIfNeeded(int bytesToTransfer, CancellationToken cancellationToken)
+    {
+        if (_speedLimitBytesPerSecond <= 0) return;
+        
+        await Task.Run(() =>
+        {
+            lock (_lockObject)
+            {
+                var now = DateTime.Now;
+                var timeSinceReset = now - _lastResetTime;
+                
+                // Reset every second
+                if (timeSinceReset.TotalMilliseconds >= 1000)
+                {
+                    _lastResetTime = now;
+                    _bytesInCurrentSecond = 0;
+                }
+                
+                _bytesInCurrentSecond += bytesToTransfer;
+                
+                // Calculate delay if needed
+                if (_bytesInCurrentSecond > _speedLimitBytesPerSecond)
+                {
+                    var remainingTime = 1000 - timeSinceReset.TotalMilliseconds;
+                    if (remainingTime > 0)
+                    {
+                        Thread.Sleep((int)remainingTime);
+                        _lastResetTime = DateTime.Now;
+                        _bytesInCurrentSecond = bytesToTransfer;
+                    }
+                }
+            }
+        }, cancellationToken);
+    }
+}
+
+/// <summary>
 /// 高性能多线程下载任务
 /// 继承TaskBase以完全适配PCL.Core架构，支持IObservableProgressSource接口
+/// 支持速度限制和可配置重试间隔
 /// </summary>
 public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
 {
@@ -65,6 +117,9 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
     private readonly int _chunkSize;
     private readonly int _maxRetries;
     private readonly int _timeoutMs;
+    private readonly long _speedLimitBytesPerSecond;
+    private readonly int _baseRetryDelayMs;
+    private readonly bool _useExponentialBackoff;
     
     private long _totalSize = 0;
     private long _totalDownloaded = 0;
@@ -73,6 +128,7 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
     private readonly object _progressLock = new();
     private DateTime _startTime;
     private CancellationTokenSource? _internalCts;
+    private readonly SpeedLimiter _speedLimiter;
     
     /// <summary>
     /// 创建多线程下载任务
@@ -83,6 +139,9 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
     /// <param name="chunkSize">分块大小(默认1MB)</param>
     /// <param name="maxRetries">最大重试次数(默认3)</param>
     /// <param name="timeoutMs">超时时间毫秒(默认30秒)</param>
+    /// <param name="speedLimitBytesPerSecond">速度限制(字节/秒，0表示无限制，默认无限制)</param>
+    /// <param name="baseRetryDelayMs">基础重试延迟毫秒(默认1秒)</param>
+    /// <param name="useExponentialBackoff">使用指数退避重试(默认true)</param>
     /// <param name="cancellationToken">取消令牌</param>
     public MultiThreadDownloadTask(
         Uri sourceUri,
@@ -91,6 +150,9 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
         int chunkSize = 1024 * 1024, // 1MB
         int maxRetries = 3,
         int timeoutMs = 30000,
+        long speedLimitBytesPerSecond = 0, // 0 = 无限制
+        int baseRetryDelayMs = 1000, // 1秒
+        bool useExponentialBackoff = true,
         CancellationToken? cancellationToken = null)
         : base($"下载 {Path.GetFileName(targetPath)}", cancellationToken, $"从 {sourceUri} 下载到 {targetPath}")
     {
@@ -100,8 +162,14 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
         _chunkSize = Math.Max(1024, chunkSize); // 至少1KB
         _maxRetries = Math.Max(0, maxRetries);
         _timeoutMs = Math.Max(5000, timeoutMs); // 至少5秒
+        _speedLimitBytesPerSecond = Math.Max(0, speedLimitBytesPerSecond);
+        _baseRetryDelayMs = Math.Max(100, baseRetryDelayMs); // 至少100ms
+        _useExponentialBackoff = useExponentialBackoff;
         
-        LogWrapper.Info(LogModule, $"创建多线程下载任务: {Name}, 线程数: {_threadCount}");
+        // 初始化速度限制器
+        _speedLimiter = new SpeedLimiter(_speedLimitBytesPerSecond);
+        
+        LogWrapper.Info(LogModule, $"创建多线程下载任务: {Name}, 线程数: {_threadCount}, 速度限制: {(_speedLimitBytesPerSecond > 0 ? $"{_speedLimitBytesPerSecond / 1024 / 1024:F1}MB/s" : "无限制")}");
     }
     
     /// <summary>
@@ -337,6 +405,9 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
                 int bytesRead;
                 while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
                 {
+                    // 速度限制检查
+                    await _speedLimiter.WaitIfNeeded(bytesRead, token);
+                    
                     await fileStream.WriteAsync(buffer, 0, bytesRead, token);
                     
                     lock (_progressLock)
@@ -356,8 +427,21 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
                 chunk.RetryCount = attempt + 1;
                 LogWrapper.Warn(LogModule, $"工作线程 {workerId} 分块 {chunk.Id} 下载失败 (重试 {attempt + 1}/{_maxRetries}): {ex.Message}");
                 
-                // 重试前等待一段时间
-                await Task.Delay(Math.Min(1000 * (attempt + 1), 5000), token);
+                // 计算重试延迟时间
+                int retryDelay;
+                if (_useExponentialBackoff)
+                {
+                    // 指数退避: baseDelay * 2^attempt，最大30秒
+                    retryDelay = Math.Min(_baseRetryDelayMs * (int)Math.Pow(2, attempt), 30000);
+                }
+                else
+                {
+                    // 固定延迟
+                    retryDelay = _baseRetryDelayMs;
+                }
+                
+                LogWrapper.Debug(LogModule, $"工作线程 {workerId} 分块 {chunk.Id} 将在 {retryDelay}ms 后重试");
+                await Task.Delay(retryDelay, token);
             }
             catch (Exception ex)
             {
@@ -416,6 +500,9 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
         
         while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
         {
+            // 速度限制检查
+            await _speedLimiter.WaitIfNeeded(bytesRead, token);
+            
             await fileStream.WriteAsync(buffer, 0, bytesRead, token);
             totalDownloaded += bytesRead;
             
@@ -477,5 +564,39 @@ public class MultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
             var speed = elapsed.TotalSeconds > 0 ? _totalDownloaded / elapsed.TotalSeconds : 0;
             return (_totalDownloaded, _totalSize, speed, _activeChunks.Count);
         }
+    }
+    
+    /// <summary>
+    /// 获取当前速度限制设置(字节/秒)
+    /// </summary>
+    public long GetSpeedLimit() => _speedLimitBytesPerSecond;
+    
+    /// <summary>
+    /// 获取重试配置信息
+    /// </summary>
+    public (int BaseRetryDelayMs, bool UseExponentialBackoff, int MaxRetries) GetRetryConfig()
+    {
+        return (_baseRetryDelayMs, _useExponentialBackoff, _maxRetries);
+    }
+    
+    /// <summary>
+    /// 获取详细下载配置信息
+    /// </summary>
+    public string GetConfigurationInfo()
+    {
+        var speedLimitText = _speedLimitBytesPerSecond > 0 
+            ? $"{_speedLimitBytesPerSecond / 1024.0 / 1024.0:F2} MB/s" 
+            : "无限制";
+        
+        var retryStrategyText = _useExponentialBackoff ? "指数退避" : "固定间隔";
+        
+        return $"配置信息:\n" +
+               $"  线程数: {_threadCount}\n" +
+               $"  分块大小: {_chunkSize / 1024.0 / 1024.0:F2} MB\n" +
+               $"  速度限制: {speedLimitText}\n" +
+               $"  最大重试: {_maxRetries}\n" +
+               $"  重试策略: {retryStrategyText}\n" +
+               $"  基础延迟: {_baseRetryDelayMs} ms\n" +
+               $"  超时时间: {_timeoutMs} ms";
     }
 }

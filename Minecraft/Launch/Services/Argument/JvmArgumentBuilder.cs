@@ -59,7 +59,7 @@ public class JvmArgumentBuilder(IMcInstance instance) {
         AddVersionJsonJvmArguments(arguments);
         AddCommonJvmArguments(arguments);
         AddRendererConfiguration(arguments);
-        AddProxyConfigurationModern(arguments);
+        AddProxyConfiguration(arguments);
         AddRetroWrapperConfiguration(arguments);
         AddJavaWrapperConfiguration(arguments, selectedJava);
         
@@ -154,27 +154,10 @@ public class JvmArgumentBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 添加代理配置 (旧版)
+    /// 添加代理配置
     /// </summary>
     private void AddProxyConfiguration(List<string> arguments) {
         if (!ShouldUseProxy()) return;
-
-        try {
-            var proxyUri = new Uri(Config.System.HttpProxy.CustomAddress);
-            var scheme = GetProxyScheme(proxyUri);
-
-            arguments.Add($"-D{scheme}.proxyHost={proxyUri.Host}");
-            arguments.Add($"-D{scheme}.proxyPort={proxyUri.Port}");
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "无法配置代理设置");
-        }
-    }
-
-    /// <summary>
-    /// 添加代理配置 (新版)
-    /// </summary>
-    private void AddProxyConfigurationModern(List<string> arguments) {
-        if (!ShouldUseProxyModern()) return;
 
         try {
             var proxyUri = new Uri(Config.System.HttpProxy.CustomAddress);
@@ -188,17 +171,9 @@ public class JvmArgumentBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 判断是否应该使用代理 (旧版)
+    /// 判断是否应该使用代理
     /// </summary>
     private bool ShouldUseProxy() {
-        return Config.Instance.UseProxy[instance.Path] &&
-               !string.IsNullOrWhiteSpace(Config.System.HttpProxy.CustomAddress);
-    }
-
-    /// <summary>
-    /// 判断是否应该使用代理 (新版)
-    /// </summary>
-    private bool ShouldUseProxyModern() {
         return Config.Instance.UseProxy[instance.Path] &&
                Config.System.HttpProxy.Type == 2 &&
                !string.IsNullOrWhiteSpace(Config.System.HttpProxy.CustomAddress);

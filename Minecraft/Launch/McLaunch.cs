@@ -12,13 +12,6 @@ public static class McLaunch {
         var launchCts = new CancellationTokenSource();
 
         try {
-            Delegate[] pipelineSteps = [
-                new Func<TaskBase<object>, object, object>((_, _) => PreCheckService.Validate(launchCts)),
-                new Func<TaskBase<object>, object, Task<JavaInfo>>(async (_, _) => await JavaSelectService.SelectBestJavaAsync()),
-            ];
-
-            PipelineTask<string> mcLaunchTask = new("实例启动", pipelineSteps, launchCts.Token);
-            await mcLaunchTask.RunAsync();
 
             return true;
         } finally {

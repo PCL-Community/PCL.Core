@@ -17,8 +17,6 @@ using PCL.Core.Utils.Exts;
 namespace PCL.Core.Minecraft.Instance;
 
 public class InstanceManager(string path) {
-    public string Path { get; } = path;
-    
     /// <summary>
     /// Minecraft 实例列表
     /// </summary>
@@ -28,14 +26,11 @@ public class InstanceManager(string path) {
     /// 用作 UI 显示被排序过的实例字典
     /// </summary>
     public Dictionary<McInstanceCardType, List<IMcInstance>> McInstanceUiDict { get; set; } = [];
-    
-    public IJsonBasedInstance CurrentJsonBased => FolderService.FolderManager.Current as IJsonBasedInstance 
-        ?? throw new InvalidOperationException("当前实例不是基于 JSON 的实例，无法进行此操作。");
 
     public async Task McInstanceListLoadAsync(CancellationToken cancelToken = default) {
         try {
             // Get version folders
-            var versionPath = System.IO.Path.Combine(Path, "versions");
+            var versionPath = Path.Combine(path, "versions");
 
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
@@ -69,23 +64,23 @@ public class InstanceManager(string path) {
                 .FirstOrDefault(instance => instance.Name == savedSelection && instance.CardType != McInstanceCardType.Error);
 
             if (selectedInstance != null) {
-                FolderService.FolderManager.Current = selectedInstance;
-                LogWrapper.Warn($"选择保存的 Minecraft 实例：{FolderService.FolderManager.Current.Path}");
+                FolderService.FolderManager.CurrentInst = selectedInstance;
+                LogWrapper.Warn($"选择保存的 Minecraft 实例：{FolderService.FolderManager.CurrentInst.Path}");
             } else {
                 selectedInstance = McInstanceList
                     .FirstOrDefault(instance => instance.CardType != McInstanceCardType.Error);
 
                 if (selectedInstance != null) {
-                    FolderService.FolderManager.Current = selectedInstance;
-                    Config.Launch.SelectedInstance = FolderService.FolderManager.Current.Name;
-                    LogWrapper.Warn($"自动选择 Minecraft 实例：{FolderService.FolderManager.Current.Path}");
+                    FolderService.FolderManager.CurrentInst = selectedInstance;
+                    Config.Launch.SelectedInstance = FolderService.FolderManager.CurrentInst.Name;
+                    LogWrapper.Warn($"自动选择 Minecraft 实例：{FolderService.FolderManager.CurrentInst.Path}");
                 } else {
-                    FolderService.FolderManager.Current = null;
+                    FolderService.FolderManager.CurrentInst = null;
                     LogWrapper.Warn("未找到可用的 Minecraft 实例");
                 }
             }
         } else {
-            FolderService.FolderManager.Current = null;
+            FolderService.FolderManager.CurrentInst = null;
             if (savedSelection.IsNullOrEmpty()) {
                 Config.Launch.SelectedInstance = string.Empty;
                 LogWrapper.Warn("清除失效的 Minecraft 实例选择");

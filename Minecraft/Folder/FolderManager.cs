@@ -19,12 +19,12 @@ public class FolderManager {
     /// <summary>
     /// 当前的 Minecraft 文件夹路径。
     /// </summary>
-    public string PathMcFolder { get; set; } = string.Empty;
+    public string CurrentFolder { get; set; } = string.Empty;
 
     /// <summary>
     /// 当前选择的 Minecraft 实例
     /// </summary>
-    public IMcInstance? Current { get; set; }
+    public IMcInstance? CurrentInst { get; set; }
 
     /// <summary>
     /// Minecraft 文件夹列表。
@@ -133,13 +133,13 @@ public class FolderManager {
             }
 
             // TODO: 未来去除这个 $ 符号
-            PathMcFolder = Path.Combine(Basics.ExecutablePath, Config.Launch.SelectedFolder.TrimStart('$'));
-            if (string.IsNullOrEmpty(PathMcFolder) || !Directory.Exists(PathMcFolder)) {
+            CurrentFolder = Path.Combine(Basics.ExecutablePath, Config.Launch.SelectedFolder.TrimStart('$'));
+            if (string.IsNullOrEmpty(CurrentFolder) || !Directory.Exists(CurrentFolder)) {
                 // Invalid folder
-                if (string.IsNullOrEmpty(PathMcFolder)) {
+                if (string.IsNullOrEmpty(CurrentFolder)) {
                     LogWrapper.Info("没有选择 Minecraft 文件夹，使用第一个");
                 } else {
-                    LogWrapper.Info($"Minecraft 文件夹非法或不存在: {PathMcFolder}");
+                    LogWrapper.Info($"Minecraft 文件夹非法或不存在: {CurrentFolder}");
                 }
                 // TODO: 这边也是
                 Config.Launch.SelectedFolder = McFolderList[0].Path.Replace(Basics.ExecutablePath, "$");

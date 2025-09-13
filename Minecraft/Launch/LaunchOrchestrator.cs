@@ -6,8 +6,6 @@ using AuthenticationManager = System.Net.AuthenticationManager;
 
 namespace PCL.Core.Minecraft.Launch;
 
-// TODO: 重构为 PipeLineTask
-
 public static class LaunchOrchestrator
 {
     /*

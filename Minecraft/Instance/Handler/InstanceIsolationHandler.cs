@@ -18,12 +18,12 @@ public static class InstanceIsolationHandler {
         }
         
         if (Config.Instance.IndieV2[instance.Path]) {
-            return Config.Instance.IndieV2[instance.Path] ? instance.Path : FolderManager.PathMcFolder;
+            return Config.Instance.IndieV2[instance.Path] ? instance.Path : FolderService.FolderManager.CurrentFolder;
         }
 
         var shouldBeIndie = ShouldBeIndie(instance);
         Config.Instance.IndieV2[instance.Path] = shouldBeIndie;
-        return Config.Instance.IndieV2[instance.Path] ? instance.Path : FolderManager.PathMcFolder;
+        return Config.Instance.IndieV2[instance.Path] ? instance.Path : FolderService.FolderManager.CurrentFolder;
     }
 
     private static bool ShouldBeIndie(IMcInstance instance) {

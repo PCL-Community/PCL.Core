@@ -9,7 +9,7 @@ using PCL.Core.Minecraft.Instance.Service;
 using PCL.Core.UI;
 using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.Minecraft.Launch;
+namespace PCL.Core.Minecraft.Launch.Services.Argument;
 
 public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo selectedJavaInfo) {
     private readonly List<string> jvmArguments;

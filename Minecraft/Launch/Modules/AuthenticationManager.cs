@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using PCL.Core.Minecraft.Launch.Services;
@@ -171,3 +172,4 @@ public static class AuthenticationManager {
     private static McProfile SelectedProfile => throw new NotImplementedException("需要从原代码引用");
     private static object Setup => throw new NotImplementedException("需要从原代码引用");
 }
+*/

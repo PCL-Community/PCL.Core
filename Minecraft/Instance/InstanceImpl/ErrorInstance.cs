@@ -12,7 +12,7 @@ public class ErrorInstance : IMcInstance {
     /// </summary>
     public ErrorInstance(string path, string? desc = null, string? logo = null) {
         // 定义基础路径
-        var basePath = System.IO.Path.Combine(FolderManager.PathMcFolder, "versions");
+        var basePath = System.IO.Path.Combine(FolderService.FolderManager.CurrentFolder, "versions");
 
         // 判断是否为绝对路径，并拼接正确的路径
         Path = path.Contains(':') ? path : System.IO.Path.Combine(basePath, path);

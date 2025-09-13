@@ -631,6 +631,11 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
     private void CreateDownloadChunks(long totalSize)
     {
         var chunkCount = Math.Min(_config.ThreadCount, (int)Math.Ceiling((double)totalSize / _config.ChunkSize));
+        if (chunkCount <= 0)
+        {
+            LogWrapper.Error(LogModule, $"无法创建下载分块: chunkCount={chunkCount} (ThreadCount={_config.ThreadCount}, totalSize={totalSize}, ChunkSize={_config.ChunkSize})");
+            return;
+        }
         var chunkSize = totalSize / chunkCount;
         var remainder = totalSize % chunkCount;
         

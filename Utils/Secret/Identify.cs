@@ -1,97 +1,47 @@
 ﻿using System;
 using System.Management;
-using PCL.Core.App;
-using PCL.Core.Logging;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Secret;
 
-public static class Identify
+public class Identify
 {
-    private const string DefaultRawCode = "B09675A9351CBD1FD568056781FE3966DD936CC9B94E51AB5CF67EEB7E74C075";
-    private static readonly Lazy<string?> _LazyCpuId = new(_GetCpuId);
+    public static readonly Lazy<string> RawId = new(_getRawId);
+    public static readonly Lazy<string> EncryptionKey = new(_getEncryptionKey);
+    public static readonly Lazy<string> LauncherId = new(_getLauncherId);
 
-    private static readonly Lazy<string> _LazyRawCode =
-        new(() => CpuId is null ? DefaultRawCode : SHA256Provider.Instance.ComputeHash(CpuId).ToUpper());
+    private const string DefaultRawId = "c34f48114e31f6bb99bdf720f0d98a3c74e325a90c3a8e638d3687a83d404b0c3687b6c0b7a752d718dd5e27a6be6ab68a7f8aa996de158052190bf3ffd17c61";
 
-    private static readonly Lazy<string> _LaunchId = new(_GetLaunchId);
-
-    private static readonly Lazy<string> _LazyEncryptKey =
-        new(() => SHA512Provider.Instance.ComputeHash(RawCode).Substring(4, 32).ToUpper());
-
-    public static string GetGuid() => Guid.NewGuid().ToString();
-    public static string? CpuId => _LazyCpuId.Value;
-    public static string RawCode => _LazyRawCode.Value;
-    public static string LaunchId => _LaunchId.Value;
-    public static string EncryptKey => _LazyEncryptKey.Value;
-
-    private static string? _GetCpuId()
+    private static string _getRawId()
     {
-        try
+        string? code = null;
+        using (var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct"))
+        using (var results = searcher.Get())
         {
-            using var searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor");
-            using var collection = searcher.Get();
-
-            foreach (var item in collection)
+            foreach (var managementObject in results)
             {
-                try
-                {
-                    return item["ProcessorId"]?.ToString();
-                }
-                catch (ManagementException ex)
-                {
-                    LogWrapper.Warn("Identify", $"WMI属性读取失败: {ex.Message}");
-                }
-                finally
-                {
-                    item.Dispose();
-                }
+                var uuid = managementObject?["UUID"];
+                if (uuid is null) continue;
+                code = uuid.ToString();
+                break;
             }
-
-            LogWrapper.Warn("Identify", "未找到有效的CPU ID");
-            return null;
-        }
-        catch (ManagementException ex)
-        {
-            LogWrapper.Error("Identify", $"WMI查询失败: {ex.Message}");
-        }
-        catch (System.Runtime.InteropServices.COMException ex)
-        {
-            LogWrapper.Error("Identify", $"COM异常: {ex.Message}. 请确保WMI服务正在运行");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            LogWrapper.Error("Identify", "访问被拒绝，请以管理员权限运行");
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Error("Identify", $"意外的系统异常: {ex.Message}");
         }
 
-        return null;
+        return code is null ? DefaultRawId : SHA512Provider.Instance.ComputeHash(code);
     }
 
-    public static string GetMachineId(string randomId)
+    private static string _getEncryptionKey()
     {
-        return SHA512Provider.Instance.ComputeHash($"{randomId}|{CpuId}").ToUpper();
+        return SHA256Provider.Instance.ComputeHash($"PCL-CE|{RawId}|EncryptionKey");
     }
 
-    private static string _GetLaunchId()
+    private static string _getLauncherId()
     {
-        try
-        {
-            if (string.IsNullOrEmpty(Config.System.LaunchUuid)) Config.System.LaunchUuid = GetGuid();
-            var hashCode = GetMachineId(Config.System.LaunchUuid)
-                .Substring(6, 16)
-                .Insert(4, "-")
-                .Insert(9, "-")
-                .Insert(14, "-");
-            return hashCode;
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Error(ex, "Identify", "无法获取短识别码");
-            return "PCL2-CECE-GOOD-2025";
-        }
+        var sample = SHA512Provider.Instance.ComputeHash($"PCL-CE|{RawId}|LauncherId");
+        // 16 in length, 8 bytes, 64 bits, enough for us
+        return sample.Substring(64, 16)
+            .Insert(4, "-")
+            .Insert(9, "-")
+            .Insert(14, "-");
     }
 }

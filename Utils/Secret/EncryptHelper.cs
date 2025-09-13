@@ -2,14 +2,25 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using PCL.Core.Utils.Encryption;
 
 namespace PCL.Core.Utils.Secret;
 
 public static class EncryptHelper
 {
-    public static string SecretEncrypt(string data) => AesEncrypt(data, Identify.EncryptKey);
+    public static string SecretEncrypt(string data)
+    {
+        var rawData = Encoding.UTF8.GetBytes(data);
+        var encryptedData = ChaCha20.Instance.Encrypt(rawData, IdentifyOld.EncryptKey);
+        return Convert.ToBase64String(encryptedData);
+    }
 
-    public static string SecretDecrypt(string data) => AesDecrypt(data, Identify.EncryptKey);
+    public static string SecretDecrypt(string data)
+    {
+        var rawData = Convert.FromBase64String(data);
+        var decryptedData = ChaCha20.Instance.Decrypt(rawData, IdentifyOld.EncryptKey);
+        return Encoding.UTF8.GetString(decryptedData);
+    }
 
     public static string SecretDecryptOld(string data)
     {
@@ -18,11 +29,7 @@ public static class EncryptHelper
         var btKey = Encoding.UTF8.GetBytes(key);
         // ReSharper disable once InconsistentNaming
         var btIV = Encoding.UTF8.GetBytes(iv);
-#if NET6_0_OR_GREATER
         using var des = DES.Create();
-#else
-        using var des = new DESCryptoServiceProvider();
-#endif
         using var ms = new MemoryStream();
         using var cs = new CryptoStream(ms, des.CreateDecryptor(btKey, btIV), CryptoStreamMode.Write);
         var inData = Convert.FromBase64String(data);
@@ -38,6 +45,7 @@ public static class EncryptHelper
     /// <param name="key">密钥</param>
     /// <returns>Base64 编码的加密数据</returns>
     /// <exception cref="ArgumentNullException">如果 key 为 null 或者空</exception>
+    [Obsolete]
     public static string AesEncrypt(string input, string key)
     {
         if (string.IsNullOrEmpty(input))
@@ -92,6 +100,7 @@ public static class EncryptHelper
     /// <returns>返回解密文本</returns>
     /// <exception cref="ArgumentNullException">如果 Key 为 null 或空</exception>
     /// <exception cref="ArgumentException">如果 input 数据错误</exception>
+    [Obsolete]
     public static string AesDecrypt(string input, string key)
     {
         if (string.IsNullOrEmpty(input))

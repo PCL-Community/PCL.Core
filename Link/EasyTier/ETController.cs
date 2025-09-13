@@ -148,7 +148,7 @@ public static class ETController
             arguments.AddFlagIf(Config.Link.LatencyFirstMode, "latency-first");
             arguments.Add("compression", "zstd");
             arguments.AddFlag("multi-thread");
-            arguments.Add("machine-id", Identify.LaunchId);
+            arguments.Add("machine-id", Identify.LauncherId.Value);
 
             // TODO: 等待玩家档案迁移以获取正在使用的档案名称
             var showName = "default";

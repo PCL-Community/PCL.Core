@@ -11,32 +11,24 @@ public static class EncryptHelper
     public static string SecretEncrypt(string data)
     {
         var rawData = Encoding.UTF8.GetBytes(data);
-        var encryptedData = ChaCha20.Instance.Encrypt(rawData, IdentifyOld.EncryptKey);
+        var encryptedData = ChaCha20.Instance.Encrypt(rawData, Identify.EncryptionKey.Value);
         return Convert.ToBase64String(encryptedData);
     }
 
     public static string SecretDecrypt(string data)
     {
         var rawData = Convert.FromBase64String(data);
-        var decryptedData = ChaCha20.Instance.Decrypt(rawData, IdentifyOld.EncryptKey);
+        var decryptedData = ChaCha20.Instance.Decrypt(rawData, Identify.EncryptionKey.Value);
         return Encoding.UTF8.GetString(decryptedData);
     }
 
-    public static string SecretDecryptOld(string data)
-    {
-        const string key = "00000000";
-        const string iv = "87160295";
-        var btKey = Encoding.UTF8.GetBytes(key);
-        // ReSharper disable once InconsistentNaming
-        var btIV = Encoding.UTF8.GetBytes(iv);
-        using var des = DES.Create();
-        using var ms = new MemoryStream();
-        using var cs = new CryptoStream(ms, des.CreateDecryptor(btKey, btIV), CryptoStreamMode.Write);
-        var inData = Convert.FromBase64String(data);
-        cs.Write(inData, 0, inData.Length);
-        cs.FlushFinalBlock();
-        return Encoding.UTF8.GetString(ms.ToArray());
-    }
+    #region "旧版本兼容"
+
+    [Obsolete]
+    public static string SecretDecryptOld(string data) => AesDecrypt(data, IdentifyOld.EncryptKey);
+
+    [Obsolete]
+    public static string SecretEncryptOld(string data) => AesEncrypt(data, IdentifyOld.EncryptKey);
 
     /// <summary>
     /// 使用特定的 AES 算法加密数据
@@ -114,7 +106,7 @@ public static class EncryptHelper
         aes.BlockSize = 128;
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
-        
+
         var encryptedData = Convert.FromBase64String(input);
 
         var salt = new byte[32];
@@ -148,4 +140,6 @@ public static class EncryptHelper
             }
         }
     }
+
+    #endregion
 }

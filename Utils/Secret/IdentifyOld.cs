@@ -20,9 +20,13 @@ public static class IdentifyOld
         new(() => SHA512Provider.Instance.ComputeHash(RawCode).Substring(4, 32).ToUpper());
 
     public static string GetGuid() => Guid.NewGuid().ToString();
+    [Obsolete]
     public static string? CpuId => _LazyCpuId.Value;
+    [Obsolete]
     public static string RawCode => _LazyRawCode.Value;
+    [Obsolete]
     public static string LaunchId => _LaunchId.Value;
+    [Obsolete]
     public static string EncryptKey => _LazyEncryptKey.Value;
 
     private static string? _GetCpuId()

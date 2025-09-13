@@ -6,6 +6,7 @@ using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Service;
+using PCL.Core.Minecraft.Launch.Utils;
 using PCL.Core.UI;
 
 namespace PCL.Core.Minecraft.Launch.Services;

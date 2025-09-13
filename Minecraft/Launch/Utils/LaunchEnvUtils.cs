@@ -6,9 +6,9 @@ using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance;
 using PCL.Core.Minecraft.Instance.Interface;
 
-namespace PCL.Core.Minecraft.Launch;
+namespace PCL.Core.Minecraft.Launch.Utils;
 
-public static class LaunchEnvironmentManager {
+public static class LaunchEnvUtils {
     private const string JavaWrapperResource = "Resources/java-wrapper.jar";
     private const string LinkDResource = "Resources/linkd.exe";
 
@@ -54,7 +54,7 @@ public static class LaunchEnvironmentManager {
         sourceStream.CopyTo(fileStream);
     }
 
-    private static bool McLaunchNeedsRetroWrapper(IMcInstance mcNoPatchesInstance) {
+    public static bool NeedRetroWrapper(IMcInstance mcNoPatchesInstance) {
         var versionInfo = mcNoPatchesInstance.InstanceInfo;
 
         var isOldVersion = versionInfo.McVersionMinor < 6 && versionInfo.McVersionMinor != 99;

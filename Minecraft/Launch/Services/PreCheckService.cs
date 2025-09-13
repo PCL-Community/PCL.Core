@@ -5,6 +5,7 @@ using PCL.Core.App;
 using PCL.Core.App.Tasks;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Interface;
+using PCL.Core.Minecraft.Launch.Utils;
 using PCL.Core.UI;
 using PCL.Core.Utils.Codecs;
 using PCL.Core.Utils.Exts;

@@ -26,63 +26,6 @@ public class Library {
 
     [JsonPropertyName("rules")]
     public List<Rule>? Rules { get; set; }
-
-    // 检查是否满足rules条件
-    public bool CheckRules() {
-        if (Rules == null || Rules.Count == 0)
-            return true; // 没有规则，默认允许
-
-        var required = false;
-
-        foreach (var rule in Rules) {
-            var ruleMatches = true; // 当前规则是否匹配
-
-            // 检查操作系统条件
-            // Using a property pattern
-            // 简化后的代码（C# 9/10 语法）
-            if (rule is { Os.Name: not null }) {
-                var osName = rule.Os.Name.ToLowerInvariant();
-                var currentOs = EnvironmentInterop.GetCurrentOsName();
-
-                // 仅当操作系统名称匹配时继续检查
-                if (osName == "unknown" || osName != currentOs) {
-                    ruleMatches = false;
-                } else if (osName == currentOs && rule.Os.Version != null) {
-                    // 检查操作系统版本
-                    try {
-                        var versionPattern = rule.Os.Version;
-                        var osVersion = Environment.OSVersion.Version.ToString();
-                        ruleMatches = ruleMatches && Regex.IsMatch(osVersion, versionPattern);
-                    } catch (RegexParseException) {
-                        // 无效的正则表达式，规则不匹配
-                        ruleMatches = false;
-                    }
-                }
-
-                // 检查系统架构（x86 或 x64）
-                if (rule.Os.Arch != null) {
-                    var is32BitSystem = !Environment.Is64BitOperatingSystem;
-                    ruleMatches = ruleMatches && string.Equals(rule.Os.Arch, "x86", StringComparison.OrdinalIgnoreCase) == is32BitSystem;
-                }
-            }
-
-            // 根据action更新结果
-            switch (rule.Action) {
-                case "allow":
-                    if (ruleMatches) {
-                        required = true; // 规则匹配，允许使用
-                    }
-                    break;
-                case "disallow":
-                    if (ruleMatches) {
-                        required = false; // 规则匹配，禁止使用
-                    }
-                    break;
-            }
-        }
-
-        return required;
-    }
 }
 
 // Downloads object containing artifact and classifiers

@@ -1,14 +1,12 @@
-﻿namespace PCL.Core.Utils;
+﻿namespace PCL.Core.Utils.Codecs;
 
 using System;
 using System.Text;
 
 public static class EncodingUtils {
-    public static bool IsDefaultEncodingUtf8() {
-        return Encoding.Default.CodePage == 65001;
-    }
+    public static bool IsDefaultEncodingUtf8() => Encoding.Default.CodePage == 65001;
     
-    private static readonly Encoding GB18030 = Encoding.GetEncoding("GB18030");
+    public static bool IsDefaultEncodingGbk() => Encoding.Default.CodePage == 936;
 
     /// <summary>
     /// 解码字节数组为字符串，自动检测 BOM（UTF-8、UTF-16 LE/BE、UTF-32 LE/BE）或回退到 GB18030。
@@ -45,9 +43,9 @@ public static class EncodingUtils {
         // 无 BOM 或检测为 Encoding.Default，尝试 UTF-8
         try {
             var utf8Result = Encoding.UTF8.GetString(bytes);
-            return utf8Result.Contains('\uFFFD') ? GB18030.GetString(bytes) : utf8Result; // 无效 UTF-8，回退到 GB18030
+            return utf8Result.Contains('\uFFFD') ? Encodings.GB18030.GetString(bytes) : utf8Result; // 无效 UTF-8，回退到 GB18030
         } catch (DecoderFallbackException) {
-            return GB18030.GetString(bytes); // UTF-8 解码失败，回退到 GB18030
+            return Encodings.GB18030.GetString(bytes); // UTF-8 解码失败，回退到 GB18030
         }
     }
 }

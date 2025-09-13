@@ -36,7 +36,7 @@ public static class LobbyController
         JsonObject data = new()
         {
             ["Tag"] = "Link",
-            ["Id"] = Identify.LaunchId,
+            ["Id"] = IdentifyOld.LaunchId,
             ["NaidId"] = NaidProfile.Id,
             ["NaidEmail"] = NaidProfile.Email,
             ["NaidLastIp"] = NaidProfile.LastIp,

@@ -93,6 +93,9 @@ public class MultiThreadDownloadManager : IDisposable
             chunkSize ?? DefaultChunkSize,
             maxRetries ?? DefaultMaxRetries,
             timeoutMs ?? DefaultTimeoutMs,
+            0, // speedLimitBytesPerSecond - 默认无限制
+            1000, // baseRetryDelayMs - 默认1秒
+            true, // useExponentialBackoff - 默认启用指数退避
             _globalCts.Token
         );
         

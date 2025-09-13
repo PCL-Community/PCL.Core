@@ -51,7 +51,7 @@ public sealed class TcpForward(
             LocalPort = endPoint.Port;
 
             // 启动 TCP 接受连接任务
-            _ = Task.Run(() => _AcceptConnections(_cts.Token), _cts.Token);
+            _ = Task.Run(() => _AcceptConnectionsAsync(_cts.Token), _cts.Token);
 
             LogWrapper.Info("TcpForward", $"MC 端口转发已启动，监听 {listenAddress}:{LocalPort}，目标 {targetAddress}:{targetPort}");
         }
@@ -83,7 +83,7 @@ public sealed class TcpForward(
         LogWrapper.Info("TcpForward", "MC 端口转发已停止");
     }
 
-    private async Task _AcceptConnections(CancellationToken cancellationToken)
+    private async Task _AcceptConnectionsAsync(CancellationToken cancellationToken)
     {
         cancellationToken.Register(() =>
         {
@@ -108,7 +108,7 @@ public sealed class TcpForward(
                 await _connectionSemaphore.WaitAsync(cancellationToken);
 
                 // 异步处理连接，不等待完成
-                _ = Task.Run(() => _HandleConnection(clientSocket, cancellationToken), cancellationToken)
+                _ = Task.Run(() => _HandleConnectionAsync(clientSocket, cancellationToken), cancellationToken)
                     .ContinueWith(_ => _connectionSemaphore.Release(), TaskContinuationOptions.None);
             }
             catch (OperationCanceledException)
@@ -123,7 +123,7 @@ public sealed class TcpForward(
         }
     }
 
-    private async Task _HandleConnection(Socket clientSocket, CancellationToken cancellationToken)
+    private async Task _HandleConnectionAsync(Socket clientSocket, CancellationToken cancellationToken)
     {
         var connectionId = Guid.NewGuid();
 

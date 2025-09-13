@@ -11,6 +11,7 @@ public static class EncodingDetector
     /// 检测流中的文本编码方式（支持 Seek 的流）
     /// </summary>
     /// <param name="stream">输入流，必须支持 Seek</param>
+    /// <param name="readFromBegin">是否将流重置到起始点</param>
     /// <returns>检测到的编码，未识别时返回 UTF-8 或系统默认</returns>
     public static Encoding DetectEncoding(Stream stream, bool readFromBegin = false)
     {

@@ -22,6 +22,8 @@ public enum JavaBrandType
     Dragonwell,
     TencentKona,
     OpenJDK,
+    GraalVmCommunity,
+    JetBrains,
     Unknown
 }
 
@@ -96,7 +98,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         {
             if (!File.Exists(javaExePath))
                 return null;
-            LogWrapper.Info($"[Java] 解析 {javaExePath} 的 Java 程序信息");
+            LogWrapper.Info("Java", $"解析 {javaExePath} 的 Java 程序信息");
             var javaFileVersion = FileVersionInfo.GetVersionInfo(javaExePath);
             var javaVersion = Version.Parse(javaFileVersion.FileVersion!);
             var companyName = javaFileVersion.CompanyName
@@ -157,6 +159,8 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["Tencent"] = JavaBrandType.TencentKona,
         ["OpenJDK"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
+        ["GraalVM"] = JavaBrandType.GraalVmCommunity,
+        ["JetBrains"] = JavaBrandType.JetBrains
     };
 
     private static JavaBrandType DetermineBrand(string? output)

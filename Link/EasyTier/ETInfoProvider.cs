@@ -93,7 +93,7 @@ public static class ETInfoProvider
     /// 检查 EasyTier 状态，若状态正常则返回 0。
     /// </summary>
     /// <returns></returns>
-    public static async Task<int> CheckETStatus()
+    public static async Task<int> CheckETStatusAsync()
     {
         var retryCount = 0;
         var process = ETController.ETProcess;

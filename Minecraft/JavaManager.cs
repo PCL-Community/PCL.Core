@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Win32;
 using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance;
 
 namespace PCL.Core.Minecraft;
@@ -104,8 +105,9 @@ public class JavaManager
     /// 获取指定游戏实例所要求的版本
     /// </summary>
     /// <returns>如果有设置为 Java 实例，否则为 null</returns>
-    public static JavaInfo? GetVersionUserSetJava() {
-        var instanceSelectedJava = Config.Instance.SelectedJava[InstanceManager.Current!.Path];
+    public static JavaInfo? GetVersionUserSetJava() 
+    {
+        var instanceSelectedJava = Config.Instance.SelectedJava[FolderService.FolderManager.Current!.Path];
         return instanceSelectedJava == "使用全局设置" ? null : JavaInfo.Parse(instanceSelectedJava);
     }
 

@@ -8,6 +8,7 @@ using PCL.Core.App;
 using PCL.Core.App.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Utils;
@@ -15,9 +16,11 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance;
 
-public class InstanceManager {
+public class InstanceManager(string path) {
+    public string Path { get; } = path;
+    
     /// <summary>
-    /// List of current Minecraft folders.
+    /// Minecraft 实例列表
     /// </summary>
     public List<IMcInstance> McInstanceList { get; } = [];
 
@@ -25,19 +28,14 @@ public class InstanceManager {
     /// 用作 UI 显示被排序过的实例字典
     /// </summary>
     public Dictionary<McInstanceCardType, List<IMcInstance>> McInstanceUiDict { get; set; } = [];
-
-    /// <summary>
-    /// 当前的 Minecraft 实例
-    /// </summary>
-    public IMcInstance? Current { get; set; }
     
-    public IJsonBasedInstance CurrentJsonBased => Current as IJsonBasedInstance 
+    public IJsonBasedInstance CurrentJsonBased => FolderService.FolderManager.Current as IJsonBasedInstance 
         ?? throw new InvalidOperationException("当前实例不是基于 JSON 的实例，无法进行此操作。");
 
-    public async Task<object> McInstanceListLoadAsync(string path, CancellationToken cancelToken = default) {
+    public async Task McInstanceListLoadAsync(CancellationToken cancelToken = default) {
         try {
             // Get version folders
-            var versionPath = Path.Combine(path, "versions");
+            var versionPath = System.IO.Path.Combine(Path, "versions");
 
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
@@ -46,8 +44,6 @@ public class InstanceManager {
                     McInstanceList.Add(mcInstance);
                 }
             }
-
-            SelectInstanceAsync();
 
             if (Config.System.Debug.AddRandomDelay) {
                 await Task.Delay(Random.Shared.Next(200, 3000), cancelToken);
@@ -63,10 +59,8 @@ public class InstanceManager {
         foreach (var instance in McInstanceList) {
             instance.Load();
         }
-
-        return new VoidResult();
     }
-
+    
     private void SelectInstanceAsync() {
         var savedSelection = Config.Launch.SelectedInstance;
 
@@ -75,23 +69,23 @@ public class InstanceManager {
                 .FirstOrDefault(instance => instance.Name == savedSelection && instance.CardType != McInstanceCardType.Error);
 
             if (selectedInstance != null) {
-                Current = selectedInstance;
-                LogWrapper.Warn($"选择保存的 Minecraft 实例：{Current.Path}");
+                FolderService.FolderManager.Current = selectedInstance;
+                LogWrapper.Warn($"选择保存的 Minecraft 实例：{FolderService.FolderManager.Current.Path}");
             } else {
                 selectedInstance = McInstanceList
                     .FirstOrDefault(instance => instance.CardType != McInstanceCardType.Error);
 
                 if (selectedInstance != null) {
-                    Current = selectedInstance;
-                    Config.Launch.SelectedInstance = Current.Name;
-                    LogWrapper.Warn($"自动选择 Minecraft 实例：{Current.Path}");
+                    FolderService.FolderManager.Current = selectedInstance;
+                    Config.Launch.SelectedInstance = FolderService.FolderManager.Current.Name;
+                    LogWrapper.Warn($"自动选择 Minecraft 实例：{FolderService.FolderManager.Current.Path}");
                 } else {
-                    Current = null;
+                    FolderService.FolderManager.Current = null;
                     LogWrapper.Warn("未找到可用的 Minecraft 实例");
                 }
             }
         } else {
-            Current = null;
+            FolderService.FolderManager.Current = null;
             if (savedSelection.IsNullOrEmpty()) {
                 Config.Launch.SelectedInstance = string.Empty;
                 LogWrapper.Warn("清除失效的 Minecraft 实例选择");

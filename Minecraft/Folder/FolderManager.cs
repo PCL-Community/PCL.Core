@@ -5,31 +5,33 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using PCL.Core.App;
-using PCL.Core.App.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Instance;
+using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.UI;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Codecs;
 
 namespace PCL.Core.Minecraft.Folder;
 
-public class McFolderManager {
+public class FolderManager {
     /// <summary>
-    /// The current Minecraft folder path, ending with a backslash.
+    /// 当前的 Minecraft 文件夹路径。
     /// </summary>
-    public static string PathMcFolder { get; set; } = string.Empty;
+    public string PathMcFolder { get; set; } = string.Empty;
 
     /// <summary>
-    /// List of current Minecraft folders.
+    /// 当前选择的 Minecraft 实例
     /// </summary>
-    public static List<McFolder> McFolderList { get; } = [];
+    public IMcInstance? Current { get; set; }
 
-    public static readonly TaskBase<object> McFolderListLoadTask = new("文件夹扫描任务", 
-        new Func<TaskBase<object>, object, Task<object>>(async (_, _) => await McFolderListLoadAsync())
-        );
+    /// <summary>
+    /// Minecraft 文件夹列表。
+    /// </summary>
+    public List<McFolder> McFolderList { get; } = [];
 
-    private static async Task<object> McFolderListLoadAsync() {
+    public async Task McFolderListLoadAsync() {
         try {
             var cacheMcFolderList = new List<McFolder>();
 
@@ -118,26 +120,42 @@ public class McFolderManager {
             if (cacheMcFolderList.Count == 0) {
                 var defaultPath = Path.Combine(Basics.ExecutablePath, ".minecraft", "versions");
                 Directory.CreateDirectory(defaultPath);
-                cacheMcFolderList.Add(new McFolder("当前文件夹", Path.Combine(Basics.ExecutablePath, ".minecraft\\"), McFolderType.Original));
+                cacheMcFolderList.Add(new McFolder("当前文件夹", Path.Combine(Basics.ExecutablePath, ".minecraft"), McFolderType.Original));
             }
 
             // Update launcher_profiles.json for each folder
             foreach (var folder in cacheMcFolderList) {
                 await McFolderLauncherProfilesJsonCreateAsync(folder.Path);
+
+                var instanceManager = new InstanceManager(folder.Path);
+                await instanceManager.McInstanceListLoadAsync();
+                folder.InstanceList = instanceManager;
             }
 
-            // Simulate debug delay if enabled
+            // TODO: 未来去除这个 $ 符号
+            PathMcFolder = Path.Combine(Basics.ExecutablePath, Config.Launch.SelectedFolder.TrimStart('$'));
+            if (string.IsNullOrEmpty(PathMcFolder) || !Directory.Exists(PathMcFolder)) {
+                // Invalid folder
+                if (string.IsNullOrEmpty(PathMcFolder)) {
+                    LogWrapper.Info("没有选择 Minecraft 文件夹，使用第一个");
+                } else {
+                    LogWrapper.Info($"Minecraft 文件夹非法或不存在: {PathMcFolder}");
+                }
+                // TODO: 这边也是
+                Config.Launch.SelectedFolder = McFolderList[0].Path.Replace(Basics.ExecutablePath, "$");
+            }
+
+            // 随机延迟
             if (Config.System.Debug.AddRandomDelay) {
                 await Task.Delay(RandomUtils.NextInt(200, 2000));
             }
 
-            // Update the global folder list
+            // 更新全局文件夹列表
             McFolderList.Clear();
             McFolderList.AddRange(cacheMcFolderList);
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "加载 Minecraft 文件夹列表失败");
         }
-        return new VoidResult();
     }
 
     /// <summary>
@@ -152,7 +170,7 @@ public class McFolderManager {
 
             var profiles = new LauncherProfiles {
                 Profiles = new Dictionary<string, Profile> {
-                    ["PCL"] = new () {
+                    ["PCL"] = new() {
                         Icon = "Grass",
                         Name = "PCL",
                         LastVersionId = "latest-release",

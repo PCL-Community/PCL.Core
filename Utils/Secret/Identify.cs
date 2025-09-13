@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Management;
+using PCL.Core.Logging;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Secret;
@@ -15,9 +16,10 @@ public class Identify
     private static string _getRawId()
     {
         string? code = null;
-        using (var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct"))
-        using (var results = searcher.Get())
+        try
         {
+            using var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct");
+            using var results = searcher.Get();
             foreach (var managementObject in results)
             {
                 var uuid = managementObject?["UUID"];
@@ -25,6 +27,22 @@ public class Identify
                 code = uuid.ToString();
                 break;
             }
+        }
+        catch (ManagementException ex)
+        {
+            LogWrapper.Error("Identify", $"WMI查询失败: {ex.Message}");
+        }
+        catch (System.Runtime.InteropServices.COMException ex)
+        {
+            LogWrapper.Error("Identify", $"COM异常: {ex.Message}. 请确保WMI服务正在运行");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            LogWrapper.Error("Identify", "访问被拒绝，请以管理员权限运行");
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error("Identify", $"意外的系统异常: {ex.Message}");
         }
 
         return code is null ? DefaultRawId : SHA512Provider.Instance.ComputeHash(code);
@@ -37,11 +55,19 @@ public class Identify
 
     private static string _getLauncherId()
     {
-        var sample = SHA512Provider.Instance.ComputeHash($"PCL-CE|{RawId}|LauncherId");
-        // 16 in length, 8 bytes, 64 bits, enough for us
-        return sample.Substring(64, 16)
-            .Insert(4, "-")
-            .Insert(9, "-")
-            .Insert(14, "-");
+        try
+        {
+            var sample = SHA512Provider.Instance.ComputeHash($"PCL-CE|{RawId}|LauncherId");
+            // 16 in length, 8 bytes, 64 bits, enough for us
+            return sample.Substring(64, 16)
+                .Insert(4, "-")
+                .Insert(9, "-")
+                .Insert(14, "-");
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "Identify", "无法获取短识别码");
+            return "PCL2-CECE-GOOD-2025";
+        }
     }
 }

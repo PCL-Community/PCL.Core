@@ -18,7 +18,7 @@ namespace PCL.Core.Minecraft.Launch.Services.Argument;
 /// <summary>
 /// 构建 Minecraft JVM 启动参数的工具类
 /// </summary>
-public class JvmArgumentBuilder(IMcInstance instance) {
+public class JvmArgBuilder(IMcInstance instance) {
     private const string MesaLoaderVersion = "25.1.7";
     private const string HeapDumpParameter = "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump";
     private const string Log4jSecurityParameter = "-Dlog4j2.formatMsgNoLookups=true";
@@ -28,9 +28,9 @@ public class JvmArgumentBuilder(IMcInstance instance) {
     /// 为旧版 Minecraft 实例构建 JVM 启动参数
     /// </summary>
     /// <param name="selectedJava">已选择的 Java 信息</param>
-    /// <returns>以空格分隔的 JVM 参数字符串</returns>
+    /// <returns>JVM 参数字符串列表</returns>
     /// <exception cref="InvalidOperationException">当实例 JSON 缺少 mainClass 时抛出</exception>
-    public string BuildLegacyJvmArguments(JavaInfo selectedJava) {
+    public List<string> BuildLegacyJvmArguments(JavaInfo selectedJava) {
         var arguments = new List<string> { HeapDumpParameter };
 
         AddCustomJvmArguments(arguments);
@@ -44,16 +44,16 @@ public class JvmArgumentBuilder(IMcInstance instance) {
         
         AddAccountSystemParametersOld(arguments);
 
-        return string.Join(" ", arguments);
+        return arguments;
     }
 
     /// <summary>
     /// 为新版 Minecraft 实例构建 JVM 启动参数
     /// </summary>
     /// <param name="selectedJava">已选择的 Java 信息</param>
-    /// <returns>以空格分隔的 JVM 参数字符串</returns>
+    /// <returns>JVM 参数字符串列表</returns>
     /// <exception cref="InvalidOperationException">当实例 JSON 缺少 mainClass 时抛出</exception>
-    public string BuildModernJvmArguments(JavaInfo selectedJava) {
+    public List<string> BuildModernJvmArguments(JavaInfo selectedJava) {
         var arguments = new List<string>();
 
         AddVersionJsonJvmArguments(arguments);
@@ -66,9 +66,9 @@ public class JvmArgumentBuilder(IMcInstance instance) {
         AddAccountSystemParametersModern(arguments);
 
         var processedArguments = ProcessAndDeduplicateArguments(arguments);
-        var result = string.Join(" ", processedArguments);
-
-        return AppendMainClass(result);
+        
+        AddMainClass(processedArguments);
+        return processedArguments;
     }
 
     #region 私有方法 - 参数构建
@@ -415,9 +415,9 @@ public class JvmArgumentBuilder(IMcInstance instance) {
     private static List<string> ProcessAndDeduplicateArguments(List<string> arguments) {
         var processedArguments = new List<string>();
 
-        for (int i = 0; i < arguments.Count; i++) {
-            string currentArg = arguments[i];
-            if (currentArg.StartsWith("-")) {
+        for (var i = 0; i < arguments.Count; i++) {
+            var currentArg = arguments[i];
+            if (currentArg.StartsWith('-')) {
                 // 合并连续的非选项参数
                 while (i < arguments.Count - 1 && !arguments[i + 1].StartsWith("-")) {
                     currentArg += " " + arguments[++i];
@@ -429,14 +429,6 @@ public class JvmArgumentBuilder(IMcInstance instance) {
         // 移除已知问题参数并去重
         processedArguments.Remove(MaxDirectMemoryParameter);
         return processedArguments.Distinct().ToList();
-    }
-
-    /// <summary>
-    /// 为结果字符串添加主类
-    /// </summary>
-    private string AppendMainClass(string argumentsString) {
-        var mainClass = GetMainClass();
-        return $"{argumentsString} {mainClass}";
     }
 
     #endregion

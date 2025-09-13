@@ -5,38 +5,49 @@ using System.Text.Json;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance;
 using PCL.Core.Minecraft.Instance.Interface;
-using PCL.Core.Minecraft.Instance.Service;
+using PCL.Core.Minecraft.Launch.Utils;
 using PCL.Core.UI;
-using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Launch.Services.Argument;
 
-public class LaunchArgumentBuilder (IMcInstance noPatchesInstance, JavaInfo selectedJavaInfo) {
-    private readonly List<string> jvmArguments;
-    private readonly List<string> otherArguments;
+public class LaunchArgBuilder (IMcInstance instance, JavaInfo selectedJava) {
+    private readonly List<string> _arguments = [];
     
-    public LaunchArgumentBuilder AddJvmArguments() {
-        var arguments = "";
+    private readonly IJsonBasedInstance _jsonBasedInstance = (IJsonBasedInstance) instance;
+    
+    public LaunchArgBuilder AddJvmArguments() {
+        var jvmArgBuilder = new JvmArgBuilder(instance);
         
-        var jsonBasedInstance = InstanceManager.Current as IJsonBasedInstance;
-        if (jsonBasedInstance!.VersionJson!.TryGetPropertyValue("arguments", out var argumentNode) &&
+        if (_jsonBasedInstance.VersionJson!.TryGetPropertyValue("arguments", out var argumentNode) &&
             argumentNode!.GetValueKind() == JsonValueKind.Object &&
             argumentNode.AsObject().TryGetPropertyValue("jvm", out var jvmNode)) {
             McLaunchUtils.Log("获取新版 JVM 参数");
-            arguments = McLaunchArgumentsJvmNew(InstanceManager.Current);
-            McLaunchUtils.Log("新版 JVM 参数获取成功：");
-            McLaunchUtils.Log(arguments);
+            _arguments.AddRange(jvmArgBuilder.BuildLegacyJvmArguments(selectedJava));
+            McLaunchUtils.Log("新版 JVM 参数获取成功");
         } else {
             McLaunchUtils.Log("获取旧版 JVM 参数");
-            arguments = McLaunchArgumentsJvmOld(InstanceManager.Current);
-            McLaunchUtils.Log("旧版 JVM 参数获取成功：");
-            McLaunchUtils.Log(arguments);
+            _arguments.AddRange(jvmArgBuilder.BuildModernJvmArguments(selectedJava));
+            McLaunchUtils.Log("旧版 JVM 参数获取成功");
         }
         return this;
     }
     
-    public LaunchArgumentBuilder AddGameArguments()
-    {
+    public LaunchArgBuilder AddGameArguments() {
+        var gameArgBuilder = new GameArgBuilder(instance);
+            
+        if (!string.IsNullOrEmpty(_jsonBasedInstance.VersionJson!["minecraftArguments"]?.ToString())) {
+            McLaunchUtils.Log("获取旧版 Game 参数");
+            _arguments.AddRange(gameArgBuilder.BuildLegacyGameArguments());
+            McLaunchUtils.Log("旧版 Game 参数获取成功");
+        }
+
+        if (_jsonBasedInstance.VersionJson!.TryGetPropertyValue("arguments", out var argumentNode2) &&
+            argumentNode2!.GetValueKind() == JsonValueKind.Object &&
+            argumentNode2.AsObject().TryGetPropertyValue("game", out _)) {
+            McLaunchUtils.Log("获取新版 Game 参数");
+            _arguments.AddRange(gameArgBuilder.BuildModernGameArguments());
+            McLaunchUtils.Log("新版 Game 参数获取成功");
+        }
         // Game参数构建逻辑
         return this;
     }

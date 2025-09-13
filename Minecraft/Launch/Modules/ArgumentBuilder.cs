@@ -1,4 +1,5 @@
 ﻿using System;
+using PCL.Core.Minecraft.Launch.Services.Argument;
 using PCL.Core.Minecraft.Launch.State;
 
 namespace PCL.Core.Minecraft.Launch.Modules;
@@ -9,7 +10,7 @@ public static class ArgumentBuilder
     {
         try
         {
-            var builder = new LaunchArgumentBuilder(options.Version, selectedJavaInfo, loginResult);
+            var builder = new LaunchArgBuilder(options.Version, selectedJavaInfo, loginResult);
             var arguments = builder
                 .AddJvmArguments()
                 .AddGameArguments()

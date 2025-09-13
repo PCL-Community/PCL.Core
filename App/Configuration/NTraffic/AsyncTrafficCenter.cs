@@ -16,7 +16,7 @@ public abstract class AsyncTrafficCenter(int maxThread) : TrafficCenter
         PreviewTrafficEventArgs<TInput, TOutput> e,
         Action<PreviewTrafficEventArgs<TInput, TOutput>> onInvokeEvent)
     {
-        if (CanAsync(e)) _taskPool.Submit(async () =>
+        if (OnAsyncCheck(e)) _taskPool.Submit(async () =>
         {
             await OnTrafficAsync(e).ConfigureAwait(false);
             onInvokeEvent(e);
@@ -34,5 +34,5 @@ public abstract class AsyncTrafficCenter(int maxThread) : TrafficCenter
 
     protected virtual Task OnTrafficAsync<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e) => Task.CompletedTask;
 
-    protected virtual bool CanAsync<TInput, TOutput>(TrafficEventArgs<TInput, TOutput> e) => true;
+    protected virtual bool OnAsyncCheck<TInput, TOutput>(TrafficEventArgs<TInput, TOutput> e) => true;
 }

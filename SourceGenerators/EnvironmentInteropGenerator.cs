@@ -1,7 +1,5 @@
-// File: EnvironmentInteropGenerator.cs
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -16,10 +14,10 @@ public class EnvironmentInteropGenerator : IIncrementalGenerator
     {
         // 从 MSBuild 属性中提取所有 PCL_* 配置
         var secretProperties = context.AnalyzerConfigOptionsProvider
-            .Select(static (options, cancellationToken) => _ReadSecretProperties(options));
+            .Select(static (options, _) => _ReadSecretProperties(options));
 
         // 注册源代码生成
-        context.RegisterSourceOutput(secretProperties, GenerateSource);
+        context.RegisterSourceOutput(secretProperties, _GenerateSource);
     }
 
     private static Dictionary<string, string> _ReadSecretProperties(AnalyzerConfigOptionsProvider options)
@@ -48,23 +46,17 @@ public class EnvironmentInteropGenerator : IIncrementalGenerator
             {
                 // 去掉 PCL_ 前缀，只保留后半部分作为字典 key
                 var dictKey = key; // 例如 MS_CLIENT_ID
-                secrets[dictKey] = value!;
+                secrets[dictKey] = value;
             }
         }
 
         // 只有当 WRITE_SECRET 存在时才输出 secrets
-        if (!secrets.ContainsKey("WRITE_SECRET"))
-        {
-            return new Dictionary<string, string>(); // 返回空，不生成内容
-        }
-
-        // 移除控制开关本身
-        secrets.Remove("WRITE_SECRET");
-
-        return secrets;
+        return secrets.Remove("WRITE_SECRET")
+            ? secrets // 移除控制开关本身
+            : new Dictionary<string, string>(); // 返回空，不生成内容
     }
 
-    private static void GenerateSource(SourceProductionContext context, Dictionary<string, string> secrets)
+    private static void _GenerateSource(SourceProductionContext context, Dictionary<string, string> secrets)
     {
         var sb = new StringBuilder();
 

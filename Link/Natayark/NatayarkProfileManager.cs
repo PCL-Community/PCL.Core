@@ -51,7 +51,6 @@ public static class NatayarkProfileManager
                 $"&client_secret={EnvironmentInterop.GetSecret("NAID_CLIENT_SECRET")}" +
                 $"&{(isRefresh ? "refresh_token" : "code")}={token}" +
                 $"&redirect_uri=http://localhost:29992/callback";
-            Thread.Sleep(50); // 搁这让电脑休息半秒吗
             var httpContent = new StringContent(requestData, Encoding.UTF8, "application/x-www-form-urlencoded");
             using var oauthResponse = await HttpRequestBuilder
                 .Create("https://account.naids.com/api/oauth2/token", HttpMethod.Post)
@@ -103,13 +102,14 @@ public static class NatayarkProfileManager
                 if(ex.Message.Contains("invalid access token"))
                 {
                     WarnLog("Naid Access Token 无效，尝试刷新登录");
+                    Thread.Sleep(50); // 搁这让电脑休息半秒吗
                     await GetNaidDataAsync(Config.Link.NaidRefreshToken, true, true);
                 }
                 else if (ex.Message.Contains("invalid_grant"))
                 {
                     WarnLog("Naid 验证代码无效");
                 }
-                else if (ex.Message.Contains("401"))
+                else if (ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized })
                 {
                     NaidProfile = new NaidUser();
                     Config.Link.NaidRefreshToken = string.Empty;

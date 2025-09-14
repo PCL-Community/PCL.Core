@@ -93,8 +93,8 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
         State = TaskState.Running;
         try
         {
-            var firstParamType = Delegate.GetMethodInfo().GetParameters().First().ParameterType;
-            if (!firstParamType.IsAssignableTo(typeof(TaskBase))) 
+            var paramTypes = Delegate.GetMethodInfo().GetParameters();
+            if (paramTypes.Length == 0 || !paramTypes.First().ParameterType.IsAssignableTo(typeof(TaskBase))) 
                 Result = Delegate.DynamicInvoke(objects);
             else
                 Result = Delegate.DynamicInvoke([this, ..objects]);
@@ -147,8 +147,8 @@ public class TaskBase<TResult> : TaskBase
         State = TaskState.Running;
         try
         {
-            var firstParamType = Delegate.GetMethodInfo().GetParameters().First().ParameterType;
-            if (!firstParamType.IsAssignableTo(typeof(TaskBase<TResult>)) && firstParamType != typeof(TaskBase))
+            var paramTypes = Delegate.GetMethodInfo().GetParameters();
+            if (paramTypes.Length == 0 || (!paramTypes.First().ParameterType.IsAssignableTo(typeof(TaskBase<TResult>)) && paramTypes.First().ParameterType != typeof(TaskBase)))
                 Result = (TResult)(Delegate.DynamicInvoke(objects) ?? new object());
             else
                 Result = (TResult)(Delegate.DynamicInvoke([this, ..objects]) ?? new object());

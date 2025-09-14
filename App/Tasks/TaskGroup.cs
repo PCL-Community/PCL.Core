@@ -14,9 +14,9 @@ public abstract class TaskGroup : TaskBase, IList<TaskBase>
     public TaskGroup(string name, IList<TaskBase> tasks, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)
     {
         Name = name;
-        Tasks = (List<TaskBase>)tasks;
         foreach (TaskBase task in tasks)
             task.RegisterCancellationToken(cancellationToken);
+        Tasks = new List<TaskBase>(tasks);
         CancellationToken?.Register(() => { State = TaskState.Canceled; });
     }
     public TaskGroup(string name, IList<Delegate> delegates, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)
@@ -37,6 +37,8 @@ public abstract class TaskGroup : TaskBase, IList<TaskBase>
             }
             i++;
         }
+        foreach (TaskBase task in list)
+            task.RegisterCancellationToken(cancellationToken);
         Tasks = list;
         CancellationToken?.Register(() => { State = TaskState.Canceled; });
     }
@@ -82,21 +84,33 @@ public abstract class TaskGroup : TaskBase, IList<TaskBase>
 
 public abstract class TaskGroup<TResult> : TaskBase<TResult>, IList<TaskBase>
 {
-    public TaskGroup(string name, IList<TaskBase> tasks, CancellationToken? cancellationToken = null, string? description = null)
+    public TaskGroup(string name, IList<TaskBase> tasks, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)
     {
         Name = name;
-        Tasks = (List<TaskBase>)tasks;
+        foreach (TaskBase task in tasks)
+            task.RegisterCancellationToken(cancellationToken);
+        Tasks = new List<TaskBase>(tasks);
     }
-    public TaskGroup(string name, IList<Delegate> delegates, CancellationToken? cancellationToken = null, string? description = null)
+    public TaskGroup(string name, IList<Delegate> delegates, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)
     {
         Name = name;
         List<TaskBase> list = [];
         int i = 0;
         foreach (Delegate @delegate in delegates)
         {
-            list.Add(new TaskBase($"{name} - {i}", @delegate));
+            Type returnType = @delegate.Method.ReturnType;
+            
+            if (returnType == typeof(void))
+                list.Add(new TaskBase($"{name} - {i}", @delegate, cancellationToken));
+            else
+            {
+                Type taskBase = typeof(TaskBase<>).MakeGenericType(returnType);
+                list.Add((TaskBase)(Activator.CreateInstance(taskBase, $"{name} - {i}", @delegate, cancellationToken) ?? new TaskBase($"{name} - {i}", @delegate, cancellationToken)));
+            }
             i++;
         }
+        foreach (TaskBase task in list)
+            task.RegisterCancellationToken(cancellationToken);
         Tasks = list;
     }
 

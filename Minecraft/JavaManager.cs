@@ -100,16 +100,6 @@ public class JavaManager
             throw new ArgumentException("Not a valid java file");
         return _javas.Any(x => x.JavaExePath == javaExe);
     }
-    
-    /// <summary>
-    /// 获取指定游戏实例所要求的版本
-    /// </summary>
-    /// <returns>如果有设置为 Java 实例，否则为 null</returns>
-    public static JavaInfo? GetVersionUserSetJava() 
-    {
-        var instanceSelectedJava = Config.Instance.SelectedJava[FolderService.FolderManager.CurrentInst!.Path];
-        return instanceSelectedJava == "使用全局设置" ? null : JavaInfo.Parse(instanceSelectedJava);
-    }
 
     /// <summary>
     /// 依据版本要求自动选择 Java

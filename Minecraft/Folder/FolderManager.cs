@@ -17,9 +17,9 @@ namespace PCL.Core.Minecraft.Folder;
 
 public class FolderManager {
     /// <summary>
-    /// 当前的 Minecraft 文件夹路径。
+    /// 当前选择的 Minecraft 文件夹。
     /// </summary>
-    public string CurrentFolder { get; set; } = string.Empty;
+    public McFolder? CurrentFolder { get; set; }
 
     /// <summary>
     /// 当前选择的 Minecraft 实例
@@ -127,16 +127,17 @@ public class FolderManager {
             foreach (var folder in cacheMcFolderList) {
                 await McFolderLauncherProfilesJsonCreateAsync(folder.Path);
 
-                var instanceManager = new InstanceManager(folder.Path);
+                var instanceManager = new InstanceManager(folder);
                 await instanceManager.McInstanceListLoadAsync();
                 folder.InstanceList = instanceManager;
             }
 
             // TODO: 未来去除这个 $ 符号
-            CurrentFolder = Path.Combine(Basics.ExecutablePath, Config.Launch.SelectedFolder.TrimStart('$'));
-            if (string.IsNullOrEmpty(CurrentFolder) || !Directory.Exists(CurrentFolder)) {
+            CurrentFolder = cacheMcFolderList.Find(mcFolder => Files.ArePathsEqual(mcFolder.Path,
+                Path.Combine(Basics.ExecutablePath, Config.Launch.SelectedFolder.TrimStart('$'))));
+            if (CurrentFolder == null || !Directory.Exists(CurrentFolder.Path)) {
                 // Invalid folder
-                if (string.IsNullOrEmpty(CurrentFolder)) {
+                if (CurrentFolder == null) {
                     LogWrapper.Info("没有选择 Minecraft 文件夹，使用第一个");
                 } else {
                     LogWrapper.Info($"Minecraft 文件夹非法或不存在: {CurrentFolder}");

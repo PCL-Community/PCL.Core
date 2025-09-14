@@ -4,7 +4,7 @@ using PCL.Core.Minecraft.Launch.State;
 
 namespace PCL.Core.Minecraft.Launch.Services.Authentication;
 
-/// <summary>
+/*/// <summary>
 /// 认证提供者接口
 /// </summary>
 public interface IAuthenticationProvider {
@@ -62,4 +62,4 @@ public abstract class AuthenticationProviderBase : IAuthenticationProvider {
     protected static void Log(string message) {
         throw new NotImplementedException("需要从原代码引用Log方法");
     }
-}
+}*/

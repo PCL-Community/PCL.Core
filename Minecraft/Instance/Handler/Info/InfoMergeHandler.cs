@@ -40,14 +40,14 @@ public static class InfoMergeHandler {
         var releaseTime = RecognizeReleaseTime(versionJson);
         
         // 添加 MC 本体补丁信息
-        instanceInfo.Patchers.Add(new PatchInfo {
+        instanceInfo.Patches.Add(new PatchInfo {
             Id = "game",
             Version = version,
             ReleaseTime = releaseTime
         });
         
         // 添加其它补丁信息
-        instanceInfo.Patchers.AddRange(GetPatchInfos(instanceInfo, versionJson));
+        instanceInfo.Patches.AddRange(GetPatchInfos(instanceInfo, versionJson));
 
         clonedInstance.InstanceInfo = instanceInfo;
 

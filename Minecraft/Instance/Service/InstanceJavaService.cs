@@ -39,7 +39,7 @@ public static class InstanceJavaService {
         }
 
         // OptiFine adjustments
-        if (instance.InstanceInfo.HasPatcher("optifine")) {
+        if (instance.InstanceInfo.HasPatch("optifine")) {
             if (instance.InstanceInfo.McVersion < new Version(1, 7) || instance.InstanceInfo.McVersionMinor == 12) {
                 maxVer = UpdateMaxAndLog(maxVer, new Version(8, 999, 999, 999),
                     "OptiFine <1.7 / 1.12 requires max Java 8");
@@ -51,13 +51,13 @@ public static class InstanceJavaService {
         }
 
         // LiteLoader adjustments
-        if (instance.InstanceInfo.HasPatcher("liteloader")) {
+        if (instance.InstanceInfo.HasPatch("liteloader")) {
             maxVer = UpdateMaxAndLog(maxVer, new Version(8, 999, 999, 999),
                 "LiteLoader requires max Java 8");
         }
 
         // Forge adjustments
-        if (instance.InstanceInfo.HasPatcher("forge")) {
+        if (instance.InstanceInfo.HasPatch("forge")) {
             var mcMinor = instance.InstanceInfo.McVersionMinor;
             var mcVersion = instance.InstanceInfo.McVersion;
 
@@ -70,11 +70,11 @@ public static class InstanceJavaService {
                     <= 12 => ("<=1.12 Forge requires Java 8", null, new Version(8, 999, 999, 999)),
                     <= 14 => ("1.13 - 1.14 Forge requires Java 8 - 10", new Version(1, 8, 0, 0), new Version(10, 999, 999, 999)),
                     15 => ("1.15 Forge requires Java 8 - 15", new Version(1, 8, 0, 0), new Version(15, 999, 999, 999)),
-                    16 when Version.TryParse(instance.InstanceInfo.GetPatcher("forge")?.Version, out var forgeVersion)
+                    16 when Version.TryParse(instance.InstanceInfo.GetPatch("forge")?.Version, out var forgeVersion)
                             && forgeVersion > new Version(34, 0, 0)
                             && forgeVersion < new Version(36, 2, 25) =>
                         ("1.16 Forge 34.X - 36.2.25 requires max Java 8u321", null, new Version(1, 8, 0, 321)),
-                    18 when instance.InstanceInfo.HasPatcher("optifine") =>
+                    18 when instance.InstanceInfo.HasPatch("optifine") =>
                         ("1.18 Forge + OptiFine requires max Java 18", null, new Version(18, 999, 999, 999)),
                     _ => (null, null, null) // 默认情况，不匹配任何规则
                 };
@@ -92,13 +92,13 @@ public static class InstanceJavaService {
         }
 
         // Cleanroom adjustments
-        if (instance.InstanceInfo.HasPatcher("cleanroom")) {
+        if (instance.InstanceInfo.HasPatch("cleanroom")) {
             minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0),
                 "Cleanroom requires min Java 21");
         }
 
         // Fabric adjustments
-        if (instance.InstanceInfo.HasPatcher("fabric")) {
+        if (instance.InstanceInfo.HasPatch("fabric")) {
             var mcMinor = instance.InstanceInfo.McVersionMinor;
             // 根据 mcMinor 版本号，使用 switch 表达式确定最低 Java 版本
             minVer = mcMinor switch {
@@ -111,7 +111,7 @@ public static class InstanceJavaService {
         }
 
         // LabyMod adjustments
-        if (instance.InstanceInfo.HasPatcher("labymod")) {
+        if (instance.InstanceInfo.HasPatch("labymod")) {
             minVer = UpdateMinAndLog(minVer, new Version(21, 0, 0, 0),
                 "LabyMod requires min Java 21");
             maxVer = new Version(999, 999, 999, 999); // Reset max if needed, but already high

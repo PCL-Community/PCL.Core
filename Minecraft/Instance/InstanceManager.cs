@@ -16,7 +16,7 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance;
 
-public class InstanceManager(string path) {
+public class InstanceManager(McFolder folder) {
     /// <summary>
     /// Minecraft 实例列表
     /// </summary>
@@ -30,11 +30,11 @@ public class InstanceManager(string path) {
     public async Task McInstanceListLoadAsync(CancellationToken cancelToken = default) {
         try {
             // Get version folders
-            var versionPath = Path.Combine(path, "versions");
+            var versionPath = Path.Combine(folder.Path, "versions");
 
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
             foreach (var instance in Directory.GetDirectories(versionPath)) {
-                var mcInstance = await InstanceFactory.CreateInstanceAsync(instance);
+                var mcInstance = await InstanceFactory.CreateInstanceAsync(instance, folder);
                 if (mcInstance != null) {
                     McInstanceList.Add(mcInstance);
                 }
@@ -181,7 +181,7 @@ public class InstanceManager(string path) {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in moddedTypes) {
-                    var patcher = instance.InstanceInfo.GetPatcher(_patcherIds[t]);
+                    var patcher = instance.InstanceInfo.GetPatch(_patcherIds[t]);
                     if (patcher != null)
                         return (Array.IndexOf(_sortableTypes, t), patcher.Version);
                 }
@@ -194,7 +194,7 @@ public class InstanceManager(string path) {
             .SelectMany(g => g)
             .OrderBy(instance => {
                 foreach (var t in clientTypes) {
-                    var patcher = instance.InstanceInfo.GetPatcher(_patcherIds[t]);
+                    var patcher = instance.InstanceInfo.GetPatch(_patcherIds[t]);
                     if (patcher != null)
                         return (Array.IndexOf(_sortableTypes, t), patcher.Version);
                 }
@@ -237,7 +237,7 @@ public class InstanceManager(string path) {
 
     private (McInstanceCardType, PatchInfo) GetSortKey(IMcInstance instance, McInstanceCardType type) {
         var patcherId = _patcherIds[type];
-        return (type, instance.InstanceInfo.GetPatcher(patcherId)!);
+        return (type, instance.InstanceInfo.GetPatch(patcherId)!);
     }
 
     // 辅助类实现 IGrouping

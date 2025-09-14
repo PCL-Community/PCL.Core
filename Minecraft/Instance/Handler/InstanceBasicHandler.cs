@@ -33,7 +33,7 @@ public static class InstanceBasicHandler {
         }
 
         // 有附加组件但无法识别，归类为未知附加组件
-        if (instance.InstanceInfo.Patchers.Count > 0) {
+        if (instance.InstanceInfo.Patches.Count > 0) {
             return McInstanceCardType.UnknownPatchers;
         } 
         
@@ -58,28 +58,28 @@ public static class InstanceBasicHandler {
     private static McInstanceCardType RecognizeInstanceCardType(PatchInstanceInfo instanceInfo) {
         var cachedCardType = McInstanceCardType.Auto;
         
-        if (instanceInfo.HasPatcher("NeoForge")) {
+        if (instanceInfo.HasPatch("NeoForge")) {
             cachedCardType = McInstanceCardType.NeoForge;
-        } else if (instanceInfo.HasPatcher("Fabric")) {
+        } else if (instanceInfo.HasPatch("Fabric")) {
             cachedCardType = McInstanceCardType.Fabric;
-        } else if (instanceInfo.HasPatcher("LegacyFabric")) {
+        } else if (instanceInfo.HasPatch("LegacyFabric")) {
             cachedCardType = McInstanceCardType.LegacyFabric;
-        } else if (instanceInfo.HasPatcher("Quilt")) {
+        } else if (instanceInfo.HasPatch("Quilt")) {
             cachedCardType = McInstanceCardType.Quilt;
-        } else if (instanceInfo.HasPatcher("Forge")) {
+        } else if (instanceInfo.HasPatch("Forge")) {
             cachedCardType = McInstanceCardType.Forge;
-        } else if (instanceInfo.HasPatcher("Cleanroom")) {
+        } else if (instanceInfo.HasPatch("Cleanroom")) {
             cachedCardType = McInstanceCardType.Cleanroom;
-        } else if (instanceInfo.HasPatcher("LiteLoader")) {
+        } else if (instanceInfo.HasPatch("LiteLoader")) {
             cachedCardType = McInstanceCardType.LiteLoader;
         } 
         
         // 判断客户端类型的补丁实例
-        else if (instanceInfo.HasPatcher("OptiFine")) {
+        else if (instanceInfo.HasPatch("OptiFine")) {
             cachedCardType = McInstanceCardType.OptiFine;
-        } else if (instanceInfo.HasPatcher("LabyMod")) {
+        } else if (instanceInfo.HasPatch("LabyMod")) {
             cachedCardType = McInstanceCardType.LabyMod;
-        } else if (instanceInfo.HasPatcher("Client")) {
+        } else if (instanceInfo.HasPatch("Client")) {
             cachedCardType = McInstanceCardType.Client;
         }
 

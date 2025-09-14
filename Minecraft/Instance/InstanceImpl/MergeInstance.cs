@@ -20,9 +20,9 @@ public class MergeInstance : IMcInstance, IJsonBasedInstance {
     /// <summary>
     /// 初始化以 Merge JSON 为基础的 Minecraft 实例
     /// </summary>
-    public MergeInstance(string path, string? logo = null, string? desc = null, JsonObject? versionJson = null) {
+    public MergeInstance(string path, in McFolder folder, string? logo = null, string? desc = null, JsonObject? versionJson = null) {
         // 定义基础路径
-        var basePath = System.IO.Path.Combine(FolderService.FolderManager.CurrentFolder, "versions");
+        var basePath = System.IO.Path.Combine(folder.Path, "versions");
 
         // 判断是否为绝对路径，并拼接正确的路径
         Path = path.Contains(':') ? path : System.IO.Path.Combine(basePath, path);
@@ -30,15 +30,19 @@ public class MergeInstance : IMcInstance, IJsonBasedInstance {
         Logo = logo ?? Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
         
         Desc = desc ?? "该实例未被加载，请向作者反馈此问题";
+
+        Folder = folder;
         
         VersionJson = versionJson;
     }
+    
+    public McFolder Folder { get; }
     
     public string Path { get; }
     
     public string Name => InstanceBasicHandler.GetName(Path);
     
-    public string IsolatedPath =>  InstanceIsolationHandler.GetIsolatedPath(this);
+    public string IsolatedPath =>  InstanceIsolationHandler.GetIsolatedPath(this, FolderService.FolderManager.CurrentFolder!);
     
     public string Desc { get; set; }
 

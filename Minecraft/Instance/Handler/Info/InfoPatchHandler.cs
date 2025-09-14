@@ -20,7 +20,7 @@ public static class InfoPatchHandler {
             foreach (var patch in versionJson["patches"]!.AsArray()) {
                 var patcherInfo = patch.Deserialize<PatchInfo>(Files.PrettierJsonOptions);
                 if (patcherInfo != null) {
-                    instanceInfo.Patchers.Add(patcherInfo);
+                    instanceInfo.Patches.Add(patcherInfo);
                 }
             }
         } catch (Exception ex) {

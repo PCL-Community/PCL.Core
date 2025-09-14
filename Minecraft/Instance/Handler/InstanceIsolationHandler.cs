@@ -12,18 +12,18 @@ public static class InstanceIsolationHandler {
     /// 获取实例的隔离路径，根据全局设置和实例特性决定是否使用独立文件夹。
     /// </summary>
     /// <returns>隔离后的路径，以“\”结尾</returns>
-    public static string GetIsolatedPath(IMcInstance instance) {
+    public static string GetIsolatedPath(IMcInstance instance, McFolder folder) {
         if (instance.CardType == McInstanceCardType.Error) {
             return "";
         }
         
         if (Config.Instance.IndieV2[instance.Path]) {
-            return Config.Instance.IndieV2[instance.Path] ? instance.Path : FolderService.FolderManager.CurrentFolder;
+            return Config.Instance.IndieV2[instance.Path] ? instance.Path : folder.Path;
         }
 
         var shouldBeIndie = ShouldBeIndie(instance);
         Config.Instance.IndieV2[instance.Path] = shouldBeIndie;
-        return Config.Instance.IndieV2[instance.Path] ? instance.Path : FolderService.FolderManager.CurrentFolder;
+        return Config.Instance.IndieV2[instance.Path] ? instance.Path : folder.Path;
     }
 
     private static bool ShouldBeIndie(IMcInstance instance) {
@@ -42,9 +42,9 @@ public static class InstanceIsolationHandler {
         
         return Config.Launch.IndieSolutionV2 switch {
             0 => false,
-            1 => instance.InstanceInfo.HasPatcher("labymod") || isModded,
+            1 => instance.InstanceInfo.HasPatch("labymod") || isModded,
             2 => !isRelease,
-            3 => instance.InstanceInfo.HasPatcher("labymod") || isModded || !isRelease,
+            3 => instance.InstanceInfo.HasPatch("labymod") || isModded || !isRelease,
             _ => true
         };
     }

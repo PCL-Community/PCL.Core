@@ -118,7 +118,7 @@ public static class InstanceRamService {
             return CalculateModdedInstanceRequirements(instance);
         }
 
-        if (instance.InstanceInfo.HasPatcher("optifine")) {
+        if (instance.InstanceInfo.HasPatch("optifine")) {
             return new MemoryRequirements {
                 Minimum = 0.5,
                 Target1 = 1.5,

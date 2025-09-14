@@ -68,6 +68,12 @@ public static class Files {
         // 保存 .lnk 文件
         link.Save();
     }
+    
+    public static bool ArePathsEqual(string path1, string path2) {
+        var fullPath1 = Path.GetFullPath(path1).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullPath2 = Path.GetFullPath(path2).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(fullPath1, fullPath2, StringComparison.OrdinalIgnoreCase);
+    }
 
     public static async Task<bool> ExportAsZipArchiveAsync(
         IEnumerable<string> sourceFiles,
@@ -322,7 +328,7 @@ public static class Files {
     /// <param name="stream">要写入的流</param>
     /// <param name="cancelToken">取消令牌</param>
     /// <returns>写入是否成功</returns>
-    public static async Task<bool> WriteFileAsync(string filePath, Stream stream, CancellationToken cancelToken = default) {
+    public static async Task<bool> WriteFileAsync(string filePath, Stream? stream, CancellationToken cancelToken = default) {
         try {
             ArgumentNullException.ThrowIfNull(stream);
             var fullPath = GetFullPath(filePath);

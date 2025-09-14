@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Threading.Tasks;
 using PCL.Core.Minecraft.Launch.State;
 
@@ -155,3 +156,4 @@ public class MicrosoftAuthProvider : AuthenticationProviderBase {
         throw new NotImplementedException("需要实现基于AccessToken的认证逻辑");
     }
 }
+*/

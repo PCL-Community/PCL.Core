@@ -139,10 +139,6 @@ public static class Basics
         Process.Start(psi);
     }
     #endregion
-
-    public static bool RunInUi() {
-        return Application.Current.Dispatcher.CheckAccess();
-    }
     
     /// <summary>
     /// 获取程序打包资源的输入流。该资源必须声明为 <c>Resource</c> 类型，否则将会报错，<c>Images</c>

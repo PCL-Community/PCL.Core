@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.Interface;
@@ -20,8 +21,8 @@ public static class InstanceFactory {
 
     public static IMcInstance CloneInstance(IMcInstance original) =>
         original switch {
-            MergeInstance noPatches => CopyCommonProperties(noPatches, new MergeInstance(noPatches.Path)),
-            PatchInstance patches => CopyCommonProperties(patches, new PatchInstance(patches.Path)),
+            MergeInstance merge => CopyCommonProperties(merge, new MergeInstance(merge.Path, merge.Folder)),
+            PatchInstance patch => CopyCommonProperties(patch, new PatchInstance(patch.Path, patch.Folder)),
             _ => throw new NotSupportedException("不支持的实例类型")
         };
 
@@ -35,14 +36,14 @@ public static class InstanceFactory {
         instance.InstanceInfo = clonedInstance.InstanceInfo;
     }
 
-    public static async Task<IMcInstance?> CreateInstanceAsync(string path) {
+    public static async Task<IMcInstance?> CreateInstanceAsync(string path, McFolder folder) {
         try {
-            var instance = await CheckPermissionAsync(path);
+            var instance = await CheckPermissionAsync(path, folder);
             if (instance != null) {
                 return instance;
             }
             
-            return await CheckJsonAsync(path);
+            return await CheckJsonAsync(path, folder);
         } catch (Exception ex) {
             LogWrapper.Warn(ex, "创建实例类时出错");
             return null;
@@ -54,7 +55,7 @@ public static class InstanceFactory {
     /// </summary>
     /// <returns>在有问题时返回 <c>ErrorInstance</c>, 没问题时返回 null。</returns>
     /// <exception cref="DirectoryNotFoundException">在实例文件夹不存在时抛出</exception>
-    private static async Task<IMcInstance?> CheckPermissionAsync(string path) {
+    private static async Task<IMcInstance?> CheckPermissionAsync(string path, McFolder folder) {
         if (!Directory.Exists(path)) {
             throw new DirectoryNotFoundException("实例文件夹不存在");
         }
@@ -64,7 +65,7 @@ public static class InstanceFactory {
             await Directories.CheckPermissionWithExceptionAsync(path + "PCL\\");
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"没有访问实例文件夹的权限：{path}");
-            return new ErrorInstance(path, desc: "PCL 没有对该文件夹的访问权限，请以管理员身份运行");
+            return new ErrorInstance(path, folder, desc: "PCL 没有对该文件夹的访问权限，请以管理员身份运行");
         }
         
         return null;
@@ -73,22 +74,22 @@ public static class InstanceFactory {
     /// <summary>
     /// 检查实例 JSON 的可用性并返回对应的实例类型
     /// </summary>
-    private static async Task<IMcInstance> CheckJsonAsync(string path) {
-        var versionJson = await InstanceJsonHandler.RefreshVersionJsonAsync(new ErrorInstance(path));
+    private static async Task<IMcInstance> CheckJsonAsync(string path, McFolder folder) {
+        var versionJson = await InstanceJsonHandler.RefreshVersionJsonAsync(new ErrorInstance(path, folder));
         if (versionJson == null) {
             LogWrapper.Warn($"实例 JSON 可用性检查失败（{path}）");
-            return new ErrorInstance(path, desc: "实例 JSON 不存在或无法解析");
+            return new ErrorInstance(path, folder, desc: "实例 JSON 不存在或无法解析");
         }
 
         if (versionJson.ContainsKey("patchers")) {
-            return new PatchInstance(path, versionJson: versionJson);
+            return new PatchInstance(path, folder, versionJson: versionJson);
         } 
         
         if (versionJson.ContainsKey("libraries")) {
-            return new MergeInstance(path, versionJson: versionJson);
+            return new MergeInstance(path, folder, versionJson: versionJson);
         }
         
         LogWrapper.Warn($"实例信息检查失败（{path}）");
-        return new ErrorInstance(path, desc: "无法识别实例信息");
+        return new ErrorInstance(path, folder, desc: "无法识别实例信息");
     }
 }

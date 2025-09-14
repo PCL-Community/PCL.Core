@@ -174,8 +174,8 @@ public class GameArgBuilder(IMcInstance instance) {
     /// </summary>
     private bool ShouldProcessOptiFine() {
         var instanceInfo = instance.InstanceInfo;
-        var hasForgeOrLiteLoader = instanceInfo.HasPatcher("forge") || instanceInfo.HasPatcher("liteloader");
-        var hasOptiFine = instanceInfo.HasPatcher("optifine");
+        var hasForgeOrLiteLoader = instanceInfo.HasPatch("forge") || instanceInfo.HasPatch("liteloader");
+        var hasOptiFine = instanceInfo.HasPatch("optifine");
 
         return hasForgeOrLiteLoader && hasOptiFine;
     }

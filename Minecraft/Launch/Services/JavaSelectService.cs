@@ -102,7 +102,7 @@ public class JavaSelectService(IMcInstance instance) {
 
         // Java 7 (用于1.8以下)
         if (maxVersion < new Version(1, 8)) {
-            var hasForge = instance.InstanceInfo.HasPatcher("forge");
+            var hasForge = instance.InstanceInfo.HasPatch("forge");
             return new JavaSpecification("Java 7", "7", hasForge);
         }
 
@@ -138,7 +138,7 @@ public class JavaSelectService(IMcInstance instance) {
             return false;
         }
 
-        if (javaSpec.DisplayName == "Java 7" && instance.InstanceInfo.HasPatcher("forge")) {
+        if (javaSpec.DisplayName == "Java 7" && instance.InstanceInfo.HasPatch("forge")) {
             MsgBoxWrapper.Show(
                 "你需要先安装 LegacyJavaFixer Mod，或自行安装 Java 7，然后才能启动该版本。",
                 "未找到 Java");

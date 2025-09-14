@@ -30,7 +30,7 @@ public class PatchInstanceInfo {
     
     public DateTime ReleaseTime { get; set; } = DateTime.MinValue;
 
-    public string? McVersionStr => Patchers.Find(p => p.Id == "game")?.Version;
+    public string? McVersionStr => Patches.Find(p => p.Id == "game")?.Version;
 
     public string FormattedVersion => InstanceInfoHandler.GetFormattedVersion(McVersionStr);
 
@@ -57,32 +57,32 @@ public class PatchInstanceInfo {
     /// </summary>
     public int? McVersionBuild => McVersion?.Build;
 
-    public List<PatchInfo> Patchers { get; } = [];
+    public List<PatchInfo> Patches { get; } = [];
 
-    public bool IsModded => HasAnyPatcher([
+    public bool IsModded => HasAnyPatch([
         "cleanroom", "liteloader", "forge", "neoforge", "fabric", "legacyfabric", "quilt"
     ]);
 
-    public bool IsClient => HasAnyPatcher([
+    public bool IsClient => HasAnyPatch([
         "labymod", "optifine"
     ]);
 
     // 检查是否包含特定加载器
-    public bool HasPatcher(string patcherId) {
-        return Patchers.Any(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+    public bool HasPatch(string patcherId) {
+        return Patches.Any(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
     }
     
-    public string GetPatcherVersion(string id) {
-        return Patchers.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.Version ?? string.Empty;
+    public string GetPatchVersion(string id) {
+        return Patches.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.Version ?? string.Empty;
     }
 
     // 检查是否包含一组加载器中的任意一个
-    public bool HasAnyPatcher(IEnumerable<string> patcherIds) {
-        return patcherIds.Any(id => Patchers.Any(p => p.Id!.Equals(id, StringComparison.OrdinalIgnoreCase)));
+    public bool HasAnyPatch(IEnumerable<string> patcherIds) {
+        return patcherIds.Any(id => Patches.Any(p => p.Id!.Equals(id, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public PatchInfo? GetPatcher(string patcherId) {
-        return Patchers.FirstOrDefault(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+    public PatchInfo? GetPatch(string patcherId) {
+        return Patches.FirstOrDefault(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
     }
 
     public string GetLogo() {
@@ -101,7 +101,7 @@ public class PatchInstanceInfo {
 
         // 其次判断加载器等
         foreach (var loader in new[] { "neoforge", "fabric", "legacyFabric", "forge", "liteloader", "quilt", "cleanroom", "labymod", "optifine" }) {
-            if (Patchers.Any(p => p.Id.Equals(loader, StringComparison.OrdinalIgnoreCase))) {
+            if (Patches.Any(p => p.Id.Equals(loader, StringComparison.OrdinalIgnoreCase))) {
                 return Path.Combine(Basics.ImagePath, PatchersImageMap[loader]);
             }
         }

@@ -2,12 +2,18 @@
 using System.IO;
 using System.Text.Json.Nodes;
 using PCL.Core.App;
+using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
 
 namespace PCL.Core.Minecraft.Instance.Interface;
 
 public interface IMcInstance {
+    /// <summary>
+    /// 实例处于的 Minecraft 文件夹
+    /// </summary>
+    McFolder Folder { get; }
+    
     /// <summary>
     /// 实例文件夹路径，以“\”结尾
     /// </summary>

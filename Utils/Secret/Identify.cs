@@ -32,15 +32,15 @@ public class Identify
         }
         catch (ManagementException ex)
         {
-            LogWrapper.Error("Identify", $"WMI查询失败: {ex.Message}");
+            LogWrapper.Error("Identify", $"WMI 查询失败，请检查组件是否正常: {ex.Message}");
         }
         catch (System.Runtime.InteropServices.COMException ex)
         {
-            LogWrapper.Error("Identify", $"COM异常: {ex.Message}. 请确保WMI服务正在运行");
+            LogWrapper.Error("Identify", $"COM 异常，请确保WMI服务正在运行: {ex.Message}");
         }
         catch (UnauthorizedAccessException)
         {
-            LogWrapper.Error("Identify", "访问被拒绝，请以管理员权限运行");
+            LogWrapper.Error("Identify", "访问被异常拒绝，请尝试以管理员权限运行");
         }
         catch (Exception ex)
         {
@@ -62,13 +62,14 @@ public class Identify
             var sample = SHA512Provider.Instance.ComputeHash($"PCL-CE|{RawId}|LauncherId");
             // 16 in length, 8 bytes, 64 bits, enough for us
             return sample.Substring(64, 16)
+                .ToUpper()
                 .Insert(4, "-")
                 .Insert(9, "-")
                 .Insert(14, "-");
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, "Identify", "无法获取短识别码");
+            LogWrapper.Error(ex, "Identify", "无法获取识别码");
             return "PCL2-CECE-GOOD-2025";
         }
     }

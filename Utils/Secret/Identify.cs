@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Management;
 using System.Security;
+using System.Text;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
@@ -32,19 +33,19 @@ public class Identify
         }
         catch (ManagementException ex)
         {
-            LogWrapper.Error("Identify", $"WMI 查询失败，请检查组件是否正常: {ex.Message}");
+            LogWrapper.Error(ex, "Identify", $"WMI 查询失败，请检查组件是否正常");
         }
         catch (System.Runtime.InteropServices.COMException ex)
         {
-            LogWrapper.Error("Identify", $"COM 异常，请确保WMI服务正在运行: {ex.Message}");
+            LogWrapper.Error(ex, "Identify", $"COM 异常，请确保WMI服务正在运行");
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
-            LogWrapper.Error("Identify", "访问被异常拒绝，请尝试以管理员权限运行");
+            LogWrapper.Error(ex, "Identify", "访问被异常拒绝，请尝试以管理员权限运行");
         }
         catch (Exception ex)
         {
-            LogWrapper.Error("Identify", $"意外的系统异常: {ex.Message}");
+            LogWrapper.Error(ex, "Identify", $"意外的系统异常");
         }
 
         return (code is null ? DefaultRawId : SHA512Provider.Instance.ComputeHash(code)).ToSecureString();
@@ -52,14 +53,41 @@ public class Identify
 
     private static SecureString _getEncryptionKey()
     {
-        return SHA256Provider.Instance.ComputeHash($"PCL-CE|{RawId}|EncryptionKey").ToSecureString();
+        var prefix = "PCL-CE|"u8.ToArray();
+        var ctx = RawId.Value.ToBytes();
+        var suffix = "|EncryptionKey"u8.ToArray();
+
+        var buffer = new byte[prefix.Length + ctx.Length + suffix.Length];
+        var bufferSpan = buffer.AsSpan();
+        prefix.CopyTo(bufferSpan[..prefix.Length]);
+        ctx.CopyTo(bufferSpan.Slice(prefix.Length, ctx.Length));
+        suffix.CopyTo(bufferSpan.Slice(prefix.Length + ctx.Length, suffix.Length));
+
+        Array.Clear(ctx);
+        var result = SHA256Provider.Instance.ComputeHash(bufferSpan).ToSecureString();
+        bufferSpan.Clear();
+
+        return result;
     }
 
     private static string _getLauncherId()
     {
         try
         {
-            var sample = SHA512Provider.Instance.ComputeHash($"PCL-CE|{RawId}|LauncherId");
+            var prefix = "PCL-CE|"u8.ToArray();
+            var ctx = RawId.Value.ToBytes();
+            var suffix = "|LauncherId"u8.ToArray();
+
+            var buffer = new byte[prefix.Length + ctx.Length + suffix.Length];
+            var bufferSpan = buffer.AsSpan();
+            prefix.CopyTo(bufferSpan[..prefix.Length]);
+            ctx.CopyTo(bufferSpan.Slice(prefix.Length, ctx.Length));
+            suffix.CopyTo(bufferSpan.Slice(prefix.Length + ctx.Length, suffix.Length));
+
+            Array.Clear(ctx);
+            var sample = SHA512Provider.Instance.ComputeHash(bufferSpan);
+            bufferSpan.Clear();
+
             // 16 in length, 8 bytes, 64 bits, enough for us
             return sample.Substring(64, 16)
                 .ToUpper()

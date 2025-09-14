@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PCL.Core.Utils.Exts;
@@ -242,7 +243,7 @@ public static class StringExtension
     }
 
     /// <summary>
-    /// 将 SecureString 转换到 string，用完后请及时销毁
+    /// 将 SecureString 转换到 string，非必要不使用
     /// </summary>
     /// <param name="ss"></param>
     /// <returns></returns>
@@ -262,6 +263,24 @@ public static class StringExtension
         {
             // 清理非托管内存
             Marshal.ZeroFreeGlobalAllocUnicode(unmanagedString);
+        }
+    }
+
+    public static byte[] ToBytes(this SecureString ss)
+    {
+        ArgumentNullException.ThrowIfNull(ss);
+
+        var ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.SecureStringToGlobalAllocUnicode(ss);
+            var unicode = Marshal.PtrToStringUni(ptr);
+            return unicode is null ? [] : Encoding.UTF8.GetBytes(unicode);
+        }
+        finally
+        {
+            if (ptr != IntPtr.Zero)
+                Marshal.ZeroFreeGlobalAllocUnicode(ptr);
         }
     }
 }

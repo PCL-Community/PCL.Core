@@ -47,7 +47,7 @@ public static class ETController
         return 0;
     }
 
-    public static int Launch(bool isHost, string name, string secret, string? hostname = null, int port = 25565)
+    public static int Launch(bool isHost, string? hostname = null)
     {
         try
         {
@@ -57,6 +57,9 @@ public static class ETController
             var arguments = new ArgumentsBuilder();
 
             // 大厅信息
+            var name = TargetLobby.NetworkName;
+            var secret = TargetLobby.NetworkSecret;
+            
             switch (TargetLobby.Type)
             {
                 case LobbyType.PCLCE:
@@ -80,8 +83,8 @@ public static class ETController
             {
                 LogWrapper.Info("Link", $"本机作为创建者创建大厅，EasyTier 网络名称: {name}");
                 arguments.Add("i", "10.114.51.41");
-                arguments.Add("tcp-whitelist", port.ToString());
-                arguments.Add("udp-whitelist", port.ToString());
+                arguments.Add("tcp-whitelist", TargetLobby.Port.ToString());
+                arguments.Add("udp-whitelist", TargetLobby.Port.ToString());
             }
             else
             {
@@ -89,16 +92,11 @@ public static class ETController
                 arguments.AddFlag("d");
                 arguments.Add("tcp-whitelist", "0");
                 arguments.Add("udp-whitelist", "0");
-                var ip = TargetLobby.Type switch
-                {
-                    LobbyType.PCLCE => "10.114.51.41",
-                    LobbyType.Terracotta => "10.144.144.1",
-                    _ => throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type)
-                };
+                
                 JoinerLocalPort = NetworkHelper.NewTcpPort();
-                LogWrapper.Info("Link", $"ET 端口转发: 远程 {port} -> 本地 {JoinerLocalPort}");
-                arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
-                arguments.Add("port-forward", $"udp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
+                LogWrapper.Info("Link", $"ET 端口转发: 远程 {TargetLobby.Port} -> 本地 {JoinerLocalPort}");
+                arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
+                arguments.Add("port-forward", $"udp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
             }
 
             // 节点设置

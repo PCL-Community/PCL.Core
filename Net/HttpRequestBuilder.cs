@@ -19,7 +19,7 @@ public class HttpRequestBuilder
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
     private bool _addLauncherHeader = true;
     private bool _doLog = true;
-    private Version _requestVersion = HttpVersion.Version30;
+    private Version _requestVersion = HttpVersion.Version20;
 
     public HttpRequestBuilder(string url, HttpMethod method)
     {

@@ -26,6 +26,9 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
 
     private readonly IJsonBasedInstance _jsonBasedInstance = (IJsonBasedInstance)instance;
 
+    /// <summary>
+    /// 构建基础的 JVM 参数（必备）
+    /// </summary>
     public LaunchArgBuilder AddJvmArguments() {
         var jvmArgBuilder = new JvmArgBuilder(instance);
 
@@ -63,6 +66,36 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         return this;
     }
 
+    public LaunchArgBuilder AddWorldArguments(string? worldName = null, string? serverIp = null) {
+        // 进存档
+        if (!string.IsNullOrEmpty(worldName)) {
+            _arguments.Add($"--quickPlaySingleplayer \"{worldName}\"");
+        }
+        
+        // 进服
+        var server = string.IsNullOrEmpty(serverIp)
+            ? Config.Instance.ServerToEnter[instance.Path]
+            : serverIp;
+        
+        if (string.IsNullOrWhiteSpace(worldName) && !string.IsNullOrWhiteSpace(server)) {
+            if (instance.InstanceInfo.ReleaseTime > new DateTime(2023, 4, 4)) {
+                _arguments.Add($"--quickPlayMultiplayer \"{server}\"");
+            } else {
+                if (server.Contains(':')) {
+                    var parts = server.Split(':');
+                    _arguments.Add($"--server {parts[0]} --port {parts[1]}");
+                } else {
+                    _arguments.Add($"--server {server} --port 25565");
+                }
+                if (instance.InstanceInfo.HasPatch("optifine")) {
+                    HintWrapper.Show("OptiFine 与自动进入服务器可能不兼容，有概率导致材质丢失甚至游戏崩溃！", HintTheme.Error);
+                }
+            }
+        }
+
+        return this;
+    }
+
     public LaunchArgBuilder AddOtherArguments() {
         // 编码参数
         if (selectedJava.JavaMajorVersion > 8) {
@@ -92,17 +125,17 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         _arguments.Add(string.IsNullOrEmpty(argumentGame) ? Config.Launch.GameArgs : argumentGame);
 
         // 替换参数
-        var replaceArguments = McLaunchArgumentsReplace();
+        var replaceArguments = await McLaunchArgumentsReplace();
         if (string.IsNullOrWhiteSpace(replaceArguments["${version_type}"])) {
             _arguments = _arguments.Replace(" --versionType ${version_type}", "");
             replaceArguments["${version_type}"] = "\"\"";
         }
 
         var finalArguments = "";
-        foreach (var argument in _arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries)) {
+        foreach (var argument in string.Join(' ', _arguments).Split(' ', StringSplitOptions.RemoveEmptyEntries)) {
             var tempArg = argument;
-            foreach (var entry in replaceArguments) {
-                tempArg = tempArg.Replace(entry.Key, entry.Value);
+            foreach (var (key, value) in replaceArguments) {
+                tempArg = tempArg.Replace(key, value);
             }
             if ((tempArg.Contains(" ") || tempArg.Contains(":\"")) && !tempArg.EndsWith("\"")) {
                 tempArg = $"\"{tempArg}\"";
@@ -111,6 +144,24 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         }
         finalArguments = finalArguments.TrimEnd();
         return this;
+    }
+    
+    public string Build() {
+        var result = new StringBuilder();
+
+        if (jvmArguments.Count > 0) {
+            result.Append("-D ");
+            result.Append(string.Join(" ", jvmArguments));
+        }
+
+        if (otherArguments.Count > 0) {
+            if (result.Length > 0) {
+                result.Append(" ");
+            }
+            result.Append(string.Join(" ", otherArguments));
+        }
+
+        return result.ToString().Trim();
     }
 
     private async Task<Dictionary<string, string>> McLaunchArgumentsReplace() {
@@ -125,7 +176,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         GameArguments.Add("${launcher_version}", "409"); // TODO: 等待迁移
         GameArguments.Add("${version_name}", instance.Name);
         var argumentInfo = Config.Instance.TypeInfo[instance.Path];
-        GameArguments.Add("${version_type}", string.IsNullOrEmpty(argumentInfo) ? Setup.Get("LaunchArgumentInfo") : argumentInfo);
+        GameArguments.Add("${version_type}", string.IsNullOrEmpty(argumentInfo) ? Config.Launch.TypeInfo : argumentInfo);
         GameArguments.Add("${game_directory}", instance.IsolatedPath.Substring(0, instance.IsolatedPath.Length - 1));
         GameArguments.Add("${assets_root}", FolderService.FolderManager.CurrentFolder + "assets");
         GameArguments.Add("${user_properties}", "{}");
@@ -251,105 +302,5 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
             return result;
 
         return Path.Combine(SystemPaths.DriveLetter, "ProgramData", "PCL", "natives");
-    }
-
-    public string Build() {
-        var result = new StringBuilder();
-
-        if (jvmArguments.Count > 0) {
-            result.Append("-D ");
-            result.Append(string.Join(" ", jvmArguments));
-        }
-
-        if (otherArguments.Count > 0) {
-            if (result.Length > 0) {
-                result.Append(" ");
-            }
-            result.Append(string.Join(" ", otherArguments));
-        }
-
-        return result.ToString().Trim();
-    }
-
-    private void McLaunchArgumentMain(string a) {
-        if (InstanceManager.Current == null) return;
-
-        McLaunchUtils.Log("开始获取 Minecraft 启动参数");
-        // 获取基准字符串与参数信息
-
-        // 编码参数
-        if (McLaunchJavaSelected.JavaMajorVersion > 8) {
-            if (!arguments.Contains("-Dstdout.encoding=")) arguments = "-Dstdout.encoding=UTF-8 " + arguments;
-            if (!arguments.Contains("-Dstderr.encoding=")) arguments = "-Dstderr.encoding=UTF-8 " + arguments;
-        }
-        if (McLaunchJavaSelected.JavaMajorVersion >= 18) {
-            if (!arguments.Contains("-Dfile.encoding=")) arguments = "-Dfile.encoding=COMPAT " + arguments;
-        }
-
-        // MJSB
-        arguments = arguments.Replace(" -Dos.name=Windows 10", " -Dos.name=\"Windows 10\"");
-
-        // 全屏
-        if (Config.Launch.WindowType == 0) arguments += " --fullscreen";
-
-        // 由 Option 传入的额外参数
-        foreach (var arg in CurrentLaunchOptions.ExtraArgs) {
-            arguments += " " + arg.Trim();
-        }
-
-        // 自定义参数
-        var argumentGame = Config.Instance.GameArgs[InstanceManager.Current.Path];
-        arguments += " " + (string.IsNullOrEmpty(argumentGame) ? Setup.Get("LaunchAdvanceGame") : argumentGame);
-
-        // 替换参数
-        var replaceArguments = McLaunchArgumentsReplace(InstanceManager.Current, loader);
-        if (string.IsNullOrWhiteSpace(replaceArguments["${version_type}"])) {
-            arguments = arguments.Replace(" --versionType ${version_type}", "");
-            replaceArguments["${version_type}"] = "\"\"";
-        }
-
-        var finalArguments = "";
-        foreach (var argument in arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries)) {
-            var tempArg = argument;
-            foreach (var entry in replaceArguments) {
-                tempArg = tempArg.Replace(entry.Key, entry.Value);
-            }
-            if ((tempArg.Contains(" ") || tempArg.Contains(":\"")) && !tempArg.EndsWith("\"")) {
-                tempArg = $"\"{tempArg}\"";
-            }
-            finalArguments += tempArg + " ";
-        }
-        finalArguments = finalArguments.TrimEnd();
-
-        // 进存档
-        string worldName = CurrentLaunchOptions.WorldName;
-        if (!string.IsNullOrEmpty(worldName)) {
-            finalArguments += $" --quickPlaySingleplayer \"{worldName}\"";
-        }
-
-        // 进服
-        string server = string.IsNullOrEmpty(CurrentLaunchOptions.ServerIp)
-            ? Config.Instance.ServerToEnter[InstanceManager.Current.Path]
-            : CurrentLaunchOptions.ServerIp;
-        if (string.IsNullOrWhiteSpace(worldName) && !string.IsNullOrWhiteSpace(server)) {
-            if (InstanceManager.Current.ReleaseTime > new DateTime(2023, 4, 4)) {
-                finalArguments += $" --quickPlayMultiplayer \"{server}\"";
-            } else {
-                if (server.Contains(":")) {
-                    var parts = server.Split(':');
-                    finalArguments += $" --server {parts[0]} --port {parts[1]}";
-                } else {
-                    finalArguments += $" --server {server} --port 25565";
-                }
-                if (InstanceManager.Current.HasPatcher("OptiFine")) {
-                    HintWrapper.Show("OptiFine 与自动进入服务器可能不兼容，有概率导致材质丢失甚至游戏崩溃！", HintTheme.Error);
-                }
-            }
-        }
-
-        // 输出
-        McLaunchUtils.Log("Minecraft 启动参数：");
-        McLaunchUtils.Log(finalArguments);
-        McLaunchArgument = finalArguments;
     }
 }

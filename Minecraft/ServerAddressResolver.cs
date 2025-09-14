@@ -64,13 +64,17 @@ public static class ServerAddressResolver {
         // 默认: 直接使用域名+默认端口
         return (address, 25565);
     }
+    
+    private static readonly object Lock = new object();
 
     private static async Task<IEnumerable<string>> _ResolveSrvRecordsAsync(string domain, CancellationToken cancelToken = default) {
         return await Task.Run(() => {
-            try {
-                return NDnsQuery.GetSRVRecords($"_minecraft._tcp.{domain}");
-            } catch {
-                return Enumerable.Empty<string>();
+            lock (Lock) {
+                try {
+                    return NDnsQuery.GetSRVRecords($"_minecraft._tcp.{domain}");
+                } catch {
+                    return Enumerable.Empty<string>();
+                }
             }
         }, cancelToken);
     }

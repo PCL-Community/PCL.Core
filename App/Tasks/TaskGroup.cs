@@ -2,9 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace PCL.Core.App.Tasks;
 
+/// <summary>
+/// 任务组原型。
+/// </summary>
 public abstract class TaskGroup : TaskBase, IList<TaskBase>
 {
     public TaskGroup(string name, IList<TaskBase> tasks, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)
@@ -19,10 +23,18 @@ public abstract class TaskGroup : TaskBase, IList<TaskBase>
     {
         Name = name;
         List<TaskBase> list = [];
-        int i = 0;
+        var i = 0;
         foreach (Delegate @delegate in delegates)
         {
-            list.Add(new TaskBase($"{name} - {i}", @delegate, cancellationToken));
+            Type returnType = @delegate.Method.ReturnType;
+            
+            if (returnType == typeof(void))
+                list.Add(new TaskBase($"{name} - {i}", @delegate, cancellationToken));
+            else
+            {
+                Type taskBase = typeof(TaskBase<>).MakeGenericType(returnType);
+                list.Add((TaskBase)(Activator.CreateInstance(taskBase, $"{name} - {i}", @delegate, cancellationToken) ?? new TaskBase($"{name} - {i}", @delegate, cancellationToken)));
+            }
             i++;
         }
         Tasks = list;

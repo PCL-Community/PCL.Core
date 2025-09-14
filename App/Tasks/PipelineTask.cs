@@ -14,7 +14,7 @@ public class PipelineReturnList : List<object?>;
 /// 若需要获取或修改任务信息，传入的委托第一个参数必须为 <see cref="TaskBase"/> 或 <see cref="TaskBase{TResult}"/>。<br/>
 /// 若需向下一委托传入多个参数，请以 <see cref="PipelineReturnList"/> 对象作为返回值。
 /// </summary>
-/// <typeparam name="TLastResult">最终的返回类型</typeparam>
+/// <typeparam name="TLastResult">最终的返回类型。如果最终返回类型为 <see cref="System.Void"/></typeparam>
 public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
 {
     public PipelineTask(string name, IList<TaskBase> taskBases, CancellationToken? cancellationToken = null, string? description = null) : base(name, taskBases, cancellationToken, description)
@@ -30,6 +30,8 @@ public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
 
     public override TLastResult Run(params object[] objects)
     {
+        if (State != TaskState.Waiting)
+            throw new Exception($"[PipelineTask - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {
@@ -66,6 +68,8 @@ public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
 
     public override async Task<TLastResult> RunAsync(params object[] objects)
     {
+        if (State != TaskState.Waiting)
+            throw new Exception($"[PipelineTask - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {

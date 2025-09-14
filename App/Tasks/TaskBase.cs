@@ -6,33 +6,31 @@ namespace PCL.Core.App.Tasks;
 
 public struct VoidResult;
 
-/// <summary>
-/// 任务原型。<br/>
-/// 传入的委托第一个参数必须为 <see cref="Task{TResult}"/>。
-/// </summary>
-/// <typeparam name="TResult">返回类型</typeparam>
-public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgressSource
+public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
 {
-    public TaskBase() 
-    { 
-        Name = ""; 
-        _delegate = () => { };
+    public TaskBase()
+    {
+        Name = "";
+        Delegate = () => { };
     }
     protected TaskBase(string name, CancellationToken? cancellationToken = null, string? description = null)
     {
         Name = name;
         Description = description;
         CancellationToken = cancellationToken;
-        _delegate = () => { };
+        Delegate = () => { };
     }
     public TaskBase(string name, Delegate loadDelegate, CancellationToken? cancellationToken = null, string? description = null)
     {
         Name = name;
-        _delegate = loadDelegate;
+        Delegate = loadDelegate;
         CancellationToken = cancellationToken;
         Description = description;
         CancellationToken?.Register(() => { State = TaskState.Canceled; });
     }
+
+    public event StateChangedHandler<double>? ProgressChanged;
+    public event StateChangedHandler<TaskState>? StateChanged;
 
     event StateChangedHandler<double>? IStateChangedSource<double>.StateChanged
     {
@@ -45,24 +43,19 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         remove => StateChanged -= value;
     }
 
-    public event StateChangedHandler<double>? ProgressChanged;
-    public event StateChangedHandler<TaskState>? StateChanged;
-
     private double _progress = 0;
     /// <summary>
     /// 任务处理进度
     /// </summary>
-    public double Progress {
-        get => _progress; 
-        set 
+    public double Progress
+    {
+        get => _progress;
+        set
         {
             ProgressChanged?.Invoke(this, _progress, value);
             _progress = value;
-        } 
+        }
     }
-
-    public string Name { get; }
-    public string? Description { get; }
 
     private TaskState _state = TaskState.Waiting;
     public TaskState State
@@ -75,32 +68,31 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         }
     }
 
-    private TResult? _result;
-    public TResult? Result
+    private object? _result;
+    public object? Result
     {
-        get
-        {
-            if (BackgroundTask?.IsCompleted ?? false)
-                return BackgroundTask.Result;
-            return _result;
-        }
-        set => _result = value;
+        get => _result;
+        protected set => _result = value;
     }
 
-    private readonly Delegate _delegate;
-    protected readonly CancellationToken? CancellationToken;
+    public string Name { get; protected set; }
+    public string? Description { get; protected set; }
 
-    public virtual TResult Run(params object[] objects)
+    protected CancellationToken? CancellationToken;
+
+    protected readonly Delegate Delegate;
+
+    public virtual object? Run(params object[] objects)
     {
         if (State != TaskState.Waiting)
             throw new Exception($"[TaskBase - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {
-            var res = (TResult)(_delegate.DynamicInvoke([this, ..objects]) ?? new object());
+            var res = Delegate.DynamicInvoke([this, .. objects]);
             CancellationToken?.ThrowIfCancellationRequested();
             State = TaskState.Completed;
-            return _result = res;
+            return Result = res;
         }
         catch (Exception)
         {
@@ -110,15 +102,69 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
         }
     }
 
-    public virtual async Task<TResult> RunAsync(params object[] objects)
+    public async Task<object?> RunAsync(params object[] objects)
     {
         if (CancellationToken != null)
-            return _result = await Task.Run(() => Run(objects), cancellationToken: (CancellationToken)CancellationToken);
-        return _result = await Task.Run(() => Run(objects));
+            return Result = await Task.Run(() => Run(objects), cancellationToken: (CancellationToken)CancellationToken);
+        return Result = await Task.Run(() => Run(objects));
     }
 
-    protected Task<TResult>? BackgroundTask;
+    public void RunBackground(params object[] objects)
+        => RunAsync(objects).Start();
 
-    public virtual void RunBackground(params object[] objects)
-        => (BackgroundTask = RunAsync(objects)).Start();
+    public void RegisterCancellationToken(CancellationToken? cancellationToken)
+        => CancellationToken = cancellationToken;
+
+    public Type ResultType { get => Delegate.Method.ReturnType; }
+}
+
+/// <summary>
+/// 任务原型。<br/>
+/// 传入的委托第一个参数必须为 <see cref="Task{TResult}"/>。
+/// </summary>
+/// <typeparam name="TResult">返回类型</typeparam>
+public class TaskBase<TResult> : TaskBase
+{
+    public TaskBase() : base() { }
+    protected TaskBase(string name, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description) { }
+    public TaskBase(string name, Delegate loadDelegate, CancellationToken? cancellationToken = null, string? description = null) : base(name, loadDelegate, cancellationToken, description) { }
+
+    private TResult? _result;
+    public new TResult? Result
+    {
+        get => _result;
+        protected set => _result = value;
+    }
+
+    public new virtual TResult Run(params object[] objects)
+    {
+        if (State != TaskState.Waiting)
+            throw new Exception($"[TaskBase - {Name}] 运行失败：任务已执行");
+        State = TaskState.Running;
+        try
+        {
+            var res = (TResult)(Delegate.DynamicInvoke([this, ..objects]) ?? new object());
+            CancellationToken?.ThrowIfCancellationRequested();
+            State = TaskState.Completed;
+            return Result = res;
+        }
+        catch (Exception)
+        {
+            if (!(CancellationToken?.IsCancellationRequested ?? false))
+                State = TaskState.Failed;
+            throw;
+        }
+    }
+
+    public new virtual async Task<TResult> RunAsync(params object[] objects)
+    {
+        if (CancellationToken != null)
+            return Result = await Task.Run(() => Run(objects), cancellationToken: (CancellationToken)CancellationToken);
+        return Result = await Task.Run(() => Run(objects));
+    }
+
+    public new virtual void RunBackground(params object[] objects)
+        => RunAsync(objects).Start();
+
+    public new Type ResultType { get => typeof(TResult); }
 }

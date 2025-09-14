@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Management;
+using System.Security;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Secret;
 
 public class Identify
 {
-    public static readonly Lazy<string> RawId = new(_getRawId);
-    public static readonly Lazy<string> EncryptionKey = new(_getEncryptionKey);
+    public static readonly Lazy<SecureString> RawId = new(_getRawId);
+    public static readonly Lazy<SecureString> EncryptionKey = new(_getEncryptionKey);
     public static readonly Lazy<string> LauncherId = new(_getLauncherId);
 
     private const string DefaultRawId = "c34f48114e31f6bb99bdf720f0d98a3c74e325a90c3a8e638d3687a83d404b0c3687b6c0b7a752d718dd5e27a6be6ab68a7f8aa996de158052190bf3ffd17c61";
 
-    private static string _getRawId()
+    private static SecureString _getRawId()
     {
         string? code = null;
         try
@@ -45,12 +47,12 @@ public class Identify
             LogWrapper.Error("Identify", $"意外的系统异常: {ex.Message}");
         }
 
-        return code is null ? DefaultRawId : SHA512Provider.Instance.ComputeHash(code);
+        return (code is null ? DefaultRawId : SHA512Provider.Instance.ComputeHash(code)).ToSecureString();
     }
 
-    private static string _getEncryptionKey()
+    private static SecureString _getEncryptionKey()
     {
-        return SHA256Provider.Instance.ComputeHash($"PCL-CE|{RawId}|EncryptionKey");
+        return SHA256Provider.Instance.ComputeHash($"PCL-CE|{RawId}|EncryptionKey").ToSecureString();
     }
 
     private static string _getLauncherId()

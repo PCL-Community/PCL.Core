@@ -6,6 +6,8 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Text.RegularExpressions;
 
 namespace PCL.Core.Utils.Exts;
@@ -224,4 +226,42 @@ public static class StringExtension
 
     public static int LastIndexOfF(this string str, string subStr, int startIndex, bool ignoreCase = false)
         => str.LastIndexOf(subStr, startIndex, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    /// <summary>
+    /// 将 string 转为 SecureString，请在存储敏感数据到内存时使用
+    /// </summary>
+    /// <param name="str"></param>
+    /// <returns></returns>
+    public static SecureString ToSecureString(this string str)
+    {
+        var ss = new SecureString();
+        foreach (var c in str) ss.AppendChar(c);
+        ss.MakeReadOnly();
+
+        return ss;
+    }
+
+    /// <summary>
+    /// 将 SecureString 转换到 string，用完后请及时销毁
+    /// </summary>
+    /// <param name="ss"></param>
+    /// <returns></returns>
+    public static string ToPlainString(this SecureString ss)
+    {
+        ArgumentNullException.ThrowIfNull(ss);
+
+        var unmanagedString = IntPtr.Zero;
+        try
+        {
+            // 将 SecureString 解密到非托管内存中
+            unmanagedString = Marshal.SecureStringToGlobalAllocUnicode(ss);
+            // 将非托管内存中的字符串复制到托管字符串中
+            return Marshal.PtrToStringUni(unmanagedString) ?? string.Empty;
+        }
+        finally
+        {
+            // 清理非托管内存
+            Marshal.ZeroFreeGlobalAllocUnicode(unmanagedString);
+        }
+    }
 }

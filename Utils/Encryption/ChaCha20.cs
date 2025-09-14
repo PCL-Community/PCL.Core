@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Security;
 using System.Text;
 using System.Security.Cryptography;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Utils.Encryption;
 
@@ -13,7 +15,7 @@ public class ChaCha20 : IEncryptionProvider
     private const int KeySize = 32;      // 256-bit key
     private const int SaltSize = 16;     // 128-bit salt for HKDF
 
-    public byte[] Encrypt(byte[] data, string key)
+    public byte[] Encrypt(byte[] data, SecureString key)
     {
         // Generate random salt, nonce and the tag
         var salt = new byte[SaltSize];
@@ -24,7 +26,7 @@ public class ChaCha20 : IEncryptionProvider
         RandomNumberGenerator.Fill(tag);
 
         // Derive key using the salt
-        using var chacha = new ChaCha20Poly1305(_DeriveKey(key, salt));
+        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToPlainString(), salt));
 
         // Prepare output arrays
         var ciphertext = new byte[data.Length];
@@ -44,7 +46,7 @@ public class ChaCha20 : IEncryptionProvider
         return result;
     }
 
-    public byte[] Decrypt(byte[] data, string key)
+    public byte[] Decrypt(byte[] data, SecureString key)
     {
         // Verify minimum data length
         if (data.Length < SaltSize + NonceSize + TagSize)
@@ -58,7 +60,7 @@ public class ChaCha20 : IEncryptionProvider
         var ciphertext = dataSpan[(SaltSize + NonceSize + TagSize)..];
 
         // Derive key using the extracted salt
-        using var chacha = new ChaCha20Poly1305(_DeriveKey(key, salt.ToArray()));
+        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToPlainString(), salt.ToArray()));
 
         // Perform decryption
         var plaintext = new byte[ciphertext.Length];

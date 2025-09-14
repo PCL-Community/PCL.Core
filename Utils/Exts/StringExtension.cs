@@ -243,7 +243,7 @@ public static class StringExtension
     }
 
     /// <summary>
-    /// 将 SecureString 转换到 string，非必要不使用
+    /// 将 SecureString 转换到 string，字符串更容易被内存分析察觉，非必要不使用
     /// </summary>
     /// <param name="ss"></param>
     /// <returns></returns>
@@ -266,6 +266,11 @@ public static class StringExtension
         }
     }
 
+    /// <summary>
+    /// 推荐使用此方法处理 SecureString 内容
+    /// </summary>
+    /// <param name="ss"></param>
+    /// <returns></returns>
     public static byte[] ToBytes(this SecureString ss)
     {
         ArgumentNullException.ThrowIfNull(ss);

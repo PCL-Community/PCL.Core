@@ -26,7 +26,7 @@ public class ChaCha20 : IEncryptionProvider
         RandomNumberGenerator.Fill(tag);
 
         // Derive key using the salt
-        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToPlainString(), salt));
+        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToBytes(), salt));
 
         // Prepare output arrays
         var ciphertext = new byte[data.Length];
@@ -60,7 +60,7 @@ public class ChaCha20 : IEncryptionProvider
         var ciphertext = dataSpan[(SaltSize + NonceSize + TagSize)..];
 
         // Derive key using the extracted salt
-        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToPlainString(), salt.ToArray()));
+        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToBytes(), salt.ToArray()));
 
         // Perform decryption
         var plaintext = new byte[ciphertext.Length];
@@ -69,10 +69,9 @@ public class ChaCha20 : IEncryptionProvider
         return plaintext;
     }
 
-    private static readonly byte[] _Info = Encoding.UTF8.GetBytes("PCL.Core.Utils.Encryption.ChaCha20");
-    private static byte[] _DeriveKey(string key, byte[] salt)
+    private static readonly byte[] _Info = "PCL.Core.Utils.Encryption.ChaCha20"u8.ToArray();
+    private static byte[] _DeriveKey(byte[] ikm, byte[] salt)
     {
-        var ikm = Encoding.UTF8.GetBytes(key);
         return HKDF.DeriveKey(
             HashAlgorithmName.SHA512,
             ikm,

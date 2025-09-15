@@ -128,8 +128,11 @@ public class PreLaunchService(IMcInstance instance, JavaInfo selectedJava) {
         await GpuAdjustmentSemaphore.WaitAsync(cancellationToken);
 
         try {
-            ProcessInterop.SetGpuPreference(selectedJava.JavawExePath, Config.Launch.SetGpuPreference);
-            ProcessInterop.SetGpuPreference(Basics.ExecutableName, Config.Launch.SetGpuPreference);
+            var result1 = ProcessInterop.SetGpuPreference(selectedJava.JavawExePath, Config.Launch.SetGpuPreference);
+            var result2 = ProcessInterop.SetGpuPreference(Basics.ExecutableName, Config.Launch.SetGpuPreference);
+            if (!result1 || !result2) {
+                McLaunchUtils.Log("显卡设置调整失败，可能需要管理员权限");
+            }
         } catch (Exception ex) {
             await HandleGpuAdjustmentFailureAsync(ex, cancellationToken);
         }

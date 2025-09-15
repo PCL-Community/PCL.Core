@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Management;
+using System.Security;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using Microsoft.Win32;
@@ -79,52 +80,124 @@ public class ProcessInterop {
 
     /// <summary>
     /// 将特定程序设置为使用高性能显卡启动。
-    /// 如果失败，则抛出异常。
     /// </summary>
     /// <param name="executable">可执行文件路径。</param>
     /// <param name="wantHighPerformance">是否使用高性能显卡，默认为 true。</param>
-    public static void SetGpuPreference(string executable, bool wantHighPerformance = true) {
+    /// <returns>操作是否成功</returns>
+    /// <exception cref="ArgumentException">当可执行文件路径无效时抛出</exception>
+    /// <exception cref="UnauthorizedAccessException">当没有足够权限访问注册表时抛出</exception>
+    /// <exception cref="SecurityException">当安全策略不允许访问注册表时抛出</exception>
+    /// <exception cref="InvalidOperationException">当注册表操作失败时抛出</exception>
+    public static bool SetGpuPreference(string executable, bool wantHighPerformance = true) {
+        // 参数验证
+        if (string.IsNullOrWhiteSpace(executable)) {
+            throw new ArgumentException("可执行文件路径不能为空或仅包含空白字符", nameof(executable));
+        }
+
+        // 验证文件路径格式
+        try {
+            var fullPath = Path.GetFullPath(executable);
+            if (!File.Exists(fullPath)) {
+                LogWrapper.Warn("System", $"指定的可执行文件不存在: {executable}");
+            }
+        } catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is PathTooLongException) {
+            throw new ArgumentException($"无效的可执行文件路径: {executable}", nameof(executable), ex);
+        }
+
         const string gpuPreferenceRegKey = @"Software\Microsoft\DirectX\UserGpuPreferences";
         const string gpuPreferenceRegValueHigh = "GpuPreference=2;";
         const string gpuPreferenceRegValueDefault = "GpuPreference=0;";
 
-        var isCurrentHighPerformance = false;
+        try {
+            var isCurrentHighPerformance = GetCurrentGpuPreference(executable, gpuPreferenceRegKey, gpuPreferenceRegValueHigh);
 
-        // Check existing setting
-        using (var readOnlyKey = Registry.CurrentUser.OpenSubKey(gpuPreferenceRegKey, false)) {
-            if (readOnlyKey != null) {
-                var currentValue = readOnlyKey.GetValue(executable)?.ToString();
-                if (gpuPreferenceRegValueHigh == currentValue) {
-                    isCurrentHighPerformance = true;
-                }
-            } else {
-                // Create parent key if it doesn't exist
-                LogWrapper.Info("System", "需要创建显卡设置的父级键");
-                using (var newKey = Registry.CurrentUser.CreateSubKey(gpuPreferenceRegKey)) {
-                    // Key created, no further action needed here
+            LogWrapper.Info("System", $"当前程序 ({executable}) 的显卡设置为高性能: {isCurrentHighPerformance}");
+
+            // 如果当前设置已经是期望的设置，则无需修改
+            if (isCurrentHighPerformance == wantHighPerformance) {
+                LogWrapper.Info("System", $"程序 ({executable}) 的显卡设置已经是期望的设置，无需修改");
+                return true;
+            }
+
+            // 写入新设置
+            return SetGpuPreferenceValue(executable, wantHighPerformance, gpuPreferenceRegKey,
+                gpuPreferenceRegValueHigh, gpuPreferenceRegValueDefault);
+        } catch (UnauthorizedAccessException ex) {
+            var errorMsg = "没有足够的权限访问注册表。请以管理员身份运行程序或检查用户权限设置。";
+            LogWrapper.Error(ex, "System", errorMsg);
+            throw new UnauthorizedAccessException(errorMsg, ex);
+        } catch (SecurityException ex) {
+            var errorMsg = "安全策略不允许访问注册表。请联系系统管理员检查安全设置。";
+            LogWrapper.Error(ex, "System", errorMsg);
+            throw new SecurityException(errorMsg, ex);
+        } catch (Exception ex) {
+            var errorMsg = $"设置GPU偏好时发生未预期的错误: {ex.Message}";
+            LogWrapper.Error(ex, "System", errorMsg);
+            throw new InvalidOperationException(errorMsg, ex);
+        }
+    }
+
+    /// <summary>
+    /// 获取当前程序的GPU偏好设置
+    /// </summary>
+    private static bool GetCurrentGpuPreference(string executable, string regKey, string highPerfValue) {
+        try {
+            using var readOnlyKey = Registry.CurrentUser.OpenSubKey(regKey, false);
+            if (readOnlyKey == null) {
+                LogWrapper.Info("System", "GPU偏好注册表键不存在，将在需要时创建");
+                return false;
+            }
+
+            var currentValue = readOnlyKey.GetValue(executable)?.ToString();
+            return string.Equals(currentValue, highPerfValue, StringComparison.OrdinalIgnoreCase);
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "System", $"读取当前GPU偏好设置时出现错误: {ex.Message}");
+            return false; // 假设当前不是高性能模式
+        }
+    }
+
+    /// <summary>
+    /// 设置GPU偏好值到注册表
+    /// </summary>
+    private static bool SetGpuPreferenceValue(string executable, bool wantHighPerformance,
+        string regKey, string highPerfValue, string defaultValue) {
+        RegistryKey? writeKey = null;
+        try {
+            // 尝试打开现有键进行写入
+            writeKey = Registry.CurrentUser.OpenSubKey(regKey, true);
+
+            // 如果键不存在，创建它
+            if (writeKey == null) {
+                LogWrapper.Info("System", "创建GPU偏好注册表键");
+                writeKey = Registry.CurrentUser.CreateSubKey(regKey);
+
+                if (writeKey == null) {
+                    throw new InvalidOperationException($"无法创建注册表键: {regKey}");
                 }
             }
-        }
 
-        LogWrapper.Info("System", $"当前程序 ({executable}) 的显卡设置为高性能: {isCurrentHighPerformance}");
+            var valueToSet = wantHighPerformance ? highPerfValue : defaultValue;
+            writeKey.SetValue(executable, valueToSet, RegistryValueKind.String);
 
-        if (isCurrentHighPerformance == wantHighPerformance) {
-            return;
+            LogWrapper.Info("System", $"成功设置程序 ({executable}) 的GPU偏好: {(wantHighPerformance ? "高性能" : "默认")}");
+            return true;
+        } catch (UnauthorizedAccessException) {
+            // 重新抛出，让上层处理
+            throw;
+        } catch (SecurityException) {
+            // 重新抛出，让上层处理
+            throw;
+        } catch (Exception ex) {
+            var errorMsg = $"写入注册表时发生错误: {ex.Message}";
+            LogWrapper.Error(ex, "System", errorMsg);
+            throw new InvalidOperationException(errorMsg, ex);
+        } finally {
+            writeKey?.Dispose();
         }
-        
-        // Write new setting
-        using var writeKey = Registry.CurrentUser.OpenSubKey(gpuPreferenceRegKey, true);
-
-        if (writeKey == null) {
-            throw new InvalidOperationException($"无法打开注册表键 {gpuPreferenceRegKey} 进行写入");
-        }
-        writeKey.SetValue(executable, wantHighPerformance ? gpuPreferenceRegValueHigh : gpuPreferenceRegValueDefault);
-        LogWrapper.Info("System", $"已调整程序 ({executable}) 显卡设置: {wantHighPerformance}");
     }
 }
 
-public enum ProcessExitCode
-{
+public enum ProcessExitCode {
     /// <summary>
     /// Indicates that the process completed successfully.
     /// </summary>

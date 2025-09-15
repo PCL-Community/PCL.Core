@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Collections.Generic;
 
-public class PreRunService(IMcInstance instance, JavaInfo selectedJava) {
+public class PreLaunchService(IMcInstance instance, JavaInfo selectedJava) {
     private static readonly SemaphoreSlim GpuAdjustmentSemaphore = new(1, 1);
 
     public async Task McLaunchPrerunAsync(CancellationToken cancellationToken = default) {

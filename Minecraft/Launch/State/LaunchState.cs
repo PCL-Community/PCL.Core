@@ -1,7 +1,6 @@
 ﻿namespace PCL.Core.Minecraft.Launch.State;
 
-public enum LaunchState
-{
+public enum LaunchState {
     Idle,
     Validating,
     Authenticating,

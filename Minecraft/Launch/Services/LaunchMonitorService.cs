@@ -9,10 +9,10 @@ using PCL.Core.Minecraft.Launch.Utils;
 
 namespace PCL.Core.Minecraft.Launch.Services;
 
-public class LaunchWaitService(IMcInstance instance, JavaInfo selectedJava) {
+public class LaunchMonitorService(IMcInstance instance, JavaInfo selectedJava) {
     private readonly IJsonBasedInstance _jsonBasedInstance = (IJsonBasedInstance)instance;
     
-    private void McLaunchWait() {
+    public void MonitorLaunch() {
         // 输出信息
         McLaunchUtils.Log("");
         McLaunchUtils.Log("~ 基础参数 ~");

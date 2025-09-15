@@ -8,8 +8,8 @@ using PCL.Core.Minecraft.Launch.Utils;
 
 namespace PCL.Core.Minecraft.Launch.Services;
 
-public class RunMinecraftService(IMcInstance instance, JavaInfo selectedJava, string launchArg) {
-    private void McLaunchRun() {
+public class MinecraftLaunchService(IMcInstance instance, JavaInfo selectedJava, string launchArg) {
+    public void LaunchMinecraft() {
         var noJavaw = Config.Launch.DontUseJavaw;
 
         // 启动信息

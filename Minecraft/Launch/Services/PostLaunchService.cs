@@ -4,8 +4,8 @@ using PCL.Core.Minecraft.Launch.Utils;
 
 namespace PCL.Core.Minecraft.Launch.Services;
 
-public class EndLaunchService(IMcInstance instance) {
-    private void McLaunchEnd() {
+public class PostLaunchService(IMcInstance instance) {
+    public void LaunchPostRun() {
         McLaunchUtils.Log("开始启动结束处理");
 
         // 暂停或开始音乐播放

@@ -14,7 +14,7 @@ namespace PCL.Core.Minecraft.Launch.Services;
 /// <summary>
 /// 启动前预检查服务
 /// </summary>
-public class PreCheckService(IMcInstance? instance) {
+public class StartUpService(IMcInstance? instance) {
     /// <summary>
     /// 验证启动配置和环境
     /// </summary>
@@ -141,7 +141,7 @@ public static class PreCheckServiceFactory {
     public static async Task PreCheckForCurrentInstanceAsync(CancellationTokenSource source) {
         var currentInstance = FolderService.FolderManager.CurrentInst;
 
-        var service = new PreCheckService(currentInstance);
+        var service = new StartUpService(currentInstance);
         service.Validate(source);
     }
 }

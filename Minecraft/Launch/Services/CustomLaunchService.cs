@@ -15,7 +15,7 @@ namespace PCL.Core.Minecraft.Launch.Services;
 /// <summary>
 /// 负责执行自定义启动命令和生成启动脚本的服务
 /// </summary>
-public class RunCustomService(IMcInstance instance, JavaInfo selectedJava, string launchArg) {
+public class CustomLaunchService(IMcInstance instance, JavaInfo selectedJava, string launchArg) {
     private readonly IMcInstance _instance = instance ?? throw new ArgumentNullException(nameof(instance));
     private readonly JavaInfo _selectedJava = selectedJava ?? throw new ArgumentNullException(nameof(selectedJava));
     private readonly string _launchArg = launchArg ?? throw new ArgumentNullException(nameof(launchArg));
@@ -25,7 +25,7 @@ public class RunCustomService(IMcInstance instance, JavaInfo selectedJava, strin
     /// 执行自定义启动流程，包括生成启动脚本和执行自定义命令
     /// </summary>
     /// <param name="cancellationToken">取消令牌</param>
-    public async Task ExecuteAsync(CancellationToken cancellationToken = default) {
+    public async Task ExecuteCustomCommandAsync(CancellationToken cancellationToken = default) {
         try {
             // 准备自定义命令
             var customCommands = PrepareCustomCommands();

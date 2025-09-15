@@ -270,7 +270,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         // 处理版本类型参数的特殊情况
         if (string.IsNullOrWhiteSpace(replacements["${version_type}"])) {
             result = result.Replace(" --versionType ${version_type}", "");
-            replacements["${version_type}"] = "\"\"";
+            replacements["${version_type}"] = @"""";
         }
 
         var processedArguments = new StringBuilder();

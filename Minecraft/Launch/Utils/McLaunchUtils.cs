@@ -36,9 +36,7 @@ public static class McLaunchUtils {
             var ruleMatches = true; // 当前规则是否匹配
 
             // 检查操作系统条件
-            // Using a property pattern
-            // 简化后的代码（C# 9/10 语法）
-            if (rule is { Os.Name: not null }) {
+            if (rule.Os?.Name != null) {
                 var osName = rule.Os.Name.ToLowerInvariant();
                 var currentOs = EnvironmentInterop.GetCurrentOsName();
 

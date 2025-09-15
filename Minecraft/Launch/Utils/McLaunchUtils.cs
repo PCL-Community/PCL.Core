@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using PCL.Core.Logging;
+using PCL.Core.Utils;
 using PCL.Core.Utils.OS;
 
 namespace PCL.Core.Minecraft.Launch.Utils;
@@ -14,11 +15,11 @@ public static class McLaunchUtils {
         // TODO: UI Log
         LogWrapper.Info("McLaunch", msg);
     }
-    
+
     // 检查是否满足rules条件
     public static bool CheckRules(JsonObject? rulesObj) {
         if (rulesObj == null) return false;
-        
+
         var rules = rulesObj.Deserialize<List<Rule>>();
         if (rules == null || rules.Count == 0)
             return true; // 没有规则，默认允许
@@ -73,6 +74,37 @@ public static class McLaunchUtils {
         }
 
         return required;
+    }
+
+    /// <summary>
+    /// 打码字符串中的 AccessToken。
+    /// </summary>
+    /// <param name="raw">原始字符串</param>
+    /// <param name="filterChar">用于替换的字符</param>
+    /// <returns>打码后的字符串</returns>
+    public static string FilterAccessToken(string raw, char filterChar) {
+        // 打码 "accessToken " 后的内容
+        if (raw.Contains("accessToken ")) {
+            foreach (Match match in RegexPatterns.AccessToken.Matches(raw)) {
+                var token = match.Value;
+                raw = raw.Replace(token, new string(filterChar, token.Length));
+            }
+        }
+
+        // TODO: 账户系统
+        /*
+        // 打码当前登录的结果
+        string accessToken = McLoginLoader.Output.AccessToken;
+        if (accessToken != null && accessToken.Length >= 10 &&
+            raw.IndexOf(accessToken, StringComparison.OrdinalIgnoreCase) >= 0 &&
+            McLoginLoader.Output.Uuid != McLoginLoader.Output.AccessToken) // UUID 和 AccessToken 一样则不打码
+        {
+            raw = raw.Replace(accessToken,
+                accessToken.Substring(0, 5) + new string(filterChar, accessToken.Length - 10) + accessToken.Substring(accessToken.Length - 5));
+        }
+        */
+
+        return raw;
     }
 }
 

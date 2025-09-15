@@ -10,10 +10,12 @@ public class ArgBuildService(IMcInstance instance, bool isDemo, JavaInfo selecte
             var builder = new LaunchArgBuilder(instance, selectedJavaInfo, isDemo /*, loginResult*/);
             var argBuilder = builder
                 .AddJvmArguments()
-                .AddGameArguments();
-            var arguments = await argBuilder.BuildAsync();
+                .AddGameArguments()
+                .AddOtherArguments()
+                .AddWorldArguments();
+            var launchArg = await argBuilder.BuildAsync();
 
-            return arguments;
+            return launchArg;
         } catch (Exception ex) {
             throw new InvalidOperationException("构建启动参数失败", ex);
         }

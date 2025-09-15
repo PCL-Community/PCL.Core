@@ -109,4 +109,11 @@ public static partial class RegexPatterns
     public static readonly Regex McInfdevVersion = _McInfdevVersion();
     [GeneratedRegex(@"^inf-(\d{8})(-(\d+))?$", RegexOptions.Compiled)]
     private static partial Regex _McInfdevVersion();
+    
+    /// <summary>
+    /// 匹配 accessToken 内容。
+    /// </summary>
+    public static readonly Regex AccessToken = _AccessToken();
+    [GeneratedRegex("(?<=accessToken ([^ ]{5}))[^ ]+(?=[^ ]{5})", RegexOptions.Compiled)]
+    private static partial Regex _AccessToken();
 }

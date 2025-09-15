@@ -23,16 +23,11 @@ namespace PCL.Core.Minecraft.Launch.Services.Argument;
 /// </summary>
 public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool isDemo) {
     private readonly List<string> _arguments = [];
-    private readonly IJsonBasedInstance _jsonBasedInstance = (IJsonBasedInstance)instance;
+    private readonly IJsonBasedInstance _jsonBasedInstance = (IJsonBasedInstance) instance;
 
     // ReSharper disable InconsistentNaming
     // 常量定义
-    private const string LAUNCHER_NAME = "PCLCE";
-    private const string LAUNCHER_VERSION = "409";
-    private const string DEFAULT_ASSET_INDEX = "legacy";
-    private const string DEFAULT_USER_TYPE = "msa";
     private const string DEFAULT_SERVER_PORT = "25565";
-    private const int MINECRAFT_LEGACY_VERSION_BUILD = 12;
     private const int JAVA_VERSION_8 = 8;
     private const int JAVA_VERSION_18 = 18;
     // ReSharper restore InconsistentNaming
@@ -102,7 +97,8 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
     /// </summary>
     public async Task<string> BuildAsync() {
         var argumentString = string.Join(' ', _arguments);
-        var replaceArguments = await BuildArgumentReplacementsAsync();
+        var customEnvReplacer = new GameEnvReplacer(instance, selectedJava);
+        var replaceArguments = await customEnvReplacer.BuildArgumentReplacementsAsync();
 
         return ProcessArgumentReplacements(argumentString, replaceArguments);
     }
@@ -281,20 +277,12 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         var arguments = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var argument in arguments) {
-            var processedArg = ApplyReplacements(argument, replacements);
+            var processedArg = GameEnvReplacer.ApplyReplacements(argument, replacements);
             processedArg = QuoteArgumentIfNeeded(processedArg);
             processedArguments.Append(processedArg).Append(' ');
         }
 
         return processedArguments.ToString().TrimEnd();
-    }
-
-    /// <summary>
-    /// 应用参数替换
-    /// </summary>
-    private static string ApplyReplacements(string argument, Dictionary<string, string> replacements) {
-        return replacements.Aggregate(argument, (current, replacement) =>
-            current.Replace(replacement.Key, replacement.Value));
     }
 
     /// <summary>
@@ -305,187 +293,6 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
             return $"\"{argument}\"";
         }
         return argument;
-    }
-
-    /// <summary>
-    /// 构建参数替换字典
-    /// </summary>
-    private async Task<Dictionary<string, string>> BuildArgumentReplacementsAsync() {
-        var gameArguments = new Dictionary<string, string> {
-            // 基础路径参数
-            ["${classpath_separator}"] = ";",
-            ["${natives_directory}"] = GetNativesFolder(),
-            ["${library_directory}"] = Path.Combine(instance.Folder.Path, "libraries"),
-            ["${libraries_directory}"] = Path.Combine(instance.Folder.Path, "libraries"),
-            ["${game_directory}"] = instance.IsolatedPath.TrimEnd('\\'),
-            ["${assets_root}"] = Path.Combine(instance.Folder.Path, "assets"),
-
-            // 启动器信息
-            ["${launcher_name}"] = LAUNCHER_NAME,
-            ["${launcher_version}"] = LAUNCHER_VERSION, // TODO: 等待迁移
-
-            // 版本信息
-            ["${version_name}"] = instance.Name,
-            ["${version_type}"] = GetVersionType(),
-
-            // 用户信息
-            ["${user_properties}"] = "{}",
-            ["${user_type}"] = DEFAULT_USER_TYPE,
-
-            // 资源相关
-            ["${game_assets}"] = Path.Combine(instance.Folder.Path, "assets", "virtual", "legacy"),
-            ["${assets_index_name}"] = GetAssetsIndexName(),
-
-            // ClassPath
-            ["${classpath}"] = await BuildClassPathAsync()
-        };
-
-        // 添加窗口尺寸参数
-        var gameSize = CalculateGameWindowSize();
-        gameArguments["${resolution_width}"] = $"{Math.Round(gameSize.Width)}";
-        gameArguments["${resolution_height}"] = $"{Math.Round(gameSize.Height)}";
-
-        return gameArguments;
-    }
-
-    /// <summary>
-    /// 获取版本类型信息
-    /// </summary>
-    private string GetVersionType() {
-        var argumentInfo = Config.Instance.TypeInfo[instance.Path];
-        return string.IsNullOrEmpty(argumentInfo) ? Config.Launch.TypeInfo : argumentInfo;
-    }
-
-    /// <summary>
-    /// 计算游戏窗口大小
-    /// </summary>
-    private Size CalculateGameWindowSize() {
-        Size gameSize = Config.Launch.WindowType switch {
-            2 => CalculateMainWindowSize(),
-            3 => new Size(Math.Max(100, Config.Launch.WindowWidthLaunch),
-                Math.Max(100, Config.Launch.WindowHeightLaunch)),
-            _ => new Size(854, 480)
-        };
-
-        return ApplyDpiFixIfNeeded(gameSize);
-    }
-
-    /// <summary>
-    /// 计算主窗口大小
-    /// </summary>
-    private static Size CalculateMainWindowSize() {
-        // TODO: 实现与启动器窗口尺寸一致的逻辑
-        var result = new Size(854, 480);
-        result.Height -= 29.5 * UiHelper.GetSystemDpi() / 96; // 标题栏高度
-        return result;
-    }
-
-    /// <summary>
-    /// 应用DPI修复（如果需要）
-    /// </summary>
-    private Size ApplyDpiFixIfNeeded(Size gameSize) {
-        if (NeedsDpiFix()) {
-            McLaunchUtils.Log($"应用窗口大小DPI修复（Java版本：{selectedJava.Version.Revision}）");
-            var dpiScale = UiHelper.GetSystemDpi() / 96.0;
-            gameSize.Width /= dpiScale;
-            gameSize.Height /= dpiScale;
-        }
-
-        return gameSize;
-    }
-
-    /// <summary>
-    /// 判断是否需要DPI修复
-    /// </summary>
-    private bool NeedsDpiFix() {
-        return instance.InstanceInfo.McVersionBuild <= MINECRAFT_LEGACY_VERSION_BUILD &&
-               selectedJava.JavaMajorVersion <= JAVA_VERSION_8 &&
-               selectedJava.Version.Revision is >= 200 and <= 321 &&
-               !instance.InstanceInfo.HasPatch("optifine") &&
-               !instance.InstanceInfo.HasPatch("forge");
-    }
-
-    /// <summary>
-    /// 构建ClassPath字符串
-    /// </summary>
-    private async Task<string> BuildClassPathAsync() {
-        var cpStrings = new List<string> {
-            await LaunchEnvUtils.ExtractRetroWrapperAsync(instance)
-        };
-
-        // TODO: 等待实例下载部分实现
-        /*
-        var libList = McLibListGet(instance, true);
-        string? optiFineCp = null;
-
-        foreach (var library in libList)
-        {
-            if (library.IsNatives) continue;
-
-            if (library.Name?.Contains("com.cleanroommc:cleanroom:0.2") == true)
-            {
-                cpStrings.Insert(0, library.LocalPath); // Cleanroom 必须在第一位
-            }
-            else if (library.Name == "optifine:OptiFine")
-            {
-                optiFineCp = library.LocalPath;
-            }
-            else
-            {
-                cpStrings.Add(library.LocalPath);
-            }
-        }
-
-        if (optiFineCp != null)
-        {
-            cpStrings.Insert(cpStrings.Count - 2, optiFineCp); // OptiFine 放在倒数第二位
-        }
-        */
-
-        return string.Join(";", cpStrings);
-    }
-
-    /// <summary>
-    /// 获取资源文件索引名称
-    /// </summary>
-    private string GetAssetsIndexName() {
-        try {
-            // 优先使用 assetIndex.id
-            if (_jsonBasedInstance.VersionJson!.TryGetPropertyValue("assetIndex", out var assetIndexElement) &&
-                assetIndexElement!.GetValueKind() == JsonValueKind.Object &&
-                assetIndexElement.AsObject().TryGetPropertyValue("id", out var idElement) &&
-                idElement!.GetValueKind() == JsonValueKind.String) {
-                return idElement.ToString();
-            }
-
-            // 其次使用 assets
-            if (_jsonBasedInstance.VersionJson.TryGetPropertyValue("assets", out var assetsElement) &&
-                assetsElement!.GetValueKind() == JsonValueKind.String) {
-                return assetsElement.ToString();
-            }
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "获取资源文件索引名失败，使用默认值");
-        }
-
-        return DEFAULT_ASSET_INDEX;
-    }
-
-    /// <summary>
-    /// 获取Natives文件夹路径
-    /// </summary>
-    private string GetNativesFolder() {
-        var primaryPath = Path.Combine(instance.Path, instance.Name, "-natives");
-        if (EncodingUtils.IsDefaultEncodingGbk() || primaryPath.IsASCII()) {
-            return primaryPath;
-        }
-
-        var fallbackPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            ".minecraft", "bin", "natives");
-        if (fallbackPath.IsASCII()) {
-            return fallbackPath;
-        }
-
-        return Path.Combine(SystemPaths.DriveLetter, "ProgramData", "PCL", "natives");
     }
 
     #endregion

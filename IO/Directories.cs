@@ -43,24 +43,20 @@ public static class Directories {
             var currentUser = System.Security.Principal.WindowsIdentity.GetCurrent();
             var principal = new System.Security.Principal.WindowsPrincipal(currentUser);
 
-            bool isDenied = false;
-            bool isAllowed = false;
+            var isDenied = false;
+            var isAllowed = false;
 
-            foreach (FileSystemAccessRule rule in rules)
-            {
+            foreach (FileSystemAccessRule rule in rules) {
                 if (!rule.FileSystemRights.HasFlag(FileSystemRights.Write))
                     continue;
 
                 // 检查规则是否适用于当前用户或其组
-                if (principal.IsInRole(rule.IdentityReference.Value))
-                {
-                    if (rule.AccessControlType == AccessControlType.Deny)
-                    {
+                if (principal.IsInRole(rule.IdentityReference.Value)) {
+                    if (rule.AccessControlType == AccessControlType.Deny) {
                         isDenied = true;
                         break; // 拒绝优先，直接返回
                     }
-                    else if (rule.AccessControlType == AccessControlType.Allow)
-                    {
+                    if (rule.AccessControlType == AccessControlType.Allow) {
                         isAllowed = true;
                     }
                 }

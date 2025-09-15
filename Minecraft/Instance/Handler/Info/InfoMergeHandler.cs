@@ -114,7 +114,7 @@ public static class InfoMergeHandler {
         }
 
         // Forge
-        if (!hasNeoForge & !hasFabric) {
+        if (!hasNeoForge && !hasFabric) {
             try {
                 FindArgumentData(versionJson, "--fml.forgeVersion", "forge");
             } catch (Exception ex) {

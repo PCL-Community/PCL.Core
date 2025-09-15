@@ -5,12 +5,18 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils;
 using PCL.Core.Utils.OS;
 
 namespace PCL.Core.Minecraft.Launch.Utils;
 
 public static class McLaunchUtils {
+    // ReSharper disable InconsistentNaming
+    private const string DEFAULT_ASSET_INDEX = "legacy";
+    // ReSharper restore InconsistentNaming
+    
+    
     public static void Log(string msg) {
         // TODO: UI Log
         LogWrapper.Info("McLaunch", msg);
@@ -74,6 +80,31 @@ public static class McLaunchUtils {
         }
 
         return required;
+    }
+    
+    /// <summary>
+    /// 获取资源文件索引名称
+    /// </summary>
+    public static string GetAssetsIndexName(IJsonBasedInstance jsonBasedInstance) {
+        try {
+            // 优先使用 assetIndex.id
+            if (jsonBasedInstance.VersionJson!.TryGetPropertyValue("assetIndex", out var assetIndexElement) &&
+                assetIndexElement!.GetValueKind() == JsonValueKind.Object &&
+                assetIndexElement.AsObject().TryGetPropertyValue("id", out var idElement) &&
+                idElement!.GetValueKind() == JsonValueKind.String) {
+                return idElement.ToString();
+            }
+
+            // 其次使用 assets
+            if (jsonBasedInstance.VersionJson.TryGetPropertyValue("assets", out var assetsElement) &&
+                assetsElement!.GetValueKind() == JsonValueKind.String) {
+                return assetsElement.ToString();
+            }
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "获取资源文件索引名失败，使用默认值");
+        }
+
+        return DEFAULT_ASSET_INDEX;
     }
 
     /// <summary>

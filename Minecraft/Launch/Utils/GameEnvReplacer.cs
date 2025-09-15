@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using PCL.Core.App;
-using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Codecs;
@@ -23,7 +20,6 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     // 常量定义
     private const string LAUNCHER_NAME = "PCLCE";
     private const string LAUNCHER_VERSION = "409";
-    private const string DEFAULT_ASSET_INDEX = "legacy";
     private const string DEFAULT_USER_TYPE = "msa";
     private const int MINECRAFT_LEGACY_VERSION_BUILD = 12;
     private const int JAVA_VERSION_8 = 8;
@@ -65,7 +61,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
 
             // 资源相关
             ["${game_assets}"] = Path.Combine(instance.Folder.Path, "assets", "virtual", "legacy"),
-            ["${assets_index_name}"] = GetAssetsIndexName(),
+            ["${assets_index_name}"] = McLaunchUtils.GetAssetsIndexName(_jsonBasedInstance),
 
             // ClassPath
             ["${classpath}"] = await BuildClassPathAsync(),
@@ -134,31 +130,6 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
                selectedJava.Version.Revision is >= 200 and <= 321 &&
                !instance.InstanceInfo.HasPatch("optifine") &&
                !instance.InstanceInfo.HasPatch("forge");
-    }
-    
-    /// <summary>
-    /// 获取资源文件索引名称
-    /// </summary>
-    private string GetAssetsIndexName() {
-        try {
-            // 优先使用 assetIndex.id
-            if (_jsonBasedInstance.VersionJson!.TryGetPropertyValue("assetIndex", out var assetIndexElement) &&
-                assetIndexElement!.GetValueKind() == JsonValueKind.Object &&
-                assetIndexElement.AsObject().TryGetPropertyValue("id", out var idElement) &&
-                idElement!.GetValueKind() == JsonValueKind.String) {
-                return idElement.ToString();
-            }
-
-            // 其次使用 assets
-            if (_jsonBasedInstance.VersionJson.TryGetPropertyValue("assets", out var assetsElement) &&
-                assetsElement!.GetValueKind() == JsonValueKind.String) {
-                return assetsElement.ToString();
-            }
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "获取资源文件索引名失败，使用默认值");
-        }
-
-        return DEFAULT_ASSET_INDEX;
     }
 
     /// <summary>

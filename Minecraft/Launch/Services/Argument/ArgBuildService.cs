@@ -11,7 +11,7 @@ public class ArgBuildService(IMcInstance instance, bool isDemo, JavaInfo selecte
             var argBuilder = builder
                 .AddJvmArguments()
                 .AddGameArguments();
-            var arguments = await argBuilder.Build();
+            var arguments = await argBuilder.BuildAsync();
 
             return arguments;
         } catch (Exception ex) {

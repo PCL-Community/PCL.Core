@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,28 +30,33 @@ public class MultipleTaskExecution {
         var currentIndex = 0;
 
         async void OnStateChanged(object sender, TaskState oldState, TaskState newState) {
-            var loader = (TaskBase<TOutput>)sender;
-            if (newState == TaskState.Completed) {
-                mainLoader.Result = loader.Result;
-                AbortOtherLoaders(loaderList, loader);
-                tcs.SetResult(true);
-            } else if (newState == TaskState.Failed || newState == TaskState.Canceled) {
-                if (currentIndex < loaderList.Count - 1) {
-                    currentIndex++;
-                    var nextLoader = loaderList[currentIndex].Key;
-                    nextLoader.State = TaskState.Waiting;
-                    nextLoader.RunBackground(input);
-                    await Task.Delay(loaderList[currentIndex].Value * 1000).ContinueWith(t => {
-                        if (nextLoader.State == TaskState.Running)
-                            nextLoader.State = TaskState.Failed;
-                    });
-                } else {
-                    var error = loaderList
-                                    .Select(l => l.Key.BackgroundTask?.Exception?.InnerException)
-                                    .FirstOrDefault(e => e != null && e.Message.Contains("不可用"))
-                                ?? new TimeoutException("所有下载源连接超时");
-                    AbortOtherLoaders(loaderList, null);
-                    tcs.SetException(error);
+            var loader = (TaskBase<TOutput>) sender;
+            switch (newState) {
+                case TaskState.Completed : {
+                    mainLoader.Result = loader.Result;
+                    AbortOtherLoaders(loaderList, loader);
+                    tcs.SetResult(true);
+                    break;
+                } 
+                case TaskState.Failed or TaskState.Canceled : {
+                    if (currentIndex < loaderList.Count - 1) {
+                        currentIndex++;
+                        var nextLoader = loaderList[currentIndex].Key;
+                        nextLoader.State = TaskState.Waiting;
+                        nextLoader.RunBackground(input);
+                        await Task.Delay(loaderList[currentIndex].Value * 1000).ContinueWith(t => {
+                            if (nextLoader.State == TaskState.Running)
+                                nextLoader.State = TaskState.Failed;
+                        });
+                    } else {
+                        var error = loaderList
+                                        .Select(l => l.Key.BackgroundTask?.Exception?.InnerException)
+                                        .FirstOrDefault(e => e != null && e.Message.Contains("不可用"))
+                                    ?? new TimeoutException("所有下载源连接超时");
+                        AbortOtherLoaders(loaderList, null);
+                        tcs.SetException(error);
+                    }
+                    break;
                 }
             }
         }
@@ -66,15 +72,13 @@ public class MultipleTaskExecution {
 
         await tcs.Task;
     }
-    
-    private void AbortOtherLoaders<TOutput>(List<KeyValuePair<TaskBase<TOutput>, int>> loaderList, TaskBase<TOutput>? except)
-    {
-        foreach (var loader in loaderList)
-        {
-            if (loader.Key != except && loader.Key.State == TaskState.Running)
-            {
+
+    private void AbortOtherLoaders<TOutput>(List<KeyValuePair<TaskBase<TOutput>, int>> loaderList, TaskBase<TOutput>? except) {
+        foreach (var loader in loaderList) {
+            if (loader.Key != except && loader.Key.State == TaskState.Running) {
                 loader.Key.State = TaskState.Canceled;
             }
         }
     }
 }
+*/

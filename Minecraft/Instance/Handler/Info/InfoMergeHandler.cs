@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Impl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils.Exts;
 

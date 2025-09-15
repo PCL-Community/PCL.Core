@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl;
+namespace PCL.Core.Minecraft.Instance.Impl;
 
 /// <summary>
 /// 表示 Minecraft 实例中附加组件（如 OptiFine、Forge 等）的版本信息和安装状态。

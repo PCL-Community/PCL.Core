@@ -2,7 +2,7 @@
 using System.IO;
 using System.Windows.Shapes;
 using PCL.Core.App;
-using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Impl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Service;
 using PCL.Core.Minecraft.Launch.Utils;

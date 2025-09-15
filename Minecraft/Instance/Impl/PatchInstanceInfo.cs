@@ -8,7 +8,7 @@ using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl;
+namespace PCL.Core.Minecraft.Instance.Impl;
 
 /// <summary>
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。

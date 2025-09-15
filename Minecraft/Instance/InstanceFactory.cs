@@ -5,7 +5,7 @@ using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
-using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Impl;
 using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Instance;

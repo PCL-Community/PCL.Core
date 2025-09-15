@@ -809,12 +809,12 @@ public static class Files {
                 }
             }
 
-            if (errors.Length > 0) {
-                errors.Insert(0, $"实际校验地址：{localPath}\n");
-                return errors.ToString().TrimEnd();
+            if (errors.Length <= 0) {
+                return null;
             }
-
-            return null;
+            
+            errors.Insert(0, $"实际校验地址：{localPath}\n");
+            return errors.ToString().TrimEnd();
         } catch (Exception ex) {
             LogWrapper.Warn("Checker", $"检查文件出错: {ex}");
             return ex.ToString();

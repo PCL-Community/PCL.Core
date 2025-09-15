@@ -6,7 +6,7 @@ using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Handler.Info;
 using PCL.Core.Minecraft.Instance.Interface;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl;
+namespace PCL.Core.Minecraft.Instance.Impl;
 
 /// <summary>
 /// 管理以 Merge 类型 JSON 为基础的实例基础信息

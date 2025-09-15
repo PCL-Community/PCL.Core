@@ -3,7 +3,7 @@ using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl;
+namespace PCL.Core.Minecraft.Instance.Impl;
 
 public class ErrorInstance : IMcInstance {
     /// <summary>

@@ -1,5 +1,5 @@
 ﻿using PCL.Core.Minecraft.Folder;
-using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Impl;
 
 namespace PCL.Core.Minecraft.Instance.Interface;
 

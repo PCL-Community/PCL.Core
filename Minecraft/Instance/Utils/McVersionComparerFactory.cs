@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Impl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Utils;
 

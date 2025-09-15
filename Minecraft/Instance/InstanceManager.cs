@@ -9,7 +9,7 @@ using PCL.Core.App.Tasks;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Folder;
-using PCL.Core.Minecraft.Instance.InstanceImpl;
+using PCL.Core.Minecraft.Instance.Impl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Instance.Utils;
 using PCL.Core.Utils.Exts;

@@ -1,10 +1,4 @@
-﻿using System.Threading.Tasks;
-using PCL.Core.Minecraft.Launch.Modules;
-using PCL.Core.Minecraft.Launch.Services;
-using PCL.Core.Minecraft.Launch.State;
-using AuthenticationManager = System.Net.AuthenticationManager;
-
-namespace PCL.Core.Minecraft.Launch;
+﻿namespace PCL.Core.Minecraft.Launch;
 
 public static class LaunchOrchestrator
 {

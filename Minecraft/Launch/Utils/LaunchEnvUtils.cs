@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
@@ -47,8 +48,9 @@ public static class LaunchEnvUtils {
 
     private static void WriteResourceToFile(string resourceName, string path) {
         using var sourceStream = Basics.GetResourceStream(resourceName);
-        if (sourceStream == null)
+        if (sourceStream == null) {
             throw new FileNotFoundException($"资源 {resourceName} 未找到。");
+        }
 
         using var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096);
         sourceStream.CopyTo(fileStream);
@@ -62,5 +64,22 @@ public static class LaunchEnvUtils {
         var isRwEnabled = !Config.Launch.DisableRw && !Config.Instance.DisableRw[mcNoPatchesInstance.Path];
 
         return (isOldVersion || isSpecificVersion) && isRwEnabled;
+    }
+    
+    public static async Task<string> ExtractRetroWrapperAsync(IMcInstance instance) {
+        // RetroWrapper 释放
+        if (!NeedRetroWrapper(instance)) {
+            return string.Empty;
+        }
+        
+        var wrapperPath = Path.Combine(instance.Folder.Path, "libraries/retrowrapper/RetroWrapper.jar");
+        try {
+            await Files.WriteFileAsync(wrapperPath, Basics.GetResourceStream("Resources/retro-wrapper.jar"));
+            return wrapperPath;
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "RetroWrapper 释放失败");
+        }
+
+        return string.Empty;
     }
 }

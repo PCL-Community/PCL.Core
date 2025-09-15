@@ -12,7 +12,6 @@ public static class McLaunch {
         var launchCts = new CancellationTokenSource();
 
         try {
-
             return true;
         } finally {
             launchCts.Dispose(); // 确保在pipeline执行完成后释放

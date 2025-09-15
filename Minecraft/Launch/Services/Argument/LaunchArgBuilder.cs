@@ -124,15 +124,21 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         var argumentGame = Config.Instance.GameArgs[instance.Path];
         _arguments.Add(string.IsNullOrEmpty(argumentGame) ? Config.Launch.GameArgs : argumentGame);
 
+        return this;
+    }
+    
+    public async Task<string> Build() {
+        var result = string.Join(' ', _arguments);
+        
         // 替换参数
         var replaceArguments = await McLaunchArgumentsReplace();
         if (string.IsNullOrWhiteSpace(replaceArguments["${version_type}"])) {
-            _arguments = _arguments.Replace(" --versionType ${version_type}", "");
+            result = result.Replace(" --versionType ${version_type}", "");
             replaceArguments["${version_type}"] = "\"\"";
         }
 
         var finalArguments = "";
-        foreach (var argument in string.Join(' ', _arguments).Split(' ', StringSplitOptions.RemoveEmptyEntries)) {
+        foreach (var argument in result.Split(' ', StringSplitOptions.RemoveEmptyEntries)) {
             var tempArg = argument;
             foreach (var (key, value) in replaceArguments) {
                 tempArg = tempArg.Replace(key, value);
@@ -143,25 +149,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
             finalArguments += tempArg + " ";
         }
         finalArguments = finalArguments.TrimEnd();
-        return this;
-    }
-    
-    public string Build() {
-        var result = new StringBuilder();
-
-        if (jvmArguments.Count > 0) {
-            result.Append("-D ");
-            result.Append(string.Join(" ", jvmArguments));
-        }
-
-        if (otherArguments.Count > 0) {
-            if (result.Length > 0) {
-                result.Append(" ");
-            }
-            result.Append(string.Join(" ", otherArguments));
-        }
-
-        return result.ToString().Trim();
+        return finalArguments;
     }
 
     private async Task<Dictionary<string, string>> McLaunchArgumentsReplace() {
@@ -223,38 +211,34 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         GameArguments.Add("${assets_index_name}", McAssetsGetIndexName(instance));
 
         // 支持库参数
-        List<McLibToken> LibList = McLibListGet(instance, true);
-        loader.Output = LibList;
-        var CpStrings = new List<string>();
-        string OptiFineCp = null;
+        // List<McLibToken> LibList = McLibListGet(instance, true);
+        // loader.Output = LibList;
+        var cpStrings = new List<string>();
+        string optiFineCp = null;
 
         // RetroWrapper 释放
-        if (LaunchEnvUtils.NeedRetroWrapper(instance)) {
-            var wrapperPath = Path.Combine(instance.Folder.Path, "libraries/retrowrapper/RetroWrapper.jar");
-            try {
-                await Files.WriteFileAsync(wrapperPath, Basics.GetResourceStream("Resources/retro-wrapper.jar"));
-                CpStrings.Add(wrapperPath);
-            } catch (Exception ex) {
-                LogWrapper.Warn(ex, "RetroWrapper 释放失败");
-            }
-        }
+        cpStrings.Add(await LaunchEnvUtils.ExtractRetroWrapperAsync(instance));
 
+        // TODO: 等待实例下载部分实现
+        /*
         foreach (var library in LibList) {
             if (library.IsNatives) continue;
             if (library.Name != null && library.Name.Contains("com.cleanroommc:cleanroom:0.2")) {
                 // Cleanroom 的主 Jar 必须放在 ClassPath 第一位
-                CpStrings.Insert(0, library.LocalPath);
+                cpStrings.Insert(0, library.LocalPath);
             }
             if (library.Name != null && library.Name == "optifine:OptiFine") {
-                OptiFineCp = library.LocalPath;
+                optiFineCp = library.LocalPath;
             } else {
-                CpStrings.Add(library.LocalPath);
+                cpStrings.Add(library.LocalPath);
             }
         }
-        if (OptiFineCp != null) {
-            CpStrings.Insert(CpStrings.Count - 2, OptiFineCp); // OptiFine 总是需要放到倒数第二位
+        */
+        
+        if (optiFineCp != null) {
+            cpStrings.Insert(cpStrings.Count - 2, optiFineCp); // OptiFine 总是需要放到倒数第二位
         }
-        GameArguments.Add("${classpath}", string.Join(";", CpStrings));
+        GameArguments.Add("${classpath}", string.Join(";", cpStrings));
 
         return GameArguments;
     }

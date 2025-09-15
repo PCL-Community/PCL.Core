@@ -19,9 +19,12 @@ public static class RandomUtils {
     /// <exception cref="ArgumentNullException">当 <paramref name="collection"/> 为 null 时抛出。</exception>
     /// <exception cref="ArgumentException">当 <paramref name="collection"/> 为空时抛出。</exception>
     public static T PickRandom<T>(ICollection<T> collection) {
-        return collection.Count == 0 
-            ? throw new ArgumentException("集合不能为空", nameof(collection)) 
-            : collection.ElementAt(SharedRandom.Next(collection.Count));
+        if (collection.Count == 0)
+            throw new ArgumentException("集合不能为空", nameof(collection));
+        var index = SharedRandom.Next(collection.Count);
+        if (collection is IList<T> list)
+            return list[index];
+        return collection.Skip(index).First();
     }
 
     /// <summary>

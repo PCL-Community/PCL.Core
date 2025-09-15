@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Windows.Shapes;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.Interface;
@@ -35,18 +37,22 @@ public class LaunchWaitService(IMcInstance instance, JavaInfo selectedJava) {
         McLaunchUtils.Log("验证方式：" + McLoginLoader.Output.Type);
         */
         McLaunchUtils.Log("");
+        
+        var customEnvReplacer = new CustomEnvReplacer(instance, selectedJava);
 
         // 获取窗口标题
         var windowTitle = Config.Instance.Title[instance.Path];
-        if (string.IsNullOrEmpty(windowTitle) && !Setup.Get("VersionArgumentTitleEmpty", instance: McInstanceCurrent))
-            windowTitle = Setup.Get("LaunchArgumentTitle");
-        windowTitle = ArgumentReplace(windowTitle, false);
+        if (string.IsNullOrEmpty(windowTitle) && !Config.Instance.UseGlobalTitle[instance.Path])
+            windowTitle = Config.Launch.Title;
+        windowTitle = customEnvReplacer.ArgumentReplace(windowTitle);
 
         // JStack 路径
-        string JStackPath = McLaunchJavaSelected.JavaFolder + "\\jstack.exe";
+        var jStackPath = System.IO.Path.Combine(selectedJava.JavaFolder, "jstack.exe");
 
         // 初始化等待
-        Watcher Watcher = new Watcher(Loader, McInstanceCurrent, windowTitle, File.Exists(JStackPath) ? JStackPath : "", CurrentLaunchOptions.Test);
+        // TODO: 等待实现
+        /*
+        Watcher Watcher = new Watcher(Loader, McInstanceCurrent, windowTitle, File.Exists(jStackPath) ? jStackPath : "", CurrentLaunchOptions.Test);
         McLaunchWatcher = Watcher;
 
         // 显示实时日志
@@ -61,6 +67,7 @@ public class LaunchWaitService(IMcInstance instance, JavaInfo selectedJava) {
             FrmLogLeft.Add(Watcher);
             McLaunchUtils.Log("已显示游戏实时日志");
         }
+        
 
         // 等待
         while (Watcher.State == Watcher.MinecraftState.Loading) {
@@ -69,5 +76,6 @@ public class LaunchWaitService(IMcInstance instance, JavaInfo selectedJava) {
         if (Watcher.State == Watcher.MinecraftState.Crashed) {
             throw new Exception("$$");
         }
+        */
     }
 }

@@ -81,7 +81,8 @@ public class RunCustomService(IMcInstance instance, JavaInfo selectedJava, strin
             await Files.WriteFileAsync(
                 scriptPath,
                 McLaunchUtils.FilterAccessToken(scriptContent, 'F'),
-                encoding: encoding);
+                encoding: encoding,
+                cancelToken: cancellationToken);
 
             LogWrapper.Debug($"Launch script generated at: {scriptPath}");
         } catch (Exception ex) {

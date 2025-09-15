@@ -329,8 +329,8 @@ public static class Files {
     /// <param name="cancelToken">取消令牌</param>
     /// <returns>写入是否成功</returns>
     public static async Task<bool> WriteFileAsync(string filePath, Stream? stream, CancellationToken cancelToken = default) {
+        if (stream == null) return false;
         try {
-            ArgumentNullException.ThrowIfNull(stream);
             var fullPath = GetFullPath(filePath);
             var directoryName = Path.GetDirectoryName(fullPath);
             if (directoryName is null) {

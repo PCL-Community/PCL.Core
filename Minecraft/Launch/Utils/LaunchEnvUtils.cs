@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft.Instance;
 using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Launch.Utils;

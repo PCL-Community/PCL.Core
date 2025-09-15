@@ -6,15 +6,14 @@ using System.Linq;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
+using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
+namespace PCL.Core.Minecraft.Instance.InstanceImpl;
 
 /// <summary>
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。
 /// </summary>
 public class PatchInstanceInfo {
-    private Version? _mcVersion;
-
     private static readonly FrozenDictionary<string, string> PatchersImageMap =
         new Dictionary<string, string> {
             { "neoforge", "Blocks/NeoForge.png" },
@@ -32,20 +31,13 @@ public class PatchInstanceInfo {
 
     public string? McVersionStr => Patches.Find(p => p.Id == "game")?.Version;
 
-    public string FormattedVersion => InstanceInfoHandler.GetFormattedVersion(McVersionStr);
+    public string FormattedVersion => !string.IsNullOrEmpty(McVersionStr) ? InstanceInfoHandler.GetFormattedVersion(McVersionStr!) : string.Empty;
 
-    public bool IsNormalVersion => InstanceInfoHandler.IsNormalVersion(McVersionStr);
+    public bool IsNormalVersion => !string.IsNullOrEmpty(McVersionStr) && InstanceInfoHandler.IsNormalVersion(McVersionStr!);
     
     public McVersionType VersionType { get; set; } = McVersionType.Release;
     
-    public Version? McVersion {
-        get => _mcVersion ??= RefreshMcVersion();
-        set => _mcVersion = value;
-    }
-
-    private Version? RefreshMcVersion() {
-        return IsNormalVersion ? Version.Parse(McVersionStr) : null;
-    }
+    public Version? McVersion => IsNormalVersion ? Version.Parse(McVersionStr!) : null;
     
     /// <summary>
     /// 原版主版本号，如 12（对于 1.12.2），不可用为 -1。
@@ -78,11 +70,11 @@ public class PatchInstanceInfo {
 
     // 检查是否包含一组加载器中的任意一个
     public bool HasAnyPatch(IEnumerable<string> patcherIds) {
-        return patcherIds.Any(id => Patches.Any(p => p.Id!.Equals(id, StringComparison.OrdinalIgnoreCase)));
+        return patcherIds.Any(id => Patches.Any(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase)));
     }
 
     public PatchInfo? GetPatch(string patcherId) {
-        return Patches.FirstOrDefault(p => p.Id!.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
+        return Patches.FirstOrDefault(p => p.Id.Equals(patcherId, StringComparison.OrdinalIgnoreCase));
     }
 
     public string GetLogo() {

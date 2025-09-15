@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
-using PCL.Core.IO;
-using PCL.Core.Logging;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.Minecraft.Instance.Resources;
 

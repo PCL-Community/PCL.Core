@@ -1,9 +1,5 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.App.Tasks;
-using PCL.Core.Minecraft.Launch.Services;
-using PCL.Core.Minecraft.Launch.State;
 
 namespace PCL.Core.Minecraft.Launch;
 

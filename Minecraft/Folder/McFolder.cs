@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using PCL.Core.Minecraft.Instance;
-using PCL.Core.Minecraft.Instance.Interface;
 
 namespace PCL.Core.Minecraft.Folder;
 
@@ -10,11 +8,11 @@ namespace PCL.Core.Minecraft.Folder;
 /// </summary>
 public record McFolder(string Name, string Path, McFolderType Type) {
     public override string ToString() => Path;
-    
+
     /// <summary>
     /// 当前文件夹下的实例列表。
     /// </summary>
-    public InstanceManager InstanceList { get; set; }
+    public InstanceManager? InstanceList { get; set; }
 
     public virtual bool Equals(McFolder? other) =>
         other is not null && Name == other.Name && Path == other.Path && Type == other.Type;

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft.Instance.InstanceImpl.JsonBased.Patch;
+using PCL.Core.Minecraft.Instance.InstanceImpl;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Launch.Utils;
 

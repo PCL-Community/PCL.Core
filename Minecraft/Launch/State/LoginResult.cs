@@ -1,5 +1,5 @@
 ﻿namespace PCL.Core.Minecraft.Launch.State;
-
+/*
 /// <summary>
 /// Minecraft登录结果
 /// </summary>
@@ -61,3 +61,4 @@ public class LoginResult {
         return $"McLoginResult[Name={Name}, Type={Type}, Success={IsSuccess}]";
     }
 }
+*/

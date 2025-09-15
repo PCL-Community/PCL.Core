@@ -25,14 +25,14 @@ public class JavaSelectService(IMcInstance instance) {
     public async Task<JavaInfo> SelectBestJavaAsync() {
         var (minVersion, maxVersion) = GetJavaVersionRequirements();
 
-        var selectedJava = await SelectJavaByPriority(minVersion, maxVersion);
+        var selectedJava = await SelectJavaByPriorityAsync(minVersion, maxVersion);
         if (selectedJava != null) {
             McLaunchUtils.Log($"成功选择Java：{selectedJava}");
             return selectedJava;
         }
 
         McLaunchUtils.Log("未找到合适的Java，尝试自动下载");
-        var downloadedJava = await HandleJavaDownload(minVersion, maxVersion);
+        var downloadedJava = await HandleJavaDownloadAsync(minVersion, maxVersion);
 
         return downloadedJava ?? throw new InvalidOperationException("无法获取合适的Java版本");
     }
@@ -40,7 +40,7 @@ public class JavaSelectService(IMcInstance instance) {
     /// <summary>
     /// 按优先级选择Java：实例指定 > 全局指定 > 自动搜索
     /// </summary>
-    private async Task<JavaInfo?> SelectJavaByPriority(Version minVersion, Version maxVersion) {
+    private async Task<JavaInfo?> SelectJavaByPriorityAsync(Version minVersion, Version maxVersion) {
         LogWrapper.Info($"开始选择Java - 最低版本：{minVersion}，最高版本：{maxVersion}，实例：{instance.Name}");
 
         // 1. 优先使用实例指定的Java
@@ -61,13 +61,13 @@ public class JavaSelectService(IMcInstance instance) {
         }
 
         // 3. 自动搜索合适的Java
-        return await SearchSuitableJava(minVersion, maxVersion);
+        return await SearchSuitableJavaAsync(minVersion, maxVersion);
     }
 
     /// <summary>
     /// 处理Java自动下载逻辑
     /// </summary>
-    private async Task<JavaInfo?> HandleJavaDownload(Version minVersion, Version maxVersion) {
+    private async Task<JavaInfo?> HandleJavaDownloadAsync(Version minVersion, Version maxVersion) {
         var javaSpec = DetermineRequiredJavaSpec(minVersion, maxVersion);
 
         if (!ConfirmJavaDownload(javaSpec)) {
@@ -197,7 +197,7 @@ public class JavaSelectService(IMcInstance instance) {
     /// <summary>
     /// 自动搜索合适的Java
     /// </summary>
-    private static async Task<JavaInfo?> SearchSuitableJava(Version minVersion, Version maxVersion) {
+    private static async Task<JavaInfo?> SearchSuitableJavaAsync(Version minVersion, Version maxVersion) {
         var javaManager = JavaService.JavaManager;
         javaManager.CheckJavaAvailability();
 

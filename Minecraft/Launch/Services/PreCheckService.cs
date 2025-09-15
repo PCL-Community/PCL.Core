@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.App;
-using PCL.Core.App.Tasks;
 using PCL.Core.Minecraft.Folder;
 using PCL.Core.Minecraft.Instance.Interface;
 using PCL.Core.Minecraft.Launch.Utils;
@@ -72,7 +71,7 @@ public class PreCheckService(IMcInstance? instance) {
 
     private void ValidateInstance() {
         try {
-            instance.Load();
+            instance!.Load();
             if (instance.CardType == McInstanceCardType.Error) {
                 throw new InvalidOperationException($"Minecraft存在问题：{instance.Desc}");
             }

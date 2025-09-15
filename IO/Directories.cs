@@ -39,12 +39,34 @@ public static class Directories {
             var security = await Task.Run(() => directoryInfo.GetAccessControl(), cancellationToken);
             var rules = security.GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount));
 
-            // 检查当前用户是否有读写权限
-            var hasAccess = rules.Cast<FileSystemAccessRule>()
-                .Any(rule => rule.FileSystemRights.HasFlag(FileSystemRights.Write) &&
-                             rule.AccessControlType == AccessControlType.Allow);
+            // 检查当前用户是否有读写权限，优先考虑拒绝规则
+            var currentUser = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var principal = new System.Security.Principal.WindowsPrincipal(currentUser);
 
-            if (!hasAccess) {
+            bool isDenied = false;
+            bool isAllowed = false;
+
+            foreach (FileSystemAccessRule rule in rules)
+            {
+                if (!rule.FileSystemRights.HasFlag(FileSystemRights.Write))
+                    continue;
+
+                // 检查规则是否适用于当前用户或其组
+                if (principal.IsInRole(rule.IdentityReference.Value))
+                {
+                    if (rule.AccessControlType == AccessControlType.Deny)
+                    {
+                        isDenied = true;
+                        break; // 拒绝优先，直接返回
+                    }
+                    else if (rule.AccessControlType == AccessControlType.Allow)
+                    {
+                        isAllowed = true;
+                    }
+                }
+            }
+
+            if (isDenied || !isAllowed) {
                 return false;
             }
 

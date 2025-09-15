@@ -1,11 +1,11 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace PCL.Core.Utils;
 
 public static partial class UiHelper {
     // MONITOR_DPI_TYPE enum
-    private enum MONITOR_DPI_TYPE
-    {
+    private enum MONITOR_DPI_TYPE {
         MDT_EFFECTIVE_DPI = 0,
         MDT_ANGULAR_DPI = 1,
         MDT_RAW_DPI = 2,
@@ -33,10 +33,9 @@ public static partial class UiHelper {
     /// </summary>
     public static int GetSystemDpi() {
         // Get the primary monitor handle
-        IntPtr hMonitor = MonitorFromWindow(IntPtr.Zero, MONITOR_DEFAULTTOPRIMARY);
-        uint dpiX, dpiY;
+        var hMonitor = MonitorFromWindow(IntPtr.Zero, MONITOR_DEFAULTTOPRIMARY);
         // 0 is S_OK
-        int hr = GetDpiForMonitor(hMonitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out dpiX, out dpiY);
+        var hr = GetDpiForMonitor(hMonitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out var dpiX, out _);
         if (hr == 0)
             return (int)dpiX;
         // fallback to default DPI (96)

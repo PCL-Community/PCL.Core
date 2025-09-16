@@ -13,61 +13,6 @@ using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
 
-/// <summary>
-/// 增强的多线程下载器配置
-/// </summary>
-public class DownloadConfiguration
-{
-    /// <summary>
-    /// 线程数量
-    /// </summary>
-    public int ThreadCount { get; set; } = 4;
-    
-    /// <summary>
-    /// 分块大小
-    /// </summary>
-    public int ChunkSize { get; set; } = 1024 * 1024; // 1MB
-    
-    /// <summary>
-    /// 缓冲区大小
-    /// </summary>
-    public int BufferSize { get; set; } = 81920; // 80KB
-    
-    /// <summary>
-    /// 最大重试次数
-    /// </summary>
-    public int MaxRetries { get; set; } = 3;
-    
-    /// <summary>
-    /// 超时时间(毫秒)
-    /// </summary>
-    public int TimeoutMs { get; set; } = 30000;
-    
-    /// <summary>
-    /// 启用断点续传
-    /// </summary>
-    public bool EnableResumeSupport { get; set; } = true;
-    
-    /// <summary>
-    /// 速度限制 (字节/秒，0表示无限制)
-    /// </summary>
-    public long SpeedLimit { get; set; } = 0;
-    
-    /// <summary>
-    /// 启用连接池复用
-    /// </summary>
-    public bool EnableConnectionPooling { get; set; } = true;
-    
-    /// <summary>
-    /// 文件预分配
-    /// </summary>
-    public bool PreAllocateFile { get; set; } = true;
-    
-    /// <summary>
-    /// 启用详细日志
-    /// </summary>
-    public bool VerboseLogging { get; set; } = false;
-}
 
 /// <summary>
 /// 下载统计信息
@@ -146,10 +91,10 @@ public class SpeedController
 }
 
 /// <summary>
-/// 增强的多线程下载任务
+/// 多线程下载任务
 /// 支持断点续传、速度限制、连接池复用等高级功能
 /// </summary>
-public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResult>
+public class EnhancedMultiThreadDownloadTask : IObservableTaskStateSource, IObservableProgressSource
 {
     private const string LogModule = "EnhancedMultiThreadDownload";
     
@@ -175,26 +120,79 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
     
     public DownloadStatistics Statistics => _stats;
     
+    // 接口实现所需的字段和属性
+    private TaskState _state = TaskState.Waiting;
+    private double _progress = 0.0;
+    private readonly CancellationToken? _cancellationToken;
+    
+    // 接口实现 - IObservableTaskStateSource
+    public string Name { get; }
+    public string? Description { get; }
+    
+    public TaskState State
+    {
+        get => _state;
+        private set
+        {
+            var oldState = _state;
+            _state = value;
+            StateChanged?.Invoke(this, oldState, value);
+        }
+    }
+    
+    // 接口实现 - IObservableProgressSource
+    public double Progress
+    {
+        get => _progress;
+        private set
+        {
+            var oldProgress = _progress;
+            _progress = Math.Max(0, Math.Min(1, value));
+            ProgressChanged?.Invoke(this, oldProgress, _progress);
+        }
+    }
+    
+    // 接口实现 - 事件
+    public event StateChangedHandler<TaskState>? StateChanged;
+    public event StateChangedHandler<double>? ProgressChanged;
+    
+    // 显式接口实现
+    event StateChangedHandler<TaskState>? IStateChangedSource<TaskState>.StateChanged
+    {
+        add => StateChanged += value;
+        remove => StateChanged -= value;
+    }
+    
+    event StateChangedHandler<double>? IStateChangedSource<double>.StateChanged
+    {
+        add => ProgressChanged += value;
+        remove => ProgressChanged -= value;
+    }
+    
     /// <summary>
-    /// 创建增强的多线程下载任务
+    /// 创建多线程下载任务
     /// </summary>
     public EnhancedMultiThreadDownloadTask(
         Uri sourceUri,
         string targetPath,
         DownloadConfiguration? config = null,
         CancellationToken? cancellationToken = null)
-        : base($"增强下载 {Path.GetFileName(targetPath)}", cancellationToken, $"从 {sourceUri} 下载到 {targetPath}")
     {
         _sourceUri = sourceUri ?? throw new ArgumentNullException(nameof(sourceUri));
         _targetPath = Path.GetFullPath(targetPath);
         _tempPath = _targetPath + ".download";
         _config = config ?? new DownloadConfiguration();
         _speedController = new SpeedController(_config.SpeedLimit);
+        _cancellationToken = cancellationToken;
+        
+        // 设置任务信息
+        Name = $"下载 {Path.GetFileName(targetPath)}";
+        Description = $"从 {sourceUri} 下载到 {targetPath}";
         
         // 验证配置
         ValidateConfiguration();
         
-        LogWrapper.Info(LogModule, $"创建增强下载任务: {Name}, 配置: {_config.ThreadCount}线程, {_config.ChunkSize / 1024 / 1024}MB分块");
+        LogWrapper.Info(LogModule, $"创建下载任务: {Name}, 配置: {_config.ThreadCount}线程, {_config.ChunkSize / 1024 / 1024}MB分块");
     }
     
     private void ValidateConfiguration()
@@ -206,7 +204,10 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
         _config.TimeoutMs = Math.Max(5000, _config.TimeoutMs); // 最小5秒
     }
     
-    public override async Task<MultiThreadDownloadResult> RunAsync(params object[] objects)
+    /// <summary>
+    /// 执行下载任务
+    /// </summary>
+    public async Task<MultiThreadDownloadResult> RunAsync()
     {
         if (State != TaskState.Waiting)
             throw new InvalidOperationException($"任务已执行，当前状态: {State}");
@@ -217,10 +218,10 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
         
         try
         {
-            _internalCts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken ?? System.Threading.CancellationToken.None);
+            _internalCts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken ?? System.Threading.CancellationToken.None);
             var token = _internalCts.Token;
             
-            LogWrapper.Info(LogModule, $"开始增强下载: {_sourceUri} -> {_targetPath}");
+            LogWrapper.Info(LogModule, $"开始下载: {_sourceUri} -> {_targetPath}");
             
             // 启动速度计算定时器
             StartSpeedCalculationTimer();
@@ -379,7 +380,7 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
     }
     
     /// <summary>
-    /// 获取优化的HttpClient
+    /// 获取HttpClient
     /// </summary>
     private HttpClient GetHttpClient()
     {
@@ -396,7 +397,7 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
     }
     
     /// <summary>
-    /// 优化的多线程下载
+    /// 多线程下载
     /// </summary>
     private async Task DownloadMultiThreadAsync(CancellationToken token)
     {
@@ -410,16 +411,12 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
             downloadTasks.Add(task);
         }
         
-        // 启动进度更新任务
-        var progressTask = Task.Run(async () => await UpdateProgressAsync(token), token);
-        downloadTasks.Add(progressTask);
-        
         // 等待所有任务完成
         await Task.WhenAll(downloadTasks);
     }
     
     /// <summary>
-    /// 优化的下载工作线程
+    /// 下载工作线程
     /// </summary>
     private async Task OptimizedDownloadWorkerAsync(int workerId, CancellationToken token)
     {
@@ -452,7 +449,7 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
     }
     
     /// <summary>
-    /// 优化的分块下载
+    /// 分块下载
     /// </summary>
     private async Task DownloadChunkOptimizedAsync(HttpClient client, DownloadChunk chunk, byte[] buffer, int workerId, CancellationToken token)
     {
@@ -541,6 +538,14 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
             // 更新统计
             _stats.DownloadedBytes = Interlocked.Read(ref _totalDownloaded);
             _stats.ActiveThreads = _activeChunks.Count;
+            
+            // 实时更新进度 - Task机制会自动读取Progress属性
+            if (_totalSize > 0)
+            {
+                var totalDownloaded = Interlocked.Read(ref _totalDownloaded);
+                var currentProgress = 0.1 + (0.85 * totalDownloaded / _totalSize);
+                Progress = Math.Min(currentProgress, 0.95);
+            }
         }
     }
     
@@ -583,30 +588,6 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
         }
     }
     
-    /// <summary>
-    /// 更新进度
-    /// </summary>
-    private async Task UpdateProgressAsync(CancellationToken token)
-    {
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                if (_totalSize > 0)
-                {
-                    var totalDownloaded = Interlocked.Read(ref _totalDownloaded);
-                    var currentProgress = 0.1 + (0.85 * totalDownloaded / _totalSize);
-                    Progress = Math.Min(currentProgress, 0.95);
-                }
-                
-                await Task.Delay(200, token); // 每200ms更新一次
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-        }
-    }
     
     /// <summary>
     /// 获取文件信息
@@ -742,7 +723,12 @@ public class EnhancedMultiThreadDownloadTask : TaskBase<MultiThreadDownloadResul
             _bufferPool.Return(buffer);
         }
         
+        // 设置完成状态
+        Progress = 1.0;
+        State = TaskState.Completed;
         _stats.EndTime = DateTime.Now;
+        
+        LogWrapper.Info(LogModule, $"单线程下载完成: 大小={_totalSize:N0} bytes, 耗时={_stats.ElapsedTime.TotalSeconds:F1}s");
         return CreateSuccessResult();
     }
     

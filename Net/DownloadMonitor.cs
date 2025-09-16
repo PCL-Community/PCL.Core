@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -323,7 +324,7 @@ public class DownloadMonitor : IDisposable
     private void UpdateActiveDownloadStats()
     {
         // 这里可以从实际的下载任务中更新统计信息
-        // 暂时保持空实现，实际使用时需要与具体的下载任务集成
+        // TODO:暂时保持空实现，实际使用时需要与具体的下载任务集成
     }
     
     /// <summary>
@@ -487,21 +488,114 @@ public class DownloadMonitor : IDisposable
         return recommendations;
     }
     
-    /// <summary>
-    /// 获取CPU使用率（简化实现）
-    /// </summary>
-    private double GetCpuUsage()
+    private static readonly PerformanceCounter? _cpuCounter;
+    private static readonly PerformanceCounter? _memoryCounter;
+    private static readonly Process _currentProcess = Process.GetCurrentProcess();
+    private DateTime _lastCpuTime = DateTime.UtcNow;
+    private TimeSpan _lastProcessorTime = _currentProcess.TotalProcessorTime;
+    
+    static DownloadMonitor()
     {
-        // 实际实现应该使用PerformanceCounter或其他系统API
-        return 0.0;
+        try
+        {
+            _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            _memoryCounter = new PerformanceCounter("Memory", "Available MBytes");
+            // Initialize CPU counter (first call returns 0)
+            _cpuCounter.NextValue();
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Warn("DownloadMonitor", $"无法初始化性能计数器: {ex.Message}");
+        }
     }
     
     /// <summary>
-    /// 获取内存使用量（简化实现）
+    /// 获取CPU使用率
+    /// </summary>
+    private double GetCpuUsage()
+    {
+        try
+        {
+            // 先使用方法1:使用PerformanceCounter（Windows系统）
+            if (_cpuCounter != null)
+            {
+                return _cpuCounter.NextValue();
+            }
+            
+            // 再使用方法2:手动计算当前进程CPU使用率
+            var currentTime = DateTime.UtcNow;
+            var currentProcessorTime = _currentProcess.TotalProcessorTime;
+            
+            var cpuUsedMs = (currentProcessorTime - _lastProcessorTime).TotalMilliseconds;
+            var totalMsPassed = (currentTime - _lastCpuTime).TotalMilliseconds;
+            var cpuUsageTotal = cpuUsedMs / (Environment.ProcessorCount * totalMsPassed);
+            
+            _lastCpuTime = currentTime;
+            _lastProcessorTime = currentProcessorTime;
+            
+            return Math.Max(0, Math.Min(100, cpuUsageTotal * 100));
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Debug("DownloadMonitor", $"获取CPU使用率失败: {ex.Message}");
+            return 0.0;
+        }
+    }
+    
+    /// <summary>
+    /// 获取内存使用量
     /// </summary>
     private long GetMemoryUsage()
     {
-        return GC.GetTotalMemory(false);
+        try
+        {
+            // 获取当前进程的工作集内存
+            _currentProcess.Refresh();
+            var workingSet = _currentProcess.WorkingSet64;
+            
+            // 获取.NET管理的内存
+            var managedMemory = GC.GetTotalMemory(false);
+            
+            // 获取进程私有内存
+            var privateMemory = _currentProcess.PrivateMemorySize64;
+            
+            // 返回工作集内存（实际物理内存使用量）
+            return workingSet;
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Debug("DownloadMonitor", $"获取内存使用量失败: {ex.Message}");
+            // 降级到GC内存统计
+            return GC.GetTotalMemory(false);
+        }
+    }
+    
+    /// <summary>
+    /// 获取详细内存信息
+    /// </summary>
+    public (long WorkingSet, long PrivateMemory, long ManagedMemory, long AvailableMemory) GetDetailedMemoryInfo()
+    {
+        try
+        {
+            _currentProcess.Refresh();
+            var workingSet = _currentProcess.WorkingSet64;
+            var privateMemory = _currentProcess.PrivateMemorySize64;
+            var managedMemory = GC.GetTotalMemory(false);
+            
+            long availableMemory = 0;
+            if (_memoryCounter != null)
+            {
+                availableMemory = (long)_memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
+            }
+            
+            return (workingSet, privateMemory, managedMemory, availableMemory);
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Debug("DownloadMonitor", $"获取详细内存信息失败: {ex.Message}");
+            var managedMemory = GC.GetTotalMemory(false);
+            return (managedMemory, managedMemory, managedMemory, 0);
+        }
     }
     
     /// <summary>

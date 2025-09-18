@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -18,7 +19,7 @@ public class HttpRequestBuilder
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
     private bool _addLauncherHeader = true;
     private bool _doLog = true;
-    private Version _requestVersion = HttpVersion.Version30;
+    private Version _requestVersion = HttpVersion.Version20;
 
     public HttpRequestBuilder(string url, HttpMethod method)
     {
@@ -59,7 +60,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="key"></param>
     /// <param name="value"></param>
@@ -71,7 +72,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="cookies"></param>
     /// <returns></returns>
@@ -213,7 +214,7 @@ public class HttpRequestBuilder
         _request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
+            .ExecuteAsync(async () => await client.SendAsync(_request.Clone(), _completionOption));
         var responseUri = responseMessage.RequestMessage?.RequestUri;
         if (responseUri != null && _request.RequestUri != responseUri) _makeLog($"已重定向至 {responseUri}");
         _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");

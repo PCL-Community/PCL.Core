@@ -15,6 +15,7 @@ public static partial class Config
     {
         [ConfigItem<bool>("HintDownloadThread", false)] public partial bool DownloadThreadCount { get; set; }
         [ConfigItem<int>("HintNotice", 0)] public partial int Notice { get; set; }
+        [ConfigItem<bool>("HintRenderer", false)] public partial bool Renderer { get; set; }
         [ConfigItem<int>("HintDownload", 0)] public partial int Download { get; set; }
         [ConfigItem<bool>("HintInstallBack", false)] public partial bool InstallPageBack { get; set; }
         [ConfigItem<bool>("HintHide", false)] public partial bool HideGameInstance { get; set; }
@@ -249,6 +250,7 @@ public static partial class Config
         [ConfigItem<bool>("LaunchAdvanceDisableRW", false, ConfigSource.Local)] public partial bool DisableRw { get; set; }
         [ConfigItem<bool>("LaunchAdvanceGraphicCard", true)] public partial bool SetGpuPreference { get; set; }
         [ConfigItem<bool>("LaunchAdvanceNoJavaw", false)] public partial bool DontUseJavaw { get; set; }
+        [ConfigItem<int>("LaunchAdvanceRenderer", 0 ,ConfigSource.Local)] public partial int Renderer { get; set; }
         [ConfigItem<string>("LaunchArgumentTitle", "", ConfigSource.Local)] public partial string Title { get; set; }
         [ConfigItem<string>("LaunchArgumentInfo", "PCL", ConfigSource.Local)] public partial string TypeInfo { get; set; }
         [ConfigItem<string>("LaunchArgumentJavaSelect", "")] public partial string SelectedJava { get; set; }

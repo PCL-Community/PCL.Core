@@ -15,16 +15,7 @@ public class SHA1Provider : IHashProvider
         var originalPosition = input.Position;
         try
         {
-
-            using var hash = SHA1.Create();
-            var res = hash.ComputeHash(input);
-            var sb = new StringBuilder(Length);
-            foreach (var b in res)
-            {
-                sb.Append(b.ToString("x2"));
-            }
-
-            return sb.ToString();
+            return HashResultHandler.ConvertResultToString(SHA1.HashData(input), Length);
         }
         catch (Exception e)
         {
@@ -36,7 +27,9 @@ public class SHA1Provider : IHashProvider
             input.Position = originalPosition;
         }
     }
-    public string ComputeHash(byte[] input) => ComputeHash(new MemoryStream(input));
+    public string ComputeHash(byte[] input) => HashResultHandler.ConvertResultToString(SHA1.HashData(input), Length);
+    public string ComputeHash(ReadOnlySpan<byte> input) => HashResultHandler.ConvertResultToString(SHA1.HashData(input), Length);
+
     public string ComputeHash(string input, Encoding? en = null) => ComputeHash(
         en == null
             ? Encoding.UTF8.GetBytes(input)

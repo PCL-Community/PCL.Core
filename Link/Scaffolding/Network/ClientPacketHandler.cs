@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PCL.Core.Link.Scaffolding;
+namespace PCL.Core.Link.Scaffolding.Network;
 
 public class ClientPacketHandler : IDisposable
 {

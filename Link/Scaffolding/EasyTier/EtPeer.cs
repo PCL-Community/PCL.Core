@@ -1,6 +1,6 @@
 ﻿namespace PCL.Core.Link.Scaffolding.EasyTier;
 
-public class Network
+public class EtPeer
 {
     
 }

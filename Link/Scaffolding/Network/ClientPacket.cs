@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Link.Scaffolding;
+namespace PCL.Core.Link.Scaffolding.Network;
 
 public class ClientPacket
 {

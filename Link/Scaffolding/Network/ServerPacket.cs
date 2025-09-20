@@ -2,7 +2,7 @@
 using System.Buffers.Binary;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Link.Scaffolding;
+namespace PCL.Core.Link.Scaffolding.Network;
 
 public class ServerPacket
 {

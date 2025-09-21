@@ -106,7 +106,7 @@ public static class LobbyController
             LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
         }
 
-        var etResult = ETController.Launch(isHost, hostname: playerName);
+        var etResult = ETController.Launch(isHost, playerName);
         if (etResult == 1)
         {
             return 1;

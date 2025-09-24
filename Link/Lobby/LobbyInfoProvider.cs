@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Linq;
 using System.Numerics;
 using PCL.Core.App;
 using PCL.Core.Link.Natayark;
@@ -6,6 +7,7 @@ using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
+using static PCL.Core.Link.Scaffolding.SCFController;
 
 namespace PCL.Core.Link.Lobby;
 
@@ -61,28 +63,76 @@ public static class LobbyInfoProvider
             LogWrapper.Error("Link", "无效的大厅编号: " + code);
             return null;
         }
-
-        if (code.Split("-".ToCharArray()).Length != 5) // PCL CE 大厅
+        
+        // Scaffolding 大厅 (以 U/ 开头, 4段)
+        if (code.StartsWith("U/"))
         {
             try
             {
-                var info = code.FromB32ToB10();
+                var infoList = code[2..].Split('-');
+                if (infoList.Length != 4 || infoList.Any(s => s.Length != 4))
+                {
+                    LogWrapper.Error("Link", "无效的 Scaffolding 大厅编号格式: " + code);
+                    return null;
+                }
+                
+                // 验证字符集和校验和
+                const string validChars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 排除I,O
+                var fullCode = string.Join("", infoList);
+                
+                // 检查字符有效性
+                foreach (var c in fullCode.Where(c => !validChars.Contains(c)))
+                {
+                    LogWrapper.Error("Link", "大厅编号包含无效字符: " + c);
+                    return null;
+                }
+
+                // 计算校验和 (所有字符映射值按小端序组合成整数后，必须能被7整除)
+                long checksum = 0;
+                for (int i = 0; i < fullCode.Length; i++)
+                {
+                    int charValue = validChars.IndexOf(fullCode[i]);
+                    checksum += charValue * (long)Math.Pow(34, i);
+                }
+                
+                if (checksum % 7 != 0)
+                {
+                    LogWrapper.Error("Link", "大厅编号校验和验证失败: " + code);
+                    return null;
+                }
+
+                // 提取网络名和密钥
+                // 格式：U/NNNN-NNNN-SSSS-SSSS
+                // 网络名：scaffolding-mc-NNNN-NNNN
+                // 网络密钥：SSSS-SSSS
+                var networkName = $"scaffolding-mc-{infoList[0]}-{infoList[1]}";
+                var networkSecret = $"{infoList[2]}-{infoList[3]}";
+                
+                TargetSCFLobby = new SCFLobbyInfo // TODO: 解决ET轮询获取主机信息的问题
+                { 
+                    Port = 0,
+                    Ip = null
+                };
+
                 return new LobbyInfo
                 {
                     OriginalCode = code,
-                    NetworkName = info[..8],
-                    NetworkSecret = info[8..10],
-                    Port = int.Parse(info[10..]),
-                    Type = LobbyType.PCLCE,
-                    Ip = "10.114.51.41"
+                    NetworkName = networkName,
+                    NetworkSecret = networkSecret,
+                    Port = 0, // 游戏端口需要通过SCF协议获取
+                    Type = LobbyType.Scaffolding,
+                    Ip = null, // IP地址需要通过SCF协议获取
                 };
             }
             catch (Exception ex)
             {
-                LogWrapper.Error(ex, "Link", "大厅编号解析失败，可能是无效的 PCL CE 大厅编号: " + code);
+                LogWrapper.Error(ex, "Link", "大厅编号解析失败，可能是无效的 Scaffolding 大厅编号: " + code);
+                return null;
             }
         }
-        else // 陶瓦
+        
+        // 陶瓦大厅 (5段)
+        if (code.Split('-').Length == 5)
         {
             var matches = code.RegexSearch(RegexPatterns.TerracottaId);
             if (matches.Count == 0)
@@ -118,6 +168,31 @@ public static class LobbyInfoProvider
                 };
             }
         }
+        
+        // PCL CE 大厅 (10位 Base32)
+        if (code.Length == 10)
+        {
+            try
+            {
+                var info = code.FromB32ToB10();
+                return new LobbyInfo
+                {
+                    OriginalCode = code,
+                    NetworkName = info[..8],
+                    NetworkSecret = info[8..10],
+                    Port = int.Parse(info[10..]),
+                    Type = LobbyType.PCLCE,
+                    Ip = "10.114.51.41"
+                };
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "Link", "大厅编号解析失败，可能是无效的 PCL CE 大厅编号: " + code);
+                return null;
+            }
+        }
+        
+        LogWrapper.Error("Link", "未知的大厅编号: " + code);
         return null;
     }
 

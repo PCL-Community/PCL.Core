@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -14,6 +16,26 @@ namespace PCL.Core.Link.Scaffolding;
 
 public static class SCFController
 {
+    public class SCFLobbyInfo
+    {
+        public required IPAddress Ip { get; init; }
+        public required int Port { get; init; }
+        public List<string> Protocols { get; set; }
+    }
+    
+    /// <summary>
+    /// 目标 SCF 大厅
+    /// </summary>
+    public static SCFLobbyInfo? TargetSCFLobby { get; set; }
+    
+    private static readonly List<string> _SupportedProtocols =
+    [
+        "c:ping",
+        "c:protocols",
+        "c:server_port",
+        "c:player_ping",
+        "c:player_profile_list"
+    ];
     private static bool _isHost;
     private static Socket? _socket;
     private static CancellationTokenSource? _cts;
@@ -85,6 +107,13 @@ public static class SCFController
             SendBufferSize = 8192
         };
         var port = NetworkHelper.NewTcpPort();
+        TargetSCFLobby = new SCFLobbyInfo
+        {
+            Ip = IPAddress.Loopback,
+            Port = port,
+            Protocols = _SupportedProtocols
+        };
+        
         _socket.Bind(new IPEndPoint(IPAddress.Loopback, port));
         _socket.Listen(100);
         LogWrapper.Info("Link", $"scaffolding 主机已启动，端口 {port}");
@@ -170,15 +199,11 @@ public static class SCFController
         {
             throw new Exception("无法作为主机启动客户端");
         }
-        if (TargetLobby == null)
+        if (TargetSCFLobby == null)
         {
             throw new Exception("未选择目标大厅");
         }
-        if (TargetLobby.Ip == null)
-        {
-            throw new Exception("目标大厅 IP 地址无效");
-        }
-        var hostEndpoint = new IPEndPoint(IPAddress.Parse(TargetLobby.Ip), 0); // TODO 需要解析主机HostName里面的端口信息
+        var hostEndpoint = new IPEndPoint(TargetSCFLobby.Ip, TargetSCFLobby.Port); // TODO 同 ParseCode 方法中的 TODO
         
         _socket = new Socket(SocketType.Stream, ProtocolType.Tcp)
         {
@@ -192,58 +217,72 @@ public static class SCFController
         // 开始启动客户端循环
         _cts = new CancellationTokenSource();
         _ = Task.Run(() => _ClientLoopAsync(_cts.Token), _cts.Token);
-        _ = Task.Run(async () =>
+        _ = Task.Run(() => _InitClientAsync(_cts.Token), _cts.Token);
+    }
+    
+    private static async Task _InitClientAsync(CancellationToken token)
+    {
+        if (TargetSCFLobby == null)
         {
-            var retries = 0;
-            while (_cts.Token.IsCancellationRequested && retries <= 10)
+            throw new Exception("未选择目标大厅");
+        }
+        var retries = 0;
+        while (!token.IsCancellationRequested && retries <= 10)
+        {
+            // 获取主机支持的协议
+            var response = await _SendToHostAsync(token, "c:protocols", string.Join("\0", _SupportedProtocols));
+            if (response != null)
             {
-                // 获取主机支持的协议
-                var protocols = "c:ping\0c:protocols\0c:server_port\0c:player_ping\0c:player_profile_list";
-                var response = await _SendToHostAsync(_cts.Token, "c:protocols", protocols);
-                if (response != null)
+                if (response.StatusCode != 200)
                 {
-                    if (response.StatusCode != 200)
-                    {
-                        LogWrapper.Warn("Link", $"主机响应异常，状态码: {response.StatusCode}");
-                    }
-                    else
-                    {
-                        var serverProtocols = Encoding.UTF8.GetString(response.Body).Split('\0', StringSplitOptions.RemoveEmptyEntries);
-                        LogWrapper.Info("Link", $"收到主机响应, 状态: {response.StatusCode}, 支持的协议: {string.Join(", ", serverProtocols)}");
-                        
-                        // TODO 储存或处理主机支持的协议
-                    }
+                    LogWrapper.Warn("Link", $"主机响应异常，状态码: {response.StatusCode}");
                 }
                 else
                 {
-                    retries++;
-                    LogWrapper.Warn("Link", $"未收到主机响应, 再尝试 { 10 - retries } 次");
-                    await Task.Delay(1000, _cts.Token);
-                    continue;
+                    var serverProtocols = Encoding.UTF8.GetString(response.Body).Split('\0', StringSplitOptions.RemoveEmptyEntries).ToList();
+                    LogWrapper.Info("Link", $"收到主机响应, 状态: {response.StatusCode}, 支持的协议: {string.Join(", ", serverProtocols)}");
+
+                    TargetSCFLobby.Protocols = serverProtocols.Intersect(_SupportedProtocols).ToList();
                 }
-            
-                // 获取服务器端口
-                response = await _SendToHostAsync(_cts.Token, "c:server_port", string.Empty);
-                if (response != null)
-                {
-                    if (response.StatusCode != 200)
-                    {
-                        LogWrapper.Warn("Link", response.StatusCode == 32 ? "主机服务器未开启" : $"主机响应异常，状态码: {response.StatusCode}");
-                    }
-                    else
-                    {
-                        // TODO 大端序数字转换不会写, 到时候再说
-                        break; // 成功获取端口后退出重试循环
-                    }
-                }
+                retries = 0;
             }
-        }, _cts.Token);
+            else
+            {
+                retries++;
+                LogWrapper.Warn("Link", $"未收到主机响应, 再尝试 { 10 - retries } 次");
+                try
+                {
+                    await Task.Delay(1000, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                continue;
+            }
+            
+            // 获取服务器端口
+            response = await _SendToHostAsync(token, "c:server_port", string.Empty);
+            if (response != null)
+            {
+                if (response.StatusCode != 200)
+                {
+                    LogWrapper.Warn("Link", response.StatusCode == 32 ? "主机服务器未开启" : $"主机响应异常，状态码: {response.StatusCode}");
+                }
+                else
+                {
+                    // TODO 大端序数字转换不会写, 到时候再说
+                    break; // 成功获取端口后退出重试循环
+                }
+                retries = 0;
+            }
+        }
     }
 
     private static async Task _ClientLoopAsync(CancellationToken token)
     {
         var retries = 0;
-        while (token.IsCancellationRequested && retries <= 10)
+        while (!token.IsCancellationRequested && retries <= 10)
         {
             var body = new JsonObject
             {
@@ -271,10 +310,24 @@ public static class SCFController
             {
                 retries++;
                 LogWrapper.Warn("Link", $"未收到主机响应, 再尝试 { 10 - retries } 次");
-                await Task.Delay(1000, token);
+                try
+                {
+                    await Task.Delay(1000, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
                 continue;
             }
-            await Task.Delay(5000, token);
+            try
+            {
+                await Task.Delay(5000, token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
     #region 发送数据到主机
@@ -310,7 +363,7 @@ public static class SCFController
             {
                 return null;
             }
-            var response = new byte[1024];
+            var response = new byte[8192];
             await _socket.ReceiveAsync(response, token);
             var responsePacket = ServerPacket.From(response);
             return responsePacket;

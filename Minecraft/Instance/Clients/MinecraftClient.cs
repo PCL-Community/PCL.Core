@@ -17,9 +17,13 @@ using PCL.Core.IO;
 
 namespace PCL.Core.Minecraft.Instance.Clients;
 
-public class MinecraftClient : IClient
+public class MinecraftClient : ClientBase
 {
     public static JsonNode? VersionList;
+    private Version? _version;
+    private JsonNode? _versionJson;
+    private string? _jsonUrl;
+    private string? _jsonHash;
     private const string Official = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
     private const string BmclApi = "https://bmclapi2.bangbang93.com/mc/game/version_manifest_v2.json";
     private const string AssetsBaseUri = "https://resources.download.minecraft.net";
@@ -35,7 +39,7 @@ public class MinecraftClient : IClient
         .Replace("piston-meta.mojang.com", "bmclapi2.bangbang93.com")
         .Replace("libraries.minecraft.net", "bmclapi2.bangbang93.com/maven")
         .Replace("pistom-data.mojang.com", "bmclapi2.bangbang93.com")
-        .Replace(AssetsBaseUri,"https://bmclapi2.bangbang93.com/assets");
+        .Replace(AssetsBaseUri, "https://bmclapi2.bangbang93.com/assets");
         return Config.ToolConfigGroup.DownloadConfigGroup.VersionSourceSolution switch
         {
             0 => [uri, uri, mirror],
@@ -44,12 +48,12 @@ public class MinecraftClient : IClient
         };
     }
 
-    public static async Task<JsonNode?> GetVersionInfoAsync(string mcVersion)
+    public new static async Task<JsonNode?> GetVersionInfoAsync(string mcVersion)
     {
         if (VersionList is null) await UpdateVersionIndexAsync();
         return VersionList!["versions"]?.AsArray().Where(value => value?["id"]?.ToString() == mcVersion).First();
     }
-    public static async Task UpdateVersionIndexAsync()
+    public new static async Task UpdateVersionIndexAsync()
     {
         foreach (var source in _GetVersionSource())
         {
@@ -64,21 +68,19 @@ public class MinecraftClient : IClient
             }
         }
     }
-    public static async Task<string> GetJsonAsync(string mcVersion, string? exceptHash = null)
+    public override async Task<string> GetJsonAsync()
     {
-        var version = await GetVersionInfoAsync(mcVersion);
-        if (version is null) throw new VersionNotFoundException($"Version not found: {mcVersion}");
-        foreach (var source in _GetFileSource(version["url"]!.ToString()))
+
+        foreach (var source in _GetFileSource(_jsonUrl!.ToString()))
         {
             try
             {
                 var response = await HttpRequestBuilder.Create(source, HttpMethod.Get).SendAsync(true);
                 var content = await response.AsStringAsync();
-                exceptHash ??= version["sha1"]?.ToString();
-                if (!string.IsNullOrEmpty(exceptHash))
+                if (!string.IsNullOrEmpty(_jsonHash))
                 {
                     var hashResult = SHA1Provider.Instance.ComputeHash(content);
-                    if (hashResult != exceptHash) continue;
+                    if (string.Equals(hashResult, _jsonHash, StringComparison.OrdinalIgnoreCase)) continue;
                 }
                 return content;
             }
@@ -89,10 +91,14 @@ public class MinecraftClient : IClient
         }
         throw new HttpRequestException("Failed to download version json:All of source unavailable");
     }
-    public static List<NetFile> AnalysisLibrary(JsonNode versionJson)
+    public override async Task<IEnumerable<NetFile>> AnalyzeLibraryAsync()
     {
         var list = new List<NetFile>();
-        foreach (var library in versionJson["libraries"]!.AsArray())
+        if (_versionJson is null)
+        {
+            _versionJson = JsonNode.Parse(await GetJsonAsync());
+        }
+        foreach (var library in _versionJson!["libraries"]!.AsArray())
         {
             var rules = library?["rules"];
             // skip check when rules is null
@@ -143,35 +149,43 @@ public class MinecraftClient : IClient
         }
         return list;
     }
-    public static async Task<List<NetFile>?> AnalysisAssets(JsonNode versionJson)
+    public override Task<IEnumerable<NetFile>> AnalyzeMissingLibraryAsync()
     {
+        return base.AnalyzeMissingLibraryAsync();
+    }
+    public async Task<List<NetFile>> AnalyzeAssetsAsync(JsonNode versionJson)
+    {
+        await GetJsonAsync();
         var list = new List<NetFile>();
-        foreach (var asset in versionJson["object"])
+        foreach (var asset in versionJson["object"]!.AsObject())
         {
-            var hash = asset["hash"].ToString();
-            var size = asset["size"].GetValue<int>();
-            var pathSuffix = $"{hash.SubString(0, 1)}/{hash}";
+            var hash = asset!.Value!["hash"]!.ToString();
+            var size = asset!.Value!["size"]!.GetValue<int>();
+            var pathSuffix = $"{hash.Substring(0, 1)}/{hash}";
             var assetUri = $"{AssetsBaseUri}/{pathSuffix}";
             var path = $"assets/objects/{pathSuffix}";
-
-        }
-    }
-    public static async Task StartClientInstallAsync(string mcVersion, string path)
-    {
-        var versionJson = await GetJsonAsync(mcVersion);
-        var versionJsonNode = JsonNode.Parse(versionJson);
-        ArgumentNullException.ThrowIfNull(versionJsonNode);
-        var libraryList = AnalysisLibrary(versionJsonNode);
-        var downloader = new Downloader();
-        foreach (var library in libraryList)
-        {
-            foreach (var item in library.GetDownloadItem())
+            list.Add(new NetFile()
             {
-                downloader.AddItem(item);
-            }
+                Url = _GetFileSource(assetUri),
+                Path = path,
+                Algorithm = HashAlgorithm.sha1,
+                Hash = hash
+            });
         }
-        downloader.Start();
-
+        return list;
     }
-    
+    public static async Task<MinecraftClient> ParseAsync<T>(string mcVersion)
+    {
+        if (VersionList is null) await UpdateVersionIndexAsync();
+        var info = GetVersionInfoAsync(mcVersion);
+        var client = new MinecraftClient()
+        {
+            _version = new Version(mcVersion)
+        };
+        return client;
+    }
+    public override async Task ExecuteInstallerAsync(string path)
+    {
+        
+    }   
 }

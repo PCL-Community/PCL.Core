@@ -46,9 +46,6 @@ public static partial class KernelInterop
 
     [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
     private static extern int RtlGetVersion(ref RTL_OSVERSIONINFOEX lpVersionInformation);
-
-    [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
-    private static extern int RtlGetVersion(ref RTL_OSVERSIONINFOEX lpVersionInformation);
     
     /// <summary>
     /// Retrieve the kernel version number of the current operating system (unaffected by compatibility settings)

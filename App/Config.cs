@@ -301,7 +301,20 @@ public static partial class Config
         [ConfigItem<bool>("LogoCustom", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> IsLogoCustom { get; }
         [ConfigItem<string>("CustomInfo", "", ConfigSource.GameInstance)] public partial ArgConfig<string> CustomInfo { get; }
         [ConfigItem<string>("Info", "", ConfigSource.GameInstance)] public partial ArgConfig<string> Info { get; }
+        [ConfigItem<string>("ReleaseTime", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ReleaseTime { get; }
         [ConfigItem<int>("State", 0, ConfigSource.GameInstance)] public partial ArgConfig<int> State { get; }
+        [ConfigItem<string>("VersionFabric", "", ConfigSource.GameInstance)] public partial ArgConfig<string> FabricVersion { get; }
+        [ConfigItem<string>("VersionLegacyFabric", "", ConfigSource.GameInstance)] public partial ArgConfig<string> LegacyFabricVersion { get; }
+        [ConfigItem<string>("VersionQuilt", "", ConfigSource.GameInstance)] public partial ArgConfig<string> QuiltVersion { get; }
+        [ConfigItem<string>("VersionLabyMod", "", ConfigSource.GameInstance)] public partial ArgConfig<string> LabyModVersion { get; }
+        [ConfigItem<string>("VersionOptiFine", "", ConfigSource.GameInstance)] public partial ArgConfig<string> OptiFineVersion { get; }
+        [ConfigItem<bool>("VersionLiteLoader", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> HasLiteLoader { get; }
+        [ConfigItem<string>("VersionForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ForgeVersion { get; }
+        [ConfigItem<string>("VersionNeoForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> NeoForgeVersion { get; }
+        [ConfigItem<string>("VersionCleanroom", "", ConfigSource.GameInstance)] public partial ArgConfig<string> CleanroomVersion { get; }
+        [ConfigItem<string>("VersionOriginal", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> McVersion { get; }
+        [ConfigItem<int>("VersionOriginalMain", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMajor { get; }
+        [ConfigItem<int>("VersionOriginalSub", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMinor { get; }
         [ConfigItem<int>("VersionApiCode", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> SortCode { get; }
         [ConfigItem<string>("VersionModpackVersion", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackVersion { get; }
         [ConfigItem<string>("VersionModpackSource", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackSource { get; }

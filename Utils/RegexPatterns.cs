@@ -81,4 +81,12 @@ public static partial class RegexPatterns
     public static readonly Regex MotdCode = _MotdCode();
     [GeneratedRegex("(§[0-9a-fk-oAr]|#[0-9A-Fa-f]{6})", RegexOptions.Compiled)]
     private static partial Regex _MotdCode();
+
+    public static readonly Regex BroadcastMotd = _BroadcastMotd();
+    [GeneratedRegex(@"\[MOTD\](.*?)\[/MOTD\]", RegexOptions.Compiled)]
+    private static partial Regex _BroadcastMotd();
+
+    public static readonly Regex BroadcastAd = _BroadcastAd();
+    [GeneratedRegex(@"\[AD\](.*?)\[/AD\]", RegexOptions.Compiled)]
+    private static partial Regex _BroadcastAd();
 }

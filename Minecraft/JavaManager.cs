@@ -6,14 +6,17 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Win32;
+using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Folder;
+using PCL.Core.Minecraft.Instance;
 
 namespace PCL.Core.Minecraft;
 
 public class JavaManager
 {
-    private List<Java> _javas = [];
-    public List<Java> JavaList => [.. _javas];
+    private List<JavaInfo> _javas = [];
+    public List<JavaInfo> JavaList => [.. _javas];
 
     private void _SortJavaList()
     {
@@ -56,7 +59,7 @@ public class JavaManager
 
                 var ret = newJavaList
                     .Where(x => !x.Split(Path.DirectorySeparatorChar).Any(part => _ExcludeFolderName.Contains(part, StringComparer.OrdinalIgnoreCase)))
-                    .Select(Java.Parse).Where(x => x != null).Select(x => x!).ToList();
+                    .Select(JavaInfo.Parse).Where(x => x != null).Select(x => x!).ToList();
                 foreach (var item in ret)
                 {
                     if (oldJavaList.TryGetValue(item.JavaExePath, out var existing))
@@ -69,7 +72,7 @@ public class JavaManager
         await _scanTask;
     }
 
-    public void Add(Java j)
+    public void Add(JavaInfo j)
     {
         ArgumentNullException.ThrowIfNull(j);
         if (HasJava(j.JavaExePath))
@@ -83,7 +86,7 @@ public class JavaManager
         ArgumentNullException.ThrowIfNull(javaExe);
         if (HasJava(javaExe))
             return;
-        var temp = Java.Parse(javaExe);
+        var temp = JavaInfo.Parse(javaExe);
         if (temp == null)
             return;
         _javas.Add(temp);
@@ -104,7 +107,7 @@ public class JavaManager
     /// <param name="minVersion">最小版本号</param>
     /// <param name="maxVersion">最大版本号</param>
     /// <returns></returns>
-    public async Task<List<Java>> SelectSuitableJavaAsync(Version minVersion, Version maxVersion)
+    public async Task<List<JavaInfo>> SelectSuitableJava(Version minVersion, Version maxVersion)
     {
         if (_javas.Count == 0)
             await ScanJavaAsync();
@@ -114,7 +117,7 @@ public class JavaManager
             where j.IsStillAvailable && j.IsEnabled
                                      && j.JavaMajorVersion >= minMajorVersion && j.JavaMajorVersion <= maxMajorVersion
                                      && j.Version >= minVersion && j.Version <= maxVersion
-            orderby j.Version, j.IsJre, j.Brand
+            orderby j.IsJre, j.Brand
             select j).ToList();
     }
 
@@ -344,7 +347,7 @@ public class JavaManager
             }
             catch
             {
-                var temp = Java.Parse(cache.Path);
+                var temp = JavaInfo.Parse(cache.Path);
                 if (temp == null)
                     continue;
                 temp.IsEnabled = cache.IsEnable;

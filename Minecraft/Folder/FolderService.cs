@@ -2,6 +2,7 @@
 using PCL.Core.App;
 namespace PCL.Core.Minecraft.Folder;
 
+
 [LifecycleService(LifecycleState.Running)]
 public sealed class FolderService : GeneralService {
     private static LifecycleContext? _context;
@@ -20,7 +21,7 @@ public sealed class FolderService : GeneralService {
 
             _folderManager = new FolderManager();
 
-            Task.Run(async () => await _folderManager.McFolderListLoadAsync());
+            // Task.Run(async () => await _folderManager.McFolderListLoadAsync());
         }
     }
 }

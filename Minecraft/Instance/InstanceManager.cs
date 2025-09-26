@@ -33,8 +33,8 @@ public class InstanceManager(McFolder folder) {
             var versionPath = Path.Combine(folder.Path, "versions");
 
             await Directories.CheckPermissionWithExceptionAsync(versionPath, cancelToken);
-            foreach (var instance in Directory.GetDirectories(versionPath)) {
-                var mcInstance = await InstanceFactory.CreateInstanceAsync(instance, folder);
+            foreach (var path in Directory.GetDirectories(versionPath)) {
+                var mcInstance = await InstanceFactory.CreateInstanceAsync(path, folder);
                 if (mcInstance != null) {
                     McInstanceList.Add(mcInstance);
                 }

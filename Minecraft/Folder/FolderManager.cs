@@ -185,7 +185,7 @@ public class FolderManager {
 
             var resultJson = JsonSerializer.Serialize(profiles, Files.PrettierJsonOptions);
             await Files.WriteFileAsync(filePath, resultJson, encoding: Encodings.GB18030);
-            LogWrapper.Info($"[Minecraft] 已创建 launcher_profiles.json：{folder}");
+            LogWrapper.Info("Minecraft", $"已创建 launcher_profiles.json：{folder}");
         } catch (Exception ex) {
             LogWrapper.Warn(ex, $"创建 launcher_profiles.json 失败（{folder}）");
         }

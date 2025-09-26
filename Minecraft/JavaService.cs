@@ -1,17 +1,18 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using PCL.Core.App;
 
 namespace PCL.Core.Minecraft;
 
 [LifecycleService(LifecycleState.Loaded)]
-public sealed class JavaSerivce : GeneralService
+public sealed class JavaService : GeneralService
 {
     private static LifecycleContext? _context;
     public static LifecycleContext Context => _context!;
 
     /// <inheritdoc />
-    public JavaSerivce() : base("java", "Java服务")
+    public JavaService() : base("java", "Java管理")
     {
         _context = Lifecycle.GetContext(this);
     }
@@ -37,13 +38,13 @@ public sealed class JavaSerivce : GeneralService
             return;
         }
 
-        _javaManager.ScanJavaAsync().ContinueWith((_) =>
+        _javaManager.ScanJavaAsync().ContinueWith(_ =>
         {
             _SetCache(_javaManager.GetCache());
 
             var logInfo = string.Join("\n\t", _javaManager.JavaList);
             Context.Info($"Finished to scan java: {logInfo}");
-        });
+        }, TaskScheduler.Default);
     }
 
     private static List<JavaLocalCache> _GetCaches()

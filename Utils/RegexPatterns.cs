@@ -18,7 +18,7 @@ public static partial class RegexPatterns
     /// 换行符，包括 <c>\r\n</c> <c>\n</c> <c>\r</c> 三种。
     /// </summary>
     public static readonly Regex NewLine = _NewLine();
-    [GeneratedRegex(@"\r\n|\n|\r", RegexOptions.Compiled)]
+    [GeneratedRegex(@"\r\n|\n|\r")]
     private static partial Regex _NewLine();
 
     /// <summary>
@@ -29,7 +29,7 @@ public static partial class RegexPatterns
         @"^v?(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)" +
         @"(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?" +
         @"(?:\+(?<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$";
-    [GeneratedRegex(PatternSemVer, RegexOptions.ExplicitCapture | RegexOptions.Compiled)]
+    [GeneratedRegex(PatternSemVer, RegexOptions.ExplicitCapture)]
     private static partial Regex _SemVer();
 
     /// <summary>
@@ -37,7 +37,7 @@ public static partial class RegexPatterns
     /// </summary>
     public static readonly Regex HttpUri = _HttpUri();
     private const string PatternHttpUri = @"^https?://(?:\[[^\]\s]+\]|[^/\s?#:]+)(?::\d{1,5})?(?:/[^\s?#]*)?(?:\?[^\s#]*)?(?:#\S*)?$";
-    [GeneratedRegex(PatternHttpUri, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled)]
+    [GeneratedRegex(PatternHttpUri, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex _HttpUri();
 
     /// <summary>
@@ -50,14 +50,14 @@ public static partial class RegexPatterns
         @"|\[(?<ipv6>[0-9A-Fa-f:.]+)\]|(?:(?:[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?\.)+(?:[A-Za-z]{2,63}|xn--[" +
         @"A-Za-z0-9\-]{2,59})))(?::(?<port>6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3}))?" +
         @"(?<path>/[^\s?#]*)?(?:\?(?<query>[^\s#]*))?(?:#(?<fragment>[^\s]*))?$";
-    [GeneratedRegex(PatternFullHttpUri, RegexOptions.ExplicitCapture | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled)]
+    [GeneratedRegex(PatternFullHttpUri, RegexOptions.ExplicitCapture | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex _FullHttpUri();
 
     /// <summary>
     /// LastPending(_Xxx).log 路径。
     /// </summary>
     public static readonly Regex LastPendingLogPath = _LastPendingLogPath();
-    [GeneratedRegex(@"\\LastPending[_]?[^\\]*\.log$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"\\LastPending[_]?[^\\]*\.log$", RegexOptions.IgnoreCase)]
     private static partial Regex _LastPendingLogPath();
 
     /// <summary>
@@ -71,7 +71,7 @@ public static partial class RegexPatterns
     /// Minecraft 颜色代码，为 Hex 颜色代码，格式为 <c>#RRGGBB</c>。
     /// </summary>
     public static readonly Regex HexColor = _HexColor();
-    [GeneratedRegex("^#[0-9A-Fa-f]{6}$", RegexOptions.Compiled)]
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}$")]
     private static partial Regex _HexColor();
     
     /// <summary>
@@ -79,6 +79,41 @@ public static partial class RegexPatterns
     /// Matches legacy color/format codes (e.g., §a, §b, §k) and hexadecimal color codes (e.g., #FF0000).
     /// </summary>
     public static readonly Regex MotdCode = _MotdCode();
-    [GeneratedRegex("(§[0-9a-fk-oAr]|#[0-9A-Fa-f]{6})", RegexOptions.Compiled)]
+    [GeneratedRegex("(§[0-9a-fk-oAr]|#[0-9A-Fa-f]{6})")]
     private static partial Regex _MotdCode();
+    
+    /// <summary>
+    /// 匹配 Minecraft 正常版本号，如 1.20.4、1.19.3 等。
+    /// </summary>
+    public static readonly Regex McNormalVersion = _McNormalVersion();
+    [GeneratedRegex(@"^\d+\.\d+\.\d+$|^\d+\.\d+$")]
+    private static partial Regex _McNormalVersion();
+    
+    /// <summary>
+    /// 匹配 Minecraft 快照版本号，如 24w14a 等。
+    /// </summary>
+    public static readonly Regex McSnapshotVersion = _McSnapshotVersion();
+    [GeneratedRegex(@"(\d+)w(\d+)([a-z]?)")]
+    private static partial Regex _McSnapshotVersion();
+
+    /// <summary>
+    /// 匹配 Minecraft Indev 版本号，如 in-20091231-2、in-20100130 等。
+    /// </summary>
+    public static readonly Regex McIndevVersion = _McIndevVersion();
+    [GeneratedRegex(@"^in-(\d{8})(-(\d+))?$")]
+    private static partial Regex _McIndevVersion();
+
+    /// <summary>
+    /// 匹配 Minecraft Infdev 版本号，如 inf-20100611 等。
+    /// </summary>
+    public static readonly Regex McInfdevVersion = _McInfdevVersion();
+    [GeneratedRegex(@"^inf-(\d{8})(-(\d+))?$")]
+    private static partial Regex _McInfdevVersion();
+    
+    /// <summary>
+    /// 匹配 accessToken 内容。
+    /// </summary>
+    public static readonly Regex AccessToken = _AccessToken();
+    [GeneratedRegex("(?<=accessToken ([^ ]{5}))[^ ]+(?=[^ ]{5})")]
+    private static partial Regex _AccessToken();
 }

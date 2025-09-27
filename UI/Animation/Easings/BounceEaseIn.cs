@@ -6,6 +6,6 @@ public class BounceEaseIn : Easing
 {
     protected override double EaseCore(double progress)
     {
-        return 1 - BounceEaseUtils.Bounce(1 - progress);
+        return 1 - EaseUtils.Bounce(1 - progress);
     }
 }

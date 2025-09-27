@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,13 +13,19 @@ using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.BZip2;
 using PCL.Core.Logging;
 using PCL.Core.UI;
-using PCL.Core.Utils;
+using PCL.Core.Utils.Codecs;
 using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.IO;
 
 public static class Files {
+    public static readonly JsonSerializerOptions PrettierJsonOptions = new() {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
     /// <summary>
     /// 在指定路径创建一个指向目标文件的 .lnk 快捷方式。
     /// </summary>
@@ -59,6 +67,12 @@ public static class Files {
 
         // 保存 .lnk 文件
         link.Save();
+    }
+    
+    public static bool ArePathsEqual(string path1, string path2) {
+        var fullPath1 = Path.GetFullPath(path1).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullPath2 = Path.GetFullPath(path2).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(fullPath1, fullPath2, StringComparison.OrdinalIgnoreCase);
     }
 
     public static async Task<bool> ExportAsZipArchiveAsync(
@@ -236,6 +250,29 @@ public static class Files {
     }
 
     /// <summary>
+    /// 异步读取文件到流。
+    /// </summary>
+    /// <param name="filePath">文件路径（完整或相对）</param>
+    /// <param name="cancelToken">取消令牌</param>
+    /// <returns>包含文件内容的 MemoryStream，失败时返回空的 MemoryStream</returns>
+    public static async Task<MemoryStream> ReadFileToStreamOrEmptyAsync(string filePath, CancellationToken cancelToken = default) {
+        try {
+            var fullPath = GetFullPath(filePath);
+            if (!File.Exists(fullPath))
+                throw new FileNotFoundException(fullPath);
+
+            await using var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
+            var memoryStream = new MemoryStream();
+            await fileStream.CopyToAsync(memoryStream, cancelToken);
+            memoryStream.Position = 0; // 重置流位置以便后续读取
+            return memoryStream;
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, $"读取文件到流出错：{filePath}");
+            return new MemoryStream(); // 返回空的 MemoryStream
+        }
+    }
+
+    /// <summary>
     /// 写入字符串到文件，支持追加或覆盖，自动创建目录。
     /// </summary>
     /// <param name="filePath">文件路径（完整或相对）</param>
@@ -291,9 +328,9 @@ public static class Files {
     /// <param name="stream">要写入的流</param>
     /// <param name="cancelToken">取消令牌</param>
     /// <returns>写入是否成功</returns>
-    public static async Task<bool> WriteFileAsync(string filePath, Stream stream, CancellationToken cancelToken = default) {
+    public static async Task<bool> WriteFileAsync(string filePath, Stream? stream, CancellationToken cancelToken = default) {
+        if (stream == null) return false;
         try {
-            ArgumentNullException.ThrowIfNull(stream);
             var fullPath = GetFullPath(filePath);
             var directoryName = Path.GetDirectoryName(fullPath);
             if (directoryName is null) {
@@ -592,8 +629,7 @@ public static class Files {
     }
 
     #endregion
-    
-    
+
     /// <summary>
     /// 从剪切板粘贴文件或文件夹
     /// </summary>
@@ -637,5 +673,151 @@ public static class Files {
         }
 
         return count;
+    }
+
+    /// <summary>
+    /// 合并两个 JSON 对象，源 JSON 覆盖目标 JSON 的同名键，数组去重合并。
+    /// </summary>
+    /// <param name="target">目标 JSON 对象。</param>
+    /// <param name="source">源 JSON 对象，优先级高于目标对象。</param>
+    /// <returns>合并后的 JSON 对象。如果输入无效，返回源或目标的深拷贝。</returns>
+    /// <exception cref="ArgumentNullException">如果 target 和 source 均为 null，则抛出异常。</exception>
+    public static JsonNode MergeJson(JsonNode target, JsonNode source) {
+        if (target == null && source == null) {
+            throw new ArgumentNullException(nameof(target), "目标和源 JSON 不能同时为 null。");
+        }
+
+        if (target == null) {
+            return source.DeepClone();
+        }
+
+        if (target is not JsonObject targetObj || source is not JsonObject sourceObj) {
+            // 如果源是对象，优先返回源的深拷贝；否则返回目标的深拷贝
+            return source.DeepClone();
+        }
+
+        var result = (JsonObject)targetObj.DeepClone(); // 克隆以避免修改原始对象
+
+        foreach (var (key, sourceValue) in sourceObj) {
+            var targetValue = result[key];
+
+            if (sourceValue == null) {
+                // 忽略 null 值，保留目标值
+                continue;
+            }
+
+            if (sourceValue is JsonObject && targetValue is JsonObject) {
+                // 递归合并嵌套对象
+                result[key] = MergeJson(targetValue, sourceValue);
+            } else if (sourceValue is JsonArray sourceArray && targetValue is JsonArray targetArray) {
+                // 合并数组并去重
+                var uniqueValues = new HashSet<string>(StringComparer.Ordinal);
+                JsonArray mergedArray = [];
+
+                // 添加目标数组元素
+                foreach (var item in targetArray) {
+                    if (item == null) {
+                        continue;
+                    }
+                    var itemStr = item.ToJsonString();
+                    if (uniqueValues.Add(itemStr)) {
+                        mergedArray.Add(item.DeepClone());
+                    }
+                }
+
+                // 添加源数组元素（源覆盖目标）
+                foreach (var item in sourceArray) {
+                    if (item == null) {
+                        continue;
+                    }
+                    var itemStr = item.ToJsonString();
+                    if (uniqueValues.Add(itemStr)) {
+                        mergedArray.Add(item.DeepClone());
+                    }
+                }
+
+                result[key] = mergedArray;
+            } else {
+                // 直接覆盖（包括简单值、数组替换或其他类型）
+                result[key] = sourceValue.DeepClone();
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 检查文件。若成功则返回 null，失败则返回错误的描述文本，描述文本不以句号结尾。不会抛出错误。
+    /// </summary>
+    public static async Task<string?> CheckAsync(
+        string localPath,
+        long minSize = -1,
+        long actualSize = -1,
+        string? hash = null,
+        bool isJson = false) {
+        try {
+            LogWrapper.Debug("Checker", $"开始校验文件 {localPath}");
+            var info = new FileInfo(localPath);
+            if (!info.Exists) return $"文件不存在：{localPath}";
+
+            var fileSize = info.Length;
+            var errors = new StringBuilder();
+            var allowSizeMismatch = false; // 允许相信哈希正确但是大小不正确
+
+            if (!string.IsNullOrEmpty(hash)) {
+                var computedHash = hash.Length switch {
+                    < 35 => await GetFileMD5Async(localPath), // MD5
+                    64 => await GetFileSHA256Async(localPath), // SHA256
+                    _ => await GetFileSHA1Async(localPath) // SHA1 (40)
+                };
+
+                if (!string.Equals(hash, computedHash, StringComparison.OrdinalIgnoreCase)) {
+                    var hashType = hash.Length switch {
+                        < 35 => "MD5",
+                        64 => "SHA256",
+                        _ => "SHA1"
+                    };
+                    errors.AppendLine($"文件 {hashType} 应为 {hash}，实际为 {computedHash}");
+                } else {
+                    allowSizeMismatch = true;
+                }
+            }
+
+            // 检查实际大小
+            if (actualSize >= 0 && actualSize != fileSize && !allowSizeMismatch) {
+                var contentPreview = fileSize < 2000 ? await ReadAllTextOrEmptyAsync(localPath) : "";
+                errors.AppendLine($"文件大小应为 {actualSize} B，实际为 {fileSize} B" +
+                                  (string.IsNullOrEmpty(contentPreview) ? "" : $"，内容为 {contentPreview}"));
+            }
+
+            // 检查最小大小
+            if (minSize >= 0 && minSize > fileSize) {
+                var contentPreview = fileSize < 2000 ? await ReadAllTextOrEmptyAsync(localPath) : "";
+                errors.AppendLine($"文件大小应大于 {minSize} B，实际为 {fileSize} B" +
+                                  (string.IsNullOrEmpty(contentPreview) ? "" : $"，内容为 {contentPreview}"));
+            }
+
+            // JSON 检查
+            if (isJson) {
+                var content = await ReadAllTextOrEmptyAsync(localPath);
+                if (string.IsNullOrEmpty(content)) throw new Exception("读取到的文件为空");
+                try {
+                    using var document = JsonDocument.Parse(content);
+                    // 简单验证 JSON 有效性
+                } catch (JsonException ex) {
+                    throw new Exception("不是有效的 Json 文件", ex);
+                }
+            }
+
+            if (errors.Length <= 0) {
+                return null;
+            }
+            
+            errors.Insert(0, $"实际校验地址：{localPath}\n");
+            return errors.ToString().TrimEnd();
+        } catch (Exception ex) {
+            LogWrapper.Warn("Checker", $"检查文件出错: {ex}");
+            return ex.ToString();
+        }
     }
 }

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.VisualStudio.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils.OS;
 
@@ -67,6 +68,42 @@ public sealed class Lifecycle : ILifecycleService
             foreach (var item in _PendingLogs) Console.WriteLine(item.ComposeMessage());
         }
     }
+
+    // -- Joinable 任务管理 --
+    
+    /// <summary>
+    /// 公用 <see cref="JoinableTaskContext"/> 实例。
+    /// </summary>
+    // ReSharper disable once InconsistentNaming
+    public static JoinableTaskContext JTC { get; } = new();
+
+    private static readonly JoinableTaskFactory _TaskFactory = JTC.Factory;
+    private static readonly List<JoinableTask> _JoinableTasks = [];
+    
+    /// <summary>
+    /// 在当前生命周期运行一个异步方法，生命周期将会等待该方法结束。
+    /// </summary>
+    /// <param name="asyncMethod">异步方法</param>
+    public static void Run(Func<Task> asyncMethod)
+    {
+        lock (_JoinableTasks)
+        {
+            var awaitable = _TaskFactory.RunAsync(asyncMethod);
+            _JoinableTasks.Add(awaitable);
+        }
+    }
+    
+    /// <summary>
+    /// 以可等待的方式运行一个异步方法，生命周期不会等待该方法结束。
+    /// </summary>
+    /// <param name="asyncMethod">异步方法</param>
+    public static Task RunAsync(Func<Task> asyncMethod) => _TaskFactory.RunAsync(asyncMethod).Task;
+    
+    /// <summary>
+    /// 在同步上下文运行一个异步方法，将会阻塞当前线程，生命周期不会等待该方法结束。
+    /// </summary>
+    /// <param name="asyncMethod">异步方法</param>
+    public static void RunSync(Func<Task> asyncMethod) => _TaskFactory.Run(asyncMethod);
 
     // -- 服务管理 --
 
@@ -183,6 +220,14 @@ public sealed class Lifecycle : ILifecycleService
         var taskList = asyncInstances.Select(
             instance => Task.Run(() => _StartService(instance))).ToArray();
         Task.WaitAll(taskList);
+        // 等待当前周期的所有 JoinableTask 结束
+        JoinableTask[] joinableTaskList;
+        lock (_JoinableTasks)
+        {
+            joinableTaskList = _JoinableTasks.ToArray();
+            _JoinableTasks.Clear();
+        }
+        foreach (var task in joinableTaskList) task.Join();
     }
 
     private static void _StartStateFlow(LifecycleState start, LifecycleState? end = null, bool count = true)

@@ -9,12 +9,11 @@ public static class HttpRequestExtension
 {
     public static HttpRequestMessage Clone(this HttpRequestMessage request)
     {
-        if (request == null)
-            throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         var clone = new HttpRequestMessage(request.Method, request.RequestUri)
         {
-            Content = request.Content?.Clone(),
+            Content = request.Content?._Clone(),
             Version = request.Version
         };
 
@@ -28,7 +27,7 @@ public static class HttpRequestExtension
         return clone;
     }
 
-    private static HttpContent Clone(this HttpContent content)
+    private static StreamContent? _Clone(this HttpContent? content)
     {
         if (content == null)
             return null;

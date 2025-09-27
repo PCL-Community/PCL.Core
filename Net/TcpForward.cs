@@ -109,7 +109,7 @@ public sealed class TcpForward(
 
                 // 异步处理连接，不等待完成
                 _ = Task.Run(() => _HandleConnectionAsync(clientSocket, cancellationToken), cancellationToken)
-                    .ContinueWith(_ => _connectionSemaphore.Release(), TaskContinuationOptions.None);
+                    .ContinueWith(_ => _connectionSemaphore.Release(), TaskScheduler.Default);
             }
             catch (OperationCanceledException)
             {

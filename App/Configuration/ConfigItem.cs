@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.App.Configuration;
 
@@ -95,7 +96,17 @@ public class ConfigItem<TValue>(
 
     public bool SetValueNoType(object value, object? argument = null)
     {
-        return SetValue((TValue)value, argument);
+        try
+        {
+            return SetValue((TValue)value, argument);
+        }
+        catch (InvalidCastException)
+        {
+            // 兼容龙猫妙妙小代码直接传入 string 值的行为
+            if (value is string v) return SetValue(v.Convert<TValue>()!, argument);
+            var msg = $"Value convert failed (required: {typeof(TValue).FullName}, provided: {value.GetType().FullName})";
+            throw new InvalidCastException(msg);
+        }
     }
 
     public bool SetDefaultValue(object? argument = null)

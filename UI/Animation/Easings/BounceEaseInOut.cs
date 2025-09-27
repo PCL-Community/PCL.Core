@@ -8,9 +8,9 @@ public class BounceEaseInOut : Easing
     {
         if (progress < 0.5)
         {
-            return 0.5 * (1 - BounceEaseUtils.Bounce(1 - progress * 2));
+            return 0.5 * (1 - EaseUtils.Bounce(1 - progress * 2));
         }
 
-        return 0.5 * BounceEaseUtils.Bounce(progress * 2 - 1) + 0.5;
+        return 0.5 * EaseUtils.Bounce(progress * 2 - 1) + 0.5;
     }
 }

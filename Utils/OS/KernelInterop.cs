@@ -30,35 +30,22 @@ public static partial class KernelInterop
 
     private const int ERROR_INSUFFICIENT_BUFFER = 122;
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    #pragma warning disable IDE1006
-    public struct RTL_OSVERSIONINFOEX
-    {
-        public uint dwOSVersionInfoSize;
-        public uint dwMajorVersion;
-        public uint dwMinorVersion;
-        public uint dwBuildNumber;
-        public uint dwPlatformId;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string szCSDVersion;
-    }
-    #pragma warning restore IDE1006
-
-    [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
-    private static extern int RtlGetVersion(ref RTL_OSVERSIONINFOEX lpVersionInformation);
-    
+    [LibraryImport("ntdll.dll")]
+    private static partial void RtlGetNtVersionNumbers(
+        out int major,
+        out int minor,
+        out int build);
     /// <summary>
     /// Retrieve the kernel version number of the current operating system (unaffected by compatibility settings)
     /// </summary>
     /// <returns>A <see cref="Version"/> instance, used to represent the current operating system kernel version number.</returns>
-    /// <exception cref="Win32Exception">The RtlGetVersion function call failed (the return code was not 0).</exception>
     public static Version GetCurrentOSVersion()
     {
-        var v = new RTL_OSVERSIONINFOEX();
-        var result = RtlGetVersion(ref v);
-        if (result != 0) throw new Win32Exception($"Failed to retrieve operating system kernel version. Return code: {result}");
-        return new Version((int)v.dwMajorVersion, (int)v.dwMinorVersion, (int)v.dwBuildNumber);
+        RtlGetNtVersionNumbers(out var major, out var minor, out var build);
+        build &= 0xFFFF;
+        return new Version(major, minor, build);
     }
+
 
     private enum LOGICAL_PROCESSOR_RELATIONSHIP : uint
     {

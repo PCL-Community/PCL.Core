@@ -2,21 +2,17 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Net;
+using PCL.Core.Utils.Secret;
 
 namespace PCL.Core.Link.Protocols.Scaffolding;
 
 public class ScfProtocol(bool isServer) : LinkProtocol(isServer)
 {
+    protected override string Identifier => "scaffolding";
+
     protected override void ReceivedData(object? sender, TcpHelper.ReceivedDateEventArgs e)
     {
         // TODO: 实现数据接收处理逻辑
-        _ = sender; // 避免未使用参数警告
-        _ = e;      // 避免未使用参数警告
-    }
-
-    protected override void ClientDisconnected(object? sender, EventArgs e)
-    {
-        // TODO: 实现客户端断开连接处理逻辑
         _ = sender; // 避免未使用参数警告
         _ = e;      // 避免未使用参数警告
     }

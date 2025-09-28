@@ -21,14 +21,29 @@ public class TcpHelper(bool isServer) : IDisposable
     
     public class ReceivedDateEventArgs(byte[] data, Socket clientSocket) : EventArgs
     {
+        /// <summary>
+        /// 接收到的数据
+        /// </summary>
         public byte[] Data => data;
         /// <summary>
         /// 客户端Socket, 用于事件中可能的回复
         /// </summary>
         public Socket ClientSocket => clientSocket;
     }
+    
+    public class HandleClientEventArgs(Socket clientSocket) : EventArgs
+    {
+        /// <summary>
+        /// 客户端地址
+        /// </summary>
+        public IPEndPoint ClientEndPoint => clientSocket.RemoteEndPoint != null 
+            ? (IPEndPoint)clientSocket.RemoteEndPoint 
+            : throw new Exception("无法获取客户端地址");
+    }
+    
+    public event EventHandler<HandleClientEventArgs>? AcceptedClient;
     public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
-    public event EventHandler? ClientDisconnected;
+    public event EventHandler<HandleClientEventArgs>? ClientDisconnected;
     
     public int Launch(string ip = "", int port = 0)
     {
@@ -90,6 +105,7 @@ public class TcpHelper(bool isServer) : IDisposable
     {
         LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
         _clientSockets.Add(clientSocket);
+        AcceptedClient?.Invoke(this, new HandleClientEventArgs(clientSocket));
         var buffer = new byte[1024];
         try
         {
@@ -111,9 +127,9 @@ public class TcpHelper(bool isServer) : IDisposable
         }
         finally
         {
+            ClientDisconnected?.Invoke(this, new HandleClientEventArgs(clientSocket));
             clientSocket.SafeClose();
             _clientSockets.Remove(clientSocket);
-            ClientDisconnected?.Invoke(this, EventArgs.Empty);
         }
     }
     

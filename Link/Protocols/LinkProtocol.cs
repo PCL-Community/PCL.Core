@@ -24,34 +24,25 @@ public abstract class LinkProtocol(bool isServer) : IDisposable
     /// 是否为服务器模式
     /// </summary>
     protected readonly bool _isServer = isServer;
-    
-    protected readonly CancellationTokenSource _ctx = new();
-    protected readonly TcpHelper _tcpHelper = new(isServer);
-    protected readonly ConcurrentDictionary<IPEndPoint, byte> _clientDict = new();
+
+    private readonly CancellationTokenSource _ctx = new();
+    protected readonly TcpHelper TcpHelper = new(isServer);
 
     /// <summary>
     /// 启动协议
     /// </summary>
     /// <returns>启动结果代码，0表示成功</returns>
-    public int Launch()
+    public virtual int Launch()
     {
         if (_isServer)
         {
-            _tcpHelper.ReceivedData += ReceivedData;
-            _tcpHelper.AcceptedClient += (s, e) =>
-            {
-                _clientDict.TryAdd(e.ClientEndPoint, 0); // TODO 添加客户端信息
-            };
-            _tcpHelper.ClientDisconnected += (s, e) =>
-            {
-                _clientDict.TryRemove(e.ClientEndPoint, out _);
-            };
+            TcpHelper.ReceivedData += ReceivedData;
             LogWrapper.Info($"{Identifier} 服务端已启动");
-            return _tcpHelper.Launch();
+            return TcpHelper.Launch();
         }
         else
         {
-            var res = _tcpHelper.Launch();
+            var res = TcpHelper.Launch();
             _ = Task.Run(async () => {
                 try
                 {
@@ -90,9 +81,8 @@ public abstract class LinkProtocol(bool isServer) : IDisposable
         try
         {
             _ctx.Cancel();
-            _tcpHelper.Close();
-            _tcpHelper.Dispose();
-            _clientDict.Clear();
+            TcpHelper.Close();
+            TcpHelper.Dispose();
             LogWrapper.Info($"{Identifier} 协议已关闭");
             return 0;
         }

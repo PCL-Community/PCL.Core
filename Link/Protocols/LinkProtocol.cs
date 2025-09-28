@@ -23,11 +23,11 @@ public abstract class LinkProtocol(bool isServer) : IDisposable
     /// <summary>
     /// 是否为服务器模式
     /// </summary>
-    private readonly bool _isServer = isServer;
+    protected readonly bool _isServer = isServer;
     
-    private readonly CancellationTokenSource _ctx = new();
-    private readonly TcpHelper _tcpHelper = new(isServer);
-    private readonly ConcurrentDictionary<IPEndPoint, byte> _clientDict = new();
+    protected readonly CancellationTokenSource _ctx = new();
+    protected readonly TcpHelper _tcpHelper = new(isServer);
+    protected readonly ConcurrentDictionary<IPEndPoint, byte> _clientDict = new();
 
     /// <summary>
     /// 启动协议

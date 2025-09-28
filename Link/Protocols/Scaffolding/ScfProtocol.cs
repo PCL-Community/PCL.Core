@@ -9,6 +9,14 @@ namespace PCL.Core.Link.Protocols.Scaffolding;
 public class ScfProtocol(bool isServer) : LinkProtocol(isServer)
 {
     protected override string Identifier => "scaffolding";
+    private readonly string[] _supportedProtocols = 
+    [
+        "c:ping",
+        "c:protocols",
+        "c:server_port",
+        "c:player_ping",
+        "c:player_profile_list"
+    ];
 
     protected override void ReceivedData(object? sender, TcpHelper.ReceivedDateEventArgs e)
     {
@@ -17,9 +25,16 @@ public class ScfProtocol(bool isServer) : LinkProtocol(isServer)
         _ = e;      // 避免未使用参数警告
     }
     
-    protected override Task ClientPart(CancellationToken token)
+    protected override async Task ClientPart(CancellationToken token)
     {
-        // TODO: 实现客户端部分逻辑
-        throw new NotImplementedException();
+        _ = Task.Run(() => ClientLoop(token), token);
+    }
+    
+    private async Task ClientLoop(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            // TODO 等待ClientPacket类写好
+        }
     }
 }

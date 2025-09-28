@@ -13,10 +13,10 @@ namespace PCL.Core.Minecraft;
 public enum JavaBrandType
 {
     EclipseTemurin,
-    Microsoft,
     Bellsoft,
     AzulZulu,
     AmazonCorretto,
+    Microsoft,
     IBMSemeru,
     Oracle,
     Dragonwell,

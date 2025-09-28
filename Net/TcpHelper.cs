@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -8,14 +9,15 @@ using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
 
-public class TcpHelper : IDisposable
+public class TcpHelper(bool isServer) : IDisposable
 {
     /// <summary>
     /// 是否为服务器, 用于判断使用哪种方法
     /// </summary>
-    private readonly bool _isServer;
-    private readonly Socket _socket;
-    private readonly CancellationTokenSource _ctx;
+    private readonly bool _isServer = isServer;
+    private Socket _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+    private List<Socket> _clientSockets = [];
+    private readonly CancellationTokenSource _ctx = new CancellationTokenSource();
     
     public class ReceivedDateEventArgs(byte[] data, Socket clientSocket) : EventArgs
     {
@@ -27,33 +29,39 @@ public class TcpHelper : IDisposable
     }
     public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
     public event EventHandler? ClientDisconnected;
-
-    public TcpHelper(bool isServer, string serverIp = "", int serverPort = 0)
+    
+    public int Launch(string ip = "", int port = 0)
     {
-        _ctx = new CancellationTokenSource();
-        _isServer = isServer;
-        if (_isServer)
+        try
         {
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socket.Bind(new IPEndPoint(IPAddress.Loopback, NetworkHelper.NewTcpPort()));
-            _ = Task.Run(() => _AcceptConnections(_ctx.Token), _ctx.Token);
+            if (_isServer)
+            {
+                _socket.Bind(new IPEndPoint(IPAddress.Loopback, NetworkHelper.NewTcpPort()));
+                _ = Task.Run(() => _AcceptConnections(_ctx.Token), _ctx.Token);
+            }
+            else
+            {
+                if (ip == "")
+                {
+                    throw new Exception("客户端必须指定服务器IP");
+                }
+                if (port == 0)
+                {
+                    throw new Exception("客户端必须指定服务器端口");
+                }
+                if (!IPAddress.TryParse(ip, out var serverAddress))
+                {
+                    throw new Exception("服务器IP格式错误");
+                }
+                _socket.Connect(new IPEndPoint(serverAddress, port));
+            }
+            LogWrapper.Info($"TCP服务启动成功, {(_isServer ? "监听" : "连接")}地址: {_socket.LocalEndPoint}");
+            return 0;
         }
-        else
+        catch (Exception ex)
         {
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            if (serverIp == "")
-            {
-                throw new Exception("客户端必须指定服务器IP");
-            }
-            if (serverPort == 0)
-            {
-                throw new Exception("客户端必须指定服务器端口");
-            }
-            if (!IPAddress.TryParse(serverIp, out var serverAddress))
-            {
-                throw new Exception("服务器IP格式错误");
-            }
-            _socket.Connect(new IPEndPoint(serverAddress, serverPort));
+            LogWrapper.Error(ex, "TCP", "启动TCP服务时发生错误");
+            return 1;
         }
     }
     
@@ -78,8 +86,10 @@ public class TcpHelper : IDisposable
         }
     }
 
-    public async Task _HandleClient(Socket clientSocket, CancellationToken token)
+    private async Task _HandleClient(Socket clientSocket, CancellationToken token)
     {
+        LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
+        _clientSockets.Add(clientSocket);
         var buffer = new byte[1024];
         try
         {
@@ -102,6 +112,7 @@ public class TcpHelper : IDisposable
         finally
         {
             clientSocket.SafeClose();
+            _clientSockets.Remove(clientSocket);
             ClientDisconnected?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -124,6 +135,22 @@ public class TcpHelper : IDisposable
         return responseData;
     }
     
+    public int Close()
+    {
+        try
+        {
+            _ctx.Cancel();
+            _socket.SafeClose();
+            LogWrapper.Info($"TCP服务已关闭");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "TCP", "关闭TCP服务时发生错误");
+            return 1;
+        }
+    }
+    
     ~TcpHelper()
     {
         Dispose(false);
@@ -138,7 +165,6 @@ public class TcpHelper : IDisposable
     private void Dispose(bool disposing)
     {
         if (!disposing) return;
-        _ctx.Cancel();
-        _socket.SafeClose();
+        Close();
     }
 }

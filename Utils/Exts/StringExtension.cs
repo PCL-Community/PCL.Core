@@ -139,12 +139,12 @@ public static class StringExtension
     /// <summary>
     /// <see cref="string.IsNullOrEmpty"/> 的扩展方法。
     /// </summary>
-    public static bool IsNullOrEmpty(this string? value) => string.IsNullOrEmpty(value);
+    public static bool IsNullOrEmpty([NotNullWhen(false)]this string? value) => string.IsNullOrEmpty(value);
 
     /// <summary>
     /// <see cref="string.IsNullOrWhiteSpace"/> 的扩展方法。
     /// </summary>
-    public static bool IsNullOrWhiteSpace(this string? value) => string.IsNullOrWhiteSpace(value);
+    public static bool IsNullOrWhiteSpace([NotNullWhen(false)]this string? value) => string.IsNullOrWhiteSpace(value);
 
     /// <summary>
     /// 当文本为空时返回替代文本，否则返回原来的文本。

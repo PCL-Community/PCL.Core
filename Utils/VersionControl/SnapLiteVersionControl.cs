@@ -289,7 +289,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                     {
                         var curFilePath = Path.Combine(_rootPath, addFile.Path);
                         var fileFolder = Path.GetDirectoryName(curFilePath);
-                        if (fileFolder == null) throw new NullReferenceException($"无法获取 {curFilePath} 的目录信息");
+                        if (fileFolder is null) throw new NullReferenceException($"无法获取 {curFilePath} 的目录信息");
                         if (!Directory.Exists(fileFolder)) Directory.CreateDirectory(fileFolder);
                         var curFile = new FileInfo(curFilePath);
                         if (curFile.Exists) curFile.Delete();
@@ -375,7 +375,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     public async Task<bool> CheckVersion(string nodeId, bool deepCheck = false)
     {
         var fileObjects = GetNodeObjects(nodeId)?.Distinct(FileVersionObjectsComparer.Instance);
-        if (fileObjects == null) return false;
+        if (fileObjects is null) return false;
         var checkTasks = fileObjects.Select(x => Task.Run(() =>
         {
             var filePath = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash);

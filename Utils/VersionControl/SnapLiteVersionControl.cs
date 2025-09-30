@@ -249,8 +249,11 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             select currentObject);
         LogWrapper.Info($"[SnapLite] 统计出总共需要删除文件 {toDelete.Count} 个，新增文件 {toAdd.Count} 个，修改文件元数据 {toUpdate.Count} 个");
 
-        // 先删除文件，再删除文件夹
-        var deleteTasks = toDelete.OrderBy(x => (int)(x.ObjectType)).Select(deleteFile => Task.Run(() =>
+        // 先删除文件深度高的文件和文件夹 并且 遵循先删除文件 后 删除文件夹
+        var deleteTasks = toDelete
+            .OrderByDescending(x => x.Path.Count(c => c == Path.DirectorySeparatorChar))
+            .ThenBy(x => (int)(x.ObjectType))
+            .Select(deleteFile => Task.Run(() =>
         {
             try
             {
@@ -262,7 +265,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 else if (deleteFile.ObjectType == ObjectType.Directory)
                 {
                     var curDir = new DirectoryInfo(Path.Combine(_rootPath, deleteFile.Path));
-                    if (curDir.Exists) curDir.Delete(true);
+                    if (curDir.Exists) curDir.Delete(false); // 如果 要删除的文件夹内还有文件 说明 出现了预料之外的删除动作
                 }
             }
             catch (Exception e)

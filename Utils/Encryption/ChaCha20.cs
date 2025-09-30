@@ -73,7 +73,7 @@ public class ChaCha20 : IEncryptionProvider
     private static byte[] _DeriveKey(byte[] ikm, byte[] salt)
     {
         return HKDF.DeriveKey(
-            HashAlgorithmName.SHA512,
+            HashAlgorithmName.SHA256,
             ikm,
             KeySize,
             salt,

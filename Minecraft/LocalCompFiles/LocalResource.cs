@@ -1,0 +1,68 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Metadata;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace PCL.Core.Minecraft.LocalCompFiles;
+
+public abstract class LocalResource
+{
+    /// <summary>
+    /// Absolute path of resource.
+    /// </summary>
+    public string Path { get; }
+
+    /// <summary>
+    /// Folder name or File name of resource.
+    /// </summary>
+    public string FileName => System.IO.Path.GetFileName(ActualPath);
+
+    public virtual string RawFileName => FileName.Replace(".disabled", string.Empty).Replace(".old", string.Empty);
+
+    /// <summary>
+    /// Demonstrate if the resource is a folder.
+    /// </summary>
+    public bool IsFolder { get; }
+
+    /// <summary>
+    /// Actual path of resource, if it's a folder, the path will remove the "__FOLDER__" suffix.
+    /// </summary>
+    public string ActualPath => IsFolder ? Path.Replace("\\__FOLDER__", string.Empty) : Path;
+
+    public FileStatus State { get; protected set; }
+    public Exception? FileUnavailableReason { get; protected set; }
+    public bool IsFileAvailable => FileUnavailableReason is null;
+
+    protected LocalResource(string path)
+    {
+        Path = path ?? string.Empty;
+        IsFolder = path?.EndsWith("\\__FOLDER__", StringComparison.OrdinalIgnoreCase) ?? false;
+        State = FileStatus.Fine;
+    }
+
+    /// <summary>
+    /// Load and parse the resource from disk.
+    /// </summary>
+    public abstract void Load();
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return $"{State} - {Path}";
+    }
+
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+    {
+        return obj is LocalResource other && Path.Equals(other.Path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        return Path.GetHashCode();
+    }
+}

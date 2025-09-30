@@ -28,7 +28,7 @@ public enum JavaBrandType
 }
 
 [Serializable]
-public class Java(string javaFolder, Version version, JavaBrandType brand, bool isEnabled, MachineType arch, bool is64Bit, bool isJre)
+public class JavaInfo(string javaFolder, Version version, JavaBrandType brand, bool isEnabled, MachineType arch, bool is64Bit, bool isJre)
 {
     /// <summary>
     /// 就像这样：
@@ -73,7 +73,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
 
     public override bool Equals(object? obj)
     {
-        if (obj is Java model)
+        if (obj is JavaInfo model)
         {
             return JavaFolder.Equals(model.JavaFolder, StringComparison.OrdinalIgnoreCase);
         }
@@ -92,7 +92,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
     /// </summary>
     /// <param name="javaExePath">java.exe 的文件地址</param>
     /// <returns></returns>
-    public static Java? Parse(string javaExePath)
+    public static JavaInfo? Parse(string javaExePath)
     {
         try
         {
@@ -129,7 +129,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
                 || (isJava64Bit ^ Environment.Is64BitOperatingSystem)
                 || !isJavaUsable;
 
-            return new Java(
+            return new JavaInfo(
                 currentJavaFolder,
                 javaVersion,
                 javaBrand,

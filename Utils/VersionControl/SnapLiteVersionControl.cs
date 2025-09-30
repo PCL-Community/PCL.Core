@@ -285,7 +285,9 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         LogWrapper.Info($"[SnapLite] 已完成文件的删除");
         
         // 先应用文件夹，再应用文件
-        var addTasks = toAdd.OrderByDescending(x => (int)(x.ObjectType)).Select(addFile => Task.Run(async () =>
+        var addTasks = toAdd
+            .OrderByDescending(x => (int)(x.ObjectType))
+            .Select(addFile => Task.Run(async () =>
         {
             try
             {
@@ -332,7 +334,8 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         await Task.WhenAll(addTasks);
         LogWrapper.Info($"[SnapLite] 已完成文件的增添");
 
-        var updateTasks = toUpdate.Select(updateObject => Task.Run(() =>
+        var updateTasks = toUpdate
+            .Select(updateObject => Task.Run(() =>
         {
             try
             {
@@ -382,7 +385,8 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
     {
         var fileObjects = GetNodeObjects(nodeId)?.Distinct(FileVersionObjectsComparer.Instance);
         if (fileObjects is null) return false;
-        var checkTasks = fileObjects.Select(x => Task.Run(() =>
+        var checkTasks = fileObjects
+            .Select(x => Task.Run(() =>
         {
             var filePath = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash);
             if (deepCheck)
@@ -447,33 +451,33 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             File.Delete(saveFilePath);
         using var fs = new FileStream(saveFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
         using var targetZip = new ZipArchive(fs, ZipArchiveMode.Update);
+        fileObjects = fileObjects
+            .OrderByDescending(x => (int)x.ObjectType) // 先文件夹后文件
+            .ToList();
         foreach (var fileObject in fileObjects)
         {
-            await Task.Run(async () =>
+            switch (fileObject.ObjectType)
             {
-                switch (fileObject.ObjectType)
+                case ObjectType.File:
                 {
-                    case ObjectType.File:
-                    {
-                        var entry = targetZip.CreateEntry(fileObject.Path);
-                        entry.LastWriteTime = fileObject.LastWriteTime;
-                        using var writer = entry.Open();
-                        using var reader = GetObjectContent(fileObject.Hash) ?? throw new Exception("无法找到存储的文件");
-                        await reader.CopyToAsync(writer);
-                        break;
-                    }
-                    case ObjectType.Directory:
-                    {
-                        var entry = targetZip.CreateEntry($"{fileObject.Path}{Path.DirectorySeparatorChar}");
-                        entry.LastWriteTime = fileObject.LastWriteTime;
-                        break;
-                    }
-                    default:
-                    {
-                        throw new NotSupportedException();
-                    }
+                    var entry = targetZip.CreateEntry(fileObject.Path);
+                    entry.LastWriteTime = fileObject.LastWriteTime;
+                    await using var writer = entry.Open();
+                    await using var reader = GetObjectContent(fileObject.Hash) ?? throw new Exception("无法找到存储的文件");
+                    await reader.CopyToAsync(writer);
+                    break;
                 }
-            });
+                case ObjectType.Directory:
+                {
+                    var entry = targetZip.CreateEntry($"{fileObject.Path}{Path.DirectorySeparatorChar}");
+                    entry.LastWriteTime = fileObject.LastWriteTime;
+                    break;
+                }
+                default:
+                {
+                    throw new NotSupportedException();
+                }
+            }
         }
     }
 

@@ -16,7 +16,6 @@ namespace PCL.Core.Utils.VersionControl;
 自己乱搓的，效率肯定没有 Git 高（
 */
 
-
 public class SnapLiteVersionControl : IVersionControl , IDisposable
 {
     private readonly string _rootPath;
@@ -265,7 +264,14 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 else if (deleteFile.ObjectType == ObjectType.Directory)
                 {
                     var curDir = new DirectoryInfo(Path.Combine(_rootPath, deleteFile.Path));
-                    if (curDir.Exists) curDir.Delete(false); // 如果 要删除的文件夹内还有文件 说明 出现了预料之外的删除动作
+                    try
+                    {
+                        if (curDir.Exists) curDir.Delete(true); // 文件夹内有不属于这个版本的东西
+                    }
+                    catch (IOException e)
+                    {
+                        LogWrapper.Warn(e, "SnapLite", $"目录 {curDir} 可能已受到外部修改，存在不属于此版本的内容且删除操作失败");
+                    }
                 }
             }
             catch (Exception e)

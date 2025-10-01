@@ -4,7 +4,15 @@ using System.Windows.Media;
 
 namespace PCL.Core.UI;
 
-public struct NColor
+// TODO: 内部实现更换成 scRGB 并且增加更多的 From 与 To 方法
+// TODO: 实现 IParsable / ISpanParsable 接口
+
+public struct NColor : 
+    IEquatable<NColor>, 
+    IAdditionOperators<NColor, NColor, NColor>, 
+    ISubtractionOperators<NColor, NColor, NColor>,
+    IMultiplyOperators<NColor, float, NColor>,
+    IDivisionOperators<NColor, float, NColor>
 {
     private Vector4 _color;
 
@@ -113,6 +121,12 @@ public struct NColor
 
     #endregion
 
+    #region IParsable / ISpanParsable
+
+    // TODO: 实现 IParsable / ISpanParsable 接口
+
+    #endregion
+
     #region HSL 
     
     public static NColor FromHsl(double sH, double sS, double sL)
@@ -144,10 +158,13 @@ public struct NColor
     {
         if (vH < 0) vH += 1;
         if (vH > 1) vH -= 1;
-        if (vH < 0.16667) return v1 + (v2 - v1) * 6 * vH;
-        if (vH < 0.5) return v2;
-        if (vH < 0.66667) return v1 + (v2 - v1) * (4 - vH * 6);
-        return v1;
+        return vH switch
+        {
+            < 0.16667 => v1 + (v2 - v1) * 6 * vH,
+            < 0.5 => v2,
+            < 0.66667 => v1 + (v2 - v1) * (4 - vH * 6),
+            _ => v1
+        };
     }
     
     #endregion

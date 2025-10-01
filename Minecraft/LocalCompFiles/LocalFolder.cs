@@ -1,5 +1,5 @@
-using System;
 using System.IO;
+using PCL.Core.Minecraft.LocalCompFiles.Models;
 
 namespace PCL.Core.Minecraft.LocalCompFiles;
 
@@ -11,12 +11,14 @@ public class LocalFolder : LocalResource
     }
 
     /// <inheritdoc />
-    public override void Load()
+    public override BaseNbtData? Load()
     {
         if (Directory.Exists(ActualPath))
         {
             FileUnavailableReason = new DirectoryNotFoundException($"Directory '{ActualPath}' not found.");
             State = FileStatus.Unavailable;
         }
+
+        return null;
     }
 }

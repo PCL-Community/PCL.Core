@@ -1,3 +1,4 @@
+using PCL.Core.Minecraft.LocalCompFiles.Models;
 using System.IO.Compression;
 using System.Text.Json;
 

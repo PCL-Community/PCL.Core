@@ -1,3 +1,4 @@
+using PCL.Core.Minecraft.LocalCompFiles.Models;
 using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 using System;
 using System.Collections.Generic;
@@ -7,14 +8,16 @@ namespace PCL.Core.Minecraft.LocalCompFiles;
 
 public class LocalModFile : LocalResource
 {
-    public ModMetadata Metadata { get; set; }
+    public ModMetadata? Metadata { get; set; }
+
     public Dictionary<string, string?> Dependencies { get; } = new();
 
-    private static readonly List<IModMetadataParser> Parsers =
+    private static readonly List<IModMetadataParser> _Parsers =
     [
-        new FabricModJsonParser(),
+        new LegacyForgeModParser(),
         new ForgeModParser(),
-        new LegacyForgeParser(),
+        new FabricModJsonParser(),
+        new QuitModParser(),
         new PackPngParser()
     ];
 
@@ -24,13 +27,13 @@ public class LocalModFile : LocalResource
     }
 
     /// <inheritdoc />
-    public override void Load()
+    public override BaseResourceData? Load()
     {
         if (File.Exists(Path))
         {
             FileUnavailableReason = new FileNotFoundException("Resource file not found.", Path);
             State = FileStatus.Unavailable;
-            return;
+            return null;
         }
 
         if (Path.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase) ||
@@ -42,7 +45,7 @@ public class LocalModFile : LocalResource
         try
         {
             using var archive = System.IO.Compression.ZipFile.OpenRead(Path);
-            foreach (var parser in Parsers)
+            foreach (var parser in _Parsers)
             {
                 parser.TryParse(archive, this);
             }
@@ -57,5 +60,7 @@ public class LocalModFile : LocalResource
         {
             Metadata = Metadata with { Name = System.IO.Path.GetFileNameWithoutExtension(RawFileName) };
         }
+
+        return null;
     }
 }

@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using PCL.Core.Minecraft.LocalCompFiles.Models;
 using Tomlyn;
 using Tomlyn.Model;
 
@@ -37,48 +35,48 @@ public class ForgeModParser : IModMetadataParser
                 return false;
             }
 
-            string? metaModId = null;
+            var metaModId = string.Empty;
             if (modTable.TryGetValue("modId", out var modId))
             {
-                metaModId = modId.ToString();
+                metaModId = modId.ToString() ?? string.Empty;
             }
 
-            string? metaVersion = null;
+            var metaVersion = string.Empty;
             if (modTable.TryGetValue("version", out var version))
             {
-                metaVersion = version.ToString();
+                metaVersion = version.ToString() ?? string.Empty;
             }
 
-            string? metaName = null;
+            var metaName = string.Empty;
             if (modTable.TryGetValue("displayName", out var name))
             {
-                metaName = name.ToString();
+                metaName = name.ToString() ?? string.Empty;
             }
 
-            string? metaDescription = null;
+            var metaDescription = string.Empty;
             if (modTable.TryGetValue("description", out var description))
             {
-                metaDescription = description.ToString();
+                metaDescription = description.ToString() ?? string.Empty;
             }
 
-            string? metaAuthors = null;
+            var metaAuthors = string.Empty;
             if (modTable.TryGetValue("authors", out var authors))
             {
-                metaAuthors = authors.ToString();
+                metaAuthors = authors.ToString() ?? string.Empty;
             }
 
-            string? metaLogo = null;
+            var metaLogo = string.Empty;
             if (modTable.TryGetValue("authors", out var logo))
             {
-                metaLogo = logo.ToString();
+                metaLogo = logo.ToString() ?? string.Empty;
             }
 
-            var metadata = new ModMetadata(metaName ?? string.Empty,
+            var metadata = new ModMetadata(metaName,
                 metaDescription,
                 metaVersion,
-                metaModId ?? string.Empty,
-                [metaAuthors ?? string.Empty],
-                metaLogo ?? string.Empty);
+                metaModId,
+                [metaAuthors],
+                metaLogo);
 
             modFile.Metadata = metadata;
 
@@ -86,6 +84,7 @@ public class ForgeModParser : IModMetadataParser
         }
         catch (Exception)
         {
+            // ignore exception
             return false;
         }
     }

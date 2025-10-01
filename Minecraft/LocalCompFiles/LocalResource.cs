@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
+using PCL.Core.Minecraft.LocalCompFiles.Models;
 
 namespace PCL.Core.Minecraft.LocalCompFiles;
 
@@ -45,7 +41,7 @@ public abstract class LocalResource
     /// <summary>
     /// Load and parse the resource from disk.
     /// </summary>
-    public abstract void Load();
+    public abstract BaseResourceData? Load();
 
     /// <inheritdoc />
     public override string ToString()

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 
-namespace PCL.Core.Minecraft.ResourceProject.Modrinth;
+namespace PCL.Core.Minecraft.ResourceProject.Modrinth.Models;
 
 [Serializable]
 public record ModrinthDonationUrl(
-    string id,
-    string platform,
-    string url);
+    string Id,
+    string Platform,
+    string Url);

@@ -5,4 +5,4 @@ public record VanillaNbtData(
     EnclosingSizeData EnclosingSize,
     int TotalVolume,
     int BlockCount,
-    int RegionCount) : BaseNbtData(TotalVolume, EnclosingSize);
+    int RegionCount) : BaseNbtData(string.Empty, TotalVolume, EnclosingSize);

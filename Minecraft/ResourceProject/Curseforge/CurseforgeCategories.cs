@@ -1,17 +1,17 @@
-﻿using System;
+using System;
 
 namespace PCL.Core.Minecraft.ResourceProject.Curseforge;
 
 [Serializable]
 public record CurseforgeCategories(
-    int id,
-    int gameId,
-    string name,
-    string slug,
-    string url,
-    string iconUrl,
-    string dateModified,
-    bool isClass,
-    int classId,
-    int parentCategoryId,
-    int displayIndex);
+    int Id,
+    int GameId,
+    string Name,
+    string Slug,
+    string Url,
+    string IconUrl,
+    string DateModified,
+    bool IsClass,
+    int ClassId,
+    int ParentCategoryId,
+    int DisplayIndex);

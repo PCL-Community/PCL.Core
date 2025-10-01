@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 
-namespace PCL.Core.Model.ResourceProject.Curseforge;
+namespace PCL.Core.Minecraft.ResourceProject.Curseforge;
 
 [Serializable]
 public record CurseforgeScreenshots(
-    int id,
-    int modId,
-    string title,
-    string description,
-    string thumbnailUrl);
+    int Id,
+    int ModId,
+    string Title,
+    string Description,
+    string ThumbnailUrl);

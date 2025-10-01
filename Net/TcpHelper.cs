@@ -1,82 +1,98 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Http;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Net;
 
-public class TcpHelper(bool isServer) : IDisposable
+public class TcpHelper : IDisposable
 {
     /// <summary>
     /// 是否为服务器, 用于判断使用哪种方法
     /// </summary>
-    private readonly bool _isServer = isServer;
-    private Socket _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-    private List<Socket> _clientSockets = [];
+    private bool _isServer;
+    private bool _isRunning;
+    private readonly Socket _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
     private readonly CancellationTokenSource _ctx = new CancellationTokenSource();
     
-    public class ReceivedDateEventArgs(byte[] data, Socket clientSocket) : EventArgs
+    public class ReceivedDateEventArgs(byte[] data, Guid clientId) : EventArgs
     {
         /// <summary>
         /// 接收到的数据
         /// </summary>
         public byte[] Data => data;
         /// <summary>
-        /// 客户端Socket, 用于事件中可能的回复
+        /// 服务端返回数据
         /// </summary>
-        public Socket ClientSocket => clientSocket;
+        public byte[]? Response => null;
+        /// <summary>
+        /// 客户端Socket的Guid, 用于填写字典信息
+        /// </summary>
+        public Guid ClientId => clientId;
     }
     
-    public class HandleClientEventArgs(Socket clientSocket) : EventArgs
+    public class AcceptedClientEventArgs(EndPoint clientEndPoint, Guid clientId) : EventArgs
     {
         /// <summary>
-        /// 客户端地址
+        /// 客户端地址, 用于填写字典信息
         /// </summary>
-        public IPEndPoint ClientEndPoint => clientSocket.RemoteEndPoint != null 
-            ? (IPEndPoint)clientSocket.RemoteEndPoint 
-            : throw new Exception("无法获取客户端地址");
+        public IPEndPoint ClientEndPoint => clientEndPoint as IPEndPoint ?? throw new Exception("无法获取客户端地址");
+        /// <summary>
+        /// 客户端Socket的Guid, 用于添加入字典
+        /// </summary>
+        public Guid ClientId => clientId;
     }
     
-    public event EventHandler<HandleClientEventArgs>? AcceptedClient;
-    public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
-    public event EventHandler<HandleClientEventArgs>? ClientDisconnected;
+    public class ClientDisconnectedEventArgs(Guid clientId) : EventArgs
+    {
+        /// <summary>
+        /// 断开连接的客户端Socket的Guid, 用于删除字典记录
+        /// </summary>
+        public Guid ClientId => clientId;
+    }
     
-    public int Launch(string ip = "", int port = 0)
+    public event EventHandler<AcceptedClientEventArgs>? AcceptedClient;
+    public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
+    public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected;
+    
+    public void StartListening(int port)
     {
         try
         {
-            if (_isServer)
+            if (_isRunning)
             {
-                _socket.Bind(new IPEndPoint(IPAddress.Loopback, NetworkHelper.NewTcpPort()));
-                _ = Task.Run(() => _AcceptConnections(_ctx.Token), _ctx.Token);
+                LogWrapper.Warn("TCP", "服务已在运行中");
             }
-            else
-            {
-                if (ip == "")
-                {
-                    throw new Exception("客户端必须指定服务器IP");
-                }
-                if (port == 0)
-                {
-                    throw new Exception("客户端必须指定服务器端口");
-                }
-                if (!IPAddress.TryParse(ip, out var serverAddress))
-                {
-                    throw new Exception("服务器IP格式错误");
-                }
-                _socket.Connect(new IPEndPoint(serverAddress, port));
-            }
-            LogWrapper.Info($"TCP服务启动成功, {(_isServer ? "监听" : "连接")}地址: {_socket.LocalEndPoint}");
-            return 0;
+            _isServer = true;
+            _isRunning = true;
+            _socket.Bind(new IPEndPoint(IPAddress.Loopback, port));
+            _ = Task.Run(() => _AcceptConnections(_ctx.Token), _ctx.Token);
+            LogWrapper.Info($"TCP服务已启动, 监听端口 {port}");
         }
         catch (Exception ex)
         {
             LogWrapper.Error(ex, "TCP", "启动TCP服务时发生错误");
-            return 1;
+        }
+    }
+    
+    public void Connect(string ip, int port)
+    { 
+        try
+        {
+            if (_isRunning)
+            {
+                throw new Exception("服务已在运行中");
+            }
+            _isServer = false;
+            _isRunning = true;
+            _socket.Connect(new IPEndPoint(IPAddress.Parse(ip), port));
+            LogWrapper.Info($"TCP服务已启动, 连接到 {ip}:{port}");
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "TCP", "启动TCP服务时发生错误");
         }
     }
     
@@ -84,6 +100,10 @@ public class TcpHelper(bool isServer) : IDisposable
     {
         try
         {
+            if (!_isRunning)
+            {
+                throw new Exception("服务未启动");
+            }
             if (!_isServer)
             {
                 throw new Exception("客户端不能调用AcceptConnections方法");
@@ -103,9 +123,13 @@ public class TcpHelper(bool isServer) : IDisposable
 
     private async Task _HandleClient(Socket clientSocket, CancellationToken token)
     {
+        if (clientSocket.RemoteEndPoint == null)
+        {
+            throw new Exception("无法获取客户端地址");
+        }
         LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
-        _clientSockets.Add(clientSocket);
-        AcceptedClient?.Invoke(this, new HandleClientEventArgs(clientSocket));
+        var clientId = Guid.NewGuid();
+        AcceptedClient?.Invoke(this, new AcceptedClientEventArgs(clientSocket.RemoteEndPoint, clientId));
         var buffer = new byte[1024];
         try
         {
@@ -118,7 +142,13 @@ public class TcpHelper(bool isServer) : IDisposable
                 }
                 var data = new byte[received];
                 Array.Copy(buffer, data, received);
-                ReceivedData?.Invoke(this, new ReceivedDateEventArgs(data, clientSocket));
+                
+                var receivedDateEventArgs = new ReceivedDateEventArgs(data, clientId);
+                ReceivedData?.Invoke(this, receivedDateEventArgs);
+                if (receivedDateEventArgs.Response != null)
+                {
+                    await clientSocket.SendAsync(receivedDateEventArgs.Response);
+                }
             }
         }
         catch (Exception ex)
@@ -127,14 +157,17 @@ public class TcpHelper(bool isServer) : IDisposable
         }
         finally
         {
-            ClientDisconnected?.Invoke(this, new HandleClientEventArgs(clientSocket));
+            ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(clientId));
             clientSocket.SafeClose();
-            _clientSockets.Remove(clientSocket);
         }
     }
     
     public async Task<byte[]?> SendToServer(byte[] data, bool isWaitResponse = true)
     {
+        if (!_isRunning)
+        {
+            throw new Exception("服务未启动");
+        }
         if (_isServer)
         {
             throw new Exception("服务器不能调用SendToServer方法");

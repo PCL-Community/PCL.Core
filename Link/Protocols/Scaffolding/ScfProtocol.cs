@@ -25,7 +25,6 @@ public class ScfProtocol : LinkProtocol
     ];
 
     private readonly ScfPlayerInfo _playerInfo;
-    private readonly List<ScfPlayerInfo> _playerList = [];
     
     public ScfProtocol(bool isServer, string hostname) : base(isServer, "scaffolding")
     {
@@ -38,7 +37,7 @@ public class ScfProtocol : LinkProtocol
         };
         if (isServer)
         {
-            _playerList.Add(_playerInfo);
+            PlayerList.Add(_playerInfo);
         }
     }
 
@@ -119,10 +118,10 @@ public class ScfProtocol : LinkProtocol
 
             if (JsonNode.Parse(Encoding.UTF8.GetString(ServerPacket.From(response).Body)) is JsonArray playerList)
             {
-                _playerList.Clear();
+                PlayerList.Clear();
                 foreach (var item in playerList)
                 {
-                    _playerList.Add(ScfPlayerInfo.FromJsonObject(item as JsonObject));
+                    PlayerList.Add(ScfPlayerInfo.FromJsonObject(item as JsonObject));
                 }
             }
             LogWrapper.Info($"{Identifier} 玩家列表已更新");
@@ -134,5 +133,11 @@ public class ScfProtocol : LinkProtocol
     {
         var jsonString = obj.ToJsonString();
         return Encoding.UTF8.GetBytes(jsonString);
+    }
+
+    public override int Close()
+    {
+        PlayerList.Clear();
+        return base.Close();
     }
 }

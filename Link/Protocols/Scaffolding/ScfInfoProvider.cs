@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Nodes;
 
 namespace PCL.Core.Link.Protocols.Scaffolding;
@@ -55,4 +56,6 @@ public static class ScfInfoProvider
             };
         }
     }
+
+    public static List<ScfPlayerInfo> PlayerList { get; set; } = [];
 }

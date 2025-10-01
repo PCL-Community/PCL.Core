@@ -20,7 +20,7 @@ public abstract class LinkProtocol(bool isServer, string identifier) : IDisposab
     /// <summary>
     /// 是否为服务器模式
     /// </summary>
-    protected readonly bool IsServer = isServer;
+    private readonly bool _isServer = isServer;
     
     protected enum ProtocolState
     {
@@ -37,7 +37,7 @@ public abstract class LinkProtocol(bool isServer, string identifier) : IDisposab
     /// <returns>启动结果代码，0表示成功</returns>
     public int Launch()
     {
-        if (IsServer)
+        if (_isServer)
         {
             TcpHelper.ReceivedData += ReceivedData;
             var port = NetworkHelper.NewTcpPort();
@@ -68,7 +68,7 @@ public abstract class LinkProtocol(bool isServer, string identifier) : IDisposab
     /// 关闭协议
     /// </summary>
     /// <returns>关闭结果代码，0表示成功</returns>
-    public int Close()
+    public virtual int Close()
     {
         try
         {

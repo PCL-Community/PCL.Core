@@ -183,7 +183,7 @@ public static partial class Config
         [ConfigGroup("Homepage")] partial class HomepageConfigGroup
         {
             [ConfigItem<int>("UiCustomType", 0, ConfigSource.Local)] public partial int Type { get; set; }
-            [ConfigItem<int>("UiCustomPreset", 0, ConfigSource.Local)] public partial int SelectedPreset { get; set; }
+            [ConfigItem<int>("UiCustomPreset", 13, ConfigSource.Local)] public partial int SelectedPreset { get; set; }
             [ConfigItem<string>("UiCustomNet", "", ConfigSource.Local)] public partial string CustomUrl { get; set; }
         }
 

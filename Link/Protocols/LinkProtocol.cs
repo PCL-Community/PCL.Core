@@ -58,18 +58,6 @@ public abstract class LinkProtocol(bool isServer, string identifier) : IDisposab
     /// <param name="sender">事件发送者</param>
     /// <param name="e">接收到的数据事件参数</param>
     protected abstract void ReceivedData(object? sender, TcpHelper.ReceivedDateEventArgs e);
-    /// <summary>
-    /// 处理新客户端连接
-    /// </summary>
-    /// <param name="sender">事件发送者</param>
-    /// <param name="e">接收到的数据事件参数</param>
-    protected abstract void AcceptedClient(object? sender, TcpHelper.AcceptedClientEventArgs e);
-    /// <summary>
-    /// 处理客户端断开连接
-    /// </summary>
-    /// <param name="sender">事件发送者</param>
-    /// <param name="e">接收到的数据事件参数</param>
-    protected abstract void ClientDisconnected(object? sender, TcpHelper.ClientDisconnectedEventArgs e);
     
     /// <summary>
     /// 即客户端部分逻辑。写成抽象方法, 是因为每个协议的客户端逻辑都不一样。

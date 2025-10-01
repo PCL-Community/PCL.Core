@@ -33,29 +33,7 @@ public class TcpHelper : IDisposable
         public Guid ClientId => clientId;
     }
     
-    public class AcceptedClientEventArgs(EndPoint clientEndPoint, Guid clientId) : EventArgs
-    {
-        /// <summary>
-        /// 客户端地址, 用于填写字典信息
-        /// </summary>
-        public IPEndPoint ClientEndPoint => clientEndPoint as IPEndPoint ?? throw new Exception("无法获取客户端地址");
-        /// <summary>
-        /// 客户端Socket的Guid, 用于添加入字典
-        /// </summary>
-        public Guid ClientId => clientId;
-    }
-    
-    public class ClientDisconnectedEventArgs(Guid clientId) : EventArgs
-    {
-        /// <summary>
-        /// 断开连接的客户端Socket的Guid, 用于删除字典记录
-        /// </summary>
-        public Guid ClientId => clientId;
-    }
-    
-    public event EventHandler<AcceptedClientEventArgs>? AcceptedClient;
     public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
-    public event EventHandler<ClientDisconnectedEventArgs>? ClientDisconnected;
     
     public void StartListening(int port)
     {
@@ -129,7 +107,6 @@ public class TcpHelper : IDisposable
         }
         LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
         var clientId = Guid.NewGuid();
-        AcceptedClient?.Invoke(this, new AcceptedClientEventArgs(clientSocket.RemoteEndPoint, clientId));
         var buffer = new byte[1024];
         try
         {
@@ -157,7 +134,6 @@ public class TcpHelper : IDisposable
         }
         finally
         {
-            ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(clientId));
             clientSocket.SafeClose();
         }
     }

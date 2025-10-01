@@ -34,19 +34,6 @@ public class ScfProtocol(bool isServer) : LinkProtocol(isServer, "scaffolding")
         _ = e;      // 避免未使用参数警告
     }
 
-    protected override void AcceptedClient(object? sender, TcpHelper.AcceptedClientEventArgs e)
-    {
-        _playerList.TryAdd(e.ClientId, new ScfPlayerInfo
-        {
-            Endpoint = e.ClientEndPoint
-        });
-    }
-
-    protected override void ClientDisconnected(object? sender, TcpHelper.ClientDisconnectedEventArgs e)
-    {
-        _playerList.TryRemove(e.ClientId, out _);
-    }
-
     protected override async Task LaunchClient()
     {
         if (TargetLobby == null)

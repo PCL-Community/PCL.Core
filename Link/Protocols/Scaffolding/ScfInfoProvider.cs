@@ -26,8 +26,12 @@ public static class ScfInfoProvider
                 ["kind"] = Kind == PlayerKind.Host ? "HOST" : "GUEST"
             };
         }
-        public static ScfPlayerInfo FromJsonObject(JsonObject obj)
+        public static ScfPlayerInfo FromJsonObject(JsonObject? obj)
         {
+            if (obj == null)
+            {
+                throw new ArgumentNullException(nameof(obj));
+            }
             // 检查必要的字段是否存在
             if (obj["name"] == null || obj["machine_id"] == null || obj["vendor"] == null || obj["kind"] == null)
             {

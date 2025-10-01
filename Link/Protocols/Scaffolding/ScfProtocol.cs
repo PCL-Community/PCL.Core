@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -13,10 +11,11 @@ using PCL.Core.Net;
 
 namespace PCL.Core.Link.Protocols.Scaffolding;
 
-public class ScfProtocol(bool isServer) : LinkProtocol(isServer, "scaffolding")
+public class ScfProtocol : LinkProtocol
 {
     protected override string Identifier => "scaffolding";
-    private readonly string[] _supportedProtocols = 
+
+    private readonly string[] _supportedProtocols =
     [
         "c:ping",
         "c:protocols",
@@ -24,12 +23,28 @@ public class ScfProtocol(bool isServer) : LinkProtocol(isServer, "scaffolding")
         "c:player_ping",
         "c:player_profile_list"
     ];
-    private string[] _serverSupportedProtocols = [];
-    private readonly ConcurrentDictionary<Guid, ScfPlayerInfo> _playerList = new();
+
+    private readonly ScfPlayerInfo _playerInfo;
+    private readonly List<ScfPlayerInfo> _playerList = [];
+    
+    public ScfProtocol(bool isServer, string hostname) : base(isServer, "scaffolding")
+    {
+        _playerInfo = new ScfPlayerInfo
+        {
+            Name = hostname,
+            MachineId = hostname, // TODO: 获取machineId(交给鸽秋)
+            Vendor = "PCL2-CE",
+            Kind = isServer ? PlayerKind.Host : PlayerKind.Guest
+        };
+        if (isServer)
+        {
+            _playerList.Add(_playerInfo);
+        }
+    }
 
     protected override void ReceivedData(object? sender, TcpHelper.ReceivedDateEventArgs e)
     {
-        // TODO: 实现数据接收处理逻辑
+        // TODO: 实现数据接收处理逻辑(最重要的，处理玩家列表)
         _ = sender; // 避免未使用参数警告
         _ = e;      // 避免未使用参数警告
     }
@@ -53,21 +68,14 @@ public class ScfProtocol(bool isServer) : LinkProtocol(isServer, "scaffolding")
             PacketType = "c:protocols",
             Body = Encoding.UTF8.GetBytes(string.Join("\0", _supportedProtocols))
         };
-        var response = await TcpHelper.SendToServer(packet.To());
-        if (response == null)
-        {
-            LogWrapper.Error("无法获取服务器响应");
-            return;
-        }
-
-        _serverSupportedProtocols = Encoding.UTF8.GetString(ServerPacket.From(response).Body).Split('\0');
+        await TcpHelper.SendToServer(packet.To(), false);
         
         packet = new ClientPacket
         {
             PacketType = "c:server_port",
             Body = []
         };
-        response = await TcpHelper.SendToServer(packet.To());
+        var response = await TcpHelper.SendToServer(packet.To());
         if (response == null)
         {
             LogWrapper.Error("无法获取服务器响应");
@@ -92,21 +100,32 @@ public class ScfProtocol(bool isServer) : LinkProtocol(isServer, "scaffolding")
             var packet = new ClientPacket
             {
                 PacketType = "c:player_ping",
-                Body = _JsonObjectToBytes(new JsonObject
-                {
-                    ["name"] = "", // TODO: 添加玩家信息
-                    ["machine_id"] = "", // TODO: 添加玩家ID
-                    ["vendor"] = "PCL2-CE"
-                })
+                Body = _JsonObjectToBytes(_playerInfo.ToJsonObject())
             };
             await TcpHelper.SendToServer(packet.To(), false);
-            packet = new ClientPacket()
+            LogWrapper.Info($"{Identifier} 已发送玩家信息");
+            
+            packet = new ClientPacket
             {
                 PacketType = "c:player_profile_list",
                 Body = []
             };
             var response = await TcpHelper.SendToServer(packet.To());
+            if (response == null)
+            {
+                LogWrapper.Error("无法获取服务器响应");
+                continue;
+            }
 
+            if (JsonNode.Parse(Encoding.UTF8.GetString(ServerPacket.From(response).Body)) is JsonArray playerList)
+            {
+                _playerList.Clear();
+                foreach (var item in playerList)
+                {
+                    _playerList.Add(ScfPlayerInfo.FromJsonObject(item as JsonObject));
+                }
+            }
+            LogWrapper.Info($"{Identifier} 玩家列表已更新");
             await Task.Delay(5000, token);
         }
     }

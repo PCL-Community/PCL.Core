@@ -1,3 +1,3 @@
 namespace PCL.Core.Minecraft.LocalCompFiles.Models;
 
-public record BaseNbtData(int TotalVolume, EnclosingSizeData EnclosingSize) : BaseResourceData;
+public record BaseNbtData(string Name, int TotalVolume, EnclosingSizeData EnclosingSize) : BaseResourceData;

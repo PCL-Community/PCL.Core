@@ -12,4 +12,4 @@ public record LitematicNbtData(
     EnclosingSizeData EnclosingSize,
     int RegionCount,
     int TotalBlocks,
-    int TotalVolume) : BaseNbtData(TotalVolume, EnclosingSize);
+    int TotalVolume) : BaseNbtData(Name, TotalVolume, EnclosingSize);

@@ -41,7 +41,7 @@ public abstract class LocalResource
     /// <summary>
     /// Load and parse the resource from disk.
     /// </summary>
-    public abstract BaseResourceData? Load();
+    public abstract BaseResourceData? Load(bool lazy = false);
 
     /// <inheritdoc />
     public override string ToString()

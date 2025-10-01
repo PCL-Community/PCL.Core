@@ -17,11 +17,12 @@ public class LocalResourceFactory
             return new LocalFolder(path);
         }
 
+        // ensure dir exist
+        // but i think that is useless
         //if (Directory.Exists(path))
         //{
         //    return new LocalFolder(path);
         //}
-
 
         //var extension = Path.GetExtension(path).ToLowerInvariant();
         var rawExtension = Path.GetExtension(path)

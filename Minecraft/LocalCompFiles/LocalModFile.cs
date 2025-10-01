@@ -27,7 +27,7 @@ public class LocalModFile : LocalResource
     }
 
     /// <inheritdoc />
-    public override BaseResourceData? Load()
+    public override BaseResourceData? Load(bool lazy = false)
     {
         if (File.Exists(Path))
         {

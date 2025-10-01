@@ -11,7 +11,7 @@ public class LocalFolder : LocalResource
     }
 
     /// <inheritdoc />
-    public override BaseNbtData? Load()
+    public override BaseResourceData? Load(bool lazy = false)
     {
         if (Directory.Exists(ActualPath))
         {

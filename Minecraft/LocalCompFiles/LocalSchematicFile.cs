@@ -15,13 +15,25 @@ public class LocalSchematicFile : LocalResource
     }
 
     /// <inheritdoc />
-    public override BaseNbtData? Load()
+    public override BaseResourceData? Load(bool lazy = false)
     {
         if (!File.Exists(Path))
         {
             FileUnavailableReason = new FileNotFoundException("Resource file not found.", Path);
             State = FileStatus.Unavailable;
             return null;
+        }
+
+        if (lazy)
+        {
+            var fileName = System.IO.Path.GetFileNameWithoutExtension(Path);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return null;
+            }
+
+            var lazyNbtData = new BaseNbtData(fileName, 0, EnclosingSizeData.Zero);
+            return lazyNbtData;
         }
 
         try
@@ -32,10 +44,12 @@ public class LocalSchematicFile : LocalResource
 
             var extension = System.IO.Path.GetExtension(Path).ToLowerInvariant();
 
+
+            // TODO: impl lazy load: only load file name
             BaseNbtData? nbtData = extension switch
             {
                 ".litematic" => _LoadLitematicNbtData(file),
-                ".schem" => _LoadSchemaNbtData(file),
+                ".schem" => _LoadSpongeSchemaNbtData(file),
                 ".schematic" => _LoadSchematicNbtData(file),
                 ".nbt" => _LoadStructureNbtData(file),
                 _ => null
@@ -52,7 +66,7 @@ public class LocalSchematicFile : LocalResource
         return null;
     }
 
-    private LitematicNbtData _LoadLitematicNbtData(NbtFile nbtFile)
+    private static LitematicNbtData _LoadLitematicNbtData(NbtFile nbtFile)
     {
         var versionTag = nbtFile.RootTag.Get<NbtInt>("Version")?.Value ?? 0;
 
@@ -93,7 +107,7 @@ public class LocalSchematicFile : LocalResource
         return nbtData;
     }
 
-    private SchemaData _LoadSchemaNbtData(NbtFile nbtFile)
+    private static SpongeSchemaData _LoadSpongeSchemaNbtData(NbtFile nbtFile)
     {
         var versionTag = nbtFile.RootTag.Get<NbtInt>("Version")?.Value ?? 0;
         var dataVersionTag = nbtFile.RootTag.Get<NbtInt>("DataVersion")?.Value ?? 0;
@@ -112,13 +126,13 @@ public class LocalSchematicFile : LocalResource
         var nameTag = metadataTag?.Get<NbtString>("Name")?.Value ?? string.Empty;
         var authorTag = metadataTag?.Get<NbtString>("Author")?.Value ?? string.Empty;
 
-        var schemaData = new SchemaData(nameTag, authorTag, regionCount, totalVolume, versionTag, dataVersionTag,
+        var schemaData = new SpongeSchemaData(nameTag, authorTag, regionCount, totalVolume, versionTag, dataVersionTag,
             enclosingSize);
 
         return schemaData;
     }
 
-    private SchematicData _LoadSchematicNbtData(NbtFile nbtFile)
+    private static SchematicData _LoadSchematicNbtData(NbtFile nbtFile)
     {
         var widhTag = nbtFile.RootTag.Get<NbtShort>("Width")?.Value ?? 0;
         var heightTag = nbtFile.RootTag.Get<NbtShort>("Height")?.Value ?? 0;
@@ -133,12 +147,12 @@ public class LocalSchematicFile : LocalResource
         LogWrapper.Debug($"Schematic material type: {materialsTag}");
 #endif
 
-        var schematicData = new SchematicData(totalVolume, enclosingSize);
+        var schematicData = new SchematicData(string.Empty, totalVolume, enclosingSize);
 
         return schematicData;
     }
 
-    private VanillaNbtData _LoadStructureNbtData(NbtFile nbtFile)
+    private static VanillaNbtData _LoadStructureNbtData(NbtFile nbtFile)
     {
         var authorTag = nbtFile.RootTag.Get<NbtString>("author")?.Value ?? string.Empty;
         var sizeElements = nbtFile.RootTag.Get<NbtList>("size")?.ToArray() ?? [];

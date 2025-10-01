@@ -5,4 +5,5 @@ public enum PeerRole
     Guest,  // 未授权接入用户
     User,   // 正常用户
     Admin,  // 管理员
+    Creator,// 创建者
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using PCL.Core.Link.Interop.ControlLayer;
 
 namespace PCL.Core.Link.Interop.NetworkLayer;
 
@@ -13,5 +14,5 @@ public interface IPeer
     int Latency { get; set; }                 // 延迟
     int PacketLoss { get; set; }              // 丢包率
     DateTime LastHeartbeat { get; set; }      // 最后心跳时间
-    Dictionary<string, object> Metadata { get; } // 扩展字段（如用户ID、角色等）
+    Dictionary<PeerMetadata, object> Metadata { get; } // 扩展字段（如用户ID、角色等）
 }

@@ -39,6 +39,17 @@ public static class RandomUtils {
     }
 
     /// <summary>
+    /// Returns a non-negative random integer that is less than the specified maximum.
+    /// </summary>
+    /// <param name="maxValue">The exclusive upper bound of the random number to be generated. maxValue must be greater than or equal to 0.</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public static int NextInt(int maxValue)
+    {
+        return maxValue < 0 ? throw new ArgumentOutOfRangeException(nameof(maxValue), "The max value is less than 0") : SharedRandom.Next(maxValue);
+    }
+
+    /// <summary>
     /// 随机打乱列表的元素，返回新列表。
     /// </summary>
     /// <typeparam name="T">列表元素类型。</typeparam>

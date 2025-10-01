@@ -247,7 +247,7 @@ public static partial class Config
         [ConfigItem<string>("LaunchAdvanceGame", "", ConfigSource.Local)] public partial string GameArgs { get; set; }
         [ConfigItem<string>("LaunchAdvanceRun", "", ConfigSource.Local)] public partial string PreLaunchCommand { get; set; }
         [ConfigItem<bool>("LaunchAdvanceRunWait", true, ConfigSource.Local)] public partial bool PreLaunchCommandWait { get; set; }
-        [ConfigItem<bool>("LaunchAdvanceDisableJLW", false, ConfigSource.Local)] public partial bool DisableJlw { get; set; }
+        [ConfigItem<bool>("LaunchAdvanceDisableJLW", true, ConfigSource.Local)] public partial bool DisableJlw { get; set; }
         [ConfigItem<bool>("LaunchAdvanceDisableRW", false, ConfigSource.Local)] public partial bool DisableRw { get; set; }
         [ConfigItem<bool>("LaunchAdvanceGraphicCard", true)] public partial bool SetGpuPreference { get; set; }
         [ConfigItem<bool>("LaunchAdvanceNoJavaw", false)] public partial bool DontUseJavaw { get; set; }

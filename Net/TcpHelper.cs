@@ -17,7 +17,7 @@ public class TcpHelper : IDisposable
     private readonly Socket _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
     private readonly CancellationTokenSource _ctx = new CancellationTokenSource();
     
-    public class ReceivedDateEventArgs(byte[] data, Guid clientId) : EventArgs
+    public class ReceivedDateEventArgs(byte[] data) : EventArgs
     {
         /// <summary>
         /// 接收到的数据
@@ -26,11 +26,7 @@ public class TcpHelper : IDisposable
         /// <summary>
         /// 服务端返回数据
         /// </summary>
-        public byte[]? Response => null;
-        /// <summary>
-        /// 客户端Socket的Guid, 用于填写字典信息
-        /// </summary>
-        public Guid ClientId => clientId;
+        public byte[]? Response { get; set; }
     }
     
     public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
@@ -106,7 +102,6 @@ public class TcpHelper : IDisposable
             throw new Exception("无法获取客户端地址");
         }
         LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
-        var clientId = Guid.NewGuid();
         var buffer = new byte[1024];
         try
         {
@@ -120,7 +115,7 @@ public class TcpHelper : IDisposable
                 var data = new byte[received];
                 Array.Copy(buffer, data, received);
                 
-                var receivedDateEventArgs = new ReceivedDateEventArgs(data, clientId);
+                var receivedDateEventArgs = new ReceivedDateEventArgs(data);
                 ReceivedData?.Invoke(this, receivedDateEventArgs);
                 if (receivedDateEventArgs.Response != null)
                 {

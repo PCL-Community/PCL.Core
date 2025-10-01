@@ -6,17 +6,12 @@ namespace PCL.Core.Link.Protocols.Scaffolding;
 
 public static class ScfInfoProvider
 {
-    public enum PlayerKind
-    {
-        Host,
-        Guest
-    }
     public class ScfPlayerInfo
     {
         public string Name { get; set; } = string.Empty;
         public string MachineId { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
-        public required PlayerKind Kind { get; init; }
+        public required bool IsHost { get; init; }
         public JsonObject ToJsonObject()
         {
             return new JsonObject
@@ -24,7 +19,7 @@ public static class ScfInfoProvider
                 ["name"] = Name,
                 ["machine_id"] = MachineId,
                 ["vendor"] = Vendor,
-                ["kind"] = Kind == PlayerKind.Host ? "HOST" : "GUEST"
+                ["kind"] = IsHost ? "HOST" : "GUEST"
             };
         }
         public static ScfPlayerInfo FromJsonObject(JsonObject? obj)
@@ -42,8 +37,8 @@ public static class ScfInfoProvider
             var kindStr = obj["kind"]!.ToString();
             var kind = kindStr switch
             {
-                "HOST" => PlayerKind.Host,
-                "GUEST" => PlayerKind.Guest,
+                "HOST" => true,
+                "GUEST" => false,
                 _ => throw new ArgumentException($"Invalid player kind value: {kindStr}")
             };
 
@@ -52,7 +47,7 @@ public static class ScfInfoProvider
                 Name = obj["name"]!.ToString(),
                 MachineId = obj["machine_id"]!.ToString(),
                 Vendor = obj["vendor"]!.ToString(),
-                Kind = kind
+                IsHost = kind
             };
         }
     }

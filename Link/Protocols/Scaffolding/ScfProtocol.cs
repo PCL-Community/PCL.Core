@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -33,7 +33,7 @@ public class ScfProtocol : LinkProtocol
             Name = hostname,
             MachineId = hostname, // TODO: 获取machineId(交给鸽秋)
             Vendor = "PCL2-CE",
-            Kind = isServer ? PlayerKind.Host : PlayerKind.Guest
+            IsHost = isServer
         };
         if (isServer)
         {
@@ -43,9 +43,43 @@ public class ScfProtocol : LinkProtocol
 
     protected override void ReceivedData(object? sender, TcpHelper.ReceivedDateEventArgs e)
     {
-        // TODO: 实现数据接收处理逻辑(最重要的，处理玩家列表)
-        _ = sender; // 避免未使用参数警告
-        _ = e;      // 避免未使用参数警告
+        var packet = ClientPacket.From(e.Data);
+        LogWrapper.Info($"{Identifier} 收到数据包, 类型:{packet.PacketType}");
+        ServerPacket response;
+        switch (packet.PacketType)
+        {
+            case "c:ping":
+                response = new ServerPacket
+                {
+                    StatusCode = 200,
+                    Body = packet.Body
+                };
+                break;
+            case "c:protocols":
+                response = new ServerPacket
+                {
+                    StatusCode = 200,
+                    Body = Encoding.UTF8.GetBytes(string.Join("\0", _supportedProtocols))
+                };
+                break;
+            case "c:server_port":
+                if (TargetLobby == null)
+                {
+                    LogWrapper.Error("未设置目标大厅，无法获取服务器端口");
+                    return;
+                }
+                var portBytes = new byte[2];
+                BinaryPrimitives.WriteUInt16BigEndian(portBytes, (ushort)TargetLobby.Port);
+                response = new ServerPacket
+                {
+                    StatusCode = 200,
+                    Body = portBytes
+                };
+                break;
+            default:
+                return;
+        }
+        e.Response = response.To();
     }
 
     protected override async Task LaunchClient()
@@ -81,11 +115,13 @@ public class ScfProtocol : LinkProtocol
             return;
         }
         
-        if (!ushort.TryParse(ServerPacket.From(response).Body, out var port))
+        if (response.Length != 2)
         {
-            LogWrapper.Error("服务器返回的端口号无效");
+            LogWrapper.Error("服务器响应长度错误");
             return;
         }
+        
+        var port = BinaryPrimitives.ReadUInt16BigEndian(response);
 
         TargetLobby.Port = port;
         State = ProtocolState.Running;

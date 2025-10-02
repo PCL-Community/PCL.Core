@@ -59,7 +59,7 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
 
         try
         {
-            File.Delete(filePath);
+            await Task.Run(() => File.Delete(filePath));
         }
         catch (FileNotFoundException) { /* 忽略此错误 */ }
         catch (DirectoryNotFoundException ex)

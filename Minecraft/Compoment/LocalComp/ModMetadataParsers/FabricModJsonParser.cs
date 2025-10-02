@@ -1,11 +1,10 @@
 using System.IO.Compression;
 using System.Text.Json;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
-using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
-public class FabricModJsonParser : IModMetadataParser
+internal class FabricModJsonParser : IModMetadataParser
 {
     /// <inheritdoc />
     public bool TryParse(ZipArchive archive, LocalModFile modFile)
@@ -20,13 +19,26 @@ public class FabricModJsonParser : IModMetadataParser
 
         try
         {
-            var jsonStu = JsonSerializer.Deserialize<ModMetadata>(content);
-            if (jsonStu == null)
+            var dto = JsonSerializer.Deserialize<FabricMetadataDto>(content);
+            if (dto == null)
             {
                 return false;
             }
 
-            modFile.Metadata = jsonStu;
+            var metadata = new ModMetadata
+            {
+                Name = dto.Name,
+                Id = dto.Id,
+                Authors = dto.Authors ?? [],
+                Description = dto.Description,
+                Icon = dto.Icon,
+                Version = dto.Version,
+                Url = dto.Contact?.Homepage ?? string.Empty
+            };
+
+            // NOTE: fabric desnt parse dependencies
+
+            modFile.Metadata = metadata;
 
             return true;
         }

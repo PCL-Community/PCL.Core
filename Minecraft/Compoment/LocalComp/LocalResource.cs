@@ -1,14 +1,14 @@
 using System;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
-namespace PCL.Core.Minecraft.LocalCompFiles;
+namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
-public abstract class LocalResource
+public abstract class LocalResource(string path)
 {
     /// <summary>
     /// Absolute path of resource.
     /// </summary>
-    public string Path { get; }
+    public string Path { get; } = path;
 
     /// <summary>
     /// Folder name or File name of resource.
@@ -20,23 +20,16 @@ public abstract class LocalResource
     /// <summary>
     /// Demonstrate if the resource is a folder.
     /// </summary>
-    public bool IsFolder { get; }
+    public bool IsFolder { get; } = path?.EndsWith("\\__FOLDER__", StringComparison.OrdinalIgnoreCase) ?? false;
 
     /// <summary>
     /// Actual path of resource, if it's a folder, the path will remove the "__FOLDER__" suffix.
     /// </summary>
     public string ActualPath => IsFolder ? Path.Replace("\\__FOLDER__", string.Empty) : Path;
 
-    public FileStatus State { get; protected set; }
+    public FileStatus State { get; protected set; } = FileStatus.Fine;
     public Exception? FileUnavailableReason { get; protected set; }
     public bool IsFileAvailable => FileUnavailableReason is null;
-
-    protected LocalResource(string path)
-    {
-        Path = path ?? string.Empty;
-        IsFolder = path?.EndsWith("\\__FOLDER__", StringComparison.OrdinalIgnoreCase) ?? false;
-        State = FileStatus.Fine;
-    }
 
     /// <summary>
     /// Load and parse the resource from disk.

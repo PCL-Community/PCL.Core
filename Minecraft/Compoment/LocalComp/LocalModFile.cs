@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 using PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
-using PCL.Core.Minecraft.LocalCompFiles;
-using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
@@ -67,5 +65,56 @@ public class LocalModFile : LocalResource
         }
 
         return null;
+    }
+
+    public void AddDependency(string modId, string? versionReq = null)
+    {
+        if (string.IsNullOrEmpty(modId) && modId.Length < 2)
+        {
+            return;
+        }
+
+        if (modId.Equals("name", StringComparison.OrdinalIgnoreCase) ||
+            int.TryParse(modId, out _))
+        {
+            return;
+        }
+
+        if (versionReq is null)
+        {
+            versionReq = string.Empty;
+        }
+        else if (!versionReq.Contains('.') && !versionReq.Contains('-'))
+        {
+            versionReq = string.Empty;
+        }
+        else if (versionReq.Contains('$'))
+        {
+            versionReq = string.Empty;
+        }
+        else
+        {
+            var preFix = versionReq[0];
+            var subFix = versionReq[^1];
+
+#pragma warning disable CS8794 // 输入始终与提供的模式匹配。
+            if (preFix is not ('[' and '(') && subFix is not (']' and ')'))
+            {
+                versionReq = $"[{versionReq},)";
+            }
+#pragma warning restore CS8794 // 输入始终与提供的模式匹配。
+        }
+
+        if (Dependencies.TryGetValue(modId, out var val))
+        {
+            if (string.IsNullOrEmpty(val))
+            {
+                val = versionReq;
+            }
+        }
+        else
+        {
+            Dependencies.Add(modId, versionReq);
+        }
     }
 }

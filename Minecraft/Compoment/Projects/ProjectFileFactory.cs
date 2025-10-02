@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
 using PCL.Core.Minecraft.Compoment.Projects.Entities;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft.Compoment.Projects;
 
@@ -83,6 +83,8 @@ public static class ProjectFileFactory
                 .Replace("+", "%20");
         }
 
+        url = UrlConverter.HandleCurseForgeDownloadUrl(url); // TODO: impl mirror
+
         var rawDeps = new List<string>();
         var rawOptionalDeps = new List<string>();
         if (dto.Dependencies is not null)
@@ -124,7 +126,7 @@ public static class ProjectFileFactory
             DownloadCount = dto.DownloadCount,
             FileName = dto.FileName,
             Hash = hash,
-            DownloadUrls = [], // TODO: impl this
+            DownloadUrls = [url],
             RawDependencies = rawDeps,
             Dependencies = [], // NOTE: lm doesnt impl this
             RawOptionalDependencies = rawOptionalDeps,
@@ -152,7 +154,7 @@ public static class ProjectFileFactory
 
         var file = dto.Files?.FirstOrDefault();
         var fileName = file?.FileName ?? string.Empty;
-        var url = file?.Url ?? string.Empty; // TODO: convert to mirror
+        var url = file?.Url ?? string.Empty; // TODO: impl mirror
         var hash = file?.Hashes
             .First(hash => hash.Key.Equals("sha1", StringComparison.OrdinalIgnoreCase))
             .Value ?? string.Empty;

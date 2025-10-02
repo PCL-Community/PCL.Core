@@ -1,4 +1,4 @@
-namespace PCL.Core.Minecraft.LocalCompFiles;
+namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
 public enum FileStatus
 {

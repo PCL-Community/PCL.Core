@@ -1,7 +1,6 @@
 using System.IO.Compression;
-using PCL.Core.Minecraft.Compoment.LocalComp;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
 public interface IModMetadataParser
 {

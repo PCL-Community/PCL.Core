@@ -1,8 +1,7 @@
 using System;
 using System.IO;
-using PCL.Core.Minecraft.Compoment.LocalComp;
 
-namespace PCL.Core.Minecraft.LocalCompFiles;
+namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
 public class LocalResourceFactory
 {

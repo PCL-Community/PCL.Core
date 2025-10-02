@@ -1,7 +1,7 @@
 using System.IO;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
-namespace PCL.Core.Minecraft.LocalCompFiles;
+namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
 public class LocalFolder : LocalResource
 {

@@ -1,14 +1,12 @@
 using System;
 using System.IO.Compression;
 using System.Linq;
-using PCL.Core.Minecraft.Compoment.LocalComp;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 using Tomlyn;
-using Tomlyn.Model;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
-public class ForgeModParser : IModMetadataParser
+internal class ForgeModParser : IModMetadataParser
 {
     /// <inheritdoc />
     public bool TryParse(ZipArchive archive, LocalModFile modFile)
@@ -23,63 +21,30 @@ public class ForgeModParser : IModMetadataParser
 
         try
         {
-            var model = Toml.ToModel(content);
-            if (!model.TryGetValue("mods", out var modsEntry) ||
-                modsEntry is not TomlTableArray modsArray)
-            {
-                return false;
-            }
+            var model = Toml.ToModel<ForgeMetadataDto>(content);
+            var modInfo = model.Mods.FirstOrDefault() ??
+                          throw new ArgumentNullException(nameof(model), "Mod info is null.");
 
-            var modTable = modsArray.FirstOrDefault();
-            if (modTable == null)
+            foreach (var dep in model.Dependencies.Select(dep => dep.Value))
             {
-                return false;
-            }
+                foreach (var info in dep)
+                {
+                    var modId = info.ModId;
+                    var reqVers = info.VersionRange;
 
-            var metaModId = string.Empty;
-            if (modTable.TryGetValue("modId", out var modId))
-            {
-                metaModId = modId.ToString() ?? string.Empty;
-            }
-
-            var metaVersion = string.Empty;
-            if (modTable.TryGetValue("version", out var version))
-            {
-                metaVersion = version.ToString() ?? string.Empty;
-            }
-
-            var metaName = string.Empty;
-            if (modTable.TryGetValue("displayName", out var name))
-            {
-                metaName = name.ToString() ?? string.Empty;
-            }
-
-            var metaDescription = string.Empty;
-            if (modTable.TryGetValue("description", out var description))
-            {
-                metaDescription = description.ToString() ?? string.Empty;
-            }
-
-            var metaAuthors = string.Empty;
-            if (modTable.TryGetValue("authors", out var authors))
-            {
-                metaAuthors = authors.ToString() ?? string.Empty;
-            }
-
-            var metaLogo = string.Empty;
-            if (modTable.TryGetValue("authors", out var logo))
-            {
-                metaLogo = logo.ToString() ?? string.Empty;
+                    modFile.AddDependency(modId, reqVers);
+                }
             }
 
             var metadata = new ModMetadata
             {
-                Name = metaName,
-                Description = metaDescription,
-                Version = metaVersion,
-                Id = metaModId,
-                Authors = [metaAuthors],
-                Icon = metaLogo
+                Name = modInfo.DisplayName,
+                Description = modInfo.Description,
+                Version = modInfo.Version,
+                Id = modInfo.ModId,
+                Authors = [modInfo.Authors],
+                Icon = modInfo.LofoFile,
+                Url = modInfo.Url
             };
 
             modFile.Metadata = metadata;

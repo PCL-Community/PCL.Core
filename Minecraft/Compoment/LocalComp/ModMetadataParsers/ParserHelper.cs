@@ -1,9 +1,10 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
 internal static class ParserHelper
 {
@@ -19,7 +20,7 @@ internal static class ParserHelper
             return null;
         }
 
-        using var reader = new StreamReader(entry.Open());
+        using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
         return reader.ReadToEnd();
     }
 

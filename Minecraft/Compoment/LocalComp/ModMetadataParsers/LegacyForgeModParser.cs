@@ -1,11 +1,11 @@
 using System.IO.Compression;
+using System.Linq;
 using System.Text.Json;
-using PCL.Core.Minecraft.Compoment.LocalComp;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
-public class LegacyForgeModParser : IModMetadataParser
+internal class LegacyForgeModParser : IModMetadataParser
 {
     /// <inheritdoc />
     public bool TryParse(ZipArchive archive, LocalModFile modFile)
@@ -20,20 +20,44 @@ public class LegacyForgeModParser : IModMetadataParser
 
         try
         {
-            var jsonData = JsonSerializer.Deserialize<LegacyForgeModMetadata>(content);
-            if (jsonData == null)
+            var dto = JsonSerializer.Deserialize<LegacyForgeModMetadataDto>(content);
+            if (dto == null)
             {
                 return false;
             }
 
+            var deps = (dto.Dependencies ?? []).Union(dto.RequireMods ?? []);
+            foreach (var dep in deps)
+            {
+                if (string.IsNullOrEmpty(dep))
+                {
+                    continue;
+                }
+
+                if (dep.Contains('@'))
+                {
+                    var spilited = dep.Split('@');
+                    var id = spilited[0];
+                    var verReq = spilited[1];
+
+                    modFile.AddDependency(id, verReq);
+                }
+                else
+                {
+                    modFile.AddDependency(dep);
+                }
+            }
+
+
             var metadata = new ModMetadata
             {
-                Name = jsonData.Name,
-                Description = jsonData.Description,
-                Version = jsonData.Version,
-                Id = jsonData.Id,
-                Authors = jsonData.Authors,
-                Icon = jsonData.LogoFile ?? string.Empty
+                Name = dto.Name,
+                Description = dto.Description,
+                Version = dto.Version,
+                Id = dto.Id,
+                Authors = dto.Authors,
+                Icon = dto.LogoFile ?? string.Empty,
+                Url = dto.Url
             };
 
             modFile.Metadata = metadata;

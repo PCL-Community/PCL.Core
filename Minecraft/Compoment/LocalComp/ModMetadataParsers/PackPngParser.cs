@@ -1,9 +1,8 @@
 using System.IO.Compression;
-using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
-public class PackPngParser : IModMetadataParser
+internal class PackPngParser : IModMetadataParser
 {
     /// <inheritdoc />
     public bool TryParse(ZipArchive archive, LocalModFile modFile)

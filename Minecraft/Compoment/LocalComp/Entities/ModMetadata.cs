@@ -1,20 +1,20 @@
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
 public record ModMetadata
 {
-    [JsonPropertyName("name")] public required string Name { get; set; }
+    public required string Name { get; init; }
 
-    [JsonPropertyName("description")] public string? Description { get; set; }
+    public string? Description { get; init; }
 
-    [JsonPropertyName("version")] public string? Version { get; set; }
+    public string? Version { get; init; }
 
-    [JsonPropertyName("id")] public required string Id { get; set; }
+    public required string Id { get; init; }
 
-    [JsonPropertyName("authors")] // NOTE: this have a problem: some mod not use string array but object array
-    public required List<string> Authors { get; set; }
+    // NOTE: this have a problem: some mod's authors not use string array but object array
+    public required List<string> Authors { get; init; }
 
-    [JsonPropertyName("icon")] public required string Icon { get; set; }
+    public required string Icon { get; init; }
+    public string? Url { get; init; }
 }

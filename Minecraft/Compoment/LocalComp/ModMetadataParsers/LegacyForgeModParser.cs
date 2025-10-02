@@ -26,12 +26,15 @@ public class LegacyForgeModParser : IModMetadataParser
                 return false;
             }
 
-            var metadata = new ModMetadata(jsonData.Name,
-                jsonData.Description,
-                jsonData.Version,
-                jsonData.Id,
-                jsonData.Authors,
-                jsonData.LogoFile ?? string.Empty);
+            var metadata = new ModMetadata
+            {
+                Name = jsonData.Name,
+                Description = jsonData.Description,
+                Version = jsonData.Version,
+                Id = jsonData.Id,
+                Authors = jsonData.Authors,
+                Icon = jsonData.LogoFile ?? string.Empty
+            };
 
             modFile.Metadata = metadata;
 

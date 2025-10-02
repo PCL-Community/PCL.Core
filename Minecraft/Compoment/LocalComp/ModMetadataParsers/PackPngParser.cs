@@ -1,7 +1,7 @@
 using System.IO.Compression;
-using PCL.Core.Minecraft.Compoment.LocalComp;
+using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
 public class PackPngParser : IModMetadataParser
 {
@@ -10,6 +10,11 @@ public class PackPngParser : IModMetadataParser
     {
         var entry = archive.GetEntry("pack.png");
         if (entry == null)
+        {
+            return false;
+        }
+
+        if (modFile.Metadata is null)
         {
             return false;
         }

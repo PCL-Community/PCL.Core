@@ -108,9 +108,9 @@ public static class ProjectFileFactory
         var gameVers = rawGameVers
             .Where(ver => ver.StartsWith("1."))
             .Select(ver => ver.Replace("-snapshot", "预览版"))
-            .ToImmutableList();
+            .ToList();
 
-        // TODO: sort game versions
+        var sortedGameVers = Utils.GameVersionSorterUtil.SortGameVersions(gameVers);
 
         var modLoaders = ModLoaderDetector.DetechCurseForgeType(rawGameVers);
 
@@ -129,7 +129,7 @@ public static class ProjectFileFactory
             Dependencies = [], // NOTE: lm doesnt impl this
             RawOptionalDependencies = rawOptionalDeps,
             OptionalDependencies = [], // NOTE: lm doesnt impl this
-            GameVersions = gameVers,
+            GameVersions = sortedGameVers,
             Type = CompType.Mod,
             ModLoaders = modLoaders
         };
@@ -192,7 +192,7 @@ public static class ProjectFileFactory
             })
             .Distinct().ToList();
 
-        // TODO: sort game version
+        var sortedGameVers = Utils.GameVersionSorterUtil.SortGameVersions(gameVers);
 
         var info = new ProjectFileInfo
         {
@@ -209,7 +209,7 @@ public static class ProjectFileFactory
             Dependencies = [], // NOTE: lm doesnt impl this, so we leave it blank
             RawOptionalDependencies = rawOptionalDeps,
             OptionalDependencies = [], // NOTE: lm doesnt impl this, so we leave it blank
-            GameVersions = gameVers,
+            GameVersions = sortedGameVers,
             Type = type
         };
 

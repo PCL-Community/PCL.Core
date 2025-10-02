@@ -168,11 +168,11 @@ public partial class MotdRenderer {
         return p;
     }
 
-    public void RenderMotd(string motd, bool isWhiteBackground = true) {
+    public void RenderMotd(string motd, bool isDarkMode = true) {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();
 
-        var colorMap = isWhiteBackground ? _colorMapWithWhiteBackground : _colorMapWithBlackBackground;
+        var colorMap = isDarkMode ? _colorMapWithBlackBackground : _colorMapWithWhiteBackground;
         var font = Config.UI.Font; // Assuming Setup is a static class accessible in the project
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"

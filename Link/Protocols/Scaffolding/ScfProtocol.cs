@@ -51,14 +51,14 @@ public class ScfProtocol : LinkProtocol
             case "c:ping":
                 response = new ServerPacket
                 {
-                    StatusCode = 200,
+                    StatusCode = 0,
                     Body = packet.Body
                 };
                 break;
             case "c:protocols":
                 response = new ServerPacket
                 {
-                    StatusCode = 200,
+                    StatusCode = 0,
                     Body = Encoding.UTF8.GetBytes(string.Join("\0", _supportedProtocols))
                 };
                 break;
@@ -72,7 +72,7 @@ public class ScfProtocol : LinkProtocol
                 BinaryPrimitives.WriteUInt16BigEndian(portBytes, (ushort)TargetLobby.Port);
                 response = new ServerPacket
                 {
-                    StatusCode = 200,
+                    StatusCode = 0,
                     Body = portBytes
                 };
                 break;
@@ -82,7 +82,7 @@ public class ScfProtocol : LinkProtocol
         e.Response = response.To();
     }
 
-    protected override async Task LaunchClient()
+    protected override async Task LaunchClientAsync()
     {
         if (TargetLobby == null)
         {
@@ -95,20 +95,20 @@ public class ScfProtocol : LinkProtocol
             return;
         }
         TcpHelper.Connect(TargetLobby.Ip, TargetLobby.ScfPort);
-        _ = Task.Run(() => _ClientLoop(Ctx.Token), Ctx.Token);
+        _ = Task.Run(() => _ClientLoopAsync(Ctx.Token), Ctx.Token);
         var packet = new ClientPacket
         {
             PacketType = "c:protocols",
             Body = Encoding.UTF8.GetBytes(string.Join("\0", _supportedProtocols))
         };
-        await TcpHelper.SendToServer(packet.To(), false);
+        await TcpHelper.SendToServerAsync(packet.To(), false);
         
         packet = new ClientPacket
         {
             PacketType = "c:server_port",
             Body = []
         };
-        var response = await TcpHelper.SendToServer(packet.To());
+        var response = await TcpHelper.SendToServerAsync(packet.To());
         if (response == null)
         {
             LogWrapper.Error("无法获取服务器响应");
@@ -128,7 +128,7 @@ public class ScfProtocol : LinkProtocol
         LogWrapper.Info($"{Identifier} 客户端已启动");
     }
     
-    private async Task _ClientLoop(CancellationToken token)
+    private async Task _ClientLoopAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
@@ -137,7 +137,7 @@ public class ScfProtocol : LinkProtocol
                 PacketType = "c:player_ping",
                 Body = _JsonObjectToBytes(_playerInfo.ToJsonObject())
             };
-            await TcpHelper.SendToServer(packet.To(), false);
+            await TcpHelper.SendToServerAsync(packet.To(), false);
             LogWrapper.Info($"{Identifier} 已发送玩家信息");
             
             packet = new ClientPacket
@@ -145,7 +145,7 @@ public class ScfProtocol : LinkProtocol
                 PacketType = "c:player_profile_list",
                 Body = []
             };
-            var response = await TcpHelper.SendToServer(packet.To());
+            var response = await TcpHelper.SendToServerAsync(packet.To());
             if (response == null)
             {
                 LogWrapper.Error("无法获取服务器响应");

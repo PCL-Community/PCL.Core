@@ -57,7 +57,7 @@ public class TcpHelper : IDisposable
         {
             if (_isRunning)
             {
-                throw new Exception("服务已在运行中");
+                throw new InvalidOperationException("服务已在运行中");
             }
             _isServer = false;
             _isRunning = true;
@@ -80,13 +80,13 @@ public class TcpHelper : IDisposable
             }
             if (!_isServer)
             {
-                throw new Exception("客户端不能调用AcceptConnections方法");
+                throw new InvalidOperationException("客户端不能调用AcceptConnections方法");
             }
             _socket.Listen(10);
             while (!token.IsCancellationRequested)
             {
                 var clientSocket = await _socket.AcceptAsync(token);
-                _ = Task.Run(() => _HandleClient(clientSocket, token), token);
+                _ = Task.Run(() => _HandleClientAsync(clientSocket, token), token);
             }
         }
         catch (Exception ex)
@@ -95,11 +95,11 @@ public class TcpHelper : IDisposable
         }
     }
 
-    private async Task _HandleClient(Socket clientSocket, CancellationToken token)
+    private async Task _HandleClientAsync(Socket clientSocket, CancellationToken token)
     {
         if (clientSocket.RemoteEndPoint == null)
         {
-            throw new Exception("无法获取客户端地址");
+            throw new ArgumentNullException("无法获取客户端地址");
         }
         LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
         var buffer = new byte[1024];
@@ -133,15 +133,15 @@ public class TcpHelper : IDisposable
         }
     }
     
-    public async Task<byte[]?> SendToServer(byte[] data, bool isWaitResponse = true)
+    public async Task<byte[]?> SendToServerAsync(byte[] data, bool isWaitResponse = true)
     {
         if (!_isRunning)
         {
-            throw new Exception("服务未启动");
+            throw new InvalidOperationException("服务未启动");
         }
         if (_isServer)
         {
-            throw new Exception("服务器不能调用SendToServer方法");
+            throw new InvalidOperationException("服务器不能调用 SendToServerAsync 方法");
         }
         await _socket.SendAsync(data);
         if (!isWaitResponse)

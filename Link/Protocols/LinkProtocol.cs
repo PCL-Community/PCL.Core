@@ -47,7 +47,7 @@ public abstract class LinkProtocol(bool isServer, string identifier) : IDisposab
         }
         else
         {
-            LaunchClient();
+            LaunchClientAsync();
         }
         return 0;
     }
@@ -62,7 +62,7 @@ public abstract class LinkProtocol(bool isServer, string identifier) : IDisposab
     /// <summary>
     /// 即客户端部分逻辑。写成抽象方法, 是因为每个协议的客户端逻辑都不一样。
     /// </summary>
-    protected abstract Task LaunchClient();
+    protected abstract Task LaunchClientAsync();
 
     /// <summary>
     /// 关闭协议

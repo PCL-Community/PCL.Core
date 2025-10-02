@@ -76,7 +76,7 @@ public class TcpHelper : IDisposable
         {
             if (!_isRunning)
             {
-                throw new Exception("服务未启动");
+                throw new InvalidOperationException("服务未启动");
             }
             if (!_isServer)
             {

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
-using PCL.Core.Minecraft.LocalCompFiles.Models;
+using PCL.Core.Minecraft.Compoment.LocalComp;
+using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
 namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 

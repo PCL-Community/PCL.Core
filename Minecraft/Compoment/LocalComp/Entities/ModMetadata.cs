@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.Models;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
 public record ModMetadata(
     [property: JsonPropertyName("name")] string Name,

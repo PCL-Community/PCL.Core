@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using fNbt;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft.LocalCompFiles.Models;
+using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 
 namespace PCL.Core.Minecraft.LocalCompFiles;
 

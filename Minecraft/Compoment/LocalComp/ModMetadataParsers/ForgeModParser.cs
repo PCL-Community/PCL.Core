@@ -1,7 +1,8 @@
 using System;
 using System.IO.Compression;
 using System.Linq;
-using PCL.Core.Minecraft.LocalCompFiles.Models;
+using PCL.Core.Minecraft.Compoment.LocalComp;
+using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 using Tomlyn;
 using Tomlyn.Model;
 

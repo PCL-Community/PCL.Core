@@ -1,16 +1,17 @@
-using PCL.Core.Minecraft.LocalCompFiles.Models;
-using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
+using PCL.Core.Minecraft.LocalCompFiles;
+using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
-namespace PCL.Core.Minecraft.LocalCompFiles;
+namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
 public class LocalModFile : LocalResource
 {
     public ModMetadata? Metadata { get; set; }
 
-    public Dictionary<string, string?> Dependencies { get; } = new();
+    public Dictionary<string, string?> Dependencies { get; } = new(); // TODO: add dependencies parsing
 
     private static readonly List<IModMetadataParser> _Parsers =
     [

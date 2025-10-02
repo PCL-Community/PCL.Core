@@ -1,4 +1,7 @@
+using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -25,6 +28,10 @@ public class ScfProtocol : LinkProtocol
     ];
 
     private readonly ScfPlayerInfo _playerInfo;
+    /// <summary>
+    /// 连接 id -> 机器 id 映射
+    /// </summary>
+    private readonly ConcurrentDictionary<Guid, string> _connectionIds = new();
     
     public ScfProtocol(bool isServer, string hostname) : base(isServer, "scaffolding")
     {
@@ -32,12 +39,32 @@ public class ScfProtocol : LinkProtocol
         {
             Name = hostname,
             MachineId = hostname, // TODO: 获取machineId(交给鸽秋)
-            Vendor = "PCL2-CE",
+            Vendor = "PCL-CE",
             IsHost = isServer
         };
         if (isServer)
         {
-            PlayerList.Add(_playerInfo);
+            PlayerList.TryAdd(_playerInfo.MachineId, _playerInfo);
+        }
+    }
+
+    protected override void AcceptedClient(object? sender, TcpHelper.HandleClientEventArgs e)
+    {
+        _connectionIds.TryAdd(e.ConnectionId, String.Empty); // 先添加一个空的机器 id, 后续收到玩家信息后更新
+        LogWrapper.Info($"{Identifier} 有新客户端连接, 连接 ID: {e.ConnectionId}");
+    }
+
+    protected override void ClientDisconnected(object? sender, TcpHelper.HandleClientEventArgs e)
+    {
+        if (_connectionIds.TryGetValue(e.ConnectionId, out var machineId))
+        {
+            _connectionIds.TryRemove(e.ConnectionId, out _);
+            PlayerList.TryRemove(machineId, out _);
+            LogWrapper.Info($"{Identifier} 客户端断开连接, 连接 ID: {e.ConnectionId}, 机器 ID: {machineId}");
+        }
+        else
+        {
+            LogWrapper.Info($"{Identifier} 客户端断开连接, 连接 ID: {e.ConnectionId}");
         }
     }
 
@@ -45,7 +72,7 @@ public class ScfProtocol : LinkProtocol
     {
         var packet = ClientPacket.From(e.Data);
         LogWrapper.Info($"{Identifier} 收到数据包, 类型:{packet.PacketType}");
-        ServerPacket response;
+        ServerPacket? response = null;
         switch (packet.PacketType)
         {
             case "c:ping":
@@ -76,10 +103,35 @@ public class ScfProtocol : LinkProtocol
                     Body = portBytes
                 };
                 break;
+            case "c:player_ping":
+                var clientPlayerInfo = JsonNode.Parse(Encoding.UTF8.GetString(packet.Body)) as JsonObject;
+                if (clientPlayerInfo == null)
+                {
+                    LogWrapper.Error("玩家信息解析错误");
+                    return;
+                }
+                
+                if (clientPlayerInfo.TryGetPropertyValue("machine_id", out var jsonMachineId))
+                {
+                    var machineId = jsonMachineId!.GetValue<string>();
+                    _connectionIds[e.ConnectionId] = machineId; // 更新连接ID到机器ID的映射
+                    
+                    if (!PlayerList.TryAdd(machineId, new ScfPlayerInfo
+                        {
+                            Name = clientPlayerInfo["name"]?.GetValue<string>() ?? string.Empty,
+                            MachineId = machineId,
+                            Vendor = "PCL-CE",
+                            IsHost = false
+                        }))
+                    {
+                        PlayerList[machineId].Name = clientPlayerInfo["name"]?.GetValue<string>() ?? string.Empty;
+                    }
+                }
+                break;
             default:
                 return;
         }
-        e.Response = response.To();
+        e.Response = response?.To();
     }
 
     protected override async Task LaunchClientAsync()
@@ -157,7 +209,8 @@ public class ScfProtocol : LinkProtocol
                 PlayerList.Clear();
                 foreach (var item in playerList)
                 {
-                    PlayerList.Add(ScfPlayerInfo.FromJsonObject(item as JsonObject));
+                    var playerInfo = ScfPlayerInfo.FromJsonObject(item as JsonObject);
+                    PlayerList.TryAdd(playerInfo.MachineId, playerInfo);
                 }
             }
             LogWrapper.Info($"{Identifier} 玩家列表已更新");

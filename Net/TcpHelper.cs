@@ -17,7 +17,7 @@ public class TcpHelper : IDisposable
     private readonly Socket _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
     private readonly CancellationTokenSource _ctx = new CancellationTokenSource();
     
-    public class ReceivedDateEventArgs(byte[] data) : EventArgs
+    public class ReceivedDateEventArgs(byte[] data, Guid connectionId) : EventArgs
     {
         /// <summary>
         /// 接收到的数据
@@ -27,9 +27,23 @@ public class TcpHelper : IDisposable
         /// 服务端返回数据
         /// </summary>
         public byte[]? Response { get; set; }
+        /// <summary>
+        /// 连接 ID, 仅服务器模式有效
+        /// </summary>
+        public Guid ConnectionId => connectionId;
+    }
+    
+    public class HandleClientEventArgs(Guid connectionId) : EventArgs
+    {
+        /// <summary>
+        /// 连接 ID, 仅服务器模式有效
+        /// </summary>
+        public Guid ConnectionId => connectionId;
     }
     
     public event EventHandler<ReceivedDateEventArgs>? ReceivedData;
+    public event EventHandler<HandleClientEventArgs>? AcceptedClient;
+    public event EventHandler<HandleClientEventArgs>? ClientDisconnected;
     
     public void StartListening(int port)
     {
@@ -97,10 +111,9 @@ public class TcpHelper : IDisposable
 
     private async Task _HandleClientAsync(Socket clientSocket, CancellationToken token)
     {
-        if (clientSocket.RemoteEndPoint == null)
-        {
-            throw new ArgumentNullException("无法获取客户端地址");
-        }
+        ArgumentNullException.ThrowIfNull(clientSocket.RemoteEndPoint);
+        var connectionId = Guid.NewGuid();
+        AcceptedClient?.Invoke(this, new HandleClientEventArgs(connectionId));
         LogWrapper.Info("TCP", $"接受来自 {clientSocket.RemoteEndPoint} 的连接");
         var buffer = new byte[1024];
         try
@@ -115,7 +128,7 @@ public class TcpHelper : IDisposable
                 var data = new byte[received];
                 Array.Copy(buffer, data, received);
                 
-                var receivedDateEventArgs = new ReceivedDateEventArgs(data);
+                var receivedDateEventArgs = new ReceivedDateEventArgs(data, connectionId);
                 ReceivedData?.Invoke(this, receivedDateEventArgs);
                 if (receivedDateEventArgs.Response != null)
                 {
@@ -129,6 +142,7 @@ public class TcpHelper : IDisposable
         }
         finally
         {
+            ClientDisconnected?.Invoke(this, new HandleClientEventArgs(connectionId));
             clientSocket.SafeClose();
         }
     }

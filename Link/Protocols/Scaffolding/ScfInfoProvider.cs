@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 
@@ -52,5 +53,9 @@ public static class ScfInfoProvider
         }
     }
 
-    public static List<ScfPlayerInfo> PlayerList { get; set; } = [];
+    /// <summary>
+    /// 键值：机器 ID,
+    /// 值：玩家信息
+    /// </summary>
+    public static ConcurrentDictionary<string, ScfPlayerInfo> PlayerList { get; set; } = [];
 }

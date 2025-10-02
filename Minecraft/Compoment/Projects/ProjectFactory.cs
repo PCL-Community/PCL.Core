@@ -79,6 +79,7 @@ public static class ProjectFactory
         { "vanilla", "原版可用" }
     };
 
+    /// <exception cref="ArgumentException">Throw if json content if invalied.</exception>
     public static ProjectInfo Create(string rawJsonContent)
     {
         if (rawJsonContent.Contains("\"Tags\""))
@@ -96,6 +97,7 @@ public static class ProjectFactory
         }
     }
 
+    /// <exception cref="ArgumentException">Throw if json content if invalied.</exception>
     private static ProjectInfo _CreateFromCache(string jsonContent)
     {
         var dto = JsonSerializer.Deserialize<CacheProjectDto>(jsonContent)
@@ -124,6 +126,7 @@ public static class ProjectFactory
         return result;
     }
 
+    /// <exception cref="ArgumentException">Throw if json content if invalied.</exception>
     private static ProjectInfo _CreateFromCurseForgeJson(string jsonContent)
     {
         var dto = JsonSerializer.Deserialize<CurseForgeProjectDto>(jsonContent)
@@ -181,6 +184,7 @@ public static class ProjectFactory
         };
     }
 
+    /// <exception cref="ArgumentException">Throw if json content if invalied.</exception>
     private static ProjectInfo _CreateFromModrinthJson(string jsonContent)
     {
         var dto = JsonSerializer.Deserialize<ModrinthProjectDto>(jsonContent)

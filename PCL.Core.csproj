@@ -86,6 +86,7 @@
     <!-- 源代码生成器 -->
     <ItemGroup>
         <AdditionalFiles Include="App\LifecycleState.cs" />
+        <None Include="minecraft\compoment\README.md" />
         <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

@@ -1,9 +1,9 @@
 using System.IO.Compression;
 using System.Text.Json;
-using PCL.Core.Minecraft.Compoment.LocalComp;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
+using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
-namespace PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
+namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
 public class FabricModJsonParser : IModMetadataParser
 {

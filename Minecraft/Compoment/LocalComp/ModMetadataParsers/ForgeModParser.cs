@@ -72,12 +72,15 @@ public class ForgeModParser : IModMetadataParser
                 metaLogo = logo.ToString() ?? string.Empty;
             }
 
-            var metadata = new ModMetadata(metaName,
-                metaDescription,
-                metaVersion,
-                metaModId,
-                [metaAuthors],
-                metaLogo);
+            var metadata = new ModMetadata
+            {
+                Name = metaName,
+                Description = metaDescription,
+                Version = metaVersion,
+                Id = metaModId,
+                Authors = [metaAuthors],
+                Icon = metaLogo
+            };
 
             modFile.Metadata = metadata;
 

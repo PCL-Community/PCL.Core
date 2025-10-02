@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
+using PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 using PCL.Core.Minecraft.LocalCompFiles;
 using PCL.Core.Minecraft.LocalCompFiles.ModMetadataParsers;
 
@@ -28,6 +29,7 @@ public class LocalModFile : LocalResource
     }
 
     /// <inheritdoc />
+    /// <exception cref="ArgumentNullException">Throw if Metadata is null after parsing</exception>
     public override BaseResourceData? Load(bool lazy = false)
     {
         if (File.Exists(Path))
@@ -56,6 +58,8 @@ public class LocalModFile : LocalResource
             FileUnavailableReason = ex;
             State = FileStatus.Unavailable;
         }
+
+        ArgumentNullException.ThrowIfNull(Metadata);
 
         if (string.IsNullOrEmpty(Metadata.Name))
         {

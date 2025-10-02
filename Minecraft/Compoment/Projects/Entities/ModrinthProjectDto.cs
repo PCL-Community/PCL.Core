@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace PCL.Core.Minecraft.Compoment.Projects.Models;
+namespace PCL.Core.Minecraft.Compoment.Projects.Entities;
 
 public record ModrinthProjectDto
 {

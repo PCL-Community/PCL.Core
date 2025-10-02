@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using PCL.Core.Minecraft.Compoment.Projects.Entities;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
-using PCL.Core.Minecraft.Compoment.Projects.Models;
 
 namespace PCL.Core.Minecraft.Compoment.Projects;
 
@@ -79,7 +79,52 @@ public static class ProjectFactory
         { "vanilla", "原版可用" }
     };
 
-    public static ProjectInfo CreateFromCurseForgeJson(string jsonContent)
+    public static ProjectInfo Create(string rawJsonContent)
+    {
+        if (rawJsonContent.Contains("\"Tags\""))
+        {
+            return _CreateFromCache(rawJsonContent);
+        }
+
+        if (rawJsonContent.Contains("\"summary\""))
+        {
+            return _CreateFromCurseForgeJson(rawJsonContent);
+        }
+        else
+        {
+            return _CreateFromModrinthJson(rawJsonContent);
+        }
+    }
+
+    private static ProjectInfo _CreateFromCache(string jsonContent)
+    {
+        var dto = JsonSerializer.Deserialize<CacheProjectDto>(jsonContent)
+                  ?? throw new ArgumentException("Invaild Cache JSON content.", nameof(jsonContent));
+
+        var gameVersion = dto.GameVersions?.OrderByDescending(ver => ver).ToList() ?? [];
+        var tags = dto.Tags?.OrderBy(tag => tag).ToList() ?? ["其他"];
+
+        var result = new ProjectInfo
+        {
+            CurseForgeFileIds = dto.CurseForgeFileIds,
+            RawName = dto.RawName,
+            Description = dto.Description,
+            Type = dto.Type,
+            Slug = dto.Slug,
+            Id = dto.Id,
+            Website = dto.Website,
+            LastUpdate = dto.LastUpdate,
+            DownloadCount = dto.DownloadCount,
+            ModLoaders = dto.ModLoaders ?? [],
+            Tags = tags,
+            LogoUrl = dto.LogoUrl,
+            GameVersions = gameVersion,
+            FromCurseForge = dto.DataSource == "CurseForge"
+        };
+        return result;
+    }
+
+    private static ProjectInfo _CreateFromCurseForgeJson(string jsonContent)
     {
         var dto = JsonSerializer.Deserialize<CurseForgeProjectDto>(jsonContent)
                   ?? throw new ArgumentException("Invalid CurseForge JSON content.", nameof(jsonContent));
@@ -136,7 +181,7 @@ public static class ProjectFactory
         };
     }
 
-    public static ProjectInfo CreateFromModrinthJson(string jsonContent)
+    private static ProjectInfo _CreateFromModrinthJson(string jsonContent)
     {
         var dto = JsonSerializer.Deserialize<ModrinthProjectDto>(jsonContent)
                   ?? throw new ArgumentException("Invalid Modrinth JSON content.", nameof(jsonContent));

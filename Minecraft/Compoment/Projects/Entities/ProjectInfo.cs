@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
 
-namespace PCL.Core.Minecraft.Compoment.Projects.Models;
+namespace PCL.Core.Minecraft.Compoment.Projects.Entities;
 
 public record ProjectInfo
 {

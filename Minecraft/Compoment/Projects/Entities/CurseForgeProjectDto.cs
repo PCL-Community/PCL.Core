@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace PCL.Core.Minecraft.Compoment.Projects.Models;
+namespace PCL.Core.Minecraft.Compoment.Projects.Entities;
 
 public record CurseForgeProjectDto
 {
@@ -44,7 +44,7 @@ public class CurseForgeLogoDto
 public class CurseForgeFileDto
 {
     [JsonPropertyName("id")] public int Id { get; set; }
-    [JsonPropertyName("gameVersions")] public List<string> GameVersions { get; set; } = []; /*...其他文件属性...*/
+    [JsonPropertyName("gameVersions")] public List<string> GameVersions { get; set; } = [];
 }
 
 public class CurseForgeFileIndexDto

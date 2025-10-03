@@ -157,8 +157,8 @@ public static class ETInfoProvider
                     Username = hostnameSplit.Length >= 2 ? hostnameSplit[1] : null,
                     McName = hostnameSplit.Length == 3 ? hostnameSplit[2] : null,
                     Cost = _GetConnectionType(info.Cost),
-                    Ping = Math.Round(Convert.ToDouble((info.Ping != "-" ? info.Ping : "0"))),
-                    Loss = Math.Round(Convert.ToDouble((info.Loss != "-" ? info.Loss : "0")) * 100, 1),
+                    Ping = Math.Round(Convert.ToDouble(info.Ping != "-" ? info.Ping : "0")),
+                    Loss = Math.Round(Convert.ToDouble(info.Loss != "-" ? info.Loss.Replace("%", "") : "0")),
                     NatType = info.NatType,
                     ETVersion = info.ETVersion
                 };

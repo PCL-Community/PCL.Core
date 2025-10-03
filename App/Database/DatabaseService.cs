@@ -7,14 +7,9 @@ namespace PCL.Core.App.Database;
 [LifecycleService(LifecycleState.Loading)]
 public class DatabaseService : GeneralService
 {
-    private static LifecycleContext? _context;
-
-    private static LifecycleContext Context => _context!;
-
     /// <inheritdoc />
     public DatabaseService() : base("database", "数据库管理")
     {
-        _context = Lifecycle.GetContext(this);
     }
 
     private static readonly ConcurrentDictionary<string, LiteDatabase> _Instances = new();

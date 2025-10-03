@@ -30,6 +30,8 @@ public class PatchInstanceInfo {
     public DateTime ReleaseTime { get; set; } = DateTime.MinValue;
 
     public string? McVersionStr => Patches.Find(p => p.Id == "game")?.Version;
+    
+    public DateTime? McReleaseDate => Patches.Find(p => p.Id == "game")?.ReleaseTime;
 
     public string FormattedVersion => !string.IsNullOrEmpty(McVersionStr) ? InstanceInfoHandler.GetFormattedVersion(McVersionStr!) : string.Empty;
 
@@ -40,12 +42,12 @@ public class PatchInstanceInfo {
     public Version? McVersion => IsNormalVersion ? Version.Parse(McVersionStr!) : null;
     
     /// <summary>
-    /// 原版主版本号，如 12（对于 1.12.2），不可用为 -1。
+    /// 原版主版本号，如 12（对于 1.12.2）
     /// </summary>
     public int? McVersionMinor => McVersion?.Minor;
 
     /// <summary>
-    /// 原版次版本号，如 2（对于 1.12.2），不可用为 -1。
+    /// 原版次版本号，如 2（对于 1.12.2）
     /// </summary>
     public int? McVersionBuild => McVersion?.Build;
 

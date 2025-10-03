@@ -2,6 +2,7 @@
 using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Minecraft.Instance.Interface;
+using PCL.Core.Minecraft.Instance.Utils;
 using PCL.Core.Minecraft.Launch.Utils;
 using PCL.Core.Utils.OS;
 
@@ -237,19 +238,43 @@ public class PreLaunchService(IMcInstance instance, JavaInfo selectedJava) {
         return "none";
     }
 
+    /*
+    *  1.0         : No language option, do not set for these versions
+    *  1.1  ~ 1.5  : zh_CN works fine, zh_cn will crash (the last two letters must be uppercase, otherwise it will cause an NPE crash)
+    *  1.6  ~ 1.10 : zh_CN works fine, zh_cn will automatically switch to English
+    *  1.11 ~ 1.12 : zh_cn works fine, zh_CN will display Chinese but the language setting will incorrectly show English as selected
+    *  1.13+       : zh_cn works fine, zh_CN will automatically switch to English
+    */
     private string DetermineRequiredLanguage(string currentLang) {
         var hasExistingSaves = Directory.Exists(Path.Combine(instance.IsolatedPath, "saves"));
         var shouldUseDefault = currentLang == "none" || !hasExistingSaves;
 
-        var requiredLang = shouldUseDefault
-            ? (Config.Tool.AutoChangeLanguage ? "zh_cn" : "en_us")
-            : currentLang.ToLowerInvariant();
+        // Get the Minecraft version information
+        var mcVersionMinor = instance.InstanceInfo.McVersionMinor;
+        var mcReleaseDate = instance.InstanceInfo.McReleaseDate;
+        var isUnder11 = mcReleaseDate < new DateTime(2012, 1, 12) 
+                          || instance.InstanceInfo.VersionType == McVersionType.Old
+                          || (mcVersionMinor == 1 && instance.InstanceInfo.McVersionBuild < 1);
 
-        // Handle legacy version format (MC < 1.12)
-        if (instance.InstanceInfo.McVersionMinor < 12) {
-            requiredLang = requiredLang[..^2] + requiredLang[^2..].ToUpperInvariant();
+        // For 1.0 and lower version, return "none" as no language option is available
+        if (isUnder11) {
+            return "none";
         }
 
+        // Determine the default language based on configuration
+        var defaultLang = Config.Tool.AutoChangeLanguage ? "zh_cn" : "en_us";
+        var requiredLang = shouldUseDefault ? defaultLang : currentLang.ToLowerInvariant();
+
+        // Apply version-specific language format rules
+        if (!requiredLang.StartsWith("zh_")) {
+            return requiredLang;
+        }
+        
+        // 1.1 ~ 1.10: Last two letters must be uppercase (zh_CN)
+        if (mcVersionMinor is >= 1 and <= 10) {
+            requiredLang = requiredLang[..^2] + requiredLang[^2..].ToUpperInvariant();
+        }
+        
         return requiredLang;
     }
 

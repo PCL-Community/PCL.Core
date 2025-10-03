@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using PCL.Core.App;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft;
 
@@ -31,37 +34,66 @@ public sealed class JavaService : GeneralService
         Context.Info("Start to initialize java manager.");
 
         _javaManager = new JavaManager();
-        var cache = _GetCaches();
-        if (cache.Count != 0)
-        {
-            _javaManager.SetCache(cache);
-            return;
-        }
-
+        LoadFromConfig();
         _javaManager.ScanJavaAsync().ContinueWith(_ =>
         {
-            _SetCache(_javaManager.GetCache());
+            SaveToConfig();
 
             var logInfo = string.Join("\n\t", _javaManager.JavaList);
             Context.Info($"Finished to scan java: {logInfo}");
         }, TaskScheduler.Default);
     }
 
-    private static List<JavaLocalCache> _GetCaches()
+    public static void LoadFromConfig()
     {
+        if (_javaManager is null) return;
+
         var raw = Config.Launch.Javas;
-        if (string.IsNullOrEmpty(raw))
+        if (raw.IsNullOrWhiteSpace()) return;
+
+        var caches = JsonSerializer.Deserialize<List<JavaLocalCache>>(raw);
+        if (caches is null)
         {
-            return [];
+            Context.Warn("序列化 Java 配置信息失败");
+            return;
         }
 
-        var cache = JsonSerializer.Deserialize<List<JavaLocalCache>>(raw);
-        return cache ?? [];
+        foreach (var cache in caches)
+        {
+            try
+            {
+                var targetInRecord = _javaManager.InternalJavas.FirstOrDefault(x => x.JavaExePath == cache.Path);
+                if (targetInRecord is not null)
+                    targetInRecord.IsEnabled = cache.IsEnable;
+            }
+            catch(Exception e)
+            {
+                Context.Error("应用配置项信息失败", e);
+                var temp = JavaInfo.Parse(cache.Path);
+                if (temp == null)
+                    continue;
+                temp.IsEnabled = cache.IsEnable;
+                _javaManager.InternalJavas.Add(temp);
+            }
+        }
     }
 
-    private static void _SetCache(List<JavaLocalCache> caches)
+    public static void SaveToConfig()
     {
+        var caches = _javaManager?.InternalJavas.Select(x => new JavaLocalCache
+        {
+            IsEnable = x.IsEnabled,
+            Path = x.JavaExePath
+        }).ToList();
+        if (caches is null) return;
         var jsonContent = JsonSerializer.Serialize(caches);
         Config.Launch.Javas = jsonContent;
     }
+
+    private class JavaLocalCache
+    {
+        public required string Path { get; init; }
+        public bool IsEnable { get; init; }
+    }
+
 }

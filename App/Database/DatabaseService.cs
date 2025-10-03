@@ -12,18 +12,12 @@ public class DatabaseService : GeneralService
     private static LifecycleContext Context => _context!;
 
     /// <inheritdoc />
-    public DatabaseService() : base("database", "DatabaseManager")
+    public DatabaseService() : base("database", "数据库管理")
     {
         _context = Lifecycle.GetContext(this);
     }
 
     private static readonly ConcurrentDictionary<string, LiteDatabase> _Instances = new();
-
-    /// <inheritdoc />
-    public override void Start()
-    {
-        // NOTE: i think there is no any initialization
-    }
 
     /// <inheritdoc />
     public override void Stop()

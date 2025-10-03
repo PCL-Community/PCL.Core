@@ -5,13 +5,8 @@ using LiteDB;
 namespace PCL.Core.App.Database;
 
 [LifecycleService(LifecycleState.Loading)]
-public class DatabaseService : GeneralService
+public class DatabaseService() : GeneralService("database", "数据库管理")
 {
-    /// <inheritdoc />
-    public DatabaseService() : base("database", "数据库管理")
-    {
-    }
-
     private static readonly ConcurrentDictionary<string, LiteDatabase> _Instances = new();
 
     /// <inheritdoc />

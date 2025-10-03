@@ -89,4 +89,7 @@
         <None Include="minecraft\compoment\README.md" />
         <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Minecraft\Compoment\Cache\" />
+    </ItemGroup>
 </Project>

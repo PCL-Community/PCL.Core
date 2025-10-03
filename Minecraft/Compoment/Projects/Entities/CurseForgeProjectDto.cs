@@ -22,7 +22,7 @@ public record CurseForgeProjectDto
 
     [JsonPropertyName("logo")] public CurseForgeLogoDto? Logo { get; set; }
 
-    [JsonPropertyName("latestFiles")] public List<CurseForgeFileDto> LatestFiles { get; set; } = [];
+    [JsonPropertyName("latestFiles")] public List<CurseForgeProjectFileDto> LatestFiles { get; set; } = [];
 
     [JsonPropertyName("latestFilesIndexes")]
     public List<CurseForgeFileIndexDto> LatestFilesIndexes { get; set; } = [];
@@ -41,11 +41,13 @@ public class CurseForgeLogoDto
     [JsonPropertyName("thumbnailUrl")] public string? ThumbnailUrl { get; set; }
 }
 
+/*
 public class CurseForgeFileDto
 {
     [JsonPropertyName("id")] public int Id { get; set; }
     [JsonPropertyName("gameVersions")] public List<string> GameVersions { get; set; } = [];
 }
+*/
 
 public class CurseForgeFileIndexDto
 {

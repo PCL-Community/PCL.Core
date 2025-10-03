@@ -6,7 +6,8 @@ using PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
-public class LocalModFile : LocalResource
+/// <inheritdoc />
+public class LocalModFile(string path) : LocalResource(path)
 {
     public ModMetadata? Metadata { get; set; }
 
@@ -20,11 +21,6 @@ public class LocalModFile : LocalResource
         new QuitModParser(),
         new PackPngParser()
     ];
-
-    /// <inheritdoc />
-    public LocalModFile(string path) : base(path)
-    {
-    }
 
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Throw if Metadata is null after parsing</exception>

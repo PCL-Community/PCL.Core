@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using PCL.Core.Minecraft.Compoment.Projects.Entities;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft.Compoment.Projects;
 
@@ -134,13 +136,15 @@ public static class ProjectFactory
 
         var type = _GetCompTypeFromCurseForgeWebsite(dto.Links.WebsiteUrl);
 
+
         var allFiles = dto.LatestFiles
-            .Select(fl => new { fl.Id, fl.GameVersions })
-            .Concat(dto.LatestFilesIndexes
-                .Select(fl => new { Id = fl.FileId, GameVersions = new List<string> { fl.GameVersion } }))
+            .Select(fl => new CurseForgeFileAdaprot(fl.Id, fl.GameVersions ?? []))
+            .Concat(dto.LatestFilesIndexes.Select(fl =>
+                new CurseForgeFileAdaprot(fl.FileId.ToString(), [fl.GameVersion])
+            ))
             .ToList();
 
-        var curseForgeFileIds = allFiles.Select(it => it.Id).Distinct().ToList();
+        var curseForgeFileIds = allFiles.Select(it => int.Parse(it.FileId)).Distinct().ToList();
 
         var gameVersions = allFiles
             .SelectMany(fl => fl.GameVersions)
@@ -165,6 +169,15 @@ public static class ProjectFactory
             tags.Add("其他");
         }
 
+        List<LoaderType> modLoaders = [];
+        foreach (var latestFile in dto.LatestFiles)
+        {
+            var rawGameVers = latestFile.GameVersions?.Select(ver => ver.Trim().ToLowerInvariant()).ToHashSet() ?? [];
+            var loaders = ModLoaderDetector.DetechCurseForgeType(rawGameVers);
+            modLoaders.AddRange(loaders);
+        }
+
+
         return new ProjectInfo
         {
             FromCurseForge = true,
@@ -179,7 +192,7 @@ public static class ProjectFactory
             DownloadCount = dto.DownloadCount,
             LogoUrl = !string.IsNullOrEmpty(dto.Logo?.ThumbnailUrl) ? dto.Logo.ThumbnailUrl : dto.Logo?.Url,
             GameVersions = gameVersions,
-            ModLoaders = [], // TODO: impl mod loader detection
+            ModLoaders = modLoaders,
             Tags = tags
         };
     }
@@ -200,26 +213,7 @@ public static class ProjectFactory
 
 
         var categoriesSet = dto.Categories.ToHashSet();
-        List<LoaderType> modLoaders = [];
-        if (categoriesSet.Contains("forge"))
-        {
-            modLoaders.Add(LoaderType.Forge);
-        }
-
-        if (categoriesSet.Contains("fabric"))
-        {
-            modLoaders.Add(LoaderType.Fabric);
-        }
-
-        if (categoriesSet.Contains("quilt"))
-        {
-            modLoaders.Add(LoaderType.Quilt);
-        }
-
-        if (categoriesSet.Contains("neoforge"))
-        {
-            modLoaders.Add(LoaderType.NeoForge);
-        }
+        var modLoaders = ModLoaderDetector.DetechCurseForgeType(categoriesSet); // idk why modrinth same as curseforge
 
         if (categoriesSet.Contains("datapack"))
         {
@@ -296,4 +290,11 @@ public static class ProjectFactory
 
         return CompType.DataPack;
     }
+
+    private static async Task<string> GetChineseDescriptionAsync()
+    {
+        throw new NotImplementedException();
+    }
 }
+
+file record CurseForgeFileAdaprot(string FileId, List<string> GameVersions);

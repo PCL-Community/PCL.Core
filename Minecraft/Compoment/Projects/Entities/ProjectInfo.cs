@@ -20,4 +20,7 @@ public record ProjectInfo
     public IReadOnlyList<string> Tags { get; init; } = [];
     public string? LogoUrl { get; init; }
     public IReadOnlyList<int> GameVersions { get; init; } = [];
+    public int WikiId { get; init; } = 0;
+    public string TranslateName { get; init; } = string.Empty;
+    public string ChineseDescription { get; init; } = string.Empty;
 }

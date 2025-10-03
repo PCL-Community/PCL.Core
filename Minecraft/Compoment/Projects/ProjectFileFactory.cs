@@ -71,6 +71,11 @@ public static class ProjectFileFactory
         var dto = JsonSerializer.Deserialize<CurseForgeProjectFileDto>(rawJsonContent)
                   ?? throw new ArgumentException("Invalid CurseForge JSON content.", nameof(rawJsonContent));
 
+        return CreateFromCurseForge(dto);
+    }
+
+    public static ProjectFileInfo CreateFromCurseForge(CurseForgeProjectFileDto dto)
+    {
         var hash = dto.Hashes
             .Where(hash => hash.Algo is 1 or 2)
             .OrderBy(hash => hash.Algo)
@@ -79,8 +84,9 @@ public static class ProjectFileFactory
         var url = dto.DownloadUrl;
         if (string.IsNullOrEmpty(url))
         {
-            url = $"https://edge.forgecdn.net/files/{dto.Id[..4]}/{dto.Id[4..]}/{WebUtility.UrlEncode(dto.FileName)}"
-                .Replace("+", "%20");
+            url =
+                $"https://edge.forgecdn.net/files/{dto.Id[..4]}/{dto.Id[4..]}/{WebUtility.UrlEncode(dto.FileName)}"
+                    .Replace("+", "%20");
         }
 
         url = UrlConverter.HandleCurseForgeDownloadUrl(url); // TODO: impl mirror
@@ -216,81 +222,5 @@ public static class ProjectFileFactory
         };
 
         return info;
-    }
-}
-
-file static class ModLoaderDetector
-{
-    private static readonly HashSet<string> _PluginKeywords = ["bukket", "folia", "paper", "purpur", "spigot"];
-
-    private static readonly Dictionary<string, LoaderType> _LoaderMap = new()
-    {
-        { "forge", LoaderType.Forge },
-        { "neoforge", LoaderType.NeoForge },
-        { "fabric", LoaderType.Fabric },
-        { "quilt", LoaderType.Quilt }
-    };
-
-    public static (CompType type, List<LoaderType> loaders)
-        DetectModrinthType(CompType defaultType, IReadOnlyList<string> rawLoaders)
-    {
-        var loaderList = rawLoaders?.ToHashSet() ?? [];
-
-        CompType finalType;
-        if (loaderList.Any(loader => _PluginKeywords.Contains(loader)))
-        {
-            finalType = CompType.Plugin;
-        }
-        else if (loaderList.Any(loader => _LoaderMap.ContainsKey(loader)))
-        {
-            finalType = CompType.Mod;
-        }
-        else if (loaderList.Contains("datapack"))
-        {
-            finalType = CompType.DataPack;
-        }
-        else
-        {
-            finalType = defaultType;
-        }
-
-        var modLoaders = loaderList.Where(loader => _LoaderMap.ContainsKey(loader))
-            .Select(loader => _LoaderMap[loader])
-            .Distinct()
-            .ToList();
-
-        return (finalType, modLoaders);
-    }
-
-    public static List<LoaderType> DetechCurseForgeType(HashSet<string> rawGameVers)
-    {
-        List<LoaderType> types = [];
-
-        if (rawGameVers.Count == 0)
-        {
-            return types;
-        }
-
-        if (rawGameVers.Contains("forge"))
-        {
-            types.Add(LoaderType.Forge);
-        }
-
-        if (rawGameVers.Contains("fabric"))
-        {
-            types.Add(LoaderType.Fabric);
-        }
-
-        if (rawGameVers.Contains("quilt"))
-        {
-            types.Add(LoaderType.Quilt);
-        }
-
-        if (rawGameVers.Contains("neoforge"))
-        {
-            types.Add(LoaderType.NeoForge);
-        }
-
-        return types;
     }
 }

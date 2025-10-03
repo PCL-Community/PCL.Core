@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
 
@@ -58,4 +59,10 @@ public record ProjectFileInfo
 
     /// <inheritdoc />
     public override string ToString() => $"{Id}: {FileName}";
+
+    public static string ToJsonSerialized(ProjectInfo info)
+    {
+        var content = JsonSerializer.Serialize(info);
+        return content;
+    }
 }

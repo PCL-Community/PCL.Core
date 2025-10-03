@@ -124,4 +124,18 @@ public static partial class RegexPatterns
     public static readonly Regex AccessToken = _AccessToken();
     [GeneratedRegex("(?<=accessToken ([^ ]{5}))[^ ]+(?=[^ ]{5})")]
     private static partial Regex _AccessToken();
+
+    /// <summary>
+    /// 使用 IsMatch 检查是否存在中文字符
+    /// </summary>
+    public static readonly Regex HasChineseChar = _HasChineseChar();
+    [GeneratedRegex(@"[\\u4e00-\\u9fbb]")]
+    private static partial Regex _HasChineseChar();
+
+    /// <summary>
+    /// 用 Replace 替换英文中的分隔特征
+    /// </summary>
+    public static readonly Regex EnglishSpacedKeywords = _EnglishSpacedKeywords();
+    [GeneratedRegex(@"([A-Z]+|[a-z]+?)(?=[A-Z]+[a-z]+[a-z ]*)")]
+    private static partial Regex _EnglishSpacedKeywords();
 }

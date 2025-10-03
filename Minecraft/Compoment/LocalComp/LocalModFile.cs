@@ -10,7 +10,7 @@ public class LocalModFile : LocalResource
 {
     public ModMetadata? Metadata { get; set; }
 
-    public Dictionary<string, string?> Dependencies { get; } = new(); // TODO: impl dependencies parsing
+    public Dictionary<string, string?> Dependencies { get; } = new();
 
     private static readonly List<IModMetadataParser> _Parsers =
     [

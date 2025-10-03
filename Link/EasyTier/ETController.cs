@@ -2,10 +2,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Net;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils;
+using PCL.Core.Utils.Secret;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
@@ -46,7 +47,7 @@ public static class ETController
         return 0;
     }
 
-    public static int Launch(bool isHost, string name, string secret, string? hostname = null, int port = 25565)
+    public static int Launch(bool isHost, string? hostname = null)
     {
         try
         {
@@ -56,6 +57,9 @@ public static class ETController
             var arguments = new ArgumentsBuilder();
 
             // 大厅信息
+            var name = TargetLobby.NetworkName;
+            var secret = TargetLobby.NetworkSecret;
+            
             switch (TargetLobby.Type)
             {
                 case LobbyType.PCLCE:
@@ -79,8 +83,8 @@ public static class ETController
             {
                 LogWrapper.Info("Link", $"本机作为创建者创建大厅，EasyTier 网络名称: {name}");
                 arguments.Add("i", "10.114.51.41");
-                arguments.Add("tcp-whitelist", port.ToString());
-                arguments.Add("udp-whitelist", port.ToString());
+                arguments.Add("tcp-whitelist", TargetLobby.Port.ToString());
+                arguments.Add("udp-whitelist", TargetLobby.Port.ToString());
             }
             else
             {
@@ -88,21 +92,16 @@ public static class ETController
                 arguments.AddFlag("d");
                 arguments.Add("tcp-whitelist", "0");
                 arguments.Add("udp-whitelist", "0");
-                var ip = TargetLobby.Type switch
-                {
-                    LobbyType.PCLCE => "10.114.51.41",
-                    LobbyType.Terracotta => "10.144.144.1",
-                    _ => throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type)
-                };
+                
                 JoinerLocalPort = NetworkHelper.NewTcpPort();
-                LogWrapper.Info("Link", $"ET 端口转发: 远程 {port} -> 本地 {JoinerLocalPort}");
-                arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
-                arguments.Add("port-forward", $"udp://127.0.0.1:{JoinerLocalPort}/{ip}:{port}");
+                LogWrapper.Info("Link", $"ET 端口转发: 远程 {TargetLobby.Port} -> 本地 {JoinerLocalPort}");
+                arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
+                arguments.Add("port-forward", $"udp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
             }
 
             // 节点设置
             var relays = ETRelay.RelayList;
-            var customNodes = Setup.Link.RelayServer;
+            var customNodes = Config.Link.RelayServer;
             foreach (var node in customNodes.Split([';'], StringSplitOptions.RemoveEmptyEntries))
             {
                 if (node.Contains("tcp://") || node.Contains("udp://"))
@@ -121,7 +120,7 @@ public static class ETController
             }
             foreach (var relay in
                 from relay in relays
-                let serverType = Setup.Link.ServerType
+                let serverType = Config.Link.ServerType
                 where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
                 select relay)
             {
@@ -129,7 +128,7 @@ public static class ETController
             }
 
             // 中继行为设置
-            if (Setup.Link.RelayType == 1)
+            if (Config.Link.RelayType == 1)
             {
                 arguments.AddFlag("disable-p2p");
             }
@@ -139,16 +138,21 @@ public static class ETController
             arguments.AddFlag("enable-kcp-proxy");
             arguments.AddFlag("use-smoltcp");
             arguments.Add("encryption-algorithm", "chacha20");
+            arguments.Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLower());
+            arguments.AddFlagIf(!Config.Link.TryPunchSym, "disable-sym-hole-punching");
+            arguments.AddFlagIf(!Config.Link.EnableIPv6, "disable-ipv6");
 
             // 用户名与其他参数
-            arguments.AddFlagIf(Setup.Link.LatencyFirstMode, "latency-first");
+            arguments.AddFlagIf(Config.Link.LatencyFirstMode, "latency-first");
             arguments.Add("compression", "zstd");
             arguments.AddFlag("multi-thread");
+            arguments.Add("machine-id", Identify.LaunchId);
+
             // TODO: 等待玩家档案迁移以获取正在使用的档案名称
             var showName = "default";
-            if (AllowCustomName && !string.IsNullOrWhiteSpace(Setup.Link.Username))
+            if (AllowCustomName && !string.IsNullOrWhiteSpace(Config.Link.Username))
             {
-                showName = Setup.Link.Username;
+                showName = Config.Link.Username;
             }
             else if (!string.IsNullOrWhiteSpace(NaidProfile.Username))
             {

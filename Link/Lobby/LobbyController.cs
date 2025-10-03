@@ -7,28 +7,29 @@ using System.Text.Json.Nodes;
 
 using PCL.Core.Link.EasyTier;
 using PCL.Core.Logging;
-using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Secret;
 using PCL.Core.Net;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.Utils.OS;
 
 namespace PCL.Core.Link.Lobby;
 
 public static class LobbyController
 {
-    public static int Launch(bool isHost, LobbyInfo lobbyInfo, string? playerName = null)
+    public static int Launch(bool isHost, string? playerName = null)
     {
+        if (TargetLobby == null) { return 1; }
         LogWrapper.Info("Link", "开始发送联机数据");
-        var servers = Setup.Link.RelayServer;
-        if (Setup.Link.ServerType != 2)
+        var servers = Config.Link.RelayServer;
+        var serverType = Config.Link.ServerType;
+        if (Config.Link.ServerType != 2)
         {
             servers = (
                 from relay in ETRelay.RelayList
-                let serverType = Setup.Link.ServerType
                 where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1)
                 select relay
             ).Aggregate(servers, (current, relay) => current + $"{relay.Url};");
@@ -40,8 +41,8 @@ public static class LobbyController
             ["NaidId"] = NaidProfile.Id,
             ["NaidEmail"] = NaidProfile.Email,
             ["NaidLastIp"] = NaidProfile.LastIp,
-            ["CustomName"] = Setup.Link.Username,
-            ["NetworkName"] = lobbyInfo.NetworkName,
+            ["CustomName"] = Config.Link.Username,
+            ["NetworkName"] = TargetLobby.NetworkName,
             ["Servers"] = servers,
             ["IsHost"] = isHost
         };
@@ -105,18 +106,18 @@ public static class LobbyController
             LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
         }
 
-        var etResult = ETController.Launch(isHost, lobbyInfo.NetworkName, lobbyInfo.NetworkSecret, port: lobbyInfo.Port, hostname: playerName);
+        var etResult = ETController.Launch(isHost, hostname: playerName);
         if (etResult == 1)
         {
             return 1;
         }
             
-        while (CheckETStatus().GetAwaiter().GetResult() != 0)
+        while (CheckETStatusAsync().GetAwaiter().GetResult() != 0)
         {
             Task.Delay(800).GetAwaiter().GetResult();
         }
 
-        if (isHost || lobbyInfo.Ip is null) return 0;
+        if (isHost || TargetLobby.Ip is null) return 0;
         string desc;
         var hostInfo = GetPlayerList().Item1?[0];
         if (hostInfo == null)

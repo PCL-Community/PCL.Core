@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -14,7 +17,9 @@ public class HttpRequestBuilder
     private readonly HttpRequestMessage _request;
     private readonly Dictionary<string, string> _cookies = [];
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
+    private bool _addLauncherHeader = true;
     private bool _doLog = true;
+    private Version _requestVersion = HttpVersion.Version20;
 
     public HttpRequestBuilder(string url, HttpMethod method)
     {
@@ -37,15 +42,25 @@ public class HttpRequestBuilder
     /// 设置请求载荷
     /// </summary>
     /// <param name="content">请求载荷</param>
+    /// <param name="contentType"></param>
     /// <returns>HttpRequestBuilder</returns>
-    public HttpRequestBuilder WithContent(HttpContent content)
+    public HttpRequestBuilder WithContent(HttpContent content, string? contentType = null)
     {
         _request.Content = content;
+        if (contentType is not null) WithHeader("Content-Type", contentType);
+        return this;
+    }
+
+    public HttpRequestBuilder WithContent(string content, string? contentType = null)
+    {
+        _request.Content = contentType is null
+            ? new StringContent(content, Encoding.UTF8)
+            : new StringContent(content, Encoding.UTF8, contentType);
         return this;
     }
 
     /// <summary>
-    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="key"></param>
     /// <param name="value"></param>
@@ -57,7 +72,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="cookies"></param>
     /// <returns></returns>
@@ -137,9 +152,15 @@ public class HttpRequestBuilder
     // 快捷方法
     public HttpRequestBuilder WithBearerToken(string token) => WithAuthentication("Bearer", token);
 
-    public HttpRequestBuilder WithHttpVersion(Version version)
+    public HttpRequestBuilder WithDefaultHeaderOption(bool hasDefaultHeader = true)
     {
-        _request.Version = version;
+        _addLauncherHeader = hasDefaultHeader;
+        return this;
+    }
+
+    public HttpRequestBuilder WithHttpVersionOption(Version httpVersion)
+    {
+        _requestVersion = httpVersion;
         return this;
     }
 
@@ -182,10 +203,18 @@ public class HttpRequestBuilder
             _request.Headers.TryAddWithoutValidation("Cookie", cookiesCtx.ToString());
         }
 
+        if (_addLauncherHeader)
+        {
+            WithHeader("User-Agent", $"PCL-Community/PCL2-CE/{Basics.VersionName} (pclc.cc)");
+            WithHeader("Referer", $"https://{Basics.VersionNumber}.ce.open.pcl2.server/");
+        }
+
         var client = NetworkService.GetClient();
+        _request.Version = _requestVersion;
+        _request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
+            .ExecuteAsync(async () => await client.SendAsync(_request.Clone(), _completionOption));
         var responseUri = responseMessage.RequestMessage?.RequestUri;
         if (responseUri != null && _request.RequestUri != responseUri) _makeLog($"已重定向至 {responseUri}");
         _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");

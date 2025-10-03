@@ -5,6 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace PCL.Core.App.Tasks;
+
+/// <summary>
+/// 管道任务。<br/>
+/// 后一个委托的参数会传入前一个委托的返回值。<br/>
+/// 传入的委托组中每一个委托的第一个参数必须为 Task&lt;object&gt;
+/// </summary>
+/// <typeparam name="TLastResult">最终的返回类型</typeparam>
 public class PipelineTask<TLastResult> : TaskBase<TLastResult>
 {
     public PipelineTask(string name, Delegate[] delegates, CancellationToken? cancellationToken = null, string? description = null) : base(name, cancellationToken, description)

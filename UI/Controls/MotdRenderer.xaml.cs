@@ -1,4 +1,4 @@
-﻿using PCL.Core.ProgramSetup;
+﻿using PCL.Core.App;
 using PCL.Core.Utils;
 
 namespace PCL.Core.UI.Controls;
@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 public partial class MotdRenderer {
     // Default Color for originalColorMap: #808080
     // Minecraft color code mapping
-    private readonly Dictionary<string, Brush> _colorMapWithBlackBackground = new() {
+    private static readonly Dictionary<string, Brush> _colorMapWithBlackBackground = new() {
         { "0", Brushes.Black }, // Black
         { "1", new SolidColorBrush(Color.FromRgb(0, 0, 170)) }, // Dark Blue
         { "2", new SolidColorBrush(Color.FromRgb(0, 170, 0)) }, // Dark Green
@@ -35,7 +35,7 @@ public partial class MotdRenderer {
     };
 
     // Color code mapping optimized for white background (#f3f6fa)
-    private readonly Dictionary<string, Brush> _colorMapWithWhiteBackground = new() {
+    private static readonly Dictionary<string, Brush> _colorMapWithWhiteBackground = new() {
         { "0", new SolidColorBrush(Color.FromRgb(51, 51, 51)) }, // Deep Gray #333333
         { "1", new SolidColorBrush(Color.FromRgb(0, 48, 135)) }, // Navy Blue #003087
         { "2", new SolidColorBrush(Color.FromRgb(0, 128, 0)) }, // Forest Green #008000
@@ -167,13 +167,25 @@ public partial class MotdRenderer {
         if (t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
         return p;
     }
+    
+    public static bool TryGetColorFromCode(string code, bool isDarkMode, out String? color) {
+        var colorMap = isDarkMode ? _colorMapWithBlackBackground : _colorMapWithWhiteBackground;
+        var success = colorMap.TryGetValue(code.ToLower(), out var brush);
+        if (!success) {
+            color = null;
+            return false;
+        }
+        var solidColorBrush = ((SolidColorBrush) brush!).Color;
+        color = $"#{solidColorBrush.R:X2}{solidColorBrush.G:X2}{solidColorBrush.B:X2}";
+        return success;
+    }
 
-    public void RenderMotd(string motd, bool isWhiteBackground = true) {
+    public void RenderMotd(string motd, bool isDarkMode = true) {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();
 
-        var colorMap = isWhiteBackground ? _colorMapWithWhiteBackground : _colorMapWithBlackBackground;
-        var font = Setup.Ui.Font; // Assuming Setup is a static class accessible in the project
+        var colorMap = isDarkMode ? _colorMapWithBlackBackground : _colorMapWithWhiteBackground;
+        var font = Config.UI.Font; // Assuming Setup is a static class accessible in the project
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
             : font);

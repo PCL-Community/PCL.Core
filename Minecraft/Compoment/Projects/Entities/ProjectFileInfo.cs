@@ -9,7 +9,7 @@ namespace PCL.Core.Minecraft.Compoment.Projects.Entities;
 public record ProjectFileInfo
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public string? ProjectId { get; set; } // NOTE: old ver ProjectFileInfo not have this property
+    public required string ProjectId { get; set; } // NOTE: old ver ProjectFileInfo not have this property
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
 

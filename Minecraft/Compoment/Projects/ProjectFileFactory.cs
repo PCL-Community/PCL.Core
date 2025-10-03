@@ -45,6 +45,7 @@ public static class ProjectFileFactory
 
         var info = new ProjectFileInfo
         {
+            ProjectId = string.Empty,
             FromCurseForge = true,
             Id = dto.Id,
             DisplayName = dto.DisplayName,

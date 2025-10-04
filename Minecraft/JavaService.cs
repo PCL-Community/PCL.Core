@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -59,7 +60,7 @@ public sealed class JavaService : GeneralService
         {
             try
             {
-                var targetInRecord = _javaManager.InternalJavas.FirstOrDefault(x => x.JavaExePath == cache.Path);
+                var targetInRecord = _javaManager.InternalJavas.FirstOrDefault(x => x.JavaExePath == Path.GetFullPath(cache.Path));
                 if (targetInRecord is not null)
                     targetInRecord.IsEnabled = cache.IsEnable;
             }

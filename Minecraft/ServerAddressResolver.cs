@@ -45,38 +45,37 @@ public static class ServerAddressResolver {
         }
 
         // 情况3: 域名 (尝试SRV查询)
-        try {
-            LogWrapper.Info($"尝试SRV查询: _minecraft._tcp.{address}");
-        
-            // 关键修复：使用 .ToList() 将可枚举的集合转换为列表，确保只枚举一次。
-            var srvRecords = (await _ResolveSrvRecordsAsync(address, cancelToken)).ToList();
+        lock (SrvLock) {
+            try {
+                LogWrapper.Info($"尝试SRV查询: _minecraft._tcp.{address}");
 
-            if (srvRecords.Count > 0) {
-                var ret = _ParseSrvRecord(srvRecords.First());
-                return ret;
+                // 关键修复：使用 .ToList() 将可枚举的集合转换为列表，确保只枚举一次。
+                var srvRecords = _ResolveSrvRecords(address).ToList();
+
+                if (srvRecords.Count > 0) {
+                    var ret = _ParseSrvRecord(srvRecords.First());
+                    LogWrapper.Info($"SRV查询成功: {ret.Host}:{ret.Port}");
+                    return ret;
+                }
+            } catch (SocketException ex) {
+                LogWrapper.Warn(ex, "SRV查询失败 (网络错误)");
+            } catch (Exception ex) {
+                LogWrapper.Warn(ex, "SRV查询异常");
             }
-        } catch (SocketException ex) {
-            LogWrapper.Warn(ex, "SRV查询失败 (网络错误)");
-        } catch (Exception ex) {
-            LogWrapper.Warn(ex, "SRV查询异常");
         }
 
         // 默认: 直接使用域名+默认端口
         return (address, 25565);
     }
     
-    private static readonly object Lock = new object();
+    private static readonly object SrvLock = new();
 
-    private static async Task<IEnumerable<string>> _ResolveSrvRecordsAsync(string domain, CancellationToken cancelToken = default) {
-        return await Task.Run(() => {
-            lock (Lock) {
-                try {
-                    return NDnsQuery.GetSRVRecords($"_minecraft._tcp.{domain}");
-                } catch {
-                    return Enumerable.Empty<string>();
-                }
-            }
-        }, cancelToken);
+    private static List<string> _ResolveSrvRecords(string domain) {
+        try {
+            return NDnsQuery.GetSRVRecords($"_minecraft._tcp.{domain}");
+        } catch {
+            return [];
+        }
     }
 
     private static (string Host, int Port) _ParseSrvRecord(string record) {

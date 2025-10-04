@@ -215,11 +215,12 @@ public partial class MotdRenderer {
             var textBlocks = new List<TextBlock>(); // Store TextBlocks for the line
             var positions = new List<double>(); // Store x-coordinates for each TextBlock
 
-            foreach (var part in parts) {
+            for (int i = 0; i < parts.Length; i++) {
+                var part = parts[i];
                 var partTrimmed = part;
-                if (positions.Count == 0) {
+                if (i == 0) {
                     partTrimmed = part.TrimStart();
-                } else if (positions.Count == parts.Length - 1) {
+                } else if (i == parts.Length - 1) {
                     partTrimmed = part.TrimEnd();
                 }
                 if (string.IsNullOrEmpty(partTrimmed)) continue;

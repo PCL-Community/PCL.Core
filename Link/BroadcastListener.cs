@@ -29,17 +29,17 @@ public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
         
         // IPv4
         _client = new UdpClient();
-        _client.JoinMulticastGroup(_MulticastAddress);
-        _client.EnableBroadcast = true;
         _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _client.Client.Bind(new IPEndPoint(IPAddress.Any, 4445));
+        _client.JoinMulticastGroup(_MulticastAddress);
+        _client.EnableBroadcast = true;
         
         // IPv6
         _clientV6 = new UdpClient(AddressFamily.InterNetworkV6);
-        _clientV6.JoinMulticastGroup(_MulticastAddressV6);
-        _clientV6.EnableBroadcast = true;
         _clientV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _clientV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, 4445));
+        _clientV6.JoinMulticastGroup(_MulticastAddressV6);
+        _clientV6.EnableBroadcast = true;
 
         _listenTask = _listenThreadAsync(_client);
         _listenTaskV6 = _listenThreadAsync(_clientV6);

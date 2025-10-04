@@ -20,21 +20,21 @@ public class StartUpService(IMcInstance? instance) {
     /// </summary>
     public void Validate(CancellationTokenSource source) {
         // 检查路径
-        ValidatePaths(source);
+        _ValidatePaths(source);
 
         // 检查实例状态
-        ValidateInstance();
+        _ValidateInstance();
 
         // 检查档案有效性
-        ValidateProfile();
+        _ValidateProfile();
 
         // 检查登录要求
-        ValidateLoginRequirements();
+        _ValidateLoginRequirements();
         
         McLaunchUtils.Log("预检查通过，准备启动游戏");
     }
 
-    private void ValidatePaths(CancellationTokenSource source) {
+    private void _ValidatePaths(CancellationTokenSource source) {
         if (instance == null) {
             throw new InvalidOperationException("未选择Minecraft实例");
         }
@@ -69,7 +69,7 @@ public class StartUpService(IMcInstance? instance) {
         }
     }
 
-    private void ValidateInstance() {
+    private void _ValidateInstance() {
         try {
             instance!.Load();
             if (instance.CardType == McInstanceCardType.Error) {
@@ -81,7 +81,7 @@ public class StartUpService(IMcInstance? instance) {
     }
 
     // TODO: 等待档案部分实现
-    private void ValidateProfile() {
+    private void _ValidateProfile() {
         /*
         if (SelectedProfile == null)
             return Result.Failed("请先选择一个档案再启动游戏！");
@@ -96,7 +96,7 @@ public class StartUpService(IMcInstance? instance) {
     }
 
     // TODO: 等待档案部分实现
-    private void ValidateLoginRequirements() {
+    private void _ValidateLoginRequirements() {
         /*
         // 检查是否要求正版验证
         if (McFolderService.FolderManager.Current.Version.HasLabyMod || Setup.Get("VersionServerLoginRequire", McFolderService.FolderManager.Current) == 1) {
@@ -143,5 +143,8 @@ public static class PreCheckServiceFactory {
 
         var service = new StartUpService(currentInstance);
         service.Validate(source);
+
+        // TODO 实例预检查逻辑
+        await Task.CompletedTask; // 先临时骗一下编译器
     }
 }

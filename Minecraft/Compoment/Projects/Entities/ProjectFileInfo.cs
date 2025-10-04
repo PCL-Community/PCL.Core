@@ -24,17 +24,17 @@ public record ProjectFileInfo
     [JsonPropertyName("status")] public required ProjectFileStatus Status { get; init; }
 
     [JsonPropertyName("fileName")] public string? FileName { get; init; }
-    [JsonPropertyName("downloadUrls")] public IReadOnlyList<string>? DownloadUrls { get; init; }
+    [JsonPropertyName("downloadUrls")] public List<string>? DownloadUrls { get; init; }
     [JsonPropertyName("hash")] public string? Hash { get; init; }
     [JsonPropertyName("rawDependencies")] public required IReadOnlyList<string> RawDependencies { get; init; }
 
     [JsonPropertyName("rawOptionalDependencies")]
     public required IReadOnlyList<string> RawOptionalDependencies { get; init; }
 
-    [JsonPropertyName("denpendencies")] public required IReadOnlyList<string> Dependencies { get; init; }
+    [JsonPropertyName("denpendencies")] public required List<string> Dependencies { get; init; }
 
     [JsonPropertyName("optionalDependencies")]
-    public required IReadOnlyList<string> OptionalDependencies { get; init; }
+    public required List<string> OptionalDependencies { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public required CompType Type { get; init; }

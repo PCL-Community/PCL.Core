@@ -1,17 +1,110 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using PCL.Core.App;
+using PCL.Core.Minecraft.Compoment.Cache;
 using PCL.Core.Minecraft.Compoment.LocalComp.Entities;
 using PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
+using PCL.Core.Minecraft.Compoment.Projects.Entities;
+using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp;
 
 /// <inheritdoc />
 public class LocalModFile(string path) : LocalResource(path)
 {
+    private static readonly CompFileHashCache _FileHashCache = new();
+
     public ModMetadata? Metadata { get; set; }
 
     public Dictionary<string, string?> Dependencies { get; } = new();
+
+    public ProjectInfo Comp { get; set; } // TODO: imlp init
+
+    public ProjectFileInfo CompFile { get; set; } // TODO: impl init
+
+    public ProjectFileInfo UpdateFile { get; set; } // TODO: impl init
+
+    public List<string> ChangelogUrls { get; set; } // TODO: impl init
+
+    public bool CompLoaded { get; set; } = false; // TODO: impl init
+
+    public bool CanUpdate => !Config.UI.Hide.FunctionModUpdate && ChangelogUrls.Count != 0;
+
+    private uint? _curseForgeHash;
+
+    public uint CurseForgeHash
+    {
+        get
+        {
+            if (_curseForgeHash is not null)
+            {
+                return _curseForgeHash.Value;
+            }
+
+
+            var cacheKey = $"{Path.GetHashCode()}-CurseForge";
+            if (_FileHashCache.TryGet(cacheKey, out var entry))
+            {
+                var timeOut = entry.InsertTime + TimeSpan.FromHours(7);
+                if (timeOut > DateTime.Now)
+                {
+                    var hash = uint.Parse(entry.Hash);
+                    _curseForgeHash = hash;
+
+                    return hash;
+                }
+            }
+
+            if (!File.Exists(Path))
+            {
+                _curseForgeHash = 0;
+                return 0;
+            }
+
+            var murmur2 = HashComputer.ComputeMurmur2(Path);
+            _curseForgeHash = murmur2;
+            _FileHashCache.AddOrUpdate(cacheKey, new FileHashCacheEntry(cacheKey, murmur2.ToString(), DateTime.Now));
+
+            return murmur2;
+        }
+    }
+
+    private string? _modrinthHash;
+
+    public string ModrinthHash
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(_modrinthHash))
+            {
+                return _modrinthHash;
+            }
+
+            var cacheKey = $"{Path.GetHashCode()}-Modrinth";
+            if (_FileHashCache.TryGet(cacheKey, out var entry))
+            {
+                var timeOut = entry.InsertTime + TimeSpan.FromHours(7);
+                if (timeOut < DateTime.Now)
+                {
+                    _modrinthHash = entry.Hash;
+                    return entry.Hash;
+                }
+            }
+
+            if (!File.Exists(Path))
+            {
+                _modrinthHash = string.Empty;
+                return string.Empty;
+            }
+
+            var sha1 = HashComputer.ComputeSha1(Path);
+            _modrinthHash = sha1;
+            _FileHashCache.AddOrUpdate(cacheKey, new FileHashCacheEntry(cacheKey, sha1, DateTime.Now));
+
+            return sha1;
+        }
+    }
 
     private static readonly List<IModMetadataParser> _Parsers =
     [

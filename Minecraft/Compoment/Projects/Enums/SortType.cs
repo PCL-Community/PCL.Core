@@ -2,7 +2,7 @@ namespace PCL.Core.Minecraft.Compoment.Projects.Enums;
 
 public enum SortType
 {
-    Default,
+    Default = 1,
     Relevance,
     Downloads,
     Follows,

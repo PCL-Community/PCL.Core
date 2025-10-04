@@ -23,4 +23,8 @@ public record ProjectInfo
     public int WikiId { get; init; } = 0;
     public string TranslateName { get; init; } = string.Empty;
     public string ChineseDescription { get; init; } = string.Empty;
+
+    /// <inheritdoc />
+    public override string ToString() =>
+        $"{Id} ({Slug}): {RawName}";
 }

@@ -1,8 +1,9 @@
 using System;
 using LiteDB;
-using PCL.Core.App;
 using PCL.Core.App.Database;
+using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft.Compoment.Exceptions;
 using PCL.Core.Minecraft.Compoment.Projects.Entities;
 
 namespace PCL.Core.Minecraft.Compoment.Cache;
@@ -10,7 +11,7 @@ namespace PCL.Core.Minecraft.Compoment.Cache;
 public class ProjectCache : DatabaseEntry
 {
     /// <inheritdoc />
-    public ProjectCache() : base($"{Config.System.CacheDirectory}/Caches/ProjectCache.db")
+    public ProjectCache() : base($"{FileCacheService.CachePath}\\ProjectCache.db")
     {
         _CachedProjects.EnsureIndex("projectIdIndex", fl => fl.ProjectInfo.Id);
         _CachedFiles.EnsureIndex("fileIdIndex", fl => fl.FileInfo.ProjectId);
@@ -85,7 +86,7 @@ public class ProjectCache : DatabaseEntry
 
     public void RemoveCachedFile(string projectId)
     {
-        _CachedFiles.Delete(Query.EQ());
+        _CachedFiles.Delete(new BsonValue(Query.EQ("ProjectId", projectId)));
     }
 
     #endregion
@@ -160,9 +161,6 @@ public class ProjectCache : DatabaseEntry
 
     #endregion
 }
-
-public sealed class CacheResultNotFoundException(string column, string queryIndex)
-    : Exception($"{queryIndex} not found in {column}.");
 
 internal record CacheProjectInfo(string ProjectId, ProjectInfo ProjectInfo, DateTime InsertTime);
 

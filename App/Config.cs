@@ -242,7 +242,7 @@ public static partial class Config
         [ConfigItem<string>("LaunchFolders", "")] public partial string Folders { get; set; }
         [ConfigItem<int>("LaunchRamType", 0, ConfigSource.Local)] public partial int MemorySolution { get; set; }
         [ConfigItem<int>("LaunchRamCustom", 15, ConfigSource.Local)] public partial int CustomMemorySize { get; set; }
-        [ConfigItem<int>("LaunchPreferredIpStack", 1)] public partial int PreferredIpStack { get; set; }
+        [ConfigItem<int>("LaunchPreferredIpStack", 0)] public partial int PreferredIpStack { get; set; }
         [ConfigItem<bool>("LaunchArgumentRam", false)] public partial bool OptimizeMemory { get; set; }
         [ConfigItem<string>("LaunchAdvanceJvm", "-XX:+UseG1GC -XX:-UseAdaptiveSizePolicy -XX:-OmitStackTraceInFastThrow -Djdk.lang.Process.allowAmbiguousCommands=true -Dfml.ignoreInvalidMinecraftCertificates=True -Dfml.ignorePatchDiscrepancies=True -Dlog4j2.formatMsgNoLookups=true", ConfigSource.Local)] public partial string JvmArgs { get; set; }
         [ConfigItem<string>("LaunchAdvanceGame", "", ConfigSource.Local)] public partial string GameArgs { get; set; }

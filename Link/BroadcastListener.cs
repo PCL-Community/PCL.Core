@@ -13,23 +13,36 @@ namespace PCL.Core.Link;
 public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
 {
     private UdpClient? _client;
+    private UdpClient? _clientV6;
     private CancellationTokenSource? _cts;
     private static readonly IPAddress _MulticastAddress = IPAddress.Parse("224.0.2.60");
+    private static readonly IPAddress _MulticastAddressV6 = IPAddress.Parse("ff75:230::60");
     private Task? _listenTask;
+    private Task? _listenTaskV6;
 
     public event Action<BroadcastRecord, IPEndPoint>? OnReceive;
 
     public void Start()
     {
-        if (_client is not null) return;
+        if (_client is not null || _clientV6 is not null) return;
         _cts = new CancellationTokenSource();
+        
+        // IPv4
         _client = new UdpClient();
         _client.JoinMulticastGroup(_MulticastAddress);
         _client.EnableBroadcast = true;
         _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _client.Client.Bind(new IPEndPoint(IPAddress.Any, 4445));
+        
+        // IPv6
+        _clientV6 = new UdpClient(AddressFamily.InterNetworkV6);
+        _clientV6.JoinMulticastGroup(_MulticastAddressV6);
+        _clientV6.EnableBroadcast = true;
+        _clientV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        _clientV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, 4445));
 
         _listenTask = _listenThreadAsync();
+        _listenTaskV6 = _listenThreadV6Async();
     }
 
     private async Task _listenThreadAsync()
@@ -39,6 +52,37 @@ public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
             try
             {
                 var result = await _client.ReceiveAsync(_cts.Token);
+                var receivedData = result.Buffer;
+                var senderEndpoint = result.RemoteEndPoint;
+
+                // 转换为 UTF-8 字符串
+                var message = Encoding.UTF8.GetString(receivedData);
+
+                // 解析服务端信息
+                if (!_TryParseServerInfo(message, out var serverInfo) || serverInfo is null) continue;
+                if (receiveLocalOnly && !_isAddressLocal(senderEndpoint.Address)) continue;
+                OnReceive?.Invoke(serverInfo, senderEndpoint);
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消，不报错
+                break;
+            }
+            catch (Exception ex)
+            {
+                // 忽略解析错误或网络异常，继续监听
+                Console.WriteLine($"Error processing packet: {ex.Message}");
+            }
+        }
+    }
+    
+    private async Task _listenThreadV6Async()
+    {
+        while (_cts is not null && _clientV6 is not null && !_cts.IsCancellationRequested)
+        {
+            try
+            {
+                var result = await _clientV6.ReceiveAsync(_cts.Token);
                 var receivedData = result.Buffer;
                 var senderEndpoint = result.RemoteEndPoint;
 
@@ -99,8 +143,12 @@ public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
         _client?.Close();
         _client?.Dispose();
         _client = null;
+        _clientV6?.Close();
+        _clientV6?.Dispose();
+        _clientV6 = null;
 
         _listenTask?.Wait(500);
+        _listenTaskV6?.Wait(500);
     }
 
     private bool _isDisposed;

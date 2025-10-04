@@ -129,7 +129,20 @@ public record LifecycleServiceInfo
     /// </summary>
     public DateTime StartTime { get; init; } = DateTime.Now;
 
+    /// <summary>
+    /// 附带启动状态的完整标识符。
+    /// </summary>
     public string FullIdentifier => $"{StartState}/{Identifier}";
+
+    /// <summary>
+    /// 服务是否正常运行，若已停止则该值为 <c>false</c>，否则为 <c>true</c>。
+    /// </summary>
+    public bool IsStopped { get; private set; } = false;
+
+    /// <summary>
+    /// 将该服务标记为已停止，将不会在程序退出流程中调用该服务的 <c>Stop()</c> 方法。
+    /// </summary>
+    public void MarkAsStopped() => IsStopped = true;
 
     /// <summary>
     /// 本 record 应由生命周期管理自动构造，若无特殊情况，请勿手动调用。

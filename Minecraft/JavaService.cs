@@ -61,7 +61,8 @@ public sealed class JavaService : GeneralService
 
         foreach (var cache in caches)
         {
-            try {
+            try
+            {
                 var targetInRecord = _javaManager.InternalJavas.FirstOrDefault(x => x.JavaExePath == Path.GetFullPath(cache.Path));
                 if (targetInRecord is not null)
                     targetInRecord.IsEnabled = cache.IsEnable;

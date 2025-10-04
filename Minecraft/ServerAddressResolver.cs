@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Net;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft;
 
@@ -35,7 +36,6 @@ public static class ServerAddressResolver {
             if (parts.Length != 2 || !int.TryParse(parts[1], out var port)) {
                 throw new FormatException("无效的端口格式");
             }
-
             return (parts[0], port);
         }
 
@@ -45,34 +45,33 @@ public static class ServerAddressResolver {
         }
 
         // 情况3: 域名 (尝试SRV查询)
-        lock (SrvLock) {
-            try {
-                LogWrapper.Info($"尝试SRV查询: _minecraft._tcp.{address}");
-
-                // 关键修复：使用 .ToList() 将可枚举的集合转换为列表，确保只枚举一次。
+        try {
+            LogWrapper.Info($"尝试SRV查询: _minecraft._tcp.{address}");
+            // 发起 SRV 查询
+            var ret = await Task.Run<(string, int)?>(() => {
                 var srvRecords = _ResolveSrvRecords(address).ToList();
-
-                if (srvRecords.Count > 0) {
-                    var ret = _ParseSrvRecord(srvRecords.First());
-                    LogWrapper.Info($"SRV查询成功: {ret.Host}:{ret.Port}");
-                    return ret;
-                }
-            } catch (SocketException ex) {
-                LogWrapper.Warn(ex, "SRV查询失败 (网络错误)");
-            } catch (Exception ex) {
-                LogWrapper.Warn(ex, "SRV查询异常");
-            }
+                var count = srvRecords.Count;
+                // 返回空记录则忽略
+                if (count == 0) return null;
+                // 返回记录非空，随机选择其中一个
+                var ret = _ParseSrvRecord(srvRecords[RandomUtils.NextInt(0, count - 1)]);
+                LogWrapper.Info($"SRV查询成功: {ret.Host}:{ret.Port}");
+                return ret;
+            }, cancelToken).ConfigureAwait(false);
+            if (ret is { } r) return r;
+        } catch (SocketException ex) {
+            LogWrapper.Warn(ex, "SRV查询失败 (网络错误)");
+        } catch (Exception ex) {
+            LogWrapper.Warn(ex, "SRV查询异常");
         }
 
         // 默认: 直接使用域名+默认端口
         return (address, 25565);
     }
-    
-    private static readonly object SrvLock = new();
 
     private static List<string> _ResolveSrvRecords(string domain) {
         try {
-            return NDnsQuery.GetSRVRecords($"_minecraft._tcp.{domain}");
+            return NDnsQuery.GetSrvRecords($"_minecraft._tcp.{domain}");
         } catch {
             return [];
         }

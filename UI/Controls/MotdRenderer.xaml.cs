@@ -1,4 +1,4 @@
-﻿using PCL.Core.App;
+using PCL.Core.App;
 using PCL.Core.Utils;
 
 namespace PCL.Core.UI.Controls;
@@ -319,23 +319,25 @@ public partial class MotdRenderer {
                 Canvas.SetLeft(textBlocks[i], positions[i] + offsetX);
             }
 
-            switch (lines.Length) {
-                case 1:
-                    var offsetY = (canvasHeight - lineHeight) / 2;
-                    foreach (var textBlock in textBlocks)
-                    {
-                        Canvas.SetTop(textBlock, offsetY);
-                    }
-                    break;
+            // 计算当前行的垂直位置
+            var offsetY = 0.0;
+            if (lines.Length == 1)
+            {
+                // 单行文本居中
+                offsetY = (canvasHeight - lineHeight) / 2;
+            }
+            else
+            {
+                // 多行文本的位置计算
+                var totalHeight = lines.Length * lineHeight;
+                var startOffset = (canvasHeight - totalHeight) / 2;
+                offsetY = startOffset + (lineIndex * lineHeight);
+            }
 
-                case 2 when lineIndex == 0:
-                    offsetY = (canvasHeight - lineHeight * 2) / 2;
-                    foreach (var textBlock in textBlocks)
-                    {
-                        Canvas.SetTop(textBlock, offsetY);
-                    }
-                    y = lineHeight + offsetY;
-                    break;
+            // 设置所有文本块的垂直位置
+            foreach (var textBlock in textBlocks)
+            {
+                Canvas.SetTop(textBlock, offsetY);
             }
         }
     }

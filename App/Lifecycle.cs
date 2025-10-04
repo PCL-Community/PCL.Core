@@ -223,7 +223,8 @@ public sealed class Lifecycle : ILifecycleService
     private static void _RemoveRunningInstance(ILifecycleService service)
     {
         _RunningServiceInfoMap.Remove(service.Identifier);
-        _RunningServiceList.Remove(service);
+        // 这个链表的作用应该是按照启动顺序停止服务，不知道为什么这里需要移除它，暂且先注释掉吧，防止可能的并发修改爆炸
+        // _RunningServiceList.Remove(service);
     }
 
     private static void _StopService(ILifecycleService service, bool async, bool manual = false)

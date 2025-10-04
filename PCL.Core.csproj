@@ -55,7 +55,7 @@
         <PackageReference Include="fNbt" Version="1.0.0" />
         <PackageReference Include="LiteDB" Version="5.0.21" />
         <!-- 网络 -->
-        <PackageReference Include="Stun.Net" Version="8.0.2" />
+        <PackageReference Include="Stun.Net" Version="8.0.2" PrivateAssets="all" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
         <PackageReference Include="Polly" Version="8.6.3" />
     </ItemGroup>

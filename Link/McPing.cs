@@ -248,7 +248,6 @@ public class McPing : IDisposable
         while (stack.Count > 0)
         {
             var current = stack.Pop();
-            LogWrapper.Debug("McPing", $"Current element: {current.GetValueKind()}");
 
             switch (current.GetValueKind())
             {

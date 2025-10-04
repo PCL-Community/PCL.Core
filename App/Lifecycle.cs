@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -76,8 +77,8 @@ public sealed class Lifecycle : ILifecycleService
 
     #region 服务管理
 
-    private static readonly Dictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
-    private static readonly LinkedList<ILifecycleService> _RunningServiceList = [];
+    private static readonly ConcurrentDictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
+    private static readonly ConcurrentStack<ILifecycleService> _StartedServiceStack = [];
     private static readonly Dictionary<string, ILifecycleService> _ManualServiceMap = [];
     private static readonly HashSet<ILifecycleService> _DeclaredStoppedServices = [];
 
@@ -128,7 +129,7 @@ public sealed class Lifecycle : ILifecycleService
             else
             {
                 // 若该服务未声明自己已结束运行，将其添加到正在运行列表
-                _RunningServiceList.AddFirst(service);
+                _StartedServiceStack.Push(service);
                 _RunningServiceInfoMap[service.Identifier] = serviceInfo;
             }
         }
@@ -213,18 +214,17 @@ public sealed class Lifecycle : ILifecycleService
     private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
     {
         new Thread(() =>
-            {
-                _StartStateFlow(state, count: count);
-                if (wait is { } w) WaitForState(w);
-            })
-            { IsBackground = true, Name = $"Lifecycle/{state}" }.Start();
+        {
+            _StartStateFlow(state, count: count);
+            if (wait is { } w) WaitForState(w);
+        })
+        { IsBackground = true, Name = $"Lifecycle/{state}" }.Start();
     }
 
     private static void _RemoveRunningInstance(ILifecycleService service)
     {
-        _RunningServiceInfoMap.Remove(service.Identifier);
-        // 这个链表的作用应该是按照启动顺序停止服务，不知道为什么这里需要移除它，暂且先注释掉吧，防止可能的并发修改爆炸
-        // _RunningServiceList.Remove(service);
+        _RunningServiceInfoMap.TryRemove(service.Identifier, out var removed);
+        removed?.MarkAsStopped();
     }
 
     private static void _StopService(ILifecycleService service, bool async, bool manual = false)
@@ -282,20 +282,23 @@ public sealed class Lifecycle : ILifecycleService
         // 停止服务
         Context.Debug("正在停止运行中的服务");
         ILifecycleLogService? logService = null;
-        foreach (var service in _RunningServiceList.ToArray())
+        while (_StartedServiceStack.TryPop(out var service))
         {
+            // 跳过已标记为停止的服务
+            if (_RunningServiceInfoMap.TryGetValue(service.Identifier, out var info) && info.IsStopped) continue;
+            // 跳过日志服务
             if (service is ILifecycleLogService ls)
             {
-                // 跳过日志服务
                 Context.Trace($"已跳过日志服务: {_ServiceName(ls)}");
                 logService = ls;
                 continue;
             }
+            // 执行停止流程
             _StopService(service, service.SupportAsyncStart);
         }
         if (logService != null)
         {
-            Context.Trace($"退出过程已结束，正在停止日志服务");
+            Context.Trace("退出过程已结束，正在停止日志服务");
             // 直接调用 Stop() 不使用常规停止实现 以保证正常情况下不会向等待区输出日志
             logService.Stop();
             Console.WriteLine("[Lifecycle] Log service stopped");

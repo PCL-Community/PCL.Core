@@ -41,48 +41,17 @@ public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
         _clientV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _clientV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, 4445));
 
-        _listenTask = _listenThreadAsync();
-        _listenTaskV6 = _listenThreadV6Async();
+        _listenTask = _listenThreadAsync(_client);
+        _listenTaskV6 = _listenThreadAsync(_clientV6);
     }
 
-    private async Task _listenThreadAsync()
+    private async Task _listenThreadAsync(UdpClient? client)
     {
-        while (_cts is not null && _client is not null && !_cts.IsCancellationRequested)
+        while (_cts is not null && client is not null && !_cts.IsCancellationRequested)
         {
             try
             {
-                var result = await _client.ReceiveAsync(_cts.Token);
-                var receivedData = result.Buffer;
-                var senderEndpoint = result.RemoteEndPoint;
-
-                // 转换为 UTF-8 字符串
-                var message = Encoding.UTF8.GetString(receivedData);
-
-                // 解析服务端信息
-                if (!_TryParseServerInfo(message, out var serverInfo) || serverInfo is null) continue;
-                if (receiveLocalOnly && !_isAddressLocal(senderEndpoint.Address)) continue;
-                OnReceive?.Invoke(serverInfo, senderEndpoint);
-            }
-            catch (OperationCanceledException)
-            {
-                // 正常取消，不报错
-                break;
-            }
-            catch (Exception ex)
-            {
-                // 忽略解析错误或网络异常，继续监听
-                Console.WriteLine($"Error processing packet: {ex.Message}");
-            }
-        }
-    }
-    
-    private async Task _listenThreadV6Async()
-    {
-        while (_cts is not null && _clientV6 is not null && !_cts.IsCancellationRequested)
-        {
-            try
-            {
-                var result = await _clientV6.ReceiveAsync(_cts.Token);
+                var result = await client.ReceiveAsync(_cts.Token);
                 var receivedData = result.Buffer;
                 var senderEndpoint = result.RemoteEndPoint;
 

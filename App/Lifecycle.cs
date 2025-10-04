@@ -19,18 +19,22 @@ namespace PCL.Core.App;
 [LifecycleService(LifecycleState.BeforeLoading, Priority = int.MaxValue)]
 public sealed class Lifecycle : ILifecycleService
 {
+    #region ILifecycleService 实现
+
     public string Identifier => "lifecycle";
     public string Name => "生命周期";
     public bool SupportAsyncStart => false;
-    
+
     private static LifecycleContext? _context;
     private Lifecycle() { _context = GetContext(this); }
     private static LifecycleContext Context => _context ?? System;
-    
+
     public void Start() { }
     public void Stop() { _context = null; }
 
-    // -- 日志管理 --
+    #endregion
+
+    #region 日志管理
 
     private static ILifecycleLogService? _logService;
     private static readonly List<LifecycleLogItem> _PendingLogs = [];
@@ -69,7 +73,9 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
-    // -- Joinable 任务管理 --
+    #endregion
+
+    #region Joinable 任务管理
     
     /// <summary>
     /// 公用 <see cref="JoinableTaskContext"/> 实例。
@@ -104,8 +110,10 @@ public sealed class Lifecycle : ILifecycleService
     /// </summary>
     /// <param name="asyncMethod">异步方法</param>
     public static void RunSync(Func<Task> asyncMethod) => _TaskFactory.Run(asyncMethod);
+    
+    #endregion
 
-    // -- 服务管理 --
+    #region 服务管理
 
     private static readonly Dictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
     private static readonly LinkedList<ILifecycleService> _RunningServiceList = [];
@@ -249,6 +257,16 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
+    private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
+    {
+        new Thread(() =>
+            {
+                _StartStateFlow(state, count: count);
+                if (wait is { } w) WaitForState(w);
+            })
+            { IsBackground = true, Name = $"Lifecycle/{state}" }.Start();
+    }
+
     private static void _RemoveRunningInstance(ILifecycleService service)
     {
         _RunningServiceInfoMap.Remove(service.Identifier);
@@ -279,6 +297,10 @@ public sealed class Lifecycle : ILifecycleService
             _RemoveRunningInstance(service);
         }
     }
+
+    #endregion
+
+    #region 进程生命周期逻辑
 
     private static void _RunCurrentExecutable(string? arguments)
     {
@@ -344,7 +366,8 @@ public sealed class Lifecycle : ILifecycleService
         // 退出程序
         Console.WriteLine($"[Lifecycle] Exiting program with status: {statusCode}");
         // 执行正常退出
-        Environment.Exit(statusCode);
+        if (statusCode == -1) Basics.CurrentProcess.Kill();
+        else Environment.Exit(statusCode);
         // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
         Console.WriteLine("[Lifecycle] Warning! Abnormal behaviour, try to kill process 1s later.");
         Thread.Sleep(1000);
@@ -368,17 +391,9 @@ public sealed class Lifecycle : ILifecycleService
         Process.Start(psi);
     }
 
-    private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
-    {
-        new Thread(() =>
-        {
-            _StartStateFlow(state, count: count);
-            if (wait is { } w) WaitForState(w);
-        })
-        { IsBackground = true, Name = $"Lifecycle/{state}" }.Start();
-    }
+    #endregion
 
-    // -- 状态控制 --
+    #region 状态控制
 
     private static LifecycleState _currentState = LifecycleState.BeforeLoading;
 
@@ -458,7 +473,9 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
-    // -- 流程触发 --
+    #endregion
+
+    #region 流程触发
 
     private static DateTime? _countRunningStart;
 
@@ -551,7 +568,9 @@ public sealed class Lifecycle : ILifecycleService
         throw new NotImplementedException();
     }
 
-    // -- 其余公共成员 --
+    #endregion
+
+    #region 公共 API
 
     /// <summary>
     /// 当前的生命周期状态，会随生命周期变化随时更新。
@@ -682,6 +701,10 @@ public sealed class Lifecycle : ILifecycleService
     /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
     public static void ForceShutdown(int statusCode = 0) => Shutdown(statusCode, true);
 
+    #endregion
+
+    #region 上下文控制
+
     /// <summary>
     /// 获取指定服务项对应的上下文实例用于日志输出、多任务通信等。一般情况下只推荐获取自身上下文。
     /// </summary>
@@ -743,4 +766,6 @@ public sealed class Lifecycle : ILifecycleService
     /// 系统默认上下文，无特殊需求请勿使用。
     /// </summary>
     public static readonly LifecycleContext System = GetContext(_SystemService);
+
+    #endregion
 }

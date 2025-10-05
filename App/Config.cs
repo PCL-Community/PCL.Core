@@ -183,7 +183,7 @@ public static partial class Config
         [ConfigGroup("Homepage")] partial class HomepageConfigGroup
         {
             [ConfigItem<int>("UiCustomType", 0, ConfigSource.Local)] public partial int Type { get; set; }
-            [ConfigItem<int>("UiCustomPreset", 0, ConfigSource.Local)] public partial int SelectedPreset { get; set; }
+            [ConfigItem<int>("UiCustomPreset", 13, ConfigSource.Local)] public partial int SelectedPreset { get; set; }
             [ConfigItem<string>("UiCustomNet", "", ConfigSource.Local)] public partial string CustomUrl { get; set; }
         }
 
@@ -231,6 +231,7 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenVersionResourcePack", false, ConfigSource.Local)] public partial bool InstanceResourcePack { get; set; }
             [ConfigItem<bool>("UiHiddenVersionShader", false, ConfigSource.Local)] public partial bool InstanceShader { get; set; }
             [ConfigItem<bool>("UiHiddenVersionSchematic", false, ConfigSource.Local)] public partial bool InstanceSchematic { get; set; }
+            [ConfigItem<bool>("UiHiddenVersionServer", false, ConfigSource.Local)] public partial bool InstanceServer { get; set; }
         }
     }
 
@@ -247,7 +248,7 @@ public static partial class Config
         [ConfigItem<string>("LaunchAdvanceGame", "", ConfigSource.Local)] public partial string GameArgs { get; set; }
         [ConfigItem<string>("LaunchAdvanceRun", "", ConfigSource.Local)] public partial string PreLaunchCommand { get; set; }
         [ConfigItem<bool>("LaunchAdvanceRunWait", true, ConfigSource.Local)] public partial bool PreLaunchCommandWait { get; set; }
-        [ConfigItem<bool>("LaunchAdvanceDisableJLW", false, ConfigSource.Local)] public partial bool DisableJlw { get; set; }
+        [ConfigItem<bool>("LaunchAdvanceDisableJLW", true, ConfigSource.Local)] public partial bool DisableJlw { get; set; }
         [ConfigItem<bool>("LaunchAdvanceDisableRW", false, ConfigSource.Local)] public partial bool DisableRw { get; set; }
         [ConfigItem<bool>("LaunchAdvanceGraphicCard", true)] public partial bool SetGpuPreference { get; set; }
         [ConfigItem<bool>("LaunchAdvanceNoJavaw", false)] public partial bool DontUseJavaw { get; set; }
@@ -275,6 +276,7 @@ public static partial class Config
         [ConfigItem<bool>("VersionAdvanceJava", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> IgnoreJavaCompatibility { get; }
         [ConfigItem<bool>("VersionAdvanceDisableJlw", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> DisableJlwObsolete { get; }
         [ConfigItem<string>("VersionAdvanceRun", "", ConfigSource.GameInstance)] public partial ArgConfig<string> PreLaunchCommand { get; }
+        [ConfigItem<string>("VersionAdvanceClasspathHead", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ClasspathHead { get; }
         [ConfigItem<bool>("VersionAdvanceRunWait", true, ConfigSource.GameInstance)] public partial ArgConfig<bool> PreLaunchCommandWait { get; }
         [ConfigItem<bool>("VersionAdvanceDisableJLW", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> DisableJlw { get; }
         [ConfigItem<bool>("VersionAdvanceUseProxyV2", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> UseProxy { get; }

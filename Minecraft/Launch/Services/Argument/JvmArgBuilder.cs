@@ -21,7 +21,7 @@ namespace PCL.Core.Minecraft.Launch.Services.Argument;
 public class JvmArgBuilder(IMcInstance instance) {
     private const string MesaLoaderVersion = "25.1.7";
     private const string HeapDumpParameter = "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump";
-    private const string Log4jSecurityParameter = "-Dlog4j2.formatMsgNoLookups=true";
+    private const string Log4JSecurityParameter = "-Dlog4j2.formatMsgNoLookups=true";
     private const string MaxDirectMemoryParameter = "-XX:MaxDirectMemorySize=256M";
 
     /// <summary>
@@ -33,16 +33,16 @@ public class JvmArgBuilder(IMcInstance instance) {
     public List<string> BuildLegacyJvmArguments(JavaInfo selectedJava) {
         var arguments = new List<string> { HeapDumpParameter };
 
-        AddCustomJvmArguments(arguments);
-        AddMemoryArguments(arguments, selectedJava);
-        AddNativeLibraryPath(arguments);
-        AddClassPath(arguments);
-        AddRendererConfiguration(arguments);
-        AddProxyConfiguration(arguments);
-        AddJavaWrapperConfiguration(arguments, selectedJava);
-        AddMainClass(arguments);
+        _AddCustomJvmArguments(arguments);
+        _AddMemoryArguments(arguments, selectedJava);
+        _AddNativeLibraryPath(arguments);
+        _AddClassPath(arguments);
+        _AddRendererConfiguration(arguments);
+        _AddProxyConfiguration(arguments);
+        _AddJavaWrapperConfiguration(arguments, selectedJava);
+        _AddMainClass(arguments);
         
-        AddAccountSystemParametersOld(arguments);
+        _AddAccountSystemParametersOld(arguments);
 
         return arguments;
     }
@@ -56,18 +56,18 @@ public class JvmArgBuilder(IMcInstance instance) {
     public List<string> BuildModernJvmArguments(JavaInfo selectedJava) {
         var arguments = new List<string>();
 
-        AddVersionJsonJvmArguments(arguments);
-        AddCommonJvmArguments(arguments);
-        AddRendererConfiguration(arguments);
-        AddProxyConfiguration(arguments);
-        AddRetroWrapperConfiguration(arguments);
-        AddJavaWrapperConfiguration(arguments, selectedJava);
+        _AddVersionJsonJvmArguments(arguments);
+        _AddCommonJvmArguments(arguments);
+        _AddRendererConfiguration(arguments);
+        _AddProxyConfiguration(arguments);
+        _AddRetroWrapperConfiguration(arguments);
+        _AddJavaWrapperConfiguration(arguments, selectedJava);
         
-        AddAccountSystemParametersModern(arguments);
+        _AddAccountSystemParametersModern(arguments);
 
-        var processedArguments = ProcessAndDeduplicateArguments(arguments);
+        var processedArguments = _ProcessAndDeduplicateArguments(arguments);
         
-        AddMainClass(processedArguments);
+        _AddMainClass(processedArguments);
         return processedArguments;
     }
 
@@ -76,21 +76,21 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加自定义 JVM 参数
     /// </summary>
-    private void AddCustomJvmArguments(List<string> arguments) {
-        var customArgs = GetCustomJvmArguments();
+    private void _AddCustomJvmArguments(List<string> arguments) {
+        var customArgs = _GetCustomJvmArguments();
         arguments.Insert(0, customArgs);
     }
 
     /// <summary>
     /// 获取自定义 JVM 参数，确保包含 Log4j 安全参数
     /// </summary>
-    private string GetCustomJvmArguments() {
+    private string _GetCustomJvmArguments() {
         var customArgs = Config.Instance.JvmArgs[instance.Path].IsNullOrEmpty()
             ? Config.Launch.JvmArgs
             : Config.Instance.JvmArgs[instance.Path];
 
-        if (!customArgs.Contains(Log4jSecurityParameter)) {
-            customArgs += $" {Log4jSecurityParameter}";
+        if (!customArgs.Contains(Log4JSecurityParameter)) {
+            customArgs += $" {Log4JSecurityParameter}";
         }
 
         // 清理已知问题参数 (issue #3511)
@@ -102,7 +102,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加内存相关参数
     /// </summary>
-    private void AddMemoryArguments(List<string> arguments, JavaInfo selectedJava) {
+    private void _AddMemoryArguments(List<string> arguments, JavaInfo selectedJava) {
         var ramInMb = InstanceRamService.GetInstanceMemoryAllocation(instance, !selectedJava.Is64Bit) * 1024;
         var youngGenSize = (int)(ramInMb * 0.15);
 
@@ -113,26 +113,26 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加本地库路径
     /// </summary>
-    private void AddNativeLibraryPath(List<string> arguments) {
-        arguments.Add($"-Djava.library.path=\"{GetNativesFolder()}\"");
+    private void _AddNativeLibraryPath(List<string> arguments) {
+        arguments.Add($"-Djava.library.path=\"{_GetNativesFolder()}\"");
     }
 
     /// <summary>
     /// 添加类路径参数
     /// </summary>
-    private void AddClassPath(List<string> arguments) {
+    private void _AddClassPath(List<string> arguments) {
         arguments.Add("-cp ${classpath}");
     }
 
     /// <summary>
     /// 添加渲染器配置
     /// </summary>
-    private void AddRendererConfiguration(List<string> arguments) {
+    private void _AddRendererConfiguration(List<string> arguments) {
         var renderer = Config.Instance.Renderer[instance.Path];
         if (renderer == 0) return;
 
-        var rendererType = GetRendererType(renderer);
-        var mesaLoaderPath = GetMesaLoaderPath();
+        var rendererType = _GetRendererType(renderer);
+        var mesaLoaderPath = _GetMesaLoaderPath();
 
         arguments.Insert(0, $"-javaagent:\"{mesaLoaderPath}\"={rendererType}");
     }
@@ -140,7 +140,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 获取渲染器类型字符串
     /// </summary>
-    private static string GetRendererType(int renderer) => renderer switch {
+    private static string _GetRendererType(int renderer) => renderer switch {
         1 => "llvmpipe",
         2 => "d3d12",
         _ => "zink"
@@ -149,19 +149,19 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 获取 Mesa Loader 路径
     /// </summary>
-    private static string GetMesaLoaderPath() {
+    private static string _GetMesaLoaderPath() {
         return Path.Combine(FileService.TempPath, "mesa-loader-windows", MesaLoaderVersion, "Loader.jar");
     }
 
     /// <summary>
     /// 添加代理配置
     /// </summary>
-    private void AddProxyConfiguration(List<string> arguments) {
-        if (!ShouldUseProxy()) return;
+    private void _AddProxyConfiguration(List<string> arguments) {
+        if (!_ShouldUseProxy()) return;
 
         try {
             var proxyUri = new Uri(Config.System.HttpProxy.CustomAddress);
-            var scheme = GetProxyScheme(proxyUri);
+            var scheme = _GetProxyScheme(proxyUri);
 
             arguments.Add($"-D{scheme}.proxyHost={proxyUri.Host}");
             arguments.Add($"-D{scheme}.proxyPort={proxyUri.Port}");
@@ -173,7 +173,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 判断是否应该使用代理
     /// </summary>
-    private bool ShouldUseProxy() {
+    private bool _ShouldUseProxy() {
         return Config.Instance.UseProxy[instance.Path] &&
                Config.System.HttpProxy.Type == 2 &&
                !string.IsNullOrWhiteSpace(Config.System.HttpProxy.CustomAddress);
@@ -182,7 +182,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 账户系统参数（旧版）
     /// </summary>
-    private void AddAccountSystemParametersOld(List<string> arguments) {
+    private void _AddAccountSystemParametersOld(List<string> arguments) {
         // TODO: 等待账户系统
         /*
         // Authlib-Injector 配置
@@ -216,7 +216,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 账户系统参数（新版）
     /// </summary>
-    private void AddAccountSystemParametersModern(List<string> arguments) {
+    private void _AddAccountSystemParametersModern(List<string> arguments) {
         // TODO: 等待账户系统
         /*
         // Authlib-Injector 配置
@@ -241,14 +241,14 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 获取代理协议类型
     /// </summary>
-    private static string GetProxyScheme(Uri proxyUri) {
+    private static string _GetProxyScheme(Uri proxyUri) {
         return proxyUri.Scheme.StartsWith("https", StringComparison.OrdinalIgnoreCase) ? "https" : "http";
     }
 
     /// <summary>
     /// 添加 RetroWrapper 配置
     /// </summary>
-    private void AddRetroWrapperConfiguration(List<string> arguments) {
+    private void _AddRetroWrapperConfiguration(List<string> arguments) {
         if (LaunchEnvUtils.NeedRetroWrapper(instance)) {
             arguments.Add("-Dretrowrapper.doUpdateCheck=false");
         }
@@ -257,8 +257,8 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加 Java Wrapper 配置
     /// </summary>
-    private void AddJavaWrapperConfiguration(List<string> arguments, JavaInfo selectedJava) {
-        if (!ShouldUseJavaWrapper()) return;
+    private void _AddJavaWrapperConfiguration(List<string> arguments, JavaInfo selectedJava) {
+        if (!_ShouldUseJavaWrapper()) return;
 
         if (selectedJava.JavaMajorVersion >= 9) {
             arguments.Add("--add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED");
@@ -271,7 +271,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 判断是否应该使用 Java Wrapper
     /// </summary>
-    private bool ShouldUseJavaWrapper() {
+    private bool _ShouldUseJavaWrapper() {
         return EncodingUtils.IsDefaultEncodingUtf8() &&
                !Config.Launch.DisableJlw &&
                !Config.Instance.DisableJlw[instance.Path];
@@ -280,15 +280,15 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加主类参数
     /// </summary>
-    private void AddMainClass(List<string> arguments) {
-        var mainClass = GetMainClass();
+    private void _AddMainClass(List<string> arguments) {
+        var mainClass = _GetMainClass();
         arguments.Add(mainClass);
     }
 
     /// <summary>
     /// 获取主类名称
     /// </summary>
-    private string GetMainClass() {
+    private string _GetMainClass() {
         var mainClass = ((IJsonBasedInstance)instance).VersionJson!["mainClass"];
         if (mainClass is null) {
             throw new InvalidOperationException("实例 JSON 中缺少 mainClass 项！");
@@ -303,26 +303,26 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 从版本 JSON 添加 JVM 参数
     /// </summary>
-    private void AddVersionJsonJvmArguments(List<string> arguments) {
+    private void _AddVersionJsonJvmArguments(List<string> arguments) {
         var jvmArgs = ((IJsonBasedInstance)instance).VersionJson!["arguments"]?["jvm"]?.AsArray();
         if (jvmArgs is null) return;
 
         foreach (var argNode in jvmArgs) {
-            ProcessJvmArgumentNode(arguments, argNode);
+            _ProcessJvmArgumentNode(arguments, argNode);
         }
     }
 
     /// <summary>
     /// 处理单个 JVM 参数节点
     /// </summary>
-    private static void ProcessJvmArgumentNode(List<string> arguments, JsonNode argNode) {
+    private static void _ProcessJvmArgumentNode(List<string> arguments, JsonNode? argNode) {
         switch (argNode) {
             case JsonValue value when value.TryGetValue<string>(out var str):
                 arguments.Add(str);
                 break;
 
             case JsonObject obj when obj["rules"] is not null && McLaunchUtils.CheckRules(obj["rules"]?.AsObject()):
-                AddRuleBasedArgument(arguments, obj);
+                _AddRuleBasedArgument(arguments, obj);
                 break;
         }
     }
@@ -330,7 +330,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加基于规则的参数
     /// </summary>
-    private static void AddRuleBasedArgument(List<string> arguments, JsonObject argObject) {
+    private static void _AddRuleBasedArgument(List<string> arguments, JsonObject argObject) {
         var valueNode = argObject["value"];
         switch (valueNode) {
             case JsonValue value when value.TryGetValue<string>(out var valueStr):
@@ -346,17 +346,17 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加通用 JVM 参数
     /// </summary>
-    private void AddCommonJvmArguments(List<string> arguments) {
-        AddCustomJvmArgumentsForModern(arguments);
-        AddIpStackPreference(arguments);
-        AddMemoryArgumentsForModern(arguments);
-        AddLog4jSecurity(arguments);
+    private void _AddCommonJvmArguments(List<string> arguments) {
+        _AddCustomJvmArgumentsForModern(arguments);
+        _AddIpStackPreference(arguments);
+        _AddMemoryArgumentsForModern(arguments);
+        _AddLog4JSecurity(arguments);
     }
 
     /// <summary>
     /// 为新版添加自定义 JVM 参数
     /// </summary>
-    private void AddCustomJvmArgumentsForModern(List<string> arguments) {
+    private void _AddCustomJvmArgumentsForModern(List<string> arguments) {
         var customArgs = Config.Instance.JvmArgs[instance.Path];
         var argsToAdd = string.IsNullOrEmpty(customArgs) ? Config.Launch.JvmArgs : customArgs;
         arguments.Insert(0, argsToAdd);
@@ -365,7 +365,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加 IP 栈偏好设置
     /// </summary>
-    private static void AddIpStackPreference(List<string> arguments) {
+    private static void _AddIpStackPreference(List<string> arguments) {
         switch (Config.Launch.PreferredIpStack) {
             case 0:
                 arguments.Add("-Djava.net.preferIPv4Stack=true");
@@ -379,8 +379,8 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 为新版添加内存参数
     /// </summary>
-    private void AddMemoryArgumentsForModern(List<string> arguments) {
-        LogAvailableMemory();
+    private void _AddMemoryArgumentsForModern(List<string> arguments) {
+        _LogAvailableMemory();
 
         var ramInGb = InstanceRamService.GetInstanceMemoryAllocation(instance);
         var ramInMb = ramInGb * 1024;
@@ -393,7 +393,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 记录可用内存信息
     /// </summary>
-    private static void LogAvailableMemory() {
+    private static void _LogAvailableMemory() {
         var availableMemoryGb = Math.Round(
             KernelInterop.GetAvailablePhysicalMemoryBytes() / 1024.0 / 1024.0 / 1024.0 * 10
             ) / 10;
@@ -403,16 +403,16 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 添加 Log4j 安全参数
     /// </summary>
-    private static void AddLog4jSecurity(List<string> arguments) {
-        if (!arguments.Any(arg => arg.Contains(Log4jSecurityParameter))) {
-            arguments.Add(Log4jSecurityParameter);
+    private static void _AddLog4JSecurity(List<string> arguments) {
+        if (!arguments.Any(arg => arg.Contains(Log4JSecurityParameter))) {
+            arguments.Add(Log4JSecurityParameter);
         }
     }
 
     /// <summary>
     /// 处理和去重参数
     /// </summary>
-    private static List<string> ProcessAndDeduplicateArguments(List<string> arguments) {
+    private static List<string> _ProcessAndDeduplicateArguments(List<string> arguments) {
         var processedArguments = new List<string>();
 
         for (var i = 0; i < arguments.Count; i++) {
@@ -438,7 +438,7 @@ public class JvmArgBuilder(IMcInstance instance) {
     /// <summary>
     /// 获取 Natives 文件夹路径，不以反斜杠结尾
     /// </summary>
-    private string GetNativesFolder() {
+    private string _GetNativesFolder() {
         var defaultPath = Path.Combine(instance.Path, $"{instance.Name}-natives");
 
         if (EncodingUtils.IsDefaultEncodingGbk() || defaultPath.IsASCII()) {

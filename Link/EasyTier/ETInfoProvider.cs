@@ -57,7 +57,7 @@ public static class ETInfoProvider
 {
     public const string ETNetworkNamePrefix = "PCLCELobby";
     public const string ETNetworkSecretPrefix = "PCLCEETLOBBY2025";
-    public const string ETVersion = "2.4.3";
+    public const string ETVersion = "2.4.5";
     public static readonly string ETPath = Path.Combine(FileService.LocalDataPath, "EasyTier", ETVersion,
         "easytier-windows-" + (RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x86_64"));
 
@@ -157,8 +157,8 @@ public static class ETInfoProvider
                     Username = hostnameSplit.Length >= 2 ? hostnameSplit[1] : null,
                     McName = hostnameSplit.Length == 3 ? hostnameSplit[2] : null,
                     Cost = _GetConnectionType(info.Cost),
-                    Ping = Math.Round(Convert.ToDouble((info.Ping != "-" ? info.Ping : "0"))),
-                    Loss = Math.Round(Convert.ToDouble((info.Loss != "-" ? info.Loss : "0")) * 100, 1),
+                    Ping = Math.Round(Convert.ToDouble(info.Ping != "-" ? info.Ping : "0")),
+                    Loss = Math.Round(Convert.ToDouble(info.Loss != "-" ? info.Loss.Replace("%", "") : "0")),
                     NatType = info.NatType,
                     ETVersion = info.ETVersion
                 };

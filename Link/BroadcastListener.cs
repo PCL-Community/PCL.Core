@@ -13,32 +13,45 @@ namespace PCL.Core.Link;
 public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
 {
     private UdpClient? _client;
+    private UdpClient? _clientV6;
     private CancellationTokenSource? _cts;
     private static readonly IPAddress _MulticastAddress = IPAddress.Parse("224.0.2.60");
+    private static readonly IPAddress _MulticastAddressV6 = IPAddress.Parse("ff75:230::60");
     private Task? _listenTask;
+    private Task? _listenTaskV6;
 
     public event Action<BroadcastRecord, IPEndPoint>? OnReceive;
 
     public void Start()
     {
-        if (_client is not null) return;
+        if (_client is not null || _clientV6 is not null) return;
         _cts = new CancellationTokenSource();
+        
+        // IPv4
         _client = new UdpClient();
-        _client.JoinMulticastGroup(_MulticastAddress);
-        _client.EnableBroadcast = true;
         _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _client.Client.Bind(new IPEndPoint(IPAddress.Any, 4445));
+        _client.JoinMulticastGroup(_MulticastAddress);
+        _client.EnableBroadcast = true;
+        
+        // IPv6
+        _clientV6 = new UdpClient(AddressFamily.InterNetworkV6);
+        _clientV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        _clientV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, 4445));
+        _clientV6.JoinMulticastGroup(_MulticastAddressV6);
+        _clientV6.EnableBroadcast = true;
 
-        _listenTask = _listenThreadAsync();
+        _listenTask = _listenThreadAsync(_client);
+        _listenTaskV6 = _listenThreadAsync(_clientV6);
     }
 
-    private async Task _listenThreadAsync()
+    private async Task _listenThreadAsync(UdpClient? client)
     {
-        while (_cts is not null && _client is not null && !_cts.IsCancellationRequested)
+        while (_cts is not null && client is not null && !_cts.IsCancellationRequested)
         {
             try
             {
-                var result = await _client.ReceiveAsync(_cts.Token);
+                var result = await client.ReceiveAsync(_cts.Token);
                 var receivedData = result.Buffer;
                 var senderEndpoint = result.RemoteEndPoint;
 
@@ -99,8 +112,12 @@ public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
         _client?.Close();
         _client?.Dispose();
         _client = null;
+        _clientV6?.Close();
+        _clientV6?.Dispose();
+        _clientV6 = null;
 
         _listenTask?.Wait(500);
+        _listenTaskV6?.Wait(500);
     }
 
     private bool _isDisposed;

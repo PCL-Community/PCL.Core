@@ -5,7 +5,7 @@ using PCL.Core.Minecraft.Compoment.Projects.Entities;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
 using PCL.Core.Utils;
 
-namespace PCL.Core.Minecraft.Compoment.Exceptions;
+namespace PCL.Core.Minecraft.Compoment.Extensions;
 
 public static class ProjectSearchRequestExtensions
 {

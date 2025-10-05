@@ -94,7 +94,12 @@ public class ScfProtocol : LinkProtocol
                 if (TargetLobby == null)
                 {
                     LogWrapper.Error("未设置目标大厅，无法获取服务器端口");
-                    return;
+                    response = new ServerPacket
+                    {
+                        StatusCode = 32,
+                        Body = []
+                    };
+                    break;
                 }
                 var portBytes = new byte[2];
                 BinaryPrimitives.WriteUInt16BigEndian(portBytes, (ushort)TargetLobby.Port);
@@ -190,10 +195,12 @@ public class ScfProtocol : LinkProtocol
             LogWrapper.Error("无法获取服务器响应");
             return;
         }
+
+        var responsePacket = ServerPacket.From(response);
         
-        if (response.Length != 2)
+        if (responsePacket.StatusCode != 0)
         {
-            LogWrapper.Error("服务器响应长度错误");
+            LogWrapper.Error(responsePacket.StatusCode == 32 ? "服务器未启动,无法获取服务器端口" : "无法获取服务器端口");
             return;
         }
         

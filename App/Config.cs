@@ -193,6 +193,7 @@ public static partial class Config
         [ConfigItem<bool>("UiLogoLeft", false, ConfigSource.Local)] public partial bool TopBarLeftAlign { get; set; }
         [ConfigItem<int>("UiAniFPS", 59)] public partial int AnimationFpsLimit { get; set; }
         [ConfigItem<string>("UiFont", "", ConfigSource.Local)] public partial string Font { get; set; }
+        [ConfigItem<string>("UiMotdFont", "", ConfigSource.Local)] public partial string MotdFont { get; set; }
         [ConfigItem<bool>("DetailedInstanceClassification", false, ConfigSource.Local)] public partial bool DetailedInstanceClassification {  get; set; }
         [ConfigItem<bool>("UiAutoPauseVideo", true, ConfigSource.Local)] public partial bool AutoPauseVideo { get; set; }
 

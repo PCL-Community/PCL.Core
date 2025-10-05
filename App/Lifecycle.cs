@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using Microsoft.VisualStudio.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils.OS;
 
@@ -19,18 +19,22 @@ namespace PCL.Core.App;
 [LifecycleService(LifecycleState.BeforeLoading, Priority = int.MaxValue)]
 public sealed class Lifecycle : ILifecycleService
 {
+    #region ILifecycleService 实现
+
     public string Identifier => "lifecycle";
     public string Name => "生命周期";
     public bool SupportAsyncStart => false;
-    
+
     private static LifecycleContext? _context;
     private Lifecycle() { _context = GetContext(this); }
     private static LifecycleContext Context => _context ?? System;
-    
+
     public void Start() { }
     public void Stop() { _context = null; }
 
-    // -- 日志管理 --
+    #endregion
+
+    #region 日志管理
 
     private static ILifecycleLogService? _logService;
     private static readonly List<LifecycleLogItem> _PendingLogs = [];
@@ -69,46 +73,12 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
-    // -- Joinable 任务管理 --
-    
-    /// <summary>
-    /// 公用 <see cref="JoinableTaskContext"/> 实例。
-    /// </summary>
-    // ReSharper disable once InconsistentNaming
-    public static JoinableTaskContext JTC { get; } = new();
+    #endregion
 
-    private static readonly JoinableTaskFactory _TaskFactory = JTC.Factory;
-    private static readonly List<JoinableTask> _JoinableTasks = [];
-    
-    /// <summary>
-    /// 在当前生命周期运行一个异步方法，生命周期将会等待该方法结束。
-    /// </summary>
-    /// <param name="asyncMethod">异步方法</param>
-    public static void Run(Func<Task> asyncMethod)
-    {
-        lock (_JoinableTasks)
-        {
-            var awaitable = _TaskFactory.RunAsync(asyncMethod);
-            _JoinableTasks.Add(awaitable);
-        }
-    }
-    
-    /// <summary>
-    /// 以可等待的方式运行一个异步方法，生命周期不会等待该方法结束。
-    /// </summary>
-    /// <param name="asyncMethod">异步方法</param>
-    public static Task RunAsync(Func<Task> asyncMethod) => _TaskFactory.RunAsync(asyncMethod).Task;
-    
-    /// <summary>
-    /// 在同步上下文运行一个异步方法，将会阻塞当前线程，生命周期不会等待该方法结束。
-    /// </summary>
-    /// <param name="asyncMethod">异步方法</param>
-    public static void RunSync(Func<Task> asyncMethod) => _TaskFactory.Run(asyncMethod);
+    #region 服务管理
 
-    // -- 服务管理 --
-
-    private static readonly Dictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
-    private static readonly LinkedList<ILifecycleService> _RunningServiceList = [];
+    private static readonly ConcurrentDictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
+    private static readonly ConcurrentStack<ILifecycleService> _StartedServiceStack = [];
     private static readonly Dictionary<string, ILifecycleService> _ManualServiceMap = [];
     private static readonly HashSet<ILifecycleService> _DeclaredStoppedServices = [];
 
@@ -159,7 +129,7 @@ public sealed class Lifecycle : ILifecycleService
             else
             {
                 // 若该服务未声明自己已结束运行，将其添加到正在运行列表
-                _RunningServiceList.AddFirst(service);
+                _StartedServiceStack.Push(service);
                 _RunningServiceInfoMap[service.Identifier] = serviceInfo;
             }
         }
@@ -220,14 +190,6 @@ public sealed class Lifecycle : ILifecycleService
         var taskList = asyncInstances.Select(
             instance => Task.Run(() => _StartService(instance))).ToArray();
         Task.WaitAll(taskList);
-        // 等待当前周期的所有 JoinableTask 结束
-        JoinableTask[] joinableTaskList;
-        lock (_JoinableTasks)
-        {
-            joinableTaskList = _JoinableTasks.ToArray();
-            _JoinableTasks.Clear();
-        }
-        foreach (var task in joinableTaskList) task.Join();
     }
 
     private static void _StartStateFlow(LifecycleState start, LifecycleState? end = null, bool count = true)
@@ -249,10 +211,20 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
+    private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
+    {
+        new Thread(() =>
+        {
+            _StartStateFlow(state, count: count);
+            if (wait is { } w) WaitForState(w);
+        })
+        { IsBackground = true, Name = $"Lifecycle/{state}" }.Start();
+    }
+
     private static void _RemoveRunningInstance(ILifecycleService service)
     {
-        _RunningServiceInfoMap.Remove(service.Identifier);
-        _RunningServiceList.Remove(service);
+        _RunningServiceInfoMap.TryRemove(service.Identifier, out var removed);
+        removed?.MarkAsStopped();
     }
 
     private static void _StopService(ILifecycleService service, bool async, bool manual = false)
@@ -280,6 +252,10 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
+    #endregion
+
+    #region 进程生命周期逻辑
+
     private static void _RunCurrentExecutable(string? arguments)
     {
         var fileName = Process.GetCurrentProcess().MainModule!.FileName;
@@ -306,20 +282,23 @@ public sealed class Lifecycle : ILifecycleService
         // 停止服务
         Context.Debug("正在停止运行中的服务");
         ILifecycleLogService? logService = null;
-        foreach (var service in _RunningServiceList.ToArray())
+        while (_StartedServiceStack.TryPop(out var service))
         {
+            // 跳过已标记为停止的服务
+            if (_RunningServiceInfoMap.TryGetValue(service.Identifier, out var info) && info.IsStopped) continue;
+            // 跳过日志服务
             if (service is ILifecycleLogService ls)
             {
-                // 跳过日志服务
                 Context.Trace($"已跳过日志服务: {_ServiceName(ls)}");
                 logService = ls;
                 continue;
             }
+            // 执行停止流程
             _StopService(service, service.SupportAsyncStart);
         }
         if (logService != null)
         {
-            Context.Trace($"退出过程已结束，正在停止日志服务");
+            Context.Trace("退出过程已结束，正在停止日志服务");
             // 直接调用 Stop() 不使用常规停止实现 以保证正常情况下不会向等待区输出日志
             logService.Stop();
             Console.WriteLine("[Lifecycle] Log service stopped");
@@ -344,7 +323,8 @@ public sealed class Lifecycle : ILifecycleService
         // 退出程序
         Console.WriteLine($"[Lifecycle] Exiting program with status: {statusCode}");
         // 执行正常退出
-        Environment.Exit(statusCode);
+        if (statusCode == -1) Basics.CurrentProcess.Kill();
+        else Environment.Exit(statusCode);
         // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
         Console.WriteLine("[Lifecycle] Warning! Abnormal behaviour, try to kill process 1s later.");
         Thread.Sleep(1000);
@@ -368,17 +348,9 @@ public sealed class Lifecycle : ILifecycleService
         Process.Start(psi);
     }
 
-    private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
-    {
-        new Thread(() =>
-        {
-            _StartStateFlow(state, count: count);
-            if (wait is { } w) WaitForState(w);
-        })
-        { IsBackground = true, Name = $"Lifecycle/{state}" }.Start();
-    }
+    #endregion
 
-    // -- 状态控制 --
+    #region 状态控制
 
     private static LifecycleState _currentState = LifecycleState.BeforeLoading;
 
@@ -458,7 +430,9 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
-    // -- 流程触发 --
+    #endregion
+
+    #region 流程触发
 
     private static DateTime? _countRunningStart;
 
@@ -551,7 +525,9 @@ public sealed class Lifecycle : ILifecycleService
         throw new NotImplementedException();
     }
 
-    // -- 其余公共成员 --
+    #endregion
+
+    #region 公共 API
 
     /// <summary>
     /// 当前的生命周期状态，会随生命周期变化随时更新。
@@ -682,6 +658,10 @@ public sealed class Lifecycle : ILifecycleService
     /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
     public static void ForceShutdown(int statusCode = 0) => Shutdown(statusCode, true);
 
+    #endregion
+
+    #region 上下文控制
+
     /// <summary>
     /// 获取指定服务项对应的上下文实例用于日志输出、多任务通信等。一般情况下只推荐获取自身上下文。
     /// </summary>
@@ -743,4 +723,6 @@ public sealed class Lifecycle : ILifecycleService
     /// 系统默认上下文，无特殊需求请勿使用。
     /// </summary>
     public static readonly LifecycleContext System = GetContext(_SystemService);
+
+    #endregion
 }

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
-using Microsoft.VisualStudio.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -73,11 +72,6 @@ public static class Basics
     #region 线程操作
 
     /// <summary>
-    /// 程序内嵌图片文件夹路径，以“/”结尾。
-    /// </summary>
-    public const string ImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
-
-    /// <summary>
     /// 在新的工作线程运行指定委托。
     /// </summary>
     /// <param name="action">要运行的委托</param>
@@ -140,17 +134,18 @@ public static class Basics
         Process.Start(psi);
     }
     #endregion
-    
+
     /// <summary>
     /// 获取程序打包资源的输入流。该资源必须声明为 <c>Resource</c> 类型，否则将会报错，<c>Images</c>
     /// 和 <c>Resources</c> 目录已默认声明该类型。
     /// </summary>
-    /// <param name="path">资源路径，例如 "Resources/java-wrapper.jar"。</param>
-    /// <returns>资源输入流，或 null 如果资源不存在。</returns>
+    /// <param name="path">资源路径，例如 "Resources/java-wrapper.jar"</param>
+    /// <returns>资源输入流，若资源不存在则为 <c>null</c></returns>
     public static Stream? GetResourceStream(string path) {
         var resourceInfo = Application.GetResourceStream(new Uri($"pack://application:,,,/{path}", UriKind.Absolute));
         return resourceInfo?.Stream;
     }
-    
-    public static string GetAppImagePath(string imageName) => Path.Combine(ImagePath, imageName);
+
+    private const string AssemblyImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
+    public static string GetAppImagePath(string imageName) => AssemblyImagePath + imageName;
 }

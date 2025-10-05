@@ -276,6 +276,7 @@ public static partial class Config
         [ConfigItem<bool>("VersionAdvanceJava", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> IgnoreJavaCompatibility { get; }
         [ConfigItem<bool>("VersionAdvanceDisableJlw", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> DisableJlwObsolete { get; }
         [ConfigItem<string>("VersionAdvanceRun", "", ConfigSource.GameInstance)] public partial ArgConfig<string> PreLaunchCommand { get; }
+        [ConfigItem<string>("VersionAdvanceClasspathHead", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ClasspathHead { get; }
         [ConfigItem<bool>("VersionAdvanceRunWait", true, ConfigSource.GameInstance)] public partial ArgConfig<bool> PreLaunchCommandWait { get; }
         [ConfigItem<bool>("VersionAdvanceDisableJLW", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> DisableJlw { get; }
         [ConfigItem<bool>("VersionAdvanceUseProxyV2", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> UseProxy { get; }

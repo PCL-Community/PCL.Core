@@ -11,7 +11,7 @@ namespace PCL.Core.Minecraft.Compoment.Projects;
 
 public static class ProjectGetter
 {
-    public static async Task<List<ProjectFileInfo>> GetByIdAsync(string projectId, bool fromCurseForge)
+    public static async Task<List<ProjectFileInfo>> GetFilesByIdAsync(string projectId, bool fromCurseForge)
     {
         var (projectInfo, fileInfos) = await _GetProjectInfosAsync(projectId, fromCurseForge).ConfigureAwait(false);
         var deps = fileInfos.SelectMany(fi => fi.RawDependencies).Distinct().ToImmutableArray();

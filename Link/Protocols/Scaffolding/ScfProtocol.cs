@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -44,7 +45,7 @@ public class ScfProtocol : LinkProtocol
         };
         if (isServer)
         {
-            PlayerList.TryAdd(_playerInfo.MachineId, _playerInfo);
+            PlayerDict.TryAdd(_playerInfo.MachineId, _playerInfo);
         }
     }
 
@@ -59,7 +60,7 @@ public class ScfProtocol : LinkProtocol
         if (_connectionIds.TryGetValue(e.ConnectionId, out var machineId))
         {
             _connectionIds.TryRemove(e.ConnectionId, out _);
-            PlayerList.TryRemove(machineId, out _);
+            PlayerDict.TryRemove(machineId, out _);
             LogWrapper.Info($"{Identifier} 客户端断开连接, 连接 ID: {e.ConnectionId}, 机器 ID: {machineId}");
         }
         else
@@ -104,8 +105,7 @@ public class ScfProtocol : LinkProtocol
                 };
                 break;
             case "c:player_ping":
-                var clientPlayerInfo = JsonNode.Parse(Encoding.UTF8.GetString(packet.Body)) as JsonObject;
-                if (clientPlayerInfo == null)
+                if (JsonNode.Parse(Encoding.UTF8.GetString(packet.Body)) is not JsonObject clientPlayerInfo)
                 {
                     LogWrapper.Error("玩家信息解析错误");
                     return;
@@ -114,19 +114,43 @@ public class ScfProtocol : LinkProtocol
                 if (clientPlayerInfo.TryGetPropertyValue("machine_id", out var jsonMachineId))
                 {
                     var machineId = jsonMachineId!.GetValue<string>();
-                    _connectionIds[e.ConnectionId] = machineId; // 更新连接ID到机器ID的映射
-                    
-                    if (!PlayerList.TryAdd(machineId, new ScfPlayerInfo
-                        {
-                            Name = clientPlayerInfo["name"]?.GetValue<string>() ?? string.Empty,
-                            MachineId = machineId,
-                            Vendor = "PCL-CE",
-                            IsHost = false
-                        }))
+                    if (machineId != _connectionIds[e.ConnectionId])
                     {
-                        PlayerList[machineId].Name = clientPlayerInfo["name"]?.GetValue<string>() ?? string.Empty;
+                        // machineId居然会变更?
+                        // 删除原本machineId所对应的PlayerInfo
+                        PlayerDict.TryRemove(_connectionIds[e.ConnectionId], out _);
+                    }
+                    _connectionIds[e.ConnectionId] = machineId; // 更新映射
+                    if (PlayerDict.TryGetValue(machineId, out var value))
+                    {
+                        // 已经存在玩家信息
+                        value.Name = clientPlayerInfo["name"]!.GetValue<string>();
+                        value.MachineId = machineId;
+                        value.Vendor = clientPlayerInfo["vendor"]!.GetValue<string>();
+                    }
+                    else
+                    {
+                        PlayerDict.TryAdd(machineId, new ScfPlayerInfo
+                        {
+                            IsHost = false,
+                            MachineId = machineId,
+                            Name = clientPlayerInfo["name"]!.GetValue<string>(),
+                            Vendor = clientPlayerInfo["vendor"]!.GetValue<string>()
+                        });
                     }
                 }
+                break;
+            case "c:player_profile_list":
+                // 长长的类型转换
+                var playerList = PlayerDict.Values.Select(
+                    JsonNode (playerInfo) => playerInfo.ToJsonObject())
+                    as List<JsonNode>;
+
+                response = new ServerPacket
+                {
+                    StatusCode = 0,
+                    Body = _JsonObjectToBytes(new JsonArray(playerList!.ToArray()))
+                };
                 break;
             default:
                 return;
@@ -187,7 +211,7 @@ public class ScfProtocol : LinkProtocol
             var packet = new ClientPacket
             {
                 PacketType = "c:player_ping",
-                Body = _JsonObjectToBytes(_playerInfo.ToJsonObject())
+                Body = _JsonObjectToBytes(_playerInfo.ToJsonObject(false))
             };
             await TcpHelper.SendToServerAsync(packet.To(), false);
             LogWrapper.Info($"{Identifier} 已发送玩家信息");
@@ -206,11 +230,11 @@ public class ScfProtocol : LinkProtocol
 
             if (JsonNode.Parse(Encoding.UTF8.GetString(ServerPacket.From(response).Body)) is JsonArray playerList)
             {
-                PlayerList.Clear();
+                PlayerDict.Clear();
                 foreach (var item in playerList)
                 {
                     var playerInfo = ScfPlayerInfo.FromJsonObject(item as JsonObject);
-                    PlayerList.TryAdd(playerInfo.MachineId, playerInfo);
+                    PlayerDict.TryAdd(playerInfo.MachineId, playerInfo);
                 }
             }
             LogWrapper.Info($"{Identifier} 玩家列表已更新");
@@ -218,7 +242,7 @@ public class ScfProtocol : LinkProtocol
         }
     }
     
-    private byte[] _JsonObjectToBytes(JsonObject obj)
+    private byte[] _JsonObjectToBytes(JsonNode obj)
     {
         var jsonString = obj.ToJsonString();
         return Encoding.UTF8.GetBytes(jsonString);
@@ -226,7 +250,7 @@ public class ScfProtocol : LinkProtocol
 
     public override int Close()
     {
-        PlayerList.Clear();
+        PlayerDict.Clear();
         return base.Close();
     }
 }

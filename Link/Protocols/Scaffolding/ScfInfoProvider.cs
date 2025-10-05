@@ -13,14 +13,14 @@ public static class ScfInfoProvider
         public string MachineId { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
         public required bool IsHost { get; init; }
-        public JsonObject ToJsonObject()
+        public JsonObject ToJsonObject(bool hasKind = true)
         {
             return new JsonObject
             {
                 ["name"] = Name,
                 ["machine_id"] = MachineId,
                 ["vendor"] = Vendor,
-                ["kind"] = IsHost ? "HOST" : "GUEST"
+                ["kind"] = hasKind ? IsHost ? "HOST" : "GUEST" : null
             };
         }
         public static ScfPlayerInfo FromJsonObject(JsonObject? obj)
@@ -35,7 +35,7 @@ public static class ScfInfoProvider
                 throw new ArgumentException("Missing required fields in JSON object");
             }
 
-            var kindStr = obj["kind"]!.ToString();
+            var kindStr = obj["kind"]!.GetValue<string>();
             var kind = kindStr switch
             {
                 "HOST" => true,
@@ -45,9 +45,9 @@ public static class ScfInfoProvider
 
             return new ScfPlayerInfo
             {
-                Name = obj["name"]!.ToString(),
-                MachineId = obj["machine_id"]!.ToString(),
-                Vendor = obj["vendor"]!.ToString(),
+                Name = obj["name"]!.GetValue<string>(),
+                MachineId = obj["machine_id"]!.GetValue<string>(),
+                Vendor = obj["vendor"]!.GetValue<string>(),
                 IsHost = kind
             };
         }
@@ -57,5 +57,5 @@ public static class ScfInfoProvider
     /// 键值：机器 ID,
     /// 值：玩家信息
     /// </summary>
-    public static ConcurrentDictionary<string, ScfPlayerInfo> PlayerList { get; set; } = [];
+    public static ConcurrentDictionary<string, ScfPlayerInfo> PlayerDict { get; set; } = [];
 }

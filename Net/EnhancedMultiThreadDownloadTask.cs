@@ -411,7 +411,7 @@ public class EnhancedMultiThreadDownloadTask : IObservableTaskStateSource, IObse
             downloadTasks.Add(task);
         }
         
-        // 等待所有任务完成
+        // 等待所有下载任务完成
         await Task.WhenAll(downloadTasks);
     }
     

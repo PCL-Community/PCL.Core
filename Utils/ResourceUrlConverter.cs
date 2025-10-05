@@ -31,4 +31,9 @@ public static class ResourceUrlConverter
 
         return result;
     }
+
+    public static string HandleCurseForgeDownloadUrl(string url) =>
+        url.Replace("-service.overwolf.wtf", ".forgecdn.net")
+            .Replace("://media.", "://edge.")
+            .Replace("://mediafilez.", "://edge.");
 }

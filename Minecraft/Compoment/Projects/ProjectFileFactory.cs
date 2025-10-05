@@ -90,7 +90,8 @@ public static class ProjectFileFactory
                     .Replace("+", "%20");
         }
 
-        url = UrlConverter.HandleCurseForgeDownloadUrl(url); // TODO: impl mirror
+        var urls = ResourceUrlConverter.ModDownloadToMirror(
+            ResourceUrlConverter.HandleCurseForgeDownloadUrl(url));
 
         var rawDeps = new List<string>();
         var rawOptionalDeps = new List<string>();
@@ -133,7 +134,7 @@ public static class ProjectFileFactory
             DownloadCount = dto.DownloadCount,
             FileName = dto.FileName,
             Hash = hash,
-            DownloadUrls = [url],
+            DownloadUrls = [..urls],
             RawDependencies = rawDeps,
             Dependencies = [], // NOTE: lm doesnt impl this
             RawOptionalDependencies = rawOptionalDeps,
@@ -161,7 +162,7 @@ public static class ProjectFileFactory
 
         var file = dto.Files?.FirstOrDefault();
         var fileName = file?.FileName ?? string.Empty;
-        var url = file?.Url ?? string.Empty; // TODO: impl mirror
+        var urls = ResourceUrlConverter.ModDownloadToMirror(file?.Url ?? string.Empty);
         var hash = file?.Hashes
             .First(hash => hash.Key.Equals("sha1", StringComparison.OrdinalIgnoreCase))
             .Value ?? string.Empty;
@@ -210,7 +211,7 @@ public static class ProjectFileFactory
             DisplayName = displayName,
             Status = status,
             FileName = fileName,
-            DownloadUrls = [url],
+            DownloadUrls = [..urls],
             DownloadCount = dto.DownloadCount,
             Hash = hash,
             ModLoaders = modLoaders,

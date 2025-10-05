@@ -291,8 +291,9 @@ public static class ProjectFactory
         return CompType.DataPack;
     }
 
-    private static async Task<string> GetChineseDescriptionAsync()
+    private static async Task<string> _GetChineseDescriptionAsync()
     {
+        // TODO: impl thi; need move database to Core
         throw new NotImplementedException();
     }
 }

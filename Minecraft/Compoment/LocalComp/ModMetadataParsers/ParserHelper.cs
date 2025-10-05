@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using PCL.Core.IO;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Minecraft.Compoment.LocalComp.ModMetadataParsers;
@@ -44,8 +45,7 @@ internal static class ParserHelper
 
         try
         {
-            // TODO: replace by cache system
-            var tempDir = Path.Combine(Path.GetTempPath(), "PCL_Cache", "ModImages");
+            var tempDir = Path.Combine(FileCacheService.CachePath, "ModImages");
             Directory.CreateDirectory(tempDir);
 
             var fileHash = _GetSimpleHash(modFilePath + logoEntry.Length);

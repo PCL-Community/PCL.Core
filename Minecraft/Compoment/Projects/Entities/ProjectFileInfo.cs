@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using PCL.Core.Minecraft.Compoment.Projects.Enums;
 
@@ -9,7 +8,7 @@ namespace PCL.Core.Minecraft.Compoment.Projects.Entities;
 public record ProjectFileInfo
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public required string ProjectId { get; set; } // NOTE: old ver ProjectFileInfo not have this property
+    public required string ProjectId { get; init; } // NOTE: old ver ProjectFileInfo not have this property
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
 
@@ -59,10 +58,4 @@ public record ProjectFileInfo
 
     /// <inheritdoc />
     public override string ToString() => $"{Id}: {FileName}";
-
-    public static string ToJsonSerialized(ProjectInfo info)
-    {
-        var content = JsonSerializer.Serialize(info);
-        return content;
-    }
 }

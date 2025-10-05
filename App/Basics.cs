@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Microsoft.VisualStudio.Threading;
+using System.Windows;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -133,6 +133,19 @@ public static class Basics
         };
         Process.Start(psi);
     }
-
     #endregion
+
+    /// <summary>
+    /// 获取程序打包资源的输入流。该资源必须声明为 <c>Resource</c> 类型，否则将会报错，<c>Images</c>
+    /// 和 <c>Resources</c> 目录已默认声明该类型。
+    /// </summary>
+    /// <param name="path">资源路径，例如 "Resources/java-wrapper.jar"</param>
+    /// <returns>资源输入流，若资源不存在则为 <c>null</c></returns>
+    public static Stream? GetResourceStream(string path) {
+        var resourceInfo = Application.GetResourceStream(new Uri($"pack://application:,,,/{path}", UriKind.Absolute));
+        return resourceInfo?.Stream;
+    }
+
+    private const string AssemblyImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
+    public static string GetAppImagePath(string imageName) => AssemblyImagePath + imageName;
 }

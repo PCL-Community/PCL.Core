@@ -43,4 +43,18 @@ public static partial class EnvironmentInterop
         ) SecretDictionary[key] = value;
         return value;
     }
+    
+    /// <summary>
+    /// 获取当前操作系统名称。
+    /// </summary>
+    /// <returns>返回小写的操作系统名称，如 "windows", "linux", "osx"。</returns>
+    public static string GetCurrentOsName() {
+        if (OperatingSystem.IsWindows())
+            return "windows";
+        if (OperatingSystem.IsLinux())
+            return "linux";
+        return OperatingSystem.IsMacOS() 
+            ? "osx"
+            : "unknown";
+    }
 }

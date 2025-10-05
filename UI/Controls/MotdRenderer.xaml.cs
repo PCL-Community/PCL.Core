@@ -1,4 +1,4 @@
-﻿using PCL.Core.App;
+using PCL.Core.App;
 using PCL.Core.Utils;
 
 namespace PCL.Core.UI.Controls;
@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 public partial class MotdRenderer {
     // Default Color for originalColorMap: #808080
     // Minecraft color code mapping
-    private readonly Dictionary<string, Brush> _colorMapWithBlackBackground = new() {
+    private static readonly Dictionary<string, Brush> ColorMapWithBlackBackground = new() {
         { "0", Brushes.Black }, // Black
         { "1", new SolidColorBrush(Color.FromRgb(0, 0, 170)) }, // Dark Blue
         { "2", new SolidColorBrush(Color.FromRgb(0, 170, 0)) }, // Dark Green
@@ -35,7 +35,7 @@ public partial class MotdRenderer {
     };
 
     // Color code mapping optimized for white background (#f3f6fa)
-    private readonly Dictionary<string, Brush> _colorMapWithWhiteBackground = new() {
+    private static readonly Dictionary<string, Brush> ColorMapWithWhiteBackground = new() {
         { "0", new SolidColorBrush(Color.FromRgb(51, 51, 51)) }, // Deep Gray #333333
         { "1", new SolidColorBrush(Color.FromRgb(0, 48, 135)) }, // Navy Blue #003087
         { "2", new SolidColorBrush(Color.FromRgb(0, 128, 0)) }, // Forest Green #008000
@@ -168,11 +168,23 @@ public partial class MotdRenderer {
         return p;
     }
 
-    public void RenderMotd(string motd, bool isWhiteBackground = true) {
+    public static bool TryGetColorFromCode(string code, bool isDarkMode, out String? color) {
+        var colorMap = isDarkMode ? ColorMapWithBlackBackground : ColorMapWithWhiteBackground;
+        var success = colorMap.TryGetValue(code.ToLower(), out var brush);
+        if (!success) {
+            color = null;
+            return false;
+        }
+        var solidColorBrush = ((SolidColorBrush)brush!).Color;
+        color = $"#{solidColorBrush.R:X2}{solidColorBrush.G:X2}{solidColorBrush.B:X2}";
+        return success;
+    }
+
+    public void RenderMotd(string motd, bool isDarkMode = true) {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();
 
-        var colorMap = isWhiteBackground ? _colorMapWithWhiteBackground : _colorMapWithBlackBackground;
+        var colorMap = isDarkMode ? ColorMapWithBlackBackground : ColorMapWithWhiteBackground;
         var font = Config.UI.Font; // Assuming Setup is a static class accessible in the project
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
@@ -203,12 +215,19 @@ public partial class MotdRenderer {
             var textBlocks = new List<TextBlock>(); // Store TextBlocks for the line
             var positions = new List<double>(); // Store x-coordinates for each TextBlock
 
-            foreach (var part in parts) {
-                if (string.IsNullOrEmpty(part)) continue;
+            for (int i = 0; i < parts.Length; i++) {
+                var part = parts[i];
+                var partTrimmed = part;
+                if (i == 0) {
+                    partTrimmed = part.TrimStart();
+                } else if (i == parts.Length - 1) {
+                    partTrimmed = part.TrimEnd();
+                }
+                if (string.IsNullOrEmpty(partTrimmed)) continue;
 
                 // Handle § color codes
-                if (part.StartsWith('§') && part.Length == 2) {
-                    var code = part[1..].ToLower();
+                if (partTrimmed.StartsWith('§') && partTrimmed.Length == 2) {
+                    var code = partTrimmed[1..].ToLower();
                     if (colorMap.TryGetValue(code, out var brush)) {
                         currentColor = brush;
                         isBold = false;
@@ -248,9 +267,9 @@ public partial class MotdRenderer {
                 }
 
                 // Handle RGB color codes
-                if (RegexPatterns.HexColor.IsMatch(part)) {
+                if (RegexPatterns.HexColor.IsMatch(partTrimmed)) {
                     try {
-                        var hex = part[1..];
+                        var hex = partTrimmed[1..];
                         var r = Convert.ToByte(hex[..2], 16);
                         var g = Convert.ToByte(hex.Substring(2, 2), 16);
                         var b = Convert.ToByte(hex.Substring(4, 2), 16);
@@ -269,12 +288,11 @@ public partial class MotdRenderer {
                 }
 
                 // Render text, always use original text for width calculation
-                var displayText = part;
+                var displayText = partTrimmed;
                 TextBlock textBlock;
                 if (isObfuscated) {
                     // Generate initial random characters for §k text
-                    foreach (var singleChar in part) {
-                        //Log(singleChar); // Assuming Log is a method accessible in the project
+                    foreach (var singleChar in partTrimmed) {
                         displayText = RandomChars[_random.Next(RandomChars.Length)].ToString();
                         textBlock = _RenderText(displayText, fontFamily, fontSize, currentColor, isBold, isItalic,
                             isUnderline, isStrikethrough, tempX, y, true,
@@ -293,10 +311,10 @@ public partial class MotdRenderer {
 
                 // Update tempX coordinate using original text width
                 if (!isObfuscated) {
-                    tempX += _MeasureTextWidth(part, fontFamily, fontSize, isBold, isItalic);
+                    tempX += _MeasureTextWidth(partTrimmed, fontFamily, fontSize, isBold, isItalic);
                 }
 
-                var textHeight = _MeasureTextHeight(part, fontFamily, fontSize, isBold, isItalic);
+                var textHeight = _MeasureTextHeight(partTrimmed, fontFamily, fontSize, isBold, isItalic);
                 lineHeight = textHeight > lineHeight ? textHeight : lineHeight;
                 lineWidth = tempX; // Update line width
             }
@@ -307,23 +325,21 @@ public partial class MotdRenderer {
                 Canvas.SetLeft(textBlocks[i], positions[i] + offsetX);
             }
 
-            switch (lines.Length) {
-                case 1:
-                    var offsetY = (canvasHeight - lineHeight) / 2;
-                    foreach (var textBlock in textBlocks)
-                    {
-                        Canvas.SetTop(textBlock, offsetY);
-                    }
-                    break;
+            // 计算当前行的垂直位置
+            double offsetY;
+            if (lines.Length == 1) {
+                // 单行文本居中
+                offsetY = (canvasHeight - lineHeight) / 2;
+            } else {
+                // 多行文本的位置计算
+                var totalHeight = lines.Length * lineHeight;
+                var startOffset = (canvasHeight - totalHeight) / 2;
+                offsetY = startOffset + (lineIndex * lineHeight);
+            }
 
-                case 2 when lineIndex == 0:
-                    offsetY = (canvasHeight - lineHeight * 2) / 2;
-                    foreach (var textBlock in textBlocks)
-                    {
-                        Canvas.SetTop(textBlock, offsetY);
-                    }
-                    y = lineHeight + offsetY;
-                    break;
+            // 设置所有文本块的垂直位置
+            foreach (var textBlock in textBlocks) {
+                Canvas.SetTop(textBlock, offsetY);
             }
         }
     }
@@ -362,8 +378,7 @@ public partial class MotdRenderer {
         return textBlock;
     }
 
-    private static FormattedText _CreateFormattedText(string text, FontFamily fontFamily, double fontSize, bool isBold, bool isItalic)
-    {
+    private static FormattedText _CreateFormattedText(string text, FontFamily fontFamily, double fontSize, bool isBold, bool isItalic) {
         return new FormattedText(
             text,
             System.Globalization.CultureInfo.InvariantCulture,
@@ -398,7 +413,7 @@ public partial class MotdRenderer {
             (int)MotdCanvas.Width, (int)MotdCanvas.Height, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(MotdCanvas);
     }
-    
+
     public void ClearCanvas() {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();

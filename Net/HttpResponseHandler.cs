@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,12 +26,12 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
         return AsStringAsync().GetAwaiter().GetResult();
     }
 
-    public async Task<string> AsStringAsync()
+    public async Task<string> AsStringAsync(CancellationToken ct = default)
     {
         try
         {
             return await _responseMessage.Content
-                .ReadAsStringAsync()
+                .ReadAsStringAsync(ct)
                 .ConfigureAwait(false);
         }
         catch (TaskCanceledException)
@@ -44,12 +44,12 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
         }
     }
 
-    public async Task<Stream> AsStreamAsync()
+    public async Task<Stream> AsStreamAsync(CancellationToken ct = default)
     {
         try
         {
             return await _responseMessage.Content
-                .ReadAsStreamAsync()
+                .ReadAsStreamAsync(ct)
                 .ConfigureAwait(false);
         }
         catch (TaskCanceledException)
@@ -62,12 +62,12 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
         }
     }
 
-    public async Task<byte[]> AsByteArrayAsync()
+    public async Task<byte[]> AsByteArrayAsync(CancellationToken ct = default)
     {
         try
         {
             return await _responseMessage.Content
-                .ReadAsByteArrayAsync()
+                .ReadAsByteArrayAsync(ct)
                 .ConfigureAwait(false);
         }
         catch (TaskCanceledException)
@@ -84,7 +84,7 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
     {
         try
         {
-            await using var stream = await AsStreamAsync().ConfigureAwait(false);
+            await using var stream = await AsStreamAsync(cancellationToken).ConfigureAwait(false);
             return await JsonSerializer.DeserializeAsync<T>(stream, options, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -154,11 +154,11 @@ public class HttpResponseHandler(HttpResponseMessage responseMessage) : IDisposa
         }
     }
 
-    public async Task EnsureSuccessStatusCodeWithContentAsync()
+    public async Task EnsureSuccessStatusCodeWithContentAsync(CancellationToken ct = default)
     {
         if (!IsSuccess)
         {
-            var content = await AsStringAsync().ConfigureAwait(false);
+            var content = await AsStringAsync(ct).ConfigureAwait(false);
             throw new HttpRequestException(
                 $"HTTP request failed with status code {_responseMessage.StatusCode}: {_responseMessage.ReasonPhrase}. Response content: {content}");
         }

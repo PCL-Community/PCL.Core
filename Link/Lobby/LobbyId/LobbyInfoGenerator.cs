@@ -21,13 +21,11 @@ public static class LobbyInfoGenerator
     {
         // 获取所有实现IParser的类
         var parserTypes = ImplementedUtils.GetImplementTypes<IParser>();
-        foreach (var parser in parserTypes
-                     .Select(parserType => (IParser)Activator.CreateInstance(parserType)!)
-                     .Where(parser => parser.Validate(code)))
-        {
-            return parser.Parse(code);
-        }
-        throw new ArgumentException("无效的LobbyId");
+        var parser = parserTypes
+            .Select(parserType => (IParser)Activator.CreateInstance(parserType)!)
+            .FirstOrDefault(parser => parser.Validate(code));
+        
+        return parser != null ? parser.Parse(code) : throw new ArgumentException("无效的LobbyId");
     }
     
     /// <summary>

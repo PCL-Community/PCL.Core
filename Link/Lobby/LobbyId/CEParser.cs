@@ -1,7 +1,7 @@
 ﻿using System;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 
-namespace PCL.Core.Link.Parser;
+namespace PCL.Core.Link.Lobby.LobbyId;
 
 public class CEParser : IParser
 {
@@ -11,11 +11,6 @@ public class CEParser : IParser
     }
 
     public LobbyInfo Parse(string code)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string Generate(LobbyInfo info)
     {
         throw new NotImplementedException();
     }

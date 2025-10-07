@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using PCL.Core.Link.Lobby.Parser;
+using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
@@ -20,13 +21,19 @@ public static class LobbyInfoGenerator
     /// <returns><see cref="LobbyInfo"/></returns>
     public static LobbyInfo Parse(string code)
     {
-        // 获取所有实现IParser的类
         var parserTypes = typeof(IParser).GetImplements();
         var parser = parserTypes
             .Select(parserType => (IParser)Activator.CreateInstance(parserType)!)
-            .FirstOrDefault(parser => parser.Validate(code));
+            .FirstOrDefault(parser =>
+            {
+                var result = parser.Validate(code);
+                if (result.isValid) return true;
+                
+                LogWrapper.Warn("Link", $"使用{ parser.GetType().Name}解析LobbyId失败: {result.error}");
+                return false;
+            });
         
-        return parser != null ? parser.Parse(code) : throw new ArgumentException("无效的LobbyId");
+        return parser?.Parse(code) ?? throw new ArgumentException("无效的LobbyId");
     }
     
     /// <summary>

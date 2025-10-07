@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
+using PCL.Core.Link.Lobby.Parser;
 using PCL.Core.Net;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 
-namespace PCL.Core.Link.Lobby.LobbyId;
+namespace PCL.Core.Link.Lobby;
 
 /// <summary>
 /// LobbyInfo生成器，可用于解析和生成LobbyInfo

@@ -1,8 +1,7 @@
-using System;
 using PCL.Core.Utils.Exts;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 
-namespace PCL.Core.Link.Lobby.LobbyId;
+namespace PCL.Core.Link.Lobby.Parser;
 
 public class CEParser : IParser
 {

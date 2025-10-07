@@ -9,6 +9,7 @@ namespace PCL.Core.Link.Lobby.Parser;
 /// <summary>
 /// 陶瓦联机的房间号解析器，用于验证和解析陶瓦联机生成的房间号
 /// </summary>
+[Parser]
 public class TerracottaParser : IParser
 {
     /// <inheritdoc />

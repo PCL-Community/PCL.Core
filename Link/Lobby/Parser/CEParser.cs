@@ -6,6 +6,7 @@ namespace PCL.Core.Link.Lobby.Parser;
 /// <summary>
 /// PCLCE启动器的LobbyId解析器，用于验证和解析PCLCE启动器生成的LobbyId
 /// </summary>
+[Parser]
 public class CEParser : IParser
 {
     /// <summary>

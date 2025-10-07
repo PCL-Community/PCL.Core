@@ -180,16 +180,16 @@ public partial class MotdRenderer {
         return success;
     }
 
-    public void RenderMotd(string motd, bool isDarkMode = true) {
+    public void RenderMotd(string motd, bool isDarkMode = true, int maxLines = int.MaxValue, double customFontSize = 12) {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();
 
         var colorMap = isDarkMode ? ColorMapWithBlackBackground : ColorMapWithWhiteBackground;
-        var font = Config.UI.MotdFont; // Assuming Setup is a static class accessible in the project
+        var font = Config.UI.MotdFont;
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
             : font);
-        const double fontSize = 12;
+        double fontSize = customFontSize; // 使用自定义字体大小
         var canvasWidth = MotdCanvas.ActualWidth > 0 ? MotdCanvas.ActualWidth : 300; // Prevent zero width
         var canvasHeight = MotdCanvas.ActualHeight > 0 ? MotdCanvas.ActualHeight : 34; // Prevent zero height
         double y = 10;
@@ -204,7 +204,9 @@ public partial class MotdRenderer {
         var isStrikethrough = false;
         var isObfuscated = false;
 
-        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++) {
+        // 限制显示的行数不超过maxLines
+        int lineCount = Math.Min(lines.Length, maxLines);
+        for (var lineIndex = 0; lineIndex < lineCount; lineIndex++) {
             var line = lines[lineIndex].Trim();
             var parts = RegexPatterns.MotdCode.Split(line);
 
@@ -215,12 +217,28 @@ public partial class MotdRenderer {
             var textBlocks = new List<TextBlock>(); // Store TextBlocks for the line
             var positions = new List<double>(); // Store x-coordinates for each TextBlock
 
-            for (int i = 0; i < parts.Length; i++) {
+            // 找出第一个和最后一个不是格式符的文本部分的索引
+            int firstNonFormatPartIndex = -1;
+            int lastNonFormatPartIndex = -1;
+            for (int j = 0; j < parts.Length; j++)
+            {
+                string part = parts[j];
+                if (!string.IsNullOrEmpty(part) && !(part.StartsWith('§') && part.Length == 2) && !RegexPatterns.HexColor.IsMatch(part))
+                {
+                    if (firstNonFormatPartIndex == -1)
+                    {
+                        firstNonFormatPartIndex = j;
+                    }
+                    lastNonFormatPartIndex = j;
+                }
+            }
+
+            for (var i = 0; i < parts.Length; i++) {
                 var part = parts[i];
                 var partTrimmed = part;
-                if (i == 0) {
+                if (i == firstNonFormatPartIndex) {
                     partTrimmed = part.TrimStart();
-                } else if (i == parts.Length - 1) {
+                } else if (i == lastNonFormatPartIndex) {
                     partTrimmed = part.TrimEnd();
                 }
                 if (string.IsNullOrEmpty(partTrimmed)) continue;
@@ -327,12 +345,12 @@ public partial class MotdRenderer {
 
             // 计算当前行的垂直位置
             double offsetY;
-            if (lines.Length == 1) {
+            if (lineCount == 1) {
                 // 单行文本居中
                 offsetY = (canvasHeight - lineHeight) / 2;
             } else {
                 // 多行文本的位置计算
-                var totalHeight = lines.Length * lineHeight;
+                var totalHeight = lineCount * lineHeight; // 使用实际显示的行数计算总高度
                 var startOffset = (canvasHeight - totalHeight) / 2;
                 offsetY = startOffset + (lineIndex * lineHeight);
             }

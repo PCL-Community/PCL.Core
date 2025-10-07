@@ -15,9 +15,21 @@ public class ConfigItem<TValue>(
     ConfigSource source
 ) : IConfigScope, ConfigItem
 {
+    /// <summary>
+    /// 配置键。
+    /// </summary>
+    public string Key { get; } = key;
+
+    /// <summary>
+    /// 配置来源。
+    /// </summary>
+    public ConfigSource Source { get; set; } = source;
+
     private Func<TValue>? _defaultValueGetter = defaultValue;
     private TValue? _defaultValue;
     private bool _defaultValueHasSet = false;
+
+    #region 默认值逻辑
 
     private TValue _GetDefaultValue()
     {
@@ -29,21 +41,13 @@ public class ConfigItem<TValue>(
     }
 
     /// <summary>
-    /// 配置键。
-    /// </summary>
-    public string Key { get; } = key;
-
-    /// <summary>
-    /// 配置来源。
-    /// </summary>
-    public ConfigSource Source { get; set; } = source;
-
-    /// <summary>
     /// 默认值。
     /// </summary>
     public TValue DefaultValue => _GetDefaultValue();
 
     public object DefaultValueNoType => DefaultValue ?? default!;
+
+    #endregion
 
     public ConfigItem(string key, TValue defaultValue, ConfigSource source)
         : this(key, () => defaultValue, source) { }

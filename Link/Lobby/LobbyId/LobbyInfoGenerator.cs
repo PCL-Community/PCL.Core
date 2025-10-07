@@ -20,7 +20,7 @@ public static class LobbyInfoGenerator
     public static LobbyInfo Parse(string code)
     {
         // 获取所有实现IParser的类
-        var parserTypes = ImplementedUtils.GetImplementTypes<IParser>();
+        var parserTypes = typeof(IParser).GetImplements();
         var parser = parserTypes
             .Select(parserType => (IParser)Activator.CreateInstance(parserType)!)
             .FirstOrDefault(parser => parser.Validate(code));

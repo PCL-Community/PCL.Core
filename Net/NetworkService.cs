@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,10 +71,10 @@ public sealed class NetworkService : GeneralService {
             .WaitAndRetryAsync(
                 retry,
                 attempt => retryPolicy?.Invoke(attempt) ?? _DefaultPolicy(attempt),
-                onRetryAsync: async (exception, _, _, _) =>
+                onRetryAsync: (exception, _, _, _) =>
                 {
                     LogWrapper.Error(exception, "Http", "发送可重试的网络请求失败。");
-                    await Task.CompletedTask;
+                    return Task.CompletedTask;
                 });
     }
 

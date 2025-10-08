@@ -41,9 +41,14 @@ public enum ConfigEvent
     Read = Get | CheckDefault,
 
     /// <summary>
+    /// 所有更新操作。
+    /// </summary>
+    Update = Set | Reset,
+
+    /// <summary>
     /// 所有改变操作。
     /// </summary>
-    Changed = Init | Set | Reset,
+    Changed = Init | Update,
 
     /// <summary>
     /// 所有操作。没事别监听这个，一点风吹草动都会触发它。

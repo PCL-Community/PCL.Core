@@ -84,7 +84,7 @@ public class TcpHelper : IDisposable
         }
     }
     
-    private async Task _AcceptConnections(CancellationToken token)
+    private async Task _AcceptConnectionsAsync(CancellationToken token)
     {
         try
         {

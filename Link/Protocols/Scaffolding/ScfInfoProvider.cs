@@ -58,4 +58,5 @@ public static class ScfInfoProvider
     /// 值：玩家信息
     /// </summary>
     public static ConcurrentDictionary<string, ScfPlayerInfo> PlayerDict { get; set; } = [];
+    public static int? ServerPort { get; set; } = null;
 }

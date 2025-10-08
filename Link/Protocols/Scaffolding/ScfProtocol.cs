@@ -175,7 +175,12 @@ public class ScfProtocol : LinkProtocol
             LogWrapper.Error("目标大厅 IP 地址未解析，无法启动客户端");
             return;
         }
-        TcpHelper.Connect(TargetLobby.Ip, TargetLobby.ScfPort);
+        if (ServerPort == null)
+        {
+            LogWrapper.Error("目标服务器端口未设置，无法启动客户端");
+            return;
+        }
+        TcpHelper.Connect(TargetLobby.Ip, (int)ServerPort);
         _ = Task.Run(() => _ClientLoopAsync(Ctx.Token), Ctx.Token);
         var packet = new ClientPacket
         {

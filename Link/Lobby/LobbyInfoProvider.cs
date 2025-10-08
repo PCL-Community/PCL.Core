@@ -34,10 +34,6 @@ public static class LobbyInfoProvider
         /// 目标游戏端口
         /// </summary>
         public required int Port { get; set; }
-        /// <summary>
-        /// SCF 协议端口
-        /// </summary>
-        public int ScfPort { get; set; }
     }
 
     public enum LobbyType

@@ -56,7 +56,7 @@ public class TcpHelper : IDisposable
             _isServer = true;
             _isRunning = true;
             _socket.Bind(new IPEndPoint(IPAddress.Loopback, port));
-            _ = Task.Run(() => _AcceptConnections(_ctx.Token), _ctx.Token);
+            _ = Task.Run(() => _AcceptConnectionsAsync(_ctx.Token), _ctx.Token);
             LogWrapper.Info($"TCP服务已启动, 监听端口 {port}");
         }
         catch (Exception ex)

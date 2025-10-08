@@ -66,7 +66,7 @@ public class ConfigItem<TValue>(
     public TValue GetValue(object? argument = null)
     {
         var exists = _provider.GetValue<TValue>(Key, out var value, argument);
-        var e = TriggerEvent(ConfigEvent.Get, argument, value, true);
+        var e = _TriggerEvent(ConfigEvent.Get, argument, value, true);
         if (e != null)
         {
             if (e.Cancelled) return DefaultValue;
@@ -88,13 +88,14 @@ public class ConfigItem<TValue>(
     /// <returns>是否成功设置值，若成功则为 <c>true</c></returns>
     public bool SetValue(TValue value, object? argument = null)
     {
-        var e = TriggerEvent(ConfigEvent.Set, argument, value);
+        var e = _TriggerEvent(ConfigEvent.Set, argument, value, isPreview: true);
         if (e != null)
         {
             if (e.Cancelled) return false;
             if (e.NewValueReplacement != null) value = (TValue)e.NewValueReplacement;
         }
         _provider.SetValue(Key, value, argument);
+        _TriggerEvent(ConfigEvent.Set, argument, value, e: e, isPreview: false);
         return true;
     }
 
@@ -120,16 +121,17 @@ public class ConfigItem<TValue>(
 
     public bool Reset(object? argument = null)
     {
-        var e = TriggerEvent(ConfigEvent.Reset, argument, DefaultValue);
+        var e = _TriggerEvent(ConfigEvent.Reset, argument, null, isPreview: true);
         if (e is { Cancelled: true }) return false;
         _provider.Delete(Key, argument);
+        _TriggerEvent(ConfigEvent.Reset, argument, null, isPreview: false);
         return true;
     }
 
     public bool IsDefault(object? argument = null)
     {
         var result = !_provider.Exists(Key, argument);
-        var e = TriggerEvent(ConfigEvent.CheckDefault, argument, result);
+        var e = _TriggerEvent(ConfigEvent.CheckDefault, argument, result);
         if (e is { NewValueReplacement: not null }) result = (bool)e.NewValueReplacement;
         return result;
     }
@@ -157,18 +159,28 @@ public class ConfigItem<TValue>(
         return exists ? value : null;
     }
 
-    public ConfigEventArgs? TriggerEvent(ConfigEvent trigger, object? argument, object? newValue, bool bypassOldValue = false, bool fillNewValue = false)
+    public ConfigEventArgs? TriggerEvent(
+        ConfigEvent trigger, object? argument,
+        bool bypassOldValue = false, bool fillNewValue = false)
     {
-        ConfigEventArgs? e = null;
+        return _TriggerEvent(trigger, argument, null, bypassOldValue, fillNewValue);
+    }
+
+    private ConfigEventArgs? _TriggerEvent(
+        ConfigEvent trigger, object? argument, object? newValue,
+        bool bypassOldValue = false, bool fillNewValue = false,
+        ConfigEventArgs? e = null, bool? isPreview = null)
+    {
         var replaceNewValue = false;
         foreach (var observer in (
-            from observer in _previewObservers.Concat(_observers)
+            from observer in (isPreview is { } p ? (p ? _previewObservers : _observers) : _previewObservers.Concat(_observers))
             let logic = (int)observer.Event & (int)trigger
             where logic > 0
             select observer
         )) {
             if (e == null)
             {
+                if (isPreview == false && !bypassOldValue) bypassOldValue = true;
                 var currentValue = (fillNewValue || !bypassOldValue) ? _GetValueOrNull(argument) : null;
                 if (newValue == null && fillNewValue) newValue = currentValue ?? DefaultValue;
                 e = new ConfigEventArgs(Key, trigger, argument, bypassOldValue ? null : currentValue, newValue);
@@ -209,14 +221,12 @@ public interface ConfigItem
     /// </summary>
     /// <param name="trigger">触发事件</param>
     /// <param name="argument">上下文参数</param>
-    /// <param name="newValue">用于向事件参数传递的新值</param>
     /// <param name="bypassOldValue">若为 <c>true</c> 则向事件参数的旧值传递 <c>null</c>，否则传递当前值</param>
     /// <param name="fillNewValue">若为 <c>true</c>，当新值为 <c>null</c> 时将传递当前值或默认值</param>
     /// <returns></returns>
     public ConfigEventArgs? TriggerEvent(
         ConfigEvent trigger,
         object? argument,
-        object? newValue,
         bool bypassOldValue = false,
         bool fillNewValue = false
     );

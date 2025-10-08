@@ -180,7 +180,7 @@ public partial class MotdRenderer {
         return success;
     }
 
-    public void RenderMotd(string motd, bool isDarkMode = true, int maxLines = int.MaxValue, double customFontSize = 12) {
+    public void RenderMotd(string motd, bool isDarkMode = true, int maxLines = int.MaxValue, double fontSize = 12, bool isCentered = true) {
         MotdCanvas.Children.Clear();
         _obfuscatedTextBlocks.Clear();
 
@@ -189,7 +189,6 @@ public partial class MotdRenderer {
         var fontFamily = new FontFamily(string.IsNullOrWhiteSpace(font)
             ? "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI"
             : font);
-        double fontSize = customFontSize; // 使用自定义字体大小
         var canvasWidth = MotdCanvas.ActualWidth > 0 ? MotdCanvas.ActualWidth : 300; // Prevent zero width
         var canvasHeight = MotdCanvas.ActualHeight > 0 ? MotdCanvas.ActualHeight : 34; // Prevent zero height
         double y = 10;
@@ -205,7 +204,7 @@ public partial class MotdRenderer {
         var isObfuscated = false;
 
         // 限制显示的行数不超过maxLines
-        int lineCount = Math.Min(lines.Length, maxLines);
+        var lineCount = Math.Min(lines.Length, maxLines);
         for (var lineIndex = 0; lineIndex < lineCount; lineIndex++) {
             var line = lines[lineIndex].Trim();
             var parts = RegexPatterns.MotdCode.Split(line);
@@ -218,11 +217,11 @@ public partial class MotdRenderer {
             var positions = new List<double>(); // Store x-coordinates for each TextBlock
 
             // 找出第一个和最后一个不是格式符的文本部分的索引
-            int firstNonFormatPartIndex = -1;
-            int lastNonFormatPartIndex = -1;
-            for (int j = 0; j < parts.Length; j++)
+            var firstNonFormatPartIndex = -1;
+            var lastNonFormatPartIndex = -1;
+            for (var j = 0; j < parts.Length; j++)
             {
-                string part = parts[j];
+                var part = parts[j];
                 if (!string.IsNullOrEmpty(part) && !(part.StartsWith('§') && part.Length == 2) && !RegexPatterns.HexColor.IsMatch(part))
                 {
                     if (firstNonFormatPartIndex == -1)
@@ -337,10 +336,12 @@ public partial class MotdRenderer {
                 lineWidth = tempX; // Update line width
             }
 
-            // Center-align: Adjust x-coordinates for each TextBlock
-            var offsetX = (canvasWidth - lineWidth) / 2;
-            for (var i = 0; i < textBlocks.Count; i++) {
-                Canvas.SetLeft(textBlocks[i], positions[i] + offsetX);
+            if (isCentered) {
+                // Center-align: Adjust x-coordinates for each TextBlock
+                var offsetX = (canvasWidth - lineWidth) / 2;
+                for (var i = 0; i < textBlocks.Count; i++) {
+                    Canvas.SetLeft(textBlocks[i], positions[i] + offsetX);
+                }
             }
 
             // 计算当前行的垂直位置

@@ -13,10 +13,10 @@ namespace PCL.Core.Minecraft;
 public enum JavaBrandType
 {
     EclipseTemurin,
-    Microsoft,
     Bellsoft,
     AzulZulu,
     AmazonCorretto,
+    Microsoft,
     IBMSemeru,
     Oracle,
     Dragonwell,
@@ -55,9 +55,9 @@ public class JavaInfo(string javaFolder, Version version, JavaBrandType brand, b
 
     public bool IsJre => isJre;
     
-    public string JavaExePath => $@"{JavaFolder}\java.exe";
+    public string JavaExePath => Path.Combine(JavaFolder, "java.exe");
     
-    public string JavawExePath => $@"{JavaFolder}\javaw.exe";
+    public string JavawExePath => Path.Combine(JavaFolder, "javaw.exe");
 
     public override string ToString()
     {

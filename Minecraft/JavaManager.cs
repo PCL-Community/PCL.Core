@@ -6,21 +6,18 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using PCL.Core.App;
 using PCL.Core.Logging;
-using PCL.Core.Minecraft.Folder;
-using PCL.Core.Minecraft.Instance;
 
 namespace PCL.Core.Minecraft;
 
 public class JavaManager
 {
-    private List<JavaInfo> _javas = [];
-    public List<JavaInfo> JavaList => [.. _javas];
+    internal List<JavaInfo> InternalJavas = [];
+    public List<JavaInfo> JavaList => [.. InternalJavas];
 
     private void _SortJavaList()
     {
-        _javas = (from j in _javas
+        InternalJavas = (from j in InternalJavas
             orderby j.Version descending, j.Brand
             select j).ToList();
     }
@@ -48,10 +45,10 @@ public class JavaManager
                 await Task.WhenAll(searchTasks);
 
                 // 记录之前设置为禁用的 Java
-                var oldJavaList = _javas.ToDictionary(x => x.JavaExePath);
+                var oldJavaList = InternalJavas.ToDictionary(x => x.JavaExePath);
                 // 新搜索到的 Java 路径
                 var newJavaList = new HashSet<string>(
-                    _javas
+                    InternalJavas
                         .Select(x => x.JavaExePath)
                         .Concat(javaPaths)
                         .Select(x => x.TrimEnd(Path.DirectorySeparatorChar)),
@@ -66,7 +63,7 @@ public class JavaManager
                         item.IsEnabled = existing.IsEnabled;
                 }
 
-                _javas = ret;
+                InternalJavas = ret;
                 _SortJavaList();
             });
         await _scanTask;
@@ -77,7 +74,7 @@ public class JavaManager
         ArgumentNullException.ThrowIfNull(j);
         if (HasJava(j.JavaExePath))
             return;
-        _javas.Add(j);
+        InternalJavas.Add(j);
         _SortJavaList();
     }
 
@@ -89,7 +86,7 @@ public class JavaManager
         var temp = JavaInfo.Parse(javaExe);
         if (temp == null)
             return;
-        _javas.Add(temp);
+        InternalJavas.Add(temp);
         _SortJavaList();
     }
 
@@ -98,7 +95,7 @@ public class JavaManager
         ArgumentNullException.ThrowIfNull(javaExe);
         if (!File.Exists(javaExe))
             throw new ArgumentException("Not a valid java file");
-        return _javas.Any(x => x.JavaExePath == javaExe);
+        return InternalJavas.Any(x => x.JavaExePath == javaExe);
     }
 
     /// <summary>
@@ -109,11 +106,11 @@ public class JavaManager
     /// <returns></returns>
     public async Task<List<JavaInfo>> SelectSuitableJava(Version minVersion, Version maxVersion)
     {
-        if (_javas.Count == 0)
+        if (InternalJavas.Count == 0)
             await ScanJavaAsync();
         var minMajorVersion = minVersion.Major == 1 ? minVersion.Minor : minVersion.Major;
         var maxMajorVersion = maxVersion.Major == 1 ? maxVersion.Minor : maxVersion.Major;
-        return (from j in _javas
+        return (from j in InternalJavas
             where j.IsStillAvailable && j.IsEnabled
                                      && j.JavaMajorVersion >= minMajorVersion && j.JavaMajorVersion <= maxMajorVersion
                                      && j.Version >= minVersion && j.Version <= maxVersion
@@ -127,7 +124,7 @@ public class JavaManager
     /// <returns></returns>
     public void CheckJavaAvailability()
     {
-        _javas = [..from j in _javas where j.IsStillAvailable select j];
+        InternalJavas = [..from j in InternalJavas where j.IsStillAvailable select j];
     }
 
     private static void _ScanRegistryForJava(ref ConcurrentBag<string> javaPaths)
@@ -325,41 +322,4 @@ public class JavaManager
             }
         }
     }
-
-    public List<JavaLocalCache> GetCache()
-    {
-        return (from j in _javas
-            select new JavaLocalCache
-            {
-                Path = j.JavaExePath,
-                IsEnable = j.IsEnabled
-            }).ToList();
-    }
-
-    public void SetCache(List<JavaLocalCache> caches)
-    {
-        foreach (var cache in caches)
-        {
-            try
-            {
-                var targetInRecord = _javas.First(x => x.JavaExePath == cache.Path);
-                targetInRecord.IsEnabled = cache.IsEnable;
-            }
-            catch
-            {
-                var temp = JavaInfo.Parse(cache.Path);
-                if (temp == null)
-                    continue;
-                temp.IsEnabled = cache.IsEnable;
-                _javas.Add(temp);
-            }
-        }
-    }
-}
-
-[Serializable]
-public class JavaLocalCache
-{
-    public string Path { get; set; } = "";
-    public bool IsEnable { get; set; }
 }

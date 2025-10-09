@@ -784,7 +784,7 @@ public static partial class Config
         /// <summary>
         /// 自定义左下角版本信息。
         /// </summary>
-        [ConfigItem<string>("LaunchArgumentInfo", "PCL", ConfigSource.Local)] public partial string TypeInfo { get; set; }
+        [ConfigItem<string>("LaunchArgumentInfo", "PCLCE", ConfigSource.Local)] public partial string TypeInfo { get; set; }
 
         /// <summary>
         /// 选择的默认 Java 实例。

@@ -33,12 +33,20 @@ public sealed class JavaService : GeneralService
         _javaManager = new JavaManager();
         _javaManager.ScanJavaAsync().ContinueWith(_ =>
         {
-            LoadFromConfig();
+            LoadFromConfig(); // Java 启用情况以及额外手动添加的 Java
             SaveToConfig();
 
             var logInfo = string.Join("\n\t", _javaManager.JavaList);
             Context.Info($"Finished to scan java: {logInfo}");
         }, TaskScheduler.Default);
+    }
+
+    public override void Stop()
+    {
+        if (_javaManager is null) return;
+
+        SaveToConfig();
+        _javaManager = null;
     }
 
     public static void LoadFromConfig()
@@ -60,6 +68,7 @@ public sealed class JavaService : GeneralService
         {
             try
             {
+                _javaManager.Add(cache.Path);
                 var targetInRecord = _javaManager.InternalJavas.FirstOrDefault(x => x.JavaExePath == Path.GetFullPath(cache.Path));
                 if (targetInRecord is not null)
                     targetInRecord.IsEnabled = cache.IsEnable;
@@ -85,12 +94,11 @@ public sealed class JavaService : GeneralService
             IsEnable = x.IsEnabled,
             Path = x.JavaExePath
         }).ToList();
-        if (caches is null) return;
 
         var jsonContent = JsonSerializer.Serialize(caches);
         if (jsonContent.IsNullOrEmpty()) return;
 
-        Config.Launch.Javas = jsonContent.ToString();
+        Config.Launch.Javas = jsonContent;
     }
 
     private class JavaLocalCache

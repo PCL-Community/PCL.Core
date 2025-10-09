@@ -64,7 +64,7 @@ public static class InstanceRamService {
     /// <returns>分配的 RAM 大小（GB）</returns>
     /// <remarks>修改此方法时，需同步更新 PageInstanceSetup</remarks>
     public static double GetGlobalMemoryAllocation(IMcInstance instance, bool? is32BitJava = null) {
-        var allocatedMemory = Config.Launch.MemorySolution == MEMORY_STRATEGY_AUTO
+        var allocatedMemory = Config.Launch.MemoryAllocationMode == MEMORY_STRATEGY_AUTO
             ? CalculateAutoMemoryAllocation(instance)
             : CalculateManualMemoryAllocation(Config.Launch.CustomMemorySize);
 

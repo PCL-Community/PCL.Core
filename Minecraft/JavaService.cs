@@ -53,7 +53,7 @@ public sealed class JavaService : GeneralService
     {
         if (_javaManager is null) return;
 
-        var raw = Config.Launch.Javas;
+        var raw = Config.Launch.JavaList;
         if (raw.IsNullOrWhiteSpace()) return;
 
         Context.Info("Loading java configs...");
@@ -98,7 +98,7 @@ public sealed class JavaService : GeneralService
         var jsonContent = JsonSerializer.Serialize(caches);
         if (jsonContent.IsNullOrEmpty()) return;
 
-        Config.Launch.Javas = jsonContent;
+        Config.Launch.JavaList = jsonContent;
     }
 
     private class JavaLocalCache

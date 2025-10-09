@@ -16,13 +16,7 @@ public abstract class Easing : IEasing
             _ => EaseCore(progress)
         };
     }
-
-    /// <summary>
-    /// 返回指定动画帧的过渡值。
-    /// </summary>
-    /// <param name="currentFrame">当前动画帧。</param>
-    /// <param name="totalFrames">总动画帧数量。</param>
-    /// <returns>过渡值。</returns>
+    
     public double Ease(int currentFrame, int totalFrames)
     {
         return totalFrames <= 0 ? 0.0 : Ease((double)currentFrame / totalFrames);

@@ -235,7 +235,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
     /// 添加全屏参数
     /// </summary>
     private void AddFullscreenArgument() {
-        if (Config.Launch.WindowType == 0) {
+        if (Config.Launch.GameWindowMode == 0) {
             _arguments.Add("--fullscreen");
         }
     }

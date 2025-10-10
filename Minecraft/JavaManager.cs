@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft;
 
@@ -191,13 +192,13 @@ public class JavaManager
 
     private static readonly string[] _TotalKeyWords = [.._MostPossibleKeyWords.Concat(_PossibleKeyWords)];
 
-    // 最大文件夹搜索深度
-    private const int MaxSearchDepth = 12;
+    // 最大文件夹搜索深度，一般来说 8 够用了
+    private const int MaxSearchDepth = 8;
 
     private static void _ScanDefaultInstallPaths(ref ConcurrentBag<string> javaPaths)
     {
         // 准备欲搜索目录
-        var programFilesPaths = new List<string>
+        var programFilesPaths = new HashSet<string>()
         {
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -211,30 +212,45 @@ public class JavaManager
                 "Program Files",
                 "Program Files (x86)"
             ];
-            bool IsDriverSuitable(DriveInfo d) => d is { IsReady: true, DriveType: DriveType.Fixed or DriveType.Removable };
-            programFilesPaths.AddRange(
-                from driver in DriveInfo.GetDrives()
-                where IsDriverSuitable(driver)
-                from keyFolder in keyFolders
-                select Path.Combine(driver.Name, keyFolder));
-            // 根目录搜索
-            foreach (var dri in from d in DriveInfo.GetDrives() where IsDriverSuitable(d) select d.Name)
+            var suitableDrives = DriveInfo.GetDrives().Where(d => d is { IsReady: true, DriveType: DriveType.Fixed }).ToArray();
+            foreach (var folder in from driver in suitableDrives
+                     from keyFolder in keyFolders
+                     select Path.Combine(driver.Name, keyFolder))
             {
-                try{
-                    programFilesPaths.AddRange(from dir in Directory.EnumerateDirectories(dri)
-                                            where _MostPossibleKeyWords.Any(x => dir.Contains(x, StringComparison.OrdinalIgnoreCase))
-                                            select dir);
+                programFilesPaths.Add(folder);
+            }
+            // 根目录搜索
+            foreach (var dri in from d in suitableDrives select d.Name)
+            {
+                if (dri.IsNullOrEmpty()) continue;
+                IEnumerable<string>? subDirs = null;
+                try
+                {
+                    subDirs = Directory.EnumerateDirectories(dri);
                 }catch(UnauthorizedAccessException){/* 忽略无权限访问的根目录 */}
+                catch (DirectoryNotFoundException) { /* 忽略找不到的目录 */ }
+                catch (IOException) { /* 忽略IO异常 */ }
+
+                if (subDirs is null) continue;
+                foreach (var folder in from dir in subDirs
+                         where _MostPossibleKeyWords.Any(x => Path.GetFileName(dir).Contains(x, StringComparison.OrdinalIgnoreCase))
+                         select dir)
+                {
+                    programFilesPaths.Add(folder);
+                }
             }
         }
         else
         {
-            programFilesPaths.AddRange(new List<string> {
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-            });
+            var programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var programFilesX86Path = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            
+            if (!programFilesPath.IsNullOrEmpty() && Directory.Exists(programFilesPath))
+                programFilesPaths.Add(programFilesPath);
+                
+            if (!programFilesX86Path.IsNullOrEmpty() && Directory.Exists(programFilesX86Path))
+                programFilesPaths.Add(programFilesX86Path);
         }
-        programFilesPaths = [.. programFilesPaths.Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x)).Distinct()];
         LogWrapper.Info($"[Java] 对下列目录进行广度关键词搜索{Environment.NewLine}{string.Join(Environment.NewLine, programFilesPaths)}");
         
         // 使用 广度优先搜索 查找 Java 文件
@@ -248,25 +264,28 @@ public class JavaManager
                 if (depth > MaxSearchDepth) continue;
                 try
                 {
+                    if (!Directory.Exists(currentPath)) continue;
                     // 只遍历包含关键字的目录
-                    var subDirs = Directory.EnumerateDirectories(currentPath)
-                        .Where(x => _TotalKeyWords.Any(k => x.Contains(k, StringComparison.OrdinalIgnoreCase)));
+                    var subDirs = depth == 0
+                        ? Directory.EnumerateDirectories(currentPath)
+                            .Where(x => _TotalKeyWords.Any(k =>
+                                Path.GetFileName(x).Contains(k, StringComparison.OrdinalIgnoreCase)))
+                        : Directory.EnumerateDirectories(currentPath);
                     foreach (var dir in subDirs)
                     {
-                        // 准备可能的 Java 路径
-                        List<string> potentialJavas = [
-                            Path.Combine(dir, "java.exe")
-                            ];
-                        potentialJavas = [.. potentialJavas.Where(File.Exists)];
-                        
-                        // 存在 Java，节点达到目标
-                        if (potentialJavas.Any())
-                            foreach (var javaPath in potentialJavas) javaPaths.Add(javaPath);
+                        if (!Directory.Exists(dir)) continue;
+                        // 检查是否存在 java.exe
+                        var javaExePath = Path.Combine(dir, "java.exe");
+                        if (File.Exists(javaExePath))
+                            javaPaths.Add(javaExePath);
                         else
                             queue.Enqueue((dir, depth + 1));
                     }
                 }
-                catch { /* 忽略无权限等异常 */ }
+                catch (Exception ex)
+                {
+                    LogWrapper.Error(ex, "Java", $"搜索 {currentPath} (depth={depth}) 过程中遇到了一个错误");
+                }
             }
         }
     }

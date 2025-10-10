@@ -5,7 +5,7 @@ using System.Windows.Threading;
 
 namespace PCL.Core.UI.Animation.UIAccessProvider;
 
-public class WpfUIAccessProvider(Dispatcher dispatcher) : IUIAccessProvider
+public sealed class WpfUIAccessProvider(Dispatcher dispatcher) : IUIAccessProvider
 {
     private readonly Dispatcher _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
 

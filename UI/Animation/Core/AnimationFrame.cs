@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using PCL.Core.UI.Animation.Animatable;
 
 namespace PCL.Core.UI.Animation.Core;
@@ -9,5 +10,6 @@ public readonly struct AnimationFrame<T> : IAnimationFrame where T : IAdditionOp
     public T Value { get; init; }
     public T StartValue { get; init; }
     public T GetAbsoluteValue() => StartValue + Value;
+
     object IAnimationFrame.GetAbsoluteValue() => GetAbsoluteValue();
 }

@@ -1,9 +1,6 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Numerics;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Markup;
 using PCL.Core.UI.Animation.Animatable;
 using PCL.Core.UI.Animation.Easings;
 
@@ -12,7 +9,6 @@ namespace PCL.Core.UI.Animation.Core;
 public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
     where T : IAdditionOperators<T, T, T>, ISubtractionOperators<T, T, T>
 {
-    [TypeConverter(typeof(EasingTypeConverter))]
     public IEasing Easing { get; set; } = new LinearEasing();
     public T? From { get; set; }
     public T To { get; set; } = default!;

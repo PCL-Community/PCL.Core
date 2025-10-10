@@ -2,7 +2,7 @@
 
 namespace PCL.Core.UI.Animation.Animatable;
 
-public class ClrAnimatable<TOwner, T> : IAnimatable
+public sealed class ClrAnimatable<TOwner, T> : IAnimatable
 {
     private readonly TOwner _owner;
     private readonly Func<TOwner, T> _getter;

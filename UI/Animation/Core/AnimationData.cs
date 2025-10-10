@@ -5,6 +5,6 @@ namespace PCL.Core.UI.Animation.Core;
 
 public record AnimationData<T> : IAnimationData
 {
-    public AnimationInfo<T> Info { get; init; } = null!;
+    public IAnimation Animation { get; init; } = null!;
     public FrozenDictionary<int, T> Values { get; init; } = null!;
 }

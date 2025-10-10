@@ -1,14 +1,18 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using PCL.Core.UI.Animation.Animatable;
 
 namespace PCL.Core.UI.Animation.Core;
 
 public interface IAnimation
 {
-    object? CurrentValue { get; internal set; }
     bool IsCompleted { get; }
     int CurrentFrame { get; set; }
-    int TotalFrames { get; }
-    Task RunAsync();
+    Task RunAsync(IAnimatable target);
     void Cancel();
-    IAnimationFrame ComputeNextFrame();
+    IAnimationFrame? ComputeNextFrame(IAnimatable target);
+    public void RaiseStarted();
+    public void RaiseCompleted(); 
+    public event EventHandler Started;
+    public event EventHandler Completed;
 }

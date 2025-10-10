@@ -44,6 +44,8 @@
     </PropertyGroup>
     <!-- NuGet 引用 -->
     <ItemGroup>
+        <!-- WPF Behaviors -->
+        <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <!-- 语言和系统特性 -->
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" PrivateAssets="all" />
         <PackageReference Include="System.Management" Version="9.0.9" PrivateAssets="all" />
@@ -73,8 +75,17 @@
         <Page Include="**\*.xaml" Exclude="bin\**;obj\**;publish\**" />
         <Resource Include="UI\Assets\*" />
         <Resource Include="UI\Assets\Shaders\*.ps" />
+		<CompilerVisibleProperty Include="PCL_WRITE_SECRET" />
+		<CompilerVisibleProperty Include="PCL_MS_CLIENT_ID" />
+		<CompilerVisibleProperty Include="PCL_CURSEFORGE_API_KEY" />
+		<CompilerVisibleProperty Include="PCL_TELEMETRY_KEY" />
+		<CompilerVisibleProperty Include="PCL_NAID_CLIENT_ID" />
+		<CompilerVisibleProperty Include="PCL_NAID_CLIENT_SECRET" />
+		<CompilerVisibleProperty Include="PCL_LINK_SERVER_ROOT" />
+		<CompilerVisibleProperty Include="PCL_LOBBY_DEFAULT_SECRET" />
+		<CompilerVisibleProperty Include="PCL_GITHUB_SHA" />
     </ItemGroup>
-    <!-- 项目自定义源生成器 -->
+    <!-- 源代码生成器 -->
     <ItemGroup>
         <AdditionalFiles Include="App\LifecycleState.cs" />
         <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>

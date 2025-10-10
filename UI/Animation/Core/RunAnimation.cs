@@ -33,7 +33,6 @@ public class RunAnimation : TriggerAction<DependencyObject>
     public DependencyProperty TargetProperty
     {
         get => (DependencyProperty)GetValue(TargetPropertyProperty);
-        [TypeConverter(typeof(DependencyPropertyConverter))]
         set => SetValue(TargetPropertyProperty, value);
     }
 

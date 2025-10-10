@@ -25,8 +25,7 @@ public class AnimationExtensions
 
     public static readonly DependencyProperty TargetPropertyProperty = DependencyProperty.RegisterAttached(
         "TargetProperty", typeof(DependencyProperty), typeof(AnimationExtensions), new PropertyMetadata(default(DependencyProperty)));
-
-    [TypeConverter(typeof(DependencyPropertyConverter))]
+    
     public static void SetTargetProperty(DependencyObject element, DependencyProperty value)
     {
         if (element is not IAnimation)

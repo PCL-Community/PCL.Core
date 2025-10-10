@@ -34,15 +34,13 @@ public class StopwatchClock(int fps = 60) : IClock, IDisposable
         if (IsRunning) return;
 
         _cts = new CancellationTokenSource();
-
-        _ = Task.Run(async () =>
+        
+        _ = Task.Run(() =>
         {
             _lastStamp = FrameUtils.NowStamp();
             
             while (!_cts.IsCancellationRequested)
             {
-                await Task.Yield();
-
                 if (Fps == int.MaxValue)
                 {
                     _lastFrame++;

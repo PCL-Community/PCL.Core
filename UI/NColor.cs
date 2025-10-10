@@ -53,7 +53,54 @@ public struct NColor :
     
     public NColor(System.Drawing.Color color) : this(color.R, color.G, color.B, color.A) { }
 
-    public NColor(string hex) : this((Color)ColorConverter.ConvertFromString(hex)) { }
+    public NColor(string hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex))
+            throw new ArgumentException("颜色字符串不能为空。", nameof(hex));
+
+        var trimmedString = hex.Trim();
+        if (!trimmedString.StartsWith('#'))
+            throw new ArgumentException("颜色字符串必须以 '#' 开头。", nameof(hex));
+
+        trimmedString = trimmedString[1..];
+
+        int r, g, b, a;
+        switch (trimmedString.Length)
+        {
+            case 3: // #RGB
+                r = Convert.ToInt32($"{trimmedString[0]}{trimmedString[0]}", 16);
+                g = Convert.ToInt32($"{trimmedString[1]}{trimmedString[1]}", 16);
+                b = Convert.ToInt32($"{trimmedString[2]}{trimmedString[2]}", 16);
+                a = 255;
+                break;
+
+            case 4: // #RGBA
+                r = Convert.ToInt32($"{trimmedString[0]}{trimmedString[0]}", 16);
+                g = Convert.ToInt32($"{trimmedString[1]}{trimmedString[1]}", 16);
+                b = Convert.ToInt32($"{trimmedString[2]}{trimmedString[2]}", 16);
+                a = Convert.ToInt32($"{trimmedString[3]}{trimmedString[3]}", 16);
+                break;
+
+            case 6: // #RRGGBB
+                r = Convert.ToInt32(trimmedString[..2], 16);
+                g = Convert.ToInt32(trimmedString[2..4], 16);
+                b = Convert.ToInt32(trimmedString[4..6], 16);
+                a = 255;
+                break;
+
+            case 8: // #RRGGBBAA
+                r = Convert.ToInt32(trimmedString[..2], 16);
+                g = Convert.ToInt32(trimmedString[2..4], 16);
+                b = Convert.ToInt32(trimmedString[4..6], 16);
+                a = Convert.ToInt32(trimmedString[6..8], 16);
+                break;
+
+            default:
+                throw new ArgumentException($"无效的颜色字符串长度：{trimmedString.Length}。", nameof(hex));
+        }
+
+        _color = new Vector4(r, g, b, a);
+    }
 
     public NColor(float a, NColor color) : this(color.R, color.G, color.B, a) { }
 

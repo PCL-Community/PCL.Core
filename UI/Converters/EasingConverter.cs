@@ -7,7 +7,8 @@ namespace PCL.Core.UI.Converters;
 
 public class EasingConverter : TypeConverter
 {
-    public override bool CanConvertFrom(ITypeDescriptorContext? td, Type t) => t == typeof(string);
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType) => 
+        sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
     
     public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) =>
         destinationType == typeof(string) || base.CanConvertTo(context, destinationType);

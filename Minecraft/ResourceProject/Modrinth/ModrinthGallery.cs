@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 
-namespace PCL.Core.Minecraft.ResourceProject.Modrinth;
+namespace PCL.Core.Minecraft.ResourceProject.Modrinth.Models;
 
 [Serializable]
 public record ModrinthGallery(
-    string url,
-    bool featured,
-    string? title,
-    string? description,
-    string created,
-    int ordering);
+    string Url,
+    bool Featured,
+    string? Title,
+    string? Description,
+    string Created,
+    int Ordering);

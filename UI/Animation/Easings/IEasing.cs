@@ -1,8 +1,12 @@
-﻿namespace PCL.Core.UI.Animation.Easings;
+﻿using System.ComponentModel;
+using PCL.Core.UI.Converters;
+
+namespace PCL.Core.UI.Animation.Easings;
 
 /// <summary>
 /// 定义了缓动类的接口。
 /// </summary>
+[TypeConverter(typeof(EasingConverter))]
 public interface IEasing
 {
     /// <summary>

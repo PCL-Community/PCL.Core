@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using PCL.Core.App;
+using PCL.Core.UI.Animation.Animatable;
 using PCL.Core.UI.Animation.Clock;
 using PCL.Core.UI.Animation.UIAccessProvider;
-using PCL.Core.Utils.OS;
+using PCL.Core.UI.Animation.ValueFilter;
 using PCL.Core.Utils.Threading;
 
 namespace PCL.Core.UI.Animation.Core;
@@ -36,7 +35,14 @@ public sealed class AnimationService : GeneralService
 
     #endregion
     
-    private static Channel<IAnimation> _animationChannel = null!;
+    private static void _RegisterValueFilters()
+    {
+        // 在这里注册所有的 ValueFilter
+        ValueFilterManager.Register(new DoubleValueFilter());
+        ValueFilterManager.Register(new NColorValueFilter());
+    }
+    
+    private static Channel<(IAnimation, IAnimatable)> _animationChannel = null!;
     private static Channel<IAnimationFrame> _frameChannel = null!;
     private static IClock _clock = null!;
     private static AsyncCountResetEvent _resetEvent = null!;
@@ -51,16 +57,19 @@ public sealed class AnimationService : GeneralService
     private static void _Initialize()
     {
         // 初始化 Channel
-        _animationChannel = Channel.CreateUnbounded<IAnimation>();
+        _animationChannel = Channel.CreateUnbounded<(IAnimation, IAnimatable)>();
         _frameChannel = Channel.CreateUnbounded<IAnimationFrame>();
         
-        // 根据能效核来确定动画计算 Task 数量
-        _taskCount = KernelInterop.GetPerformanceLogicalProcessorCount();
+        // 根据核心数量来确定动画计算 Task 数量
+        _taskCount = Environment.ProcessorCount;
         Context.Info($"以最多 {_taskCount} 个线程初始化动画计算 Task");
 
         // 初始化 CancellationTokenSource 与 ResetEvent
         _cts = new CancellationTokenSource();
         _resetEvent = new AsyncCountResetEvent();
+        
+        // 注册 ValueFilter
+        _RegisterValueFilters();
         
         // 初始化 UI 线程访问提供器并启动赋值 Task
         UIAccessProvider = new WpfUIAccessProvider(Lifecycle.CurrentApplication.Dispatcher);
@@ -81,7 +90,7 @@ public sealed class AnimationService : GeneralService
         });
 
         // 初始化 Clock 并注册 Tick 事件
-        _clock = new StopwatchClock(Fps);
+        _clock = new WinMMClock(Fps);
         _clock.Tick += ClockOnTick;
         _clock.Start();
         
@@ -104,10 +113,6 @@ public sealed class AnimationService : GeneralService
         
         // 将 ResetEvent 释放
         _resetEvent.Dispose();
-        
-        // 取消 Channel
-        _animationChannel.Writer.Complete();
-        _frameChannel.Writer.Complete();
     }
 
     private static void ClockOnTick(object? sender, long e)
@@ -119,7 +124,7 @@ public sealed class AnimationService : GeneralService
     private static async Task _AnimationComputeTaskAsync()
     {
         // 本地动画列表，确保没有一直无法计算的动画
-        var animationList = new List<IAnimation>(8);
+        var animationList = new List<(IAnimation, IAnimatable)>(8);
         
         // 持续监听 Channel 中的动画
         while (!_cts.IsCancellationRequested)
@@ -146,18 +151,21 @@ public sealed class AnimationService : GeneralService
                 var animation = animationList[i];
                             
                 // 如果动画已经完成，则从列表中移除
-                if (animation.IsCompleted)
+                if (animation.Item1.IsCompleted)
                 {
-                    animationList.Remove(animation);
+                    animation.Item1.RaiseCompleted();
+                    animationList.RemoveAt(i);
                     continue;
                 }
                             
                 // 计算动画的下一帧
-                var frame = animation.ComputeNextFrame();
+                var frame = animation.Item1.ComputeNextFrame(animation.Item2);
+                // 如果没有计算帧（当动画为 SequentialAnimationGroup 或 ParallelAnimationGroup 这种动画集合时），跳过
+                if (frame is null) continue;
                 // 将动画帧写入 Channel
-                await _frameChannel.Writer.WriteAsync(frame);
+                _frameChannel.Writer.TryWrite(frame);
                 // 增加当前帧计数
-                animation.CurrentFrame++;
+                animation.Item1.CurrentFrame++;
             }
                         
             // 等待 Tick 事件的通知
@@ -165,9 +173,14 @@ public sealed class AnimationService : GeneralService
         }
     }
 
-    internal static async Task PushAnimationAsync(IAnimation animation)
+    internal static Task PushAnimationAsync(IAnimation animation, IAnimatable target)
     {
-        await _animationChannel.Writer.WriteAsync(animation);
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        
+        animation.Completed += (_, _) => tcs.SetResult();
+        
+        _animationChannel.Writer.TryWrite((animation, target));
+        return tcs.Task;
     }
 
     internal static void RemoveAnimation(IAnimation animation)

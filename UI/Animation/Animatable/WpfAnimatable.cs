@@ -1,34 +1,40 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
+using PCL.Core.UI.Animation.ValueFilter;
 
 namespace PCL.Core.UI.Animation.Animatable;
 
-public class WpfAnimatable(DependencyObject owner, DependencyProperty property) : IAnimatable
+public sealed class WpfAnimatable(DependencyObject owner, DependencyProperty? property) : IAnimatable
 {
     public DependencyObject Owner { get; set; } = owner;
-    public DependencyProperty Property { get; set; } = property;
+    public DependencyProperty? Property { get; set; } = property;
 
     public object? GetValue()
     {
-        DependencyProperty property;
+        DependencyProperty? actualProperty;
 
         if (Property == FrameworkElement.WidthProperty)
         {
-            property = FrameworkElement.ActualWidthProperty;
+            actualProperty = FrameworkElement.ActualWidthProperty;
         }
         else if (Property == FrameworkElement.HeightProperty)
         {
-            property = FrameworkElement.ActualHeightProperty;
+            actualProperty = FrameworkElement.ActualHeightProperty;
         }
         else
         {
-            property = Property;
+            actualProperty = Property;
         }
 
-        return Owner.GetValue(property);
+        ArgumentNullException.ThrowIfNull(actualProperty);
+        
+        return Owner.GetValue(actualProperty);
     }
 
     public void SetValue(object value)
     {
+        value = ValueFilterManager.Apply(value);
+        ArgumentNullException.ThrowIfNull(Property);
         Owner.SetValue(Property, value);
     }
 }

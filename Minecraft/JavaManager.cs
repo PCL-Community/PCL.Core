@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -41,7 +42,8 @@ public class JavaManager
                     Task.Run(() => _ScanRegistryForJava(ref javaPaths)),
                     Task.Run(() => _ScanDefaultInstallPaths(ref javaPaths)),
                     Task.Run(() => _ScanPathEnvironmentVariable(ref javaPaths)),
-                    Task.Run(() => _ScanMicrosoftStoreJava(ref javaPaths))
+                    Task.Run(() => _ScanMicrosoftStoreJava(ref javaPaths)),
+                    Task.Run(() => _ScanFromWhereCommand(ref javaPaths))
                     ];
                 await Task.WhenAll(searchTasks);
 
@@ -142,7 +144,7 @@ public class JavaManager
         foreach (var regPath in registryPaths)
         {
             using var regKey = Registry.LocalMachine.OpenSubKey(regPath);
-            if (regKey == null) continue;
+            if (regKey is null) continue;
             foreach (var subKeyName in regKey.GetSubKeyNames())
             {
                 using var subKey = regKey.OpenSubKey(subKeyName);
@@ -298,11 +300,47 @@ public class JavaManager
         var paths = pathEnv.Split([';'], StringSplitOptions.RemoveEmptyEntries);
         foreach (var targetPath in paths)
         {
-            if (Path.GetInvalidPathChars().Any(x => targetPath.Contains(x)))
-                continue;
+            if (!Directory.Exists(targetPath)) continue;
             var javaExePath = Path.Combine(targetPath, "java.exe");
             if (File.Exists(javaExePath))
                 javaPaths.Add(javaExePath);
+        }
+    }
+
+    private static void _ScanFromWhereCommand(ref ConcurrentBag<string> javaPaths)
+    {
+        try
+        {
+            var proc = new Process()
+            {
+                StartInfo = new ProcessStartInfo()
+                {
+                    FileName = "where",
+                    Arguments = "java",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+            proc.Start();
+            var output = proc.StandardOutput.ReadToEnd();
+            proc.WaitForExit();
+
+            if (proc.ExitCode != 0) return;
+            var lines = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                var javaPath = line.Trim();
+                if (File.Exists(javaPath))
+                {
+                    javaPaths.Add(javaPath);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "Java", "通过 where 命令搜索 Java 时发生错误");
         }
     }
 

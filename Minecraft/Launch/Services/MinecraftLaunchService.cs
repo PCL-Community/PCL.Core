@@ -10,7 +10,7 @@ namespace PCL.Core.Minecraft.Launch.Services;
 
 public class MinecraftLaunchService(IMcInstance instance, JavaInfo selectedJava, string launchArg) {
     public void LaunchMinecraft() {
-        var noJavaw = Config.Launch.DontUseJavaw;
+        var noJavaw = Config.Launch.NoJavaw;
 
         // 启动信息
         var gameProcess = new Process();

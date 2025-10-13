@@ -8,7 +8,7 @@ public sealed class FolderService : GeneralService {
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
     
-    public FolderService() : base("folder", "实例文件夹管理服务") {
+    public FolderService() : base("folder", "实例目录管理") {
         _context = Lifecycle.GetContext(this);
     }
 

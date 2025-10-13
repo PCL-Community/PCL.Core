@@ -71,7 +71,7 @@ public class OAuthClient:IDisposable
                         AuthorizeCallback?.Invoke(result);
                         return;
                     default:
-                        LogWrapper.Error("Account",$"微软登录失败，错误信息: {result?.Description}，剩余重试次数 {allowRetry}");
+                        LogWrapper.Error("Account",$"OAuth 登录失败，错误信息: {result?.Description}，剩余重试次数 {allowRetry}");
                         allowRetry--;
                         break;
                 }
@@ -119,4 +119,5 @@ public class OAuthClient:IDisposable
         cts.Cancel();
         // TODO 在此释放托管资源
     }
+
 }

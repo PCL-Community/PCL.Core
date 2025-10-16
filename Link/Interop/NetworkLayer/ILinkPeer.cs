@@ -4,7 +4,7 @@ using PCL.Core.Link.Interop.ControlLayer;
 
 namespace PCL.Core.Link.Interop.NetworkLayer;
 
-public interface IPeer
+public interface ILinkPeer
 {
     string Name { get; set; }                 // 客户端名称
     string Id { get; }                        // Peer ID

@@ -16,9 +16,9 @@ using PCL.Core.Utils.Secret;
 
 namespace PCL.Core.Link.Scaffolding.EasyTier;
 
-public class EtNetwork(string workDirectory) : INetworkSession
+public class EtLinkNetwork(string workDirectory) : ILinkNetworkSession
 {
-    private List<EtPeer> _peers = [];
+    private List<EtLinkPeer> _peers = [];
     private Process? _easyTier;
     private int _easyTierPrcPort;
     private CancellationTokenSource? _cts;
@@ -31,7 +31,7 @@ public class EtNetwork(string workDirectory) : INetworkSession
         return File.Exists(coreApp) && File.Exists(cliApp);
     }
 
-    public async ValueTask<string> CreateSession(IPeer creatorPeer)
+    public async ValueTask<string> CreateSession(ILinkPeer creatorLinkPeer)
     {
         if (await _checkEasyTierAsync()) throw new FileNotFoundException("EasyTier app is not installed");
 
@@ -111,7 +111,7 @@ public class EtNetwork(string workDirectory) : INetworkSession
         throw new System.NotImplementedException();
     }
 
-    public IEnumerable<IPeer> GetPeers()
+    public IEnumerable<ILinkPeer> GetPeers()
     {
         return _peers;
     }
@@ -126,9 +126,9 @@ public class EtNetwork(string workDirectory) : INetworkSession
         await Shutdown();
     }
 
-    private EtPeer _getSelfPeer()
+    private EtLinkPeer _getSelfPeer()
     {
-        var self = new EtPeer
+        var self = new EtLinkPeer
         {
             Name = "Local",
             Id = SHA256Provider.Instance.ComputeHash($"PCL-CE|{Identify.LaunchId}|Link|EasyTier"),

@@ -4,7 +4,7 @@ using PCL.Core.Link.Interop.NetworkLayer;
 
 namespace PCL.Core.Link.Interop.ControlLayer;
 
-public interface IController
+public interface ILinkController
 {
     public ValueTask<string> StartByCreate();
     public ValueTask StartByJoin(string joinCode);

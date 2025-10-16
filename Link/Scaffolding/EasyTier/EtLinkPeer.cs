@@ -5,7 +5,7 @@ using PCL.Core.Link.Interop.NetworkLayer;
 
 namespace PCL.Core.Link.Scaffolding.EasyTier;
 
-public class EtPeer : IPeer
+public class EtLinkPeer : ILinkPeer
 {
     public string Name { get; init; }
     public string Id { get; init; }

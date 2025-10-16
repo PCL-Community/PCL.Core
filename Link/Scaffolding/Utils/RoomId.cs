@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCL.Core.Utils;
 
@@ -73,7 +73,7 @@ public class RoomId
 
     private static bool _isValidStr(string s)
     {
-        return s.ToArray().Any(x => !_isValidChar(x));
+        return s.All(_isValidChar);
     }
 
     public static RoomId GenerateRandomRoomId()

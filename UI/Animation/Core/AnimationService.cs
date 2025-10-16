@@ -7,7 +7,7 @@ using PCL.Core.App;
 using PCL.Core.UI.Animation.Animatable;
 using PCL.Core.UI.Animation.Clock;
 using PCL.Core.UI.Animation.UIAccessProvider;
-using PCL.Core.UI.Animation.ValueFilter;
+using PCL.Core.UI.Animation.ValueProcessor;
 using PCL.Core.Utils.Threading;
 
 namespace PCL.Core.UI.Animation.Core;
@@ -35,11 +35,14 @@ public sealed class AnimationService : GeneralService
 
     #endregion
     
-    private static void _RegisterValueFilters()
+    private static void _RegisterValueProcessors()
     {
-        // 在这里注册所有的 ValueFilter
-        ValueFilterManager.Register(new DoubleValueFilter());
-        ValueFilterManager.Register(new NColorValueFilter());
+        // 在这里注册所有的 ValueProcessor
+        ValueProcessorManager.Register(new DoubleValueProcessor());
+        ValueProcessorManager.Register(new MatrixValueProcessor());
+        ValueProcessorManager.Register(new NColorValueProcessor());
+        ValueProcessorManager.Register(new PointValueProcessor());
+        ValueProcessorManager.Register(new ThicknessValueProcessor());
     }
     
     private static Channel<(IAnimation, IAnimatable)> _animationChannel = null!;
@@ -68,8 +71,8 @@ public sealed class AnimationService : GeneralService
         _cts = new CancellationTokenSource();
         _resetEvent = new AsyncCountResetEvent();
         
-        // 注册 ValueFilter
-        _RegisterValueFilters();
+        // 注册 ValueProcessor
+        _RegisterValueProcessors();
         
         // 初始化 UI 线程访问提供器并启动赋值 Task
         UIAccessProvider = new WpfUIAccessProvider(Lifecycle.CurrentApplication.Dispatcher);
@@ -182,9 +185,9 @@ public sealed class AnimationService : GeneralService
         _animationChannel.Writer.TryWrite((animation, target));
         return tcs.Task;
     }
-
-    internal static void RemoveAnimation(IAnimation animation)
+    
+    internal static void PushAnimationFireAndForget(IAnimation animation, IAnimatable target)
     {
-        
+        _animationChannel.Writer.TryWrite((animation, target));
     }
 }

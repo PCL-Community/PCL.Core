@@ -16,4 +16,10 @@ public sealed class SequentialAnimationGroup : AnimationGroup
             await child.RunAsync(childTarget);
         }
     }
+
+    public override void RunFireAndForget(IAnimatable target)
+    {
+        // 由于顺序执行的特性，这里直接调用异步方法并且不等待其完成，无法享受 FireAndForget 的好处。
+        _ = RunAsync(target);
+    }
 }

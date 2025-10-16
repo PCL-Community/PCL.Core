@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Windows;
-using PCL.Core.UI.Animation.ValueFilter;
+using PCL.Core.UI.Animation.ValueProcessor;
 
 namespace PCL.Core.UI.Animation.Animatable;
 
@@ -33,7 +33,7 @@ public sealed class WpfAnimatable(DependencyObject owner, DependencyProperty? pr
 
     public void SetValue(object value)
     {
-        value = ValueFilterManager.Apply(value);
+        value = ValueProcessorManager.Filter(value);
         ArgumentNullException.ThrowIfNull(Property);
         Owner.SetValue(Property, value);
     }

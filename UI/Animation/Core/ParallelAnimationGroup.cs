@@ -20,4 +20,13 @@ public sealed class ParallelAnimationGroup : AnimationGroup
         
         return Task.WhenAll(tasks);
     }
+
+    public override void RunFireAndForget(IAnimatable target)
+    {
+        foreach (var child in Children)
+        {
+            var childTarget = ResolveTarget(child, target);
+            child.RunFireAndForget(childTarget);
+        }
+    }
 }

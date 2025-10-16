@@ -11,6 +11,7 @@ public abstract class AnimationBase : DependencyObject, IAnimation
     public abstract int CurrentFrame { get; set; }
     
     public abstract Task RunAsync(IAnimatable target);
+    public abstract void RunFireAndForget(IAnimatable target);
     public abstract void Cancel();
     
     public abstract IAnimationFrame? ComputeNextFrame(IAnimatable target);

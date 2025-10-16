@@ -86,6 +86,6 @@ public class RunAnimation : TriggerAction<DependencyObject>
             }
         }
         
-        _ = Animation.RunAsync(new WpfAnimatable(targetObject, targetProperty));
+        Animation.RunFireAndForget(new WpfAnimatable(targetObject, targetProperty));
     }
 }

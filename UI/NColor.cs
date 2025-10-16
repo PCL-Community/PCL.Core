@@ -7,9 +7,9 @@ namespace PCL.Core.UI;
 // TODO: 内部实现更换成 scRGB 并且增加更多的 From 与 To 方法
 // TODO: 实现 IParsable / ISpanParsable 接口
 
-public struct NColor : 
-    IEquatable<NColor>, 
-    IAdditionOperators<NColor, NColor, NColor>, 
+public struct NColor :
+    IEquatable<NColor>,
+    IAdditionOperators<NColor, NColor, NColor>,
     ISubtractionOperators<NColor, NColor, NColor>,
     IMultiplyOperators<NColor, float, NColor>,
     IDivisionOperators<NColor, float, NColor>
@@ -21,16 +21,19 @@ public struct NColor :
         get => _color.X;
         set => _color.X = value;
     }
+
     public float G
     {
         get => _color.Y;
         set => _color.Y = value;
     }
+
     public float B
     {
         get => _color.Z;
         set => _color.Z = value;
     }
+
     public float A
     {
         get => _color.W;
@@ -38,7 +41,7 @@ public struct NColor :
     }
 
     #region 构造函数
-    
+
     public NColor()
     {
         _color = new Vector4(0f, 0f, 0f, 255f);
@@ -46,12 +49,17 @@ public struct NColor :
 
     public NColor(float r, float g, float b, float a = 255f)
     {
-        _color = new Vector4(r, g, b, a);
+        _color = new Vector4(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255),
+            Math.Clamp(a, 0, 255));
     }
-    
-    public NColor(Color color) : this(color.R, color.G, color.B, a: color.A) { }
-    
-    public NColor(System.Drawing.Color color) : this(color.R, color.G, color.B, color.A) { }
+
+    public NColor(Color color) : this(color.R, color.G, color.B, a: color.A)
+    {
+    }
+
+    public NColor(System.Drawing.Color color) : this(color.R, color.G, color.B, color.A)
+    {
+    }
 
     public NColor(string hex)
     {
@@ -102,18 +110,26 @@ public struct NColor :
         _color = new Vector4(r, g, b, a);
     }
 
-    public NColor(float a, NColor color) : this(color.R, color.G, color.B, a) { }
+    public NColor(float a, NColor color) : this(color.R, color.G, color.B, a)
+    {
+    }
 
-    public NColor(float r, float g, float b) : this(r, g, b, 255f) { }
+    public NColor(float r, float g, float b) : this(r, g, b, 255f)
+    {
+    }
 
-    public NColor(SolidColorBrush brush) : this(brush.Color) { }
+    public NColor(SolidColorBrush brush) : this(brush.Color)
+    {
+    }
 
-    public NColor(Brush brush) : this((SolidColorBrush)brush) { }
-    
+    public NColor(Brush brush) : this((SolidColorBrush)brush)
+    {
+    }
+
     #endregion
 
     #region 运算符重载
-    
+
     public static NColor operator +(NColor a, NColor b)
     {
         return new NColor(a.R + b.R, a.G + b.G, a.B + b.B, a.A + b.A);
@@ -148,7 +164,7 @@ public struct NColor :
     #endregion
 
     #region IEquatable
-    
+
     public bool Equals(NColor other)
     {
         return _color.Equals(other._color);
@@ -174,8 +190,8 @@ public struct NColor :
 
     #endregion
 
-    #region HSL 
-    
+    #region HSL
+
     public static NColor FromHsl(double sH, double sS, double sL)
     {
         var color = new NColor();
@@ -213,6 +229,6 @@ public struct NColor :
             _ => v1
         };
     }
-    
+
     #endregion
 }

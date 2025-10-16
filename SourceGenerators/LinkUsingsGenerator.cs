@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 namespace PCL.Core.SourceGenerators;
 
 [Generator(LanguageNames.CSharp)]
-public class LinkParserGenerator : IIncrementalGenerator
+public class LinkUsingsGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -22,7 +22,10 @@ public class LinkParserGenerator : IIncrementalGenerator
         // 收集所有 Parser 类并生成代码
         var compilationAndClasses = context.CompilationProvider.Combine(parserClasses.Collect());
         
-        context.RegisterSourceOutput(compilationAndClasses, (ctx, source) => _GenerateCode(ctx, source.Right));
+        context.RegisterSourceOutput(compilationAndClasses, (ctx, source) =>
+        {
+            _GenerateCode(ctx, source.Right);
+        });
     }
 
     private static object? _GetParserClass(GeneratorSyntaxContext context)
@@ -30,28 +33,18 @@ public class LinkParserGenerator : IIncrementalGenerator
         var classSyntax = (ClassDeclarationSyntax)context.Node;
         var classSymbol = context.SemanticModel.GetDeclaredSymbol(classSyntax);
         if (classSymbol == null) return null;
-
-        // 检查类是否有 ParserAttribute - 通过名称匹配
-        var hasParserAttribute = classSymbol.GetAttributes().Any(attr =>
-            attr.AttributeClass != null &&
-            attr.AttributeClass.Name == "ParserAttribute");
-
-        // 添加调试信息
-        if (hasParserAttribute)
-        {
-            return classSymbol;
-        }
-        
-        // 检查所有属性名称用于调试
-        foreach (var attr in classSymbol.GetAttributes())
-        {
-            if (attr.AttributeClass?.Name == "Parser")
-            {
-                return classSymbol;
-            }
-        }
-
-        return null;
+    
+        // 检查类是否有 ParserAttribute - 通过完全限定名精确匹配，避免名称冲突
+        var parserAttributeSymbol = context
+            .SemanticModel
+            .Compilation
+            .GetTypeByMetadataName("PCL.Core.Link.Lobby.Parser.ParserAttribute");
+        if (parserAttributeSymbol == null) return null;
+    
+        return classSymbol.GetAttributes().Any(attr =>
+            SymbolEqualityComparer.Default.Equals(attr.AttributeClass, parserAttributeSymbol)) 
+            ? classSymbol 
+            : null;
     }
 
     private static void _GenerateCode(SourceProductionContext context, ImmutableArray<object?> parserClasses)
@@ -64,18 +57,19 @@ public class LinkParserGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Collections.Generic;");
+        sb.AppendLine("using PCL.Core.Link.Lobby.Parser;");
         sb.AppendLine();
-        sb.AppendLine("namespace PCL.Core.Link.Lobby.Parser;");
+        sb.AppendLine("namespace PCL.Core.Link.Lobby;");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
-        sb.AppendLine("/// 解析器注册表, 用于自动注册所有标记了 ParserAttribute 特性的解析器类");
+        sb.AppendLine("/// 用于放置联机需要用到的一些数据");
         sb.AppendLine("/// </summary>");
-        sb.AppendLine("public static class ParserRegistry");
+        sb.AppendLine("public static class LinkUsings");
         sb.AppendLine("{");
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine("    /// 所有解析器类型的列表");
+        sb.AppendLine("    /// 所有解析器实例的列表");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public static readonly List<Type> ParserTypes = new List<Type>");
+        sb.AppendLine("    public static readonly List<IParser> Parsers = new List<IParser>");
         sb.AppendLine("    {");
 
         // 添加所有找到的解析器类型
@@ -83,12 +77,12 @@ public class LinkParserGenerator : IIncrementalGenerator
         {
             if (parserClass is not INamedTypeSymbol namedTypeSymbol) continue;
             var fullTypeName = namedTypeSymbol.ToDisplayString();
-            sb.AppendLine($"        typeof({fullTypeName}),");
+            sb.AppendLine($"        new {fullTypeName}() as IParser,");
         }
 
         sb.AppendLine("    };");
         sb.AppendLine("}");
 
-        context.AddSource("ParserRegistry.g.cs", sb.ToString());
+        context.AddSource("LinkUsings.g.cs", sb.ToString());
     }
 }

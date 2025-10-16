@@ -7,7 +7,7 @@ namespace PCL.Core.Link.Scaffolding.EasyTier;
 
 public class EtLinkPeer : ILinkPeer
 {
-    public string Name { get; init; }
+    public string Name { get; set; }
     public string Id { get; init; }
     public ConnectionStatus Status { get; set; }
     public long Tx { get; set; }

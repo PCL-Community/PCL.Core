@@ -18,7 +18,9 @@ namespace PCL.Core.Link.Scaffolding.EasyTier;
 
 public class EtLinkNetwork(string workDirectory) : ILinkNetworkSession
 {
-    private List<EtLinkPeer> _peers = [];
+    private const string EasyTierRequireVersion = "2.4.5";
+
+    private readonly List<EtLinkPeer> _peers = [];
     private Process? _easyTier;
     private int _easyTierPrcPort;
     private CancellationTokenSource? _cts;
@@ -118,12 +120,20 @@ public class EtLinkNetwork(string workDirectory) : ILinkNetworkSession
 
     public async ValueTask Shutdown()
     {
-        throw new System.NotImplementedException();
+        if (_easyTier == null) return;
+        _easyTier.Kill();
+        _easyTier = null;
     }
 
     public async ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
         await Shutdown();
+    }
+
+    ~EtLinkNetwork()
+    {
+        DisposeAsync().AsTask().Wait();
     }
 
     private EtLinkPeer _getSelfPeer()

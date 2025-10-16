@@ -8,6 +8,7 @@ public interface ILinkController
 {
     public ValueTask<string> StartByCreate();
     public ValueTask StartByJoin(string joinCode);
+    public ValueTask Stop();
     event Action<string> OnPeerConnected;
     event Action<string> OnPeerDisconnected;
 

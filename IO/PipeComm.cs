@@ -10,7 +10,7 @@ using PCL.Core.Utils.OS;
 
 namespace PCL.Core.IO;
 
-public class PipeComm
+public static class PipeComm
 {
     private static void _PipeLog(string message) => LogWrapper.Trace("Pipe", message);
     private static void _PipeLogDebug(string message) => LogWrapper.Debug("Pipe", message);
@@ -36,7 +36,7 @@ public class PipeComm
     /// <param name="allowedProcessId">允许连接的客户端进程 ID，如为 Nothing 则允许所有</param>
     public static NamedPipeServerStream StartPipeServer(string identifier, string pipeName, Func<StreamReader, StreamWriter, Process?, bool> loopCallback, Action? stopCallback = null, bool stopWhenException = false, int[]? allowedProcessId = null)
     {
-        NamedPipeServerStream pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 1024, 1024);
+        var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 1024, 1024);
         var threadName = $"PipeServer/{identifier}";
 
         Basics.RunInNewThread(() =>

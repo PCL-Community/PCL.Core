@@ -179,7 +179,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
 
     private CancellationTokenSource? _cancelTokenSource;
 
-    public async Task Start(bool enableRange, long startPosition = 0, CancellationToken cancelToken = default)
+    public async Task StartAsync(bool enableRange, long startPosition = 0, CancellationToken cancelToken = default)
     {
         _cancelTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
         var cToken = _cancelTokenSource.Token;
@@ -235,7 +235,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                 }
                 // 开始传输
                 Status = DownloadSegmentStatus.Running;
-                using var httpContentStream = await resp.Content.ReadAsStreamAsync();
+                using var httpContentStream = await resp.Content.ReadAsStreamAsync(cancelToken);
                 stream.Position = StartPosition;
                 if (EndPosition == 0)
                 {

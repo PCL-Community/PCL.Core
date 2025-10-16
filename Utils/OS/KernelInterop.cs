@@ -1,25 +1,96 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace PCL.Core.Utils.OS;
 
-public static class KernelInterop
+public static partial class KernelInterop
 {
+    // ReSharper disable InconsistentNaming, UnusedMember.Local
+
+    [LibraryImport("kernel32.dll", EntryPoint = "GetCurrentThreadId", SetLastError = true)]
+    private static partial uint _GetCurrentThreadId();
+
+    [LibraryImport("kernel32.dll", EntryPoint = "ExitProcess", SetLastError = false)]
+    private static partial void _ExitProcess(uint statusCode);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "GetNamedPipeClientProcessId", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool _GetNamedPipeClientProcessId(IntPtr pipeHandle, out uint clientProcessId);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "GetLogicalProcessorInformationEx", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool _GetLogicalProcessorInformationEx(
+        LOGICAL_PROCESSOR_RELATIONSHIP relationshipType,
+        IntPtr buffer,
+        ref uint returnLength);
+
+    private const int ERROR_INSUFFICIENT_BUFFER = 122;
+
+    [LibraryImport("ntdll.dll")]
+    private static partial void RtlGetNtVersionNumbers(
+        out int major,
+        out int minor,
+        out int build);
+    /// <summary>
+    /// Retrieve the kernel version number of the current operating system (unaffected by compatibility settings)
+    /// </summary>
+    /// <returns>A <see cref="Version"/> instance, used to represent the current operating system kernel version number.</returns>
+    public static Version GetCurrentOSVersion()
+    {
+        RtlGetNtVersionNumbers(out var major, out var minor, out var build);
+        build &= 0xFFFF;
+        return new Version(major, minor, build);
+    }
+
+
+    private enum LOGICAL_PROCESSOR_RELATIONSHIP : uint
+    {
+        RelationProcessorCore    = 0,
+        RelationNumaNode         = 1,
+        RelationCache            = 2,
+        RelationProcessorPackage = 3,
+        RelationGroup            = 4,
+        RelationAll              = 0xffff
+    }
+    
+    private static MEMORYSTATUSEX CreateStatus() => new() { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    // ReSharper restore InconsistentNaming, UnusedMember.Local
+
+    private static void _ThrowLastWin32Error() => throw new Win32Exception(Marshal.GetLastWin32Error());
+
     /// <summary>
     /// 获取当前线程的 Win32 Thread ID。若无特殊情况请用 <see cref="Thread.ManagedThreadId"/> 而不是这个方法。
     /// </summary>
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern uint GetCurrentThreadId();
+    public static uint CurrentNativeThreadId => _GetCurrentThreadId();
 
     /// <summary>
     /// 直接结束当前进程。若无特殊情况请使用 <see cref="App.Lifecycle.Shutdown"/>
     /// </summary>
     /// <param name="statusCode">退出状态码 (返回值)</param>
-    [DllImport("kernel32.dll", SetLastError = false)]
-    public static extern void ExitProcess(uint statusCode);
+    public static void ExitProcess(int statusCode = 0) => _ExitProcess((uint)statusCode);
 
     /// <summary>
     /// 获取指定命名管道当前连接的客户端进程 ID
@@ -27,8 +98,7 @@ public static class KernelInterop
     /// <param name="pipeHandle">命名管道句柄</param>
     /// <param name="clientProcessId">获取到的进程 ID</param>
     /// <returns>是否成功执行</returns>
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool GetNamedPipeClientProcessId(IntPtr pipeHandle, out uint clientProcessId);
+    public static bool GetNamedPipeClientProcessId(IntPtr pipeHandle, out uint clientProcessId) => _GetNamedPipeClientProcessId(pipeHandle, out clientProcessId);
 
     /// <summary>
     /// 获取仅包含性能核（P-core）的逻辑处理器数量。
@@ -63,29 +133,6 @@ public static class KernelInterop
         }
     }
 
-    // ReSharper disable InconsistentNaming, UnusedMember.Local
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetLogicalProcessorInformationEx(
-        LOGICAL_PROCESSOR_RELATIONSHIP relationshipType,
-        IntPtr buffer,
-        ref uint returnLength);
-
-    private const int ERROR_INSUFFICIENT_BUFFER = 122;
-
-    private enum LOGICAL_PROCESSOR_RELATIONSHIP : uint
-    {
-        RelationProcessorCore    = 0,
-        RelationNumaNode         = 1,
-        RelationCache            = 2,
-        RelationProcessorPackage = 3,
-        RelationGroup            = 4,
-        RelationAll              = 0xffff
-    }
-
-    // ReSharper restore InconsistentNaming, UnusedMember.Local
-
     /// <summary>
     /// 仅承载 EfficiencyClass 和 Mask 的简单 CPU 核心信息
     /// </summary>
@@ -100,39 +147,39 @@ public static class KernelInterop
         uint returnedLength = 0;
 
         // 第一次调用仅为了获取所需缓冲区大小
-        if (!GetLogicalProcessorInformationEx(
+        if (!_GetLogicalProcessorInformationEx(
                 LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore,
                 IntPtr.Zero,
                 ref returnedLength)
             && Marshal.GetLastWin32Error() != ERROR_INSUFFICIENT_BUFFER)
         {
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
         var list = new List<ProcessorCore>();
-        IntPtr buffer = Marshal.AllocHGlobal((int)returnedLength);
+        var buffer = Marshal.AllocHGlobal((int)returnedLength);
         try
         {
-            if (!GetLogicalProcessorInformationEx(
+            if (!_GetLogicalProcessorInformationEx(
                     LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore,
                     buffer,
                     ref returnedLength))
             {
-                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+                throw new Win32Exception(Marshal.GetLastWin32Error());
             }
 
-            IntPtr ptr = buffer;
-            IntPtr end = IntPtr.Add(buffer, (int)returnedLength);
+            var ptr = buffer;
+            var end = IntPtr.Add(buffer, (int)returnedLength);
 
             // SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX 头部：Relationship (4 字节) + Size (4 字节)
             const int headerSize = sizeof(uint) + sizeof(uint);
             // GROUP_AFFINITY 大小 = KAFFINITY (平台指针大小) + WORD Group + WORD[3] Reserved
-            int groupAffinitySize = IntPtr.Size + 8;
+            var groupAffinitySize = IntPtr.Size + 8;
 
             while (ptr.ToInt64() < end.ToInt64())
             {
-                uint relationship = (uint)Marshal.ReadInt32(ptr);
-                uint size = (uint)Marshal.ReadInt32(ptr, sizeof(uint));
+                var relationship = (uint)Marshal.ReadInt32(ptr);
+                var size = (uint)Marshal.ReadInt32(ptr, sizeof(uint));
 
                 if (relationship == (uint)LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore)
                 {
@@ -143,9 +190,9 @@ public static class KernelInterop
                     // GroupCount           WORD @ offset 30
                     // GroupMask[ANYSIZE]   GROUP_AFFINITY 从 offset 32 开始
 
-                    byte efficiencyClass = Marshal.ReadByte(ptr, headerSize + 1);
-                    ushort groupCount = (ushort)Marshal.ReadInt16(ptr, headerSize + 2 + 20);
-                    IntPtr maskBase = IntPtr.Add(ptr, headerSize + 2 + 20 + sizeof(ushort));
+                    var efficiencyClass = Marshal.ReadByte(ptr, headerSize + 1);
+                    var groupCount = (ushort)Marshal.ReadInt16(ptr, headerSize + 2 + 20);
+                    var maskBase = IntPtr.Add(ptr, headerSize + 2 + 20 + sizeof(ushort));
 
                     for (var i = 0; i < groupCount; i++)
                     {
@@ -166,5 +213,35 @@ public static class KernelInterop
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// 获取系统可用物理内存 (<c>ullAvailPhys</c>) 的字节数
+    /// </summary>
+    public static ulong GetAvailablePhysicalMemoryBytes()
+    {
+        var status = CreateStatus();
+        if (!GlobalMemoryStatusEx(ref status)) _ThrowLastWin32Error();
+        return status.ullAvailPhys;
+    }
+
+    /// <summary>
+    /// 获取系统可用物理内存 (<c>ullAvailPhys</c>) 和总物理内存 (<c>ullTotalPhys</c>) 的字节数
+    /// </summary>
+    public static (ulong Total, ulong Available) GetPhysicalMemoryBytes()
+    {
+        var status = CreateStatus();
+        if (!GlobalMemoryStatusEx(ref status)) _ThrowLastWin32Error();
+        return (status.ullTotalPhys, status.ullAvailPhys);
+    }
+
+    /// <summary>
+    /// 获取以百分比表示的系统内存占用 (范围 0.0 ~ 100.0)
+    /// </summary>
+    public static double GetMemoryLoadPercent()
+    {
+        var status = CreateStatus();
+        if (!GlobalMemoryStatusEx(ref status)) _ThrowLastWin32Error();
+        return status.dwMemoryLoad;
     }
 }

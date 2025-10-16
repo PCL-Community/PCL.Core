@@ -17,7 +17,7 @@ public static class LanguageSpecificStringDictionaryExtensions
 
         // 2) 逐级回退，如 zh-Hans-CN -> zh-Hans -> zh
         var tag = ui.IetfLanguageTag;
-        for (int dash = tag.LastIndexOf('-'); dash > 0; dash = tag.LastIndexOf('-'))
+        for (var dash = tag.LastIndexOf('-'); dash > 0; dash = tag.LastIndexOf('-'))
         {
             tag = tag.Substring(0, dash);
             if (TryFromTag(dict, tag, out v))

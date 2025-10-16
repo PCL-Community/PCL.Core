@@ -22,7 +22,7 @@ public static partial class EnvironmentInterop
         if (envValue == null) return false;
         var valueLog = detailLog ? $" = {envValue}" : string.Empty;
         LogWrapper.Debug(LogModule, $"读取到环境变量 {key}{valueLog}");
-        var value = key.Convert<TValue>();
+        var value = envValue.Convert<TValue>();
         if (value == null)
         {
             LogWrapper.Warn(LogModule, $"环境变量 {key} 类型转换失败");
@@ -34,11 +34,27 @@ public static partial class EnvironmentInterop
 
     public static string? GetSecret(string key, bool readEnv = true, bool readEnvDebugOnly = false)
     {
-        SecretDictionary.TryGetValue(key, out var result);
+        if (!SecretDictionary.TryGetValue(key, out var value) &&
+            readEnv &&
 #if !DEBUG
-        if (readEnvDebugOnly) return result;
+            !readEnvDebugOnly &&
 #endif
-        if (readEnv) ReadVariable($"PCL_{key}", ref result, false);
-        return result;
+            ReadVariable($"PCL_{key}", ref value, false)
+        ) SecretDictionary[key] = value;
+        return value;
+    }
+    
+    /// <summary>
+    /// 获取当前操作系统名称。
+    /// </summary>
+    /// <returns>返回小写的操作系统名称，如 "windows", "linux", "osx"。</returns>
+    public static string GetCurrentOsName() {
+        if (OperatingSystem.IsWindows())
+            return "windows";
+        if (OperatingSystem.IsLinux())
+            return "linux";
+        return OperatingSystem.IsMacOS() 
+            ? "osx"
+            : "unknown";
     }
 }

@@ -12,8 +12,8 @@ on:
 
 jobs:
   build:
-    name: Build ${{ inputs.configuration }}-${{ inputs.architecture }}
-    runs-on: windows-latest
+    name: Build
+    runs-on: ubuntu-latest
     env:
       LANG: en_US.UTF-8
 
@@ -21,23 +21,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup MSBuild.exe
-        uses: microsoft/setup-msbuild@v2
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
         with:
-          msbuild-architecture: ${{ inputs.architecture }}
-
-      - name: Restore NuGet packages
-        run: |
-          $calculatedSha = git rev-parse --short HEAD
-          echo "SHORT_SHA=$calculatedSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          msbuild "PCL.Core.csproj" /t:Restore
+          dotnet-version: '9.0.x'
 
       - name: Build
+        env:
+          PCL_WRITE_SECRET: '1'
+          PCL_GITHUB_SHA: ${{ github.sha }}
         run: |
-          chcp 65001
-          $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          msbuild "PCL.Core.csproj" /p:Configuration=${{ inputs.configuration }} /p:Platform=${{ inputs.architecture }}
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          # Build
+          dotnet build "PCL.Core.csproj" \
+          -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.architecture }} \
+          -p:EmitCompilerGeneratedFiles=true -p:IncludeGeneratedFiles=true \
+          -p:CompilerGeneratedFilesOutputPath=./obj/generated
+          # List generated files for debug
+          echo "Generated files:"
+          find ./obj/generated -name "*.cs" -type f | head -20
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

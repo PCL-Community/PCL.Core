@@ -2,8 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -11,57 +11,65 @@ namespace PCL.Core.App;
 
 public static class Basics
 {
-    public static string VersionName;
-    public static int VersionCode;
-    
+    #region 基本信息
+
+    /// <summary>
+    /// 当前版本名称。
+    /// </summary>
+    public static string VersionName { get; set; } = "";
+
+    /// <summary>
+    /// 当前版本号。
+    /// </summary>
+    public static int VersionNumber { get; set; } = 0;
+
+    #endregion
+
+    #region 程序路径信息
+
     /// <summary>
     /// 当前进程实例。
     /// </summary>
-    public static readonly Process CurrentProcess = Process.GetCurrentProcess();
+    public static Process CurrentProcess { get; } = Process.GetCurrentProcess();
 
     /// <summary>
     /// 当前进程 ID。
     /// </summary>
-    public static readonly int CurrentProcessId = CurrentProcess.Id;
+    public static int CurrentProcessId { get; } = CurrentProcess.Id;
 
     /// <summary>
     /// 当前进程可执行文件的绝对路径。
     /// </summary>
-#if NET8_0_OR_GREATER
-    public static readonly string ExecutablePath = Environment.ProcessPath!;
-#else
-    public static readonly string ExecutablePath = Utils.OS.ProcessInterop.GetExecutablePath(CurrentProcess)!;
-#endif
+    public static string ExecutablePath { get; } = Environment.ProcessPath!;
 
     /// <summary>
     /// 当前进程可执行文件所在的目录。若有需求，请使用 <see cref="Path.Combine(string[])"/> 而不是自行拼接路径。
     /// </summary>
-    public static readonly string ExecutableDirectory = GetParentPath(ExecutablePath) ?? CurrentDirectory;
+    public static string ExecutableDirectory { get; } = GetParentPath(ExecutablePath) ?? CurrentDirectory;
 
     /// <summary>
     /// 当前进程可执行文件的名称，含扩展名。
     /// </summary>
-    public static readonly string ExecutableName = Path.GetFileName(ExecutablePath);
+    public static string ExecutableName { get; } = Path.GetFileName(ExecutablePath);
 
     /// <summary>
     /// 当前进程可执行文件的名称，不含扩展名。
     /// </summary>
-    public static readonly string ExecutableNameWithoutExtension = Path.GetFileNameWithoutExtension(ExecutablePath);
+    public static string ExecutableNameWithoutExtension { get; } = Path.GetFileNameWithoutExtension(ExecutablePath);
 
     /// <summary>
     /// 当前进程不包括第一个参数（文件名）的命令行参数。
     /// </summary>
-    public static readonly string[] CommandLineArguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
-
-    /// <summary>
-    /// 设备的架构
-    /// </summary>
-    public static Architecture DeviceArchitecture { get; } = RuntimeInformation.OSArchitecture;
+    public static string[] CommandLineArguments { get; } = Environment.GetCommandLineArgs().Skip(1).ToArray();
 
     /// <summary>
     /// 实时获取的当前目录。若要在可执行文件目录中存放文件等内容，请使用更准确的 <see cref="ExecutableDirectory"/> 而不是这个目录。
     /// </summary>
     public static string CurrentDirectory => Environment.CurrentDirectory;
+
+    #endregion
+
+    #region 线程操作
 
     /// <summary>
     /// 在新的工作线程运行指定委托。
@@ -84,6 +92,10 @@ public static class Basics
         thread.Start();
         return thread;
     }
+
+    #endregion
+
+    #region 路径操作
 
     /// <summary>
     /// 获取某个路径的父路径/目录。
@@ -121,4 +133,19 @@ public static class Basics
         };
         Process.Start(psi);
     }
+    #endregion
+
+    /// <summary>
+    /// 获取程序打包资源的输入流。该资源必须声明为 <c>Resource</c> 类型，否则将会报错，<c>Images</c>
+    /// 和 <c>Resources</c> 目录已默认声明该类型。
+    /// </summary>
+    /// <param name="path">资源路径，例如 "Resources/java-wrapper.jar"</param>
+    /// <returns>资源输入流，若资源不存在则为 <c>null</c></returns>
+    public static Stream? GetResourceStream(string path) {
+        var resourceInfo = Application.GetResourceStream(new Uri($"pack://application:,,,/{path}", UriKind.Absolute));
+        return resourceInfo?.Stream;
+    }
+
+    private const string AssemblyImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
+    public static string GetAppImagePath(string imageName) => AssemblyImagePath + imageName;
 }

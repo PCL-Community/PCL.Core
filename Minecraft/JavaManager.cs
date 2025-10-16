@@ -12,12 +12,12 @@ namespace PCL.Core.Minecraft;
 
 public class JavaManager
 {
-    private List<Java> _javas = [];
-    public List<Java> JavaList => [.. _javas];
+    internal List<JavaInfo> InternalJavas = [];
+    public List<JavaInfo> JavaList => [.. InternalJavas];
 
     private void _SortJavaList()
     {
-        _javas = (from j in _javas
+        InternalJavas = (from j in InternalJavas
             orderby j.Version descending, j.Brand
             select j).ToList();
     }
@@ -29,7 +29,7 @@ public class JavaManager
     /// 扫描 Java 会对当前已有的结果进行选择性保留
     /// </summary>
     /// <returns></returns>
-    public async Task ScanJava()
+    public async Task ScanJavaAsync()
     {
         if (_scanTask == null || _scanTask.IsCompleted)
             _scanTask = Task.Run(async () =>
@@ -45,10 +45,10 @@ public class JavaManager
                 await Task.WhenAll(searchTasks);
 
                 // 记录之前设置为禁用的 Java
-                var oldJavaList = _javas.ToDictionary(x => x.JavaExePath);
+                var oldJavaList = InternalJavas.ToDictionary(x => x.JavaExePath);
                 // 新搜索到的 Java 路径
                 var newJavaList = new HashSet<string>(
-                    _javas
+                    InternalJavas
                         .Select(x => x.JavaExePath)
                         .Concat(javaPaths)
                         .Select(x => x.TrimEnd(Path.DirectorySeparatorChar)),
@@ -56,51 +56,46 @@ public class JavaManager
 
                 var ret = newJavaList
                     .Where(x => !x.Split(Path.DirectorySeparatorChar).Any(part => _ExcludeFolderName.Contains(part, StringComparer.OrdinalIgnoreCase)))
-                    .Select(x => Java.Parse(x)!)
-                    .Where(x => x != null)
-                    .ToList();
+                    .Select(JavaInfo.Parse).Where(x => x != null).Select(x => x!).ToList();
                 foreach (var item in ret)
                 {
                     if (oldJavaList.TryGetValue(item.JavaExePath, out var existing))
                         item.IsEnabled = existing.IsEnabled;
                 }
 
-                _javas = ret;
+                InternalJavas = ret;
                 _SortJavaList();
             });
         await _scanTask;
     }
 
-    public void Add(Java j)
+    public void Add(JavaInfo j)
     {
-        if (j == null)
-            throw new ArgumentNullException(nameof(j));
+        ArgumentNullException.ThrowIfNull(j);
         if (HasJava(j.JavaExePath))
             return;
-        _javas.Add(j);
+        InternalJavas.Add(j);
         _SortJavaList();
     }
 
     public void Add(string javaExe)
     {
-        if (javaExe == null)
-            throw new ArgumentNullException(nameof(javaExe));
+        ArgumentNullException.ThrowIfNull(javaExe);
         if (HasJava(javaExe))
             return;
-        var temp = Java.Parse(javaExe);
+        var temp = JavaInfo.Parse(javaExe);
         if (temp == null)
             return;
-        _javas.Add(temp);
+        InternalJavas.Add(temp);
         _SortJavaList();
     }
 
     public bool HasJava(string javaExe)
     {
-        if (javaExe == null)
-            throw new ArgumentNullException(nameof(javaExe));
+        ArgumentNullException.ThrowIfNull(javaExe);
         if (!File.Exists(javaExe))
             throw new ArgumentException("Not a valid java file");
-        return _javas.Any(x => x.JavaExePath == javaExe);
+        return InternalJavas.Any(x => x.JavaExePath == javaExe);
     }
 
     /// <summary>
@@ -109,17 +104,17 @@ public class JavaManager
     /// <param name="minVersion">最小版本号</param>
     /// <param name="maxVersion">最大版本号</param>
     /// <returns></returns>
-    public async Task<List<Java>> SelectSuitableJava(Version minVersion, Version maxVersion)
+    public async Task<List<JavaInfo>> SelectSuitableJava(Version minVersion, Version maxVersion)
     {
-        if (_javas.Count == 0)
-            await ScanJava();
+        if (InternalJavas.Count == 0)
+            await ScanJavaAsync();
         var minMajorVersion = minVersion.Major == 1 ? minVersion.Minor : minVersion.Major;
         var maxMajorVersion = maxVersion.Major == 1 ? maxVersion.Minor : maxVersion.Major;
-        return (from j in _javas
+        return (from j in InternalJavas
             where j.IsStillAvailable && j.IsEnabled
                                      && j.JavaMajorVersion >= minMajorVersion && j.JavaMajorVersion <= maxMajorVersion
                                      && j.Version >= minVersion && j.Version <= maxVersion
-            orderby j.Version, j.IsJre, j.Brand
+            orderby j.IsJre, j.Brand
             select j).ToList();
     }
 
@@ -129,7 +124,7 @@ public class JavaManager
     /// <returns></returns>
     public void CheckJavaAvailability()
     {
-        _javas = [..from j in _javas where j.IsStillAvailable select j];
+        InternalJavas = [..from j in InternalJavas where j.IsStillAvailable select j];
     }
 
     private static void _ScanRegistryForJava(ref ConcurrentBag<string> javaPaths)
@@ -227,7 +222,7 @@ public class JavaManager
             {
                 try{
                     programFilesPaths.AddRange(from dir in Directory.EnumerateDirectories(dri)
-                                            where _MostPossibleKeyWords.Any(x => dir.IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0)
+                                            where _MostPossibleKeyWords.Any(x => dir.Contains(x, StringComparison.OrdinalIgnoreCase))
                                             select dir);
                 }catch(UnauthorizedAccessException){/* 忽略无权限访问的根目录 */}
             }
@@ -255,7 +250,7 @@ public class JavaManager
                 {
                     // 只遍历包含关键字的目录
                     var subDirs = Directory.EnumerateDirectories(currentPath)
-                        .Where(x => _TotalKeyWords.Any(k => x.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0));
+                        .Where(x => _TotalKeyWords.Any(k => x.Contains(k, StringComparison.OrdinalIgnoreCase)));
                     foreach (var dir in subDirs)
                     {
                         // 准备可能的 Java 路径
@@ -327,41 +322,4 @@ public class JavaManager
             }
         }
     }
-
-    public List<JavaLocalCache> GetCache()
-    {
-        return (from j in _javas
-            select new JavaLocalCache
-            {
-                Path = j.JavaExePath,
-                IsEnable = j.IsEnabled
-            }).ToList();
-    }
-
-    public void SetCache(List<JavaLocalCache> caches)
-    {
-        foreach (var cache in caches)
-        {
-            try
-            {
-                var targetInRecord = _javas.First(x => x.JavaExePath == cache.Path);
-                targetInRecord.IsEnabled = cache.IsEnable;
-            }
-            catch
-            {
-                var temp = Java.Parse(cache.Path);
-                if (temp == null)
-                    continue;
-                temp.IsEnabled = cache.IsEnable;
-                _javas.Add(temp);
-            }
-        }
-    }
-}
-
-[Serializable]
-public class JavaLocalCache
-{
-    public string Path { get; set; } = "";
-    public bool IsEnable { get; set; }
 }

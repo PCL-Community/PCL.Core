@@ -5,11 +5,11 @@
 /// </summary>
 public enum ActionLevel
 {
-    DebugLog = 00,
+    TraceLog = 00,
     NormalLog = 10,
     Hint = 20,
-    HintRed = 21,
+    HintErr = 21,
     MsgBox = 30,
-    MsgBoxRed = 31,
-    MsgBoxExit = 32,
+    MsgBoxErr = 31,
+    MsgBoxFatal = 32,
 }

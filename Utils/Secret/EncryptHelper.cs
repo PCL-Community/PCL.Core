@@ -7,15 +7,16 @@ namespace PCL.Core.Utils.Secret;
 
 public static class EncryptHelper
 {
-    public static string SecretEncrypt(string data) => AESEncrypt(data, Identify.EncryptKey);
+    public static string SecretEncrypt(string data) => AesEncrypt(data, Identify.EncryptKey);
 
-    public static string SecretDecrypt(string data) => AESDecrypt(data, Identify.EncryptKey);
+    public static string SecretDecrypt(string data) => AesDecrypt(data, Identify.EncryptKey);
 
     public static string SecretDecryptOld(string data)
     {
         const string key = "00000000";
         const string iv = "87160295";
         var btKey = Encoding.UTF8.GetBytes(key);
+        // ReSharper disable once InconsistentNaming
         var btIV = Encoding.UTF8.GetBytes(iv);
 #if NET6_0_OR_GREATER
         using var des = DES.Create();
@@ -37,7 +38,7 @@ public static class EncryptHelper
     /// <param name="key">密钥</param>
     /// <returns>Base64 编码的加密数据</returns>
     /// <exception cref="ArgumentNullException">如果 key 为 null 或者空</exception>
-    public static string AESEncrypt(string input, string key)
+    public static string AesEncrypt(string input, string key)
     {
         if (string.IsNullOrEmpty(input))
             return string.Empty;
@@ -75,7 +76,7 @@ public static class EncryptHelper
 
             using (var cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
             {
-                byte[] data = Encoding.UTF8.GetBytes(input);
+                var data = Encoding.UTF8.GetBytes(input);
                 cs.Write(data, 0, data.Length);
             }
 
@@ -91,7 +92,7 @@ public static class EncryptHelper
     /// <returns>返回解密文本</returns>
     /// <exception cref="ArgumentNullException">如果 Key 为 null 或空</exception>
     /// <exception cref="ArgumentException">如果 input 数据错误</exception>
-    public static string AESDecrypt(string input, string key)
+    public static string AesDecrypt(string input, string key)
     {
         if (string.IsNullOrEmpty(input))
             return string.Empty;
@@ -99,18 +100,18 @@ public static class EncryptHelper
             throw new ArgumentNullException(nameof(key));
 
 
-        using Aes aes = Aes.Create();
+        using var aes = Aes.Create();
         aes.KeySize = 256;
         aes.BlockSize = 128;
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
         
-        byte[] encryptedData = Convert.FromBase64String(input);
+        var encryptedData = Convert.FromBase64String(input);
 
-        byte[] salt = new byte[32];
+        var salt = new byte[32];
         Array.Copy(encryptedData, 0, salt, 0, salt.Length);
 
-        byte[] iv = new byte[aes.BlockSize / 8];
+        var iv = new byte[aes.BlockSize / 8];
         Array.Copy(encryptedData, salt.Length, iv, 0, iv.Length);
         aes.IV = iv;
 
@@ -126,7 +127,7 @@ public static class EncryptHelper
         }
 #pragma warning restore SYSLIB0041
 
-        int cipherTextLength = encryptedData.Length - salt.Length - iv.Length;
+        var cipherTextLength = encryptedData.Length - salt.Length - iv.Length;
         using (var ms = new MemoryStream(encryptedData, salt.Length + iv.Length, cipherTextLength))
         {
             using (var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Read))

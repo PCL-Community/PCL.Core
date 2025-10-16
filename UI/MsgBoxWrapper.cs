@@ -30,12 +30,12 @@ public static class MsgBoxWrapper
 {
     public static event MsgBoxHandler? OnShow;
 
-    public static int Show(
+    public static int ShowWithCustomButtons(
         string message,
         string caption,
         MsgBoxTheme theme,
-        ICollection<MsgBoxButtonInfo> buttonCollection,
-        bool block = true)
+        bool block,
+        ICollection<MsgBoxButtonInfo> buttonCollection)
     {
         var result = 0;
         if (buttonCollection.Count == 0) buttonCollection = [new MsgBoxButtonInfo("确定")];
@@ -43,14 +43,14 @@ public static class MsgBoxWrapper
         return result;
     }
 
-    public static int Show(
+    public static int ShowWithCustomButtons(
         string message,
         string caption = "提示",
         MsgBoxTheme theme = MsgBoxTheme.Info,
         bool block = true,
         params MsgBoxButtonInfo[] buttons)
     {
-        return Show(message, caption, theme, buttonCollection: buttons, block);
+        return ShowWithCustomButtons(message, caption, theme, block, buttonCollection: buttons);
     }
 
     public static int Show(
@@ -62,6 +62,6 @@ public static class MsgBoxWrapper
     {
         var index = 0;
         var list = buttons.Select(button => new MsgBoxButtonInfo(button, ++index)).ToList();
-        return Show(message, caption, theme, buttonCollection: list, block);
+        return ShowWithCustomButtons(message, caption, theme, block, list);
     }
 }

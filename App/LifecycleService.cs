@@ -31,7 +31,7 @@ public interface ILifecycleService
     /// 启动该服务。应由生命周期管理自动调用，若无特殊情况，请勿手动调用。
     /// </summary>
     public void Start();
-    
+
     /// <summary>
     /// 停止该服务。应由生命周期管理自动调用，若无特殊情况，请勿手动调用。
     /// </summary>
@@ -50,15 +50,15 @@ public interface ILifecycleService
 public record LifecycleLogItem(
     ILifecycleService? Source,
     string Message,
-    Exception? Exception = null,
-    LogLevel Level = LogLevel.Trace,
-    ActionLevel? ActionLevel = null)
+    Exception? Exception,
+    LogLevel Level,
+    ActionLevel ActionLevel)
 {
     /// <summary>
     /// 创建该日志项的时间
     /// </summary>
     public DateTime Time { get; } = DateTime.Now;
-    
+
     /// <summary>
     /// 创建该日志项的线程名
     /// </summary>
@@ -74,7 +74,7 @@ public record LifecycleLogItem(
     public string ComposeMessage()
     {
         var source = (Source == null) ? "" : $" [{Source.Name}|{Source.Identifier}]";
-        var result = $"[{Time:HH:mm:ss.fff}] [{Level.PrintName()}] [{ThreadName}]{source} {Message}";
+        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}]{source} {Message}";
         if (Exception != null) result += $"\n{Exception}";
         return result;
     }
@@ -93,12 +93,7 @@ public interface ILifecycleLogService : ILifecycleService
 
 /// <summary>
 /// 注册生命周期服务项，将由生命周期管理统一创建实例，然后在指定生命周期自动启动或加入等待手动启动列表。<br/>
-/// 使用此注解的类型必须直接或间接实现 <see cref="ILifecycleService"/> 接口，否则将被忽略。<br/><br/>
-/// <b>代码生成注意事项</b>：此注解的自动注册功能由 MSBuild 自定义任务运行 PowerShell
-/// 脚本生成代码实现，该脚本通过正则表达式匹配文本来确定注解属性，因此请尽可能遵循以下两种标准写法以确保注解被匹配到：<br/><br/>
-/// 1. <c>[LifecycleService(LifecycleState.Xxx), Priority = num]</c><br/>
-/// 2. <c>[LifecycleService(LifecycleState.Xxx)]</c><br/><br/>
-/// 其中 <c>num</c> 可以是一个整数或 <c>int.MaxValue</c> <c>int.MinValue</c> 之一
+/// 使用此注解的类型必须直接或间接实现 <see cref="ILifecycleService"/> 接口，否则将被忽略。
 /// </summary>
 /// <param name="startState">详见 <see cref="StartState"/></param>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
@@ -108,13 +103,13 @@ public sealed class LifecycleServiceAttribute(LifecycleState startState) : Attri
     /// 指定该服务项应于何种生命周期状态启动。生命周期管理将在指定的状态按照 <see cref="Priority"/> 自动启动服务项。
     /// </summary>
     public LifecycleState StartState { get; } = startState;
-    
+
     /// <summary>
     /// 启动优先级。同一个生命周期状态有多个服务项需要启动时，将会按优先级数值<b>降序</b>启动，即数值越大越优先。<br/>
     /// 虽然这个值可以为任意 32 位整数，但是<b>非核心服务请勿使用较为极端的值，尤其是
     /// <c>int.MaxValue</c> <c>int.MinValue</c></b>，这可能导致一些核心服务的启动时机出现问题。
     /// </summary>
-    public int Priority { get; set; } = 0;
+    public int Priority { get; init; } = 0;
 }
 
 /// <summary>
@@ -128,14 +123,27 @@ public record LifecycleServiceInfo
     public string Name => _service.Name;
     public bool CanStartAsync => _service.SupportAsyncStart;
     public LifecycleState StartState { get; }
-    
+
     /// <summary>
     /// 服务开始运行的时间。初始值为调用 <c>Start()</c> 方法的时刻，在 <c>Start()</c> 方法结束之后会更新一次。
     /// </summary>
     public DateTime StartTime { get; init; } = DateTime.Now;
-    
+
+    /// <summary>
+    /// 附带启动状态的完整标识符。
+    /// </summary>
     public string FullIdentifier => $"{StartState}/{Identifier}";
-    
+
+    /// <summary>
+    /// 服务是否正常运行，若已停止则该值为 <c>false</c>，否则为 <c>true</c>。
+    /// </summary>
+    public bool IsStopped { get; private set; } = false;
+
+    /// <summary>
+    /// 将该服务标记为已停止，将不会在程序退出流程中调用该服务的 <c>Stop()</c> 方法。
+    /// </summary>
+    public void MarkAsStopped() => IsStopped = true;
+
     /// <summary>
     /// 本 record 应由生命周期管理自动构造，若无特殊情况，请勿手动调用。
     /// </summary>

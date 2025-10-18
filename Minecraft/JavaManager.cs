@@ -117,7 +117,7 @@ public class JavaManager
             where j.IsStillAvailable && j.IsEnabled
                                      && j.JavaMajorVersion >= minMajorVersion && j.JavaMajorVersion <= maxMajorVersion
                                      && j.Version >= minVersion && j.Version <= maxVersion
-            orderby j.IsJre, j.Brand
+            orderby j.Version, j.IsJre, j.Brand // 选择最小版本的 JDK 中的合适品牌的 Java
             select j).ToList();
     }
 

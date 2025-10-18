@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Microsoft.Win32;
 using PCL.Core.Net;
 using PCL.Core.Utils.OS;
@@ -19,31 +18,29 @@ public class TelemetryService : GeneralService
 {
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
-    private TelemetryService() : base("Telemetry", "遥测数据服务") { _context = Lifecycle.GetContext(this); }
+    private TelemetryService() : base("Telemetry", "遥测") { _context = Lifecycle.GetContext(this); }
+
+    // ReSharper disable UnusedAutoPropertyAccessor.Local
 
     private class TelemetryData
     {
         public required string Tag { get; set; }
         public required string Id { get; set; }
-        [JsonPropertyName("OS")]
-        public required int Os { get; set; }
+        [JsonPropertyName("OS")] public required int Os { get; set; }
         public required bool Is64Bit { get; set; }
-        [JsonPropertyName("IsARM64")]
-        public required bool IsArm64 { get; set; }
+        [JsonPropertyName("IsARM64")] public required bool IsArm64 { get; set; }
         public required string Launcher { get; set; }
         public required string LauncherBranch {get; set; }
-        [JsonPropertyName("UsedOfficialPCL")]
-        public required bool UsedOfficialPcl { get; set; }
-        [JsonPropertyName("UsedHMCL")]
-        public required bool UsedHmcl { get; set; }
-        [JsonPropertyName("UsedBakaXL")]
-        public required bool UsedBakaXl { get; set; }
-        public required ulong Memory {get; set; }
-        public required string NatMapBehaviour {get; set; }
-        public required string NatFilterBehaviour {get; set; }
-        [JsonPropertyName("IPv6Status")]
-        public required string Ipv6Status {get; set; }
+        [JsonPropertyName("UsedOfficialPCL")] public required bool UsedOfficialPcl { get; set; }
+        [JsonPropertyName("UsedHMCL")] public required bool UsedHmcl { get; set; }
+        [JsonPropertyName("UsedBakaXL")] public required bool UsedBakaXl { get; set; }
+        public required ulong Memory { get; set; }
+        public required string NatMapBehaviour { get; set; }
+        public required string NatFilterBehaviour { get; set; }
+        [JsonPropertyName("IPv6Status")] public required string Ipv6Status { get; set; }
     }
+
+    // ReSharper restore UnusedAutoPropertyAccessor.Local
 
     public override void Start()
     {
@@ -81,7 +78,7 @@ public class TelemetryService : GeneralService
         var sendData = JsonSerializer.Serialize(telemetry);
         using var response = HttpRequestBuilder
             .Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
-            .WithAuthentication(telemetryKey)
+            .WithAuthentication(telemetryKey).WithContent(sendData, "application/json")
             .SendAsync().Result;
         if (response.IsSuccess)
             Context.Info("已发送调查数据");

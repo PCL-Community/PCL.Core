@@ -269,7 +269,7 @@ public sealed partial class ConfigService : GeneralService
             ServiceContext.Info("Invoking init events...");
             foreach (var (_, item) in _Items)
             {
-                item.TriggerEvent(ConfigEvent.Init, null, null, true, true);
+                item.TriggerEvent(ConfigEvent.Init, null, true, true);
             }
             IsInitialized = true;
         }

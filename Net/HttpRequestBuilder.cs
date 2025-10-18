@@ -4,13 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Logging;
-using Polly;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -21,12 +20,12 @@ public class HttpRequestBuilder
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
     private bool _addLauncherHeader = true;
     private bool _doLog = true;
-    private Version _requestVersion = HttpVersion.Version30;
+    private Version _requestVersion = HttpVersion.Version20;
+    private TimeSpan _timeOutMillisec = TimeSpan.FromMilliseconds(10 * 1000);
 
-    public HttpRequestBuilder(string url, HttpMethod method)
+    private HttpRequestBuilder(Uri uri, HttpMethod method)
     {
-        var uriData = new Uri(url);
-        _request = new HttpRequestMessage(method, uriData);
+        _request = new HttpRequestMessage(method, uri);
     }
 
     /// <summary>
@@ -37,7 +36,19 @@ public class HttpRequestBuilder
     /// <returns>HttpRequestBuilder</returns>
     public static HttpRequestBuilder Create(string url, HttpMethod method)
     {
-        return new HttpRequestBuilder(url, method);
+        var reqUri = new Uri(url);
+        return new HttpRequestBuilder(reqUri, method);
+    }
+
+    /// <summary>
+    /// 创建一个 HttpRequestBuilder 对象
+    /// </summary>
+    /// <param name="uri">uri</param>
+    /// <param name="method">HTTP 方法</param>
+    /// <returns>HttpRequestBuilder</returns>
+    public static HttpRequestBuilder Create(Uri uri, HttpMethod method)
+    {
+        return new HttpRequestBuilder(uri, method);
     }
 
     /// <summary>
@@ -62,7 +73,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="key"></param>
     /// <param name="value"></param>
@@ -74,7 +85,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="cookies"></param>
     /// <returns></returns>
@@ -178,29 +189,51 @@ public class HttpRequestBuilder
         return this;
     }
 
+    public HttpRequestBuilder WithTimeOut(uint millisec)
+    {
+        var time = TimeSpan.FromMilliseconds(millisec);
+        _timeOutMillisec = time;
+        return this;
+    }
+
+    public HttpRequestBuilder WithTimeOut(TimeSpan millisec)
+    {
+        _timeOutMillisec = millisec;
+        return this;
+    }
+
     /// <summary>
-    ///
+    /// 
     /// </summary>
     /// <param name="throwIfNotSuccess">请求失败时是否抛出异常</param>
     /// <param name="retryTimes">请求重试次数</param>
+    /// <param name="ct">取消令牌</param>
     /// <param name="retryPolicy">依据请求当前尝试的次数给出的重试时长控制方法</param>
     /// <exception cref="HttpRequestException">要求 <paramref name="throwIfNotSuccess"/> 时并且 HTTP 请求失败</exception>
     /// <returns></returns>
-    public async Task<HttpResponseHandler> SendAsync(bool throwIfNotSuccess = false, int retryTimes = 3, Func<int,TimeSpan>? retryPolicy = null)
+    public async Task<HttpResponseHandler> SendAsync(
+        bool throwIfNotSuccess = false,
+        int retryTimes = 3,
+        CancellationToken ct = default,
+        Func<int, TimeSpan>? retryPolicy = null)
     {
         // 处理 Cookies
         if (_cookies.Count != 0)
         {
             if (_request.Headers.Contains("Cookie")) _request.Headers.Remove("Cookie"); //去掉野生的饼干
+
             var cookiesCtx = new StringBuilder(_cookies.Count * 30); //后期需要根据实际使用调整预分配的容量大小以提高文本构建性能
             foreach (var cookie in _cookies)
             {
                 if (cookiesCtx.Length > 0)
+                {
                     cookiesCtx.Append("; ");
+                }
+
                 cookiesCtx
                     .Append(Uri.EscapeDataString(cookie.Key))
                     .Append('=')
-                    .Append(_getSafeCookieValue(cookie.Value));
+                    .Append(_GetSafeCookieValue(cookie.Value));
             }
             _request.Headers.TryAddWithoutValidation("Cookie", cookiesCtx.ToString());
         }
@@ -212,25 +245,41 @@ public class HttpRequestBuilder
         }
 
         var client = NetworkService.GetClient();
+
         _request.Version = _requestVersion;
         _request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
-        _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
+        client.Timeout = _timeOutMillisec;
+
+        _MakeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
+
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
+            .ExecuteAsync(token => client.SendAsync(_request.Clone(), _completionOption, token), ct)
+            .ConfigureAwait(false);
+
         var responseUri = responseMessage.RequestMessage?.RequestUri;
-        if (responseUri != null && _request.RequestUri != responseUri) _makeLog($"已重定向至 {responseUri}");
-        _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
-        if (throwIfNotSuccess) responseMessage.EnsureSuccessStatusCode();
+
+        if (responseUri != null && _request.RequestUri != responseUri)
+        {
+            _MakeLog($"已重定向至 {responseUri}");
+        }
+
+        _MakeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
+
+        if (throwIfNotSuccess)
+        {
+            responseMessage.EnsureSuccessStatusCode();
+        }
+
         return new HttpResponseHandler(responseMessage);
     }
 
-    private void _makeLog(string msg)
+    private void _MakeLog(string msg)
     {
         if (!_doLog) return;
         LogWrapper.Info("Network", msg);
     }
 
-    private static string _getSafeCookieValue(string value)
+    private static string _GetSafeCookieValue(string value)
     {
         if (string.IsNullOrEmpty(value)) return value;
         var needsEncoding = value.Any(c => _ForbiddenCookieValueChar.Contains(c) || char.IsControl(c));

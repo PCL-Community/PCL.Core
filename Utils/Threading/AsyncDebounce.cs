@@ -47,6 +47,7 @@ public class AsyncDebounce(CancellationToken cancelToken = default) : IDisposabl
         CancellationTokenSource? capturedCts;
         Task? runningToAwait;
 
+#pragma warning disable VSTHRD103 // 禁用检查 避免智障警告
         lock (_resetLock)
         {
             // 只取消，不在这里 Dispose
@@ -96,6 +97,7 @@ public class AsyncDebounce(CancellationToken cancelToken = default) : IDisposabl
                 }
             }, _cts.Token);
         }
+#pragma warning restore VSTHRD103
 
         // 避免 ScheduledTask 并发
         if (runningToAwait is not null) await runningToAwait.ConfigureAwait(false);

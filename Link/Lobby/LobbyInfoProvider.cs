@@ -29,11 +29,11 @@ public static class LobbyInfoProvider
         /// <summary>
         /// 远程 IP 地址，需要先解析大厅类型再填充
         /// </summary>
-        public string? Ip { get; init; }
+        public string? Ip { get; set; }
         /// <summary>
         /// 目标游戏端口
         /// </summary>
-        public required int Port { get; init; }
+        public required int Port { get; set; }
     }
 
     public enum LobbyType

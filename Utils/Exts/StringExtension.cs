@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace PCL.Core.Utils.Exts;
@@ -200,8 +201,22 @@ public static class StringExtension
     /// </summary>
     // ReSharper disable once InconsistentNaming
     public static bool IsASCII(this string str)
+        => str.All(c => c < 128);
+
+    public static T ParseToEnum<T>(this string str) where T : struct, Enum
     {
-        return str.All(c => c < 128);
+        if (String.IsNullOrWhiteSpace(str))
+        {
+            return (T)(object)0;
+        }
+        else if (int.TryParse(str, out int numericValue))
+        {
+            return (T)(object)numericValue;
+        }
+        else
+        {
+            return Enum.Parse<T>(str, true);
+        }
     }
     
     public static bool StartsWithF(this string str, string prefix, bool ignoreCase = false)

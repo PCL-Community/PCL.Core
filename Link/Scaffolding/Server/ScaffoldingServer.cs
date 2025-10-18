@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
@@ -9,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.Link.Scaffolding.Models;
 using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using PCL.Core.Logging;
 
@@ -24,6 +26,8 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     private readonly Dictionary<string, IRequestHandler> _handlers;
     private readonly CancellationTokenSource _cts = new();
     private Task? _listenTask;
+
+    public ImmutableDictionary<string, PlayerProfile> CurrentPlayers => _context.PlayerProfiles.ToImmutableDictionary();
 
     #region Events
 

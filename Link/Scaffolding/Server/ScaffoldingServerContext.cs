@@ -11,7 +11,7 @@ public class ScaffoldingServerContext : IServerContext
     public ConcurrentDictionary<string, PlayerProfile> PlayerProfiles { get; }
 
     /// <inheritdoc />
-    public ushort MinecraftServerProt { get; }
+    public int MinecraftServerProt { get; }
 
     /// <inheritdoc />
     public IReadOnlyList<string> SupportedProtocols { get; }
@@ -25,7 +25,7 @@ public class ScaffoldingServerContext : IServerContext
 
     private ScaffoldingServerContext(
         ConcurrentDictionary<string, PlayerProfile> profiles,
-        ushort mcPort,
+        int mcPort,
         IReadOnlyList<string> supportedProtocols,
         RoomInfo info,
         string playerName)
@@ -37,11 +37,8 @@ public class ScaffoldingServerContext : IServerContext
         PlayerName = playerName;
     }
 
-    public static ScaffoldingServerContext Create(string playerName)
+    public static ScaffoldingServerContext Create(string playerName, int mcPort)
     {
-        // TODO: impl this
-        ushort port = 25565;
-
         var profile = new PlayerProfile
         {
             Name = playerName,
@@ -58,6 +55,6 @@ public class ScaffoldingServerContext : IServerContext
         var dic = new ConcurrentDictionary<string, PlayerProfile>();
         _ = dic.TryAdd(string.Empty, profile);
 
-        return new ScaffoldingServerContext(dic, port, supportedProtocols, roomCode, playerName);
+        return new ScaffoldingServerContext(dic, mcPort, supportedProtocols, roomCode, playerName);
     }
 }

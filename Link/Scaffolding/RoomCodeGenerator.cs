@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -40,7 +41,7 @@ public static class RoomCodeGenerator
         return _Encode(validValue);
     }
 
-    public static bool TryParse(string? input, out RoomInfo? roomInfo)
+    public static bool TryParse(string input, [NotNullWhen(true)] out RoomInfo? roomInfo)
     {
         roomInfo = null;
         if (string.IsNullOrWhiteSpace(input) || !input.StartsWith(FullCodePrefix, StringComparison.Ordinal))

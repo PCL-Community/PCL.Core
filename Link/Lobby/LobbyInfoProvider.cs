@@ -30,7 +30,7 @@ public static class LobbyInfoProvider
         /// <summary>
         /// 远程 IP 地址，需要先解析大厅类型再填充
         /// </summary>
-        public required string Ip { get; init; }
+        public string? Ip { get; init; }
 
         /// <summary>
         /// 目标游戏端口

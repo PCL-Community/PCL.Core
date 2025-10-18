@@ -18,7 +18,7 @@ namespace PCL.Core.Link.Scaffolding;
 public sealed class ScaffoldingClient : IAsyncDisposable
 {
     private readonly string _host;
-    private readonly int _port;
+    private readonly int _scfPort;
     private readonly SemaphoreSlim _srLock = new(1, 1);
     private TcpClient? _tcpClient;
     private PipeReader? _pipeReader;
@@ -38,10 +38,10 @@ public sealed class ScaffoldingClient : IAsyncDisposable
 
     public bool IsConnected => _tcpClient?.Connected ?? false;
 
-    public ScaffoldingClient(string host, int prot, string playerName, string machineId, string vendor)
+    public ScaffoldingClient(string host, int scfPort, string playerName, string machineId, string vendor)
     {
         _host = host;
-        _port = prot;
+        _scfPort = scfPort;
 
         _playerPingRequest = new PlayerPingRequest(playerName, machineId, vendor);
     }
@@ -57,11 +57,18 @@ public sealed class ScaffoldingClient : IAsyncDisposable
         }
 
         _tcpClient = new TcpClient();
-        await _tcpClient.ConnectAsync(_host, _port, ct).ConfigureAwait(false);
-
-        var stream = _tcpClient.GetStream();
-        _pipeReader = PipeReader.Create(stream);
-        _pipeWriter = PipeWriter.Create(stream);
+        try
+        {
+            await _tcpClient.ConnectAsync(_host, _scfPort, ct).ConfigureAwait(false);
+            var stream = _tcpClient.GetStream();
+            _pipeReader = PipeReader.Create(stream);
+            _pipeWriter = PipeWriter.Create(stream);
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "ScaffoldingClient", "Failed to connect to server.");
+            ServerShuttedDown?.Invoke();
+        }
 
         _StartHeartbeats();
     }
@@ -78,7 +85,7 @@ public sealed class ScaffoldingClient : IAsyncDisposable
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(15), ct).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
 
                 await SendRequestAsync(_playerPingRequest, ct).ConfigureAwait(false);
 

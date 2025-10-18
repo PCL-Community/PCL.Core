@@ -14,7 +14,7 @@ public interface IServerContext
     /// <summary>
     /// Gets the prot of the running Minecraft server.
     /// </summary>
-    ushort MinecraftServerProt { get; }
+    int MinecraftServerProt { get; }
 
     /// <summary>
     /// Gets the list of supported protocols by the server.

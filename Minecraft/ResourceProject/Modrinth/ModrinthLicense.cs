@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 
-namespace PCL.Core.Minecraft.ResourceProject.Modrinth;
+namespace PCL.Core.Minecraft.ResourceProject.Modrinth.Models;
 
 [Serializable]
 public record ModrinthLicense(
-    string id,
-    string name,
-    string? url);
+    string Id,
+    string Name,
+    string? Url);

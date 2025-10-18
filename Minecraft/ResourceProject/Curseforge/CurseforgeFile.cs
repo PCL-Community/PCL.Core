@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 
 namespace PCL.Core.Minecraft.ResourceProject.Curseforge;
 
 [Serializable]
 public record CurseforgeFile(
-    int id,
-    int gameId,
-    int modId,
-    bool isAvailable,
-    string displayName,
-    string fileName,
-    int releaseType,
-    int fileStatus,
-    CurseforgeHashes hashes);
+    int Id,
+    int GameId,
+    int ModId,
+    bool IsAvailable,
+    string DisplayName,
+    string FileName,
+    int ReleaseType,
+    int FileStatus,
+    CurseforgeHashes Hashes);

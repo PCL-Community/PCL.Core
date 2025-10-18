@@ -1,24 +1,24 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace PCL.Core.Minecraft.ResourceProject.Curseforge;
 
 [Serializable]
 public record class CurseforgeProject(
-    int id,
-    int gameId,
-    string name,
-    string slug,
-    CurseforgeLinks links,
-    string summary,
-    int status,
-    int downloadCount,
-    bool isFeatured,
-    int primaryCategoryId,
-    List<CurseforgeCategories> categories,
-    int classId,
-    List<CurseforgeAuthors> authors,
-    CurseforgePictures logo,
-    List<CurseforgePictures> screenshots,
-    int mainFileId,
-    object latestFiles);
+    int Id,
+    int GameId,
+    string Name,
+    string Slug,
+    CurseforgeLinks Links,
+    string Summary,
+    int Status,
+    int DownloadCount,
+    bool IsFeatured,
+    int PrimaryCategoryId,
+    List<CurseforgeCategories> Categories,
+    int ClassId,
+    List<CurseforgeAuthors> Authors,
+    CurseforgePictures Logo,
+    List<CurseforgePictures> Screenshots,
+    int MainFileId,
+    object LatestFiles);

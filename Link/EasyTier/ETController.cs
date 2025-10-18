@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -51,15 +51,27 @@ public static class ETController
     {
         try
         {
-            if (TargetLobby == null || Precheck() != 0) { return 1; }
-            ETProcess = new Process { EnableRaisingEvents = true, StartInfo = new ProcessStartInfo { FileName = $"{ETPath}\\easytier-core.exe", WorkingDirectory = ETPath, WindowStyle = ProcessWindowStyle.Hidden } };
+            if (TargetLobby == null || Precheck() != 0)
+            {
+                return 1;
+            }
+
+            ETProcess = new Process
+            {
+                EnableRaisingEvents = true,
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = $"{ETPath}\\easytier-core.exe", WorkingDirectory = ETPath,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                }
+            };
 
             var arguments = new ArgumentsBuilder();
 
             // 大厅信息
             var name = TargetLobby.NetworkName;
             var secret = TargetLobby.NetworkSecret;
-            
+
             switch (TargetLobby.Type)
             {
                 case LobbyType.PCLCE:
@@ -92,7 +104,7 @@ public static class ETController
                 arguments.AddFlag("d");
                 arguments.Add("tcp-whitelist", "0");
                 arguments.Add("udp-whitelist", "0");
-                
+
                 JoinerLocalPort = NetworkHelper.NewTcpPort();
                 LogWrapper.Info("Link", $"ET 端口转发: 远程 {TargetLobby.Port} -> 本地 {JoinerLocalPort}");
                 arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
@@ -118,11 +130,13 @@ public static class ETController
                     LogWrapper.Warn("Link", $"无效的自定义节点 URL: {node}");
                 }
             }
+
             foreach (var relay in
-                from relay in relays
-                let serverType = Config.Link.ServerType
-                where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
-                select relay)
+                     from relay in relays
+                     let serverType = Config.Link.ServerType
+                     where (relay.Type == ETRelayType.Selfhosted && serverType != 2) ||
+                           (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
+                     select relay)
             {
                 arguments.Add("p", relay.Url);
             }

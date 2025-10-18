@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -117,7 +117,7 @@ public static class LobbyController
             Task.Delay(800).GetAwaiter().GetResult();
         }
 
-        if (isHost || TargetLobby.Ip is null) return 0;
+        if (isHost) return 0;
         string desc;
         var hostInfo = GetPlayerList().Item1?[0];
         if (hostInfo == null)

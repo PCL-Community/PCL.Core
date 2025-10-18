@@ -29,8 +29,8 @@ public class EasyTierEntity
     private Process? _etProcess;
     private readonly int _rpcPort;
     private readonly RoomInfo _room;
-    private readonly string _ip;
-    private readonly int _port;
+    private readonly int _mcPort;
+    private readonly int _scfPort;
     public int ForwardPort { get; private set; }
     public EtState State { get; private set; }
 
@@ -38,15 +38,15 @@ public class EasyTierEntity
     /// Constructor of EasyTierEntity
     /// </summary>
     /// <param name="room">The room information.</param>
-    /// <param name="ip">The server ip.</param>
-    /// <param name="port">The server port.</param>
+    /// <param name="mcPort">Minecraft port.</param>
+    /// <param name="scfPort">The server port.</param>
     /// <param name="asHost">Indicates whether the entity acts as a host.</param>
     /// <exception cref="InvalidOperationException">Thrown if EasyTier was broken.</exception>
-    public EasyTierEntity(RoomInfo room, string ip, int port, bool asHost)
+    public EasyTierEntity(RoomInfo room, int mcPort, int scfPort, bool asHost)
     {
-        _ip = ip;
         _room = room;
-        _port = port;
+        _mcPort = mcPort;
+        _scfPort = scfPort;
         State = EtState.Stopped;
 
         var existEntities = Process.GetProcessesByName("easytier-core");
@@ -134,9 +134,12 @@ public class EasyTierEntity
         if (asHost)
         {
             args.Add("i", "10.114.51.41")
-                .Add("host-name", $"scaffolding-mc-server-{_port}")
-                .Add("tcp-whitelist", _port.ToString())
-                .Add("udp-whitelist", _port.ToString())
+                .Add("host-name", $"scaffolding-mc-server-{_scfPort}")
+                .Add("tcp-whitelist", _scfPort.ToString())
+                .Add("tcp-whitelist", _mcPort.ToString())
+                .Add("tcp-whitelist", _mcPort.ToString())
+                .Add("udp-whitelist", _mcPort.ToString())
+                .Add("l", "tcp://0.0.0.0:0")
                 .Add("l", "udp://0.0.0.0:0");
         }
         else
@@ -145,6 +148,7 @@ public class EasyTierEntity
                 .Add("hostname", Guid.NewGuid().ToString())
                 .Add("tcp-whitelist", "0")
                 .Add("udp-whitelist", "0")
+                .Add("l", "tcp://0.0.0.0:0")
                 .Add("l", "udp://0.0.0.0:0");
         }
 
@@ -235,6 +239,7 @@ public class EasyTierEntity
         return 0;
     }
 
+    /// <exception cref="ArgumentException">Thrown if host is duplicated.</exception>
     public async Task<EtPlayerList> GetPlayersAsync()
     {
         var cliProcess = new Process
@@ -289,6 +294,11 @@ public class EasyTierEntity
 
                 if (info.Hostname.StartsWith("scaffolding-mc-server-", StringComparison.Ordinal))
                 {
+                    if (host is not null)
+                    {
+                        throw new ArgumentException("Duplicated host.", nameof(host));
+                    }
+
                     host = _ConvertPeerToPlayer(info);
                     continue;
                 }
@@ -299,6 +309,10 @@ public class EasyTierEntity
             var result = host is not null ? [host, ..players] : players;
 
             return new EtPlayerList(result, null);
+        }
+        catch (ArgumentException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

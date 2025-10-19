@@ -3,10 +3,10 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using PCL.Core.Link.Scaffolding.Abstractions;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Models;
 
-namespace PCL.Core.Link.Scaffolding.Requests;
+namespace PCL.Core.Link.Scaffolding.Client.Requests;
 
 public sealed class GetPlayerProfileListRequest : IRequest<IReadOnlyList<PlayerProfile>>
 {
@@ -17,7 +17,7 @@ public sealed class GetPlayerProfileListRequest : IRequest<IReadOnlyList<PlayerP
     };
 
     /// <inheritdoc />
-    public string RequestType { get; } = "c:player_profile_list";
+    public string RequestType { get; } = "c:player_profiles_list";
 
     /// <inheritdoc />
     public void WriteRequestBody(IBufferWriter<byte> writer)

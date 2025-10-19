@@ -79,10 +79,6 @@
     <!-- 项目自定义源生成器 -->
     <ItemGroup>
         <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Link\Scaffolding\Exceptions\" />
-      <Folder Include="Link\Scaffolding\Requests\" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 </Project>

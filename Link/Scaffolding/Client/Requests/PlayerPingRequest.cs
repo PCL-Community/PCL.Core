@@ -2,10 +2,10 @@ using System;
 using System.Buffers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using PCL.Core.Link.Scaffolding.Abstractions;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Models;
 
-namespace PCL.Core.Link.Scaffolding.Requests;
+namespace PCL.Core.Link.Scaffolding.Client.Requests;
 
 public sealed class PlayerPingRequest(string name, string machineId, string vendor) : IRequest<bool>
 {

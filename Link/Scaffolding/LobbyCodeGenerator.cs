@@ -1,5 +1,5 @@
 // This code is from terracota project.
-// Thanks for Burning_TNT's cuntribution!
+// Thanks for Burning_TNT's contribution!
 
 using System;
 using System.Collections.Generic;
@@ -7,11 +7,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Models;
 
 namespace PCL.Core.Link.Scaffolding;
 
-public static class RoomCodeGenerator
+public static class LobbyCodeGenerator
 {
     private const string Chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
     private const string FullCodePrefix = "U/";
@@ -20,7 +20,7 @@ public static class RoomCodeGenerator
 
     private static readonly Dictionary<char, ulong> _CharToValueMap;
 
-    static RoomCodeGenerator()
+    static LobbyCodeGenerator()
     {
         _CharToValueMap = new Dictionary<char, ulong>(36);
         for (byte i = 0; i < Chars.Length; i++)
@@ -32,7 +32,7 @@ public static class RoomCodeGenerator
         _CharToValueMap['O'] = 0;
     }
 
-    public static RoomInfo Generate()
+    public static LobbyInfo Generate()
     {
         var randomValue = _GetSecureRandomUInt128();
         var remainder = randomValue % 7;
@@ -41,7 +41,7 @@ public static class RoomCodeGenerator
         return _Encode(validValue);
     }
 
-    public static bool TryParse(string input, [NotNullWhen(true)] out RoomInfo? roomInfo)
+    public static bool TryParse(string input, [NotNullWhen(true)] out LobbyInfo? roomInfo)
     {
         roomInfo = null;
         if (string.IsNullOrWhiteSpace(input) || !input.StartsWith(FullCodePrefix, StringComparison.Ordinal))
@@ -102,7 +102,7 @@ public static class RoomCodeGenerator
         }
 
         var codePayload = payloadSpan.ToString().ToUpperInvariant();
-        roomInfo = new RoomInfo(
+        roomInfo = new LobbyInfo(
             FullCodePrefix + codePayload,
             $"{NetworkNameProfix}{codePayload[..9]}",
             codePayload[10..]);
@@ -110,7 +110,7 @@ public static class RoomCodeGenerator
         return true;
     }
 
-    private static RoomInfo _Encode(UInt128 value)
+    private static LobbyInfo _Encode(UInt128 value)
     {
         var codeBuilder = new StringBuilder(21);
         var nameBuilder = new StringBuilder(28);
@@ -151,7 +151,7 @@ public static class RoomCodeGenerator
             }
         }
 
-        return new RoomInfo(codeBuilder.ToString(), nameBuilder.ToString(), secretBuilder.ToString());
+        return new LobbyInfo(codeBuilder.ToString(), nameBuilder.ToString(), secretBuilder.ToString());
     }
 
     private static UInt128 _GetSecureRandomUInt128()

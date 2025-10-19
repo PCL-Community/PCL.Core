@@ -1,9 +1,9 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using PCL.Core.Link.Scaffolding.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
 
-namespace PCL.Core.Link.Scaffolding.Requests;
+namespace PCL.Core.Link.Scaffolding.Client.Requests;
 
 public sealed class GetServerProtRequest : IRequest<ushort>
 {

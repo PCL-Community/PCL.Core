@@ -5,10 +5,10 @@ using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Abstractions;
-using PCL.Core.Link.Scaffolding.Exceptions;
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Exceptions;
 
-namespace PCL.Core.Link.Scaffolding.Framing;
+namespace PCL.Core.Link.Scaffolding.Client.Framing;
 
 internal static class ProtocolReader
 {

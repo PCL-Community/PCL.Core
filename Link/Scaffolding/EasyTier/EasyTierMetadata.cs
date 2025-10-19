@@ -1,11 +1,10 @@
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using PCL.Core.IO;
 
 namespace PCL.Core.Link.Scaffolding.EasyTier;
 
-public static class EasyTierMeatdata
+public static class EasyTierMetadata
 {
     public const string CurrentEasyTierVer = "2.4.5";
 

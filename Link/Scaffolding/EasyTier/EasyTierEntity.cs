@@ -10,7 +10,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Link.EasyTier;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils;
@@ -28,7 +28,7 @@ public class EasyTierEntity
 {
     private Process? _etProcess;
     private readonly int _rpcPort;
-    private readonly RoomInfo _room;
+    private readonly LobbyInfo _lobby;
     private readonly int _mcPort;
     private readonly int _scfPort;
     public int ForwardPort { get; private set; }
@@ -37,14 +37,14 @@ public class EasyTierEntity
     /// <summary>
     /// Constructor of EasyTierEntity
     /// </summary>
-    /// <param name="room">The room information.</param>
+    /// <param name="lobby">The room information.</param>
     /// <param name="mcPort">Minecraft port.</param>
     /// <param name="scfPort">The server port.</param>
     /// <param name="asHost">Indicates whether the entity acts as a host.</param>
     /// <exception cref="InvalidOperationException">Thrown if EasyTier was broken.</exception>
-    public EasyTierEntity(RoomInfo room, int mcPort, int scfPort, bool asHost)
+    public EasyTierEntity(LobbyInfo lobby, int mcPort, int scfPort, bool asHost)
     {
-        _room = room;
+        _lobby = lobby;
         _mcPort = mcPort;
         _scfPort = scfPort;
         State = EtState.Stopped;
@@ -56,9 +56,9 @@ public class EasyTierEntity
         }
 
         LogWrapper.Info("EasyTier", "Executable file path: {");
-        if (!(File.Exists($"{EasyTierMeatdata.EasyTierFilePath}\\easytier-core.exe") &&
-              File.Exists($"{EasyTierMeatdata.EasyTierFilePath}\\easytier-cli.exx") &&
-              File.Exists($"{EasyTierMeatdata.EasyTierFilePath}\\Packet.dll")))
+        if (!(File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\easytier-core.exe") &&
+              File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe") &&
+              File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\Packet.dll")))
         {
             LogWrapper.Error("EasyTier", "EasyTier was broken.");
 
@@ -98,6 +98,30 @@ public class EasyTierEntity
         return 0;
     }
 
+    /// <summary>
+    /// Stops EasyTier process.
+    /// </summary>
+    /// <returns>
+    /// - 1 means failed to stop EasyTier.<br/>
+    /// - 0 means successful stop.
+    /// </returns>
+    public int Stop()
+    {
+        try
+        {
+            _etProcess!.Kill();
+            State = EtState.Stopped;
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "EasyTier", "Failed to stop EasyTier.");
+            State = EtState.Stopped;
+            _etProcess = null;
+            return 1;
+        }
+    }
+
     private Process _BuildProcess(bool asHost)
     {
         var process = new Process
@@ -105,8 +129,8 @@ public class EasyTierEntity
             EnableRaisingEvents = true,
             StartInfo = new ProcessStartInfo
             {
-                FileName = $"{EasyTierMeatdata.EasyTierFilePath}\\easytier-core.exe",
-                WorkingDirectory = EasyTierMeatdata.EasyTierFilePath,
+                FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-core.exe",
+                WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
                 WindowStyle = ProcessWindowStyle.Hidden
             }
         };
@@ -120,12 +144,12 @@ public class EasyTierEntity
             .AddFlagIf(!Config.Link.TryPunchSym, "disable-sys-hole-punching")
             .AddFlagIf(!Config.Link.EnableIPv6, "disable-ipv6")
             .AddFlagIf(Config.Link.LatencyFirstMode, "latency-first")
-            .Add("encryption-algorithm", "chacha20")
+            .Add("encryption-algorithm", "aes")
             .Add("compression", "zstd")
             .Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLowerInvariant())
-            .Add("network-name", _room.NetworkName)
-            .Add("network-secret", _room.NetworkSecret)
-            .Add("relay-network-whitelist", _room.NetworkName)
+            .Add("network-name", _lobby.NetworkName)
+            .Add("network-secret", _lobby.NetworkSecret)
+            .Add("relay-network-whitelist", _lobby.NetworkName)
             .Add("machine-id", Utils.Secret.Identify.LaunchId)
             .Add("rpc-portal", _rpcPort.ToString())
             .Add("private-mode", "true");
@@ -246,8 +270,8 @@ public class EasyTierEntity
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = $"{EasyTierMeatdata.EasyTierFilePath}\\easytier-cli.exe",
-                WorkingDirectory = EasyTierMeatdata.EasyTierFilePath,
+                FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
+                WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
                 Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} -o json peer",
                 ErrorDialog = false,
                 CreateNoWindow = true,

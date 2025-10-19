@@ -1,8 +1,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using PCL.Core.Link.Scaffolding.Client;
+using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
-using PCL.Core.Link.Scaffolding.Models;
 using PCL.Core.Link.Scaffolding.Server;
 using PCL.Core.Net;
 
@@ -10,18 +11,22 @@ namespace PCL.Core.Link.Scaffolding;
 
 public static class ScaffoldingFactory
 {
-    public static async Task<ScaffoldingClient> CreateClientAsync(string playerName, string roomCode, RoomType from)
+    // TODO: change pcl-ce version code when update
+    private const string LobbyVendor = $"PCL CE Ver 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
+
+    public static async Task<ScaffoldingClientEntity> CreateClientAsync(string playerName, string lobbyCode,
+        LobbyType from)
     {
         var machineId = Utils.Secret.Identify.LaunchId;
 
-        if (!RoomCodeGenerator.TryParse(roomCode, out var info))
+        if (!LobbyCodeGenerator.TryParse(lobbyCode, out var info))
         {
-            throw new ArgumentException("Invalid room share code.", nameof(roomCode));
+            throw new ArgumentException("Invalid lobby share code.", nameof(lobbyCode));
         }
 
-        var entity = _CreateEasyTierEntity(info, 0, 0, false);
-        entity.Launch();
-        var players = await entity.GetPlayersAsync().ConfigureAwait(false);
+        var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
+        etEntity.Launch();
+        var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
         var hostInfo = players.Players?.FirstOrDefault();
 
         if (hostInfo is null)
@@ -31,8 +36,8 @@ public static class ScaffoldingFactory
 
         var host = from switch
         {
-            RoomType.PCLCE => "10.114.51.41",
-            RoomType.Terracotta => "10.144.144.1",
+            LobbyType.PCLCE => "10.114.51.41",
+            LobbyType.Terracotta => "10.144.144.1",
             _ => throw new ArgumentOutOfRangeException(nameof(from), from, "Unsupported room type.")
         };
 
@@ -41,22 +46,27 @@ public static class ScaffoldingFactory
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
-        return new ScaffoldingClient(host, scfPort, playerName, machineId, "pcl2-ce");
+        return new ScaffoldingClientEntity(new ScaffoldingClient(host, scfPort, playerName, machineId, LobbyVendor),
+            etEntity);
     }
 
-    public static ScaffoldingServer CreateServer(int mcPort, string playerName)
+    public static ScaffoldingServerEntity CreateServer(int mcPort, string playerName)
     {
         var context = ScaffoldingServerContext.Create(playerName, mcPort);
         var scfPort = NetworkHelper.NewTcpPort();
 
-        var entity = _CreateEasyTierEntity(context.UserRoomInfo, mcPort, scfPort, true);
-        entity.Launch();
+        var etEntity = _CreateEasyTierEntity(context.UserLobbyInfo, mcPort, scfPort, true);
+        etEntity.Launch();
 
         var server = new ScaffoldingServer(scfPort, context);
 
-        return server;
+        return new ScaffoldingServerEntity(server, etEntity);
     }
 
-    private static EasyTierEntity _CreateEasyTierEntity(RoomInfo room, int mcPort, int port, bool asHost) =>
-        new(room, mcPort, port, asHost);
+    private static EasyTierEntity _CreateEasyTierEntity(LobbyInfo lobby, int mcPort, int port, bool asHost) =>
+        new(lobby, mcPort, port, asHost);
 }
+
+public record ScaffoldingClientEntity(ScaffoldingClient Client, EasyTierEntity EasyTier);
+
+public record ScaffoldingServerEntity(ScaffoldingServer Server, EasyTierEntity EasyTier);

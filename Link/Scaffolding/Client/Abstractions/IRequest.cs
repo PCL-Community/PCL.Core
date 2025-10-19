@@ -1,7 +1,7 @@
 using System;
 using System.Buffers;
 
-namespace PCL.Core.Link.Scaffolding.Abstractions;
+namespace PCL.Core.Link.Scaffolding.Client.Abstractions;
 
 public interface IRequest<out TResponse>
 {

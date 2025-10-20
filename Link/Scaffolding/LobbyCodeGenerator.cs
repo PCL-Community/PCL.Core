@@ -104,7 +104,7 @@ public static class LobbyCodeGenerator
         var codePayload = payloadSpan.ToString().ToUpperInvariant();
         roomInfo = new LobbyInfo(
             FullCodePrefix + codePayload,
-            $"{NetworkNameProfix}{codePayload[..9]}",
+            $"{NetworkNamePrefix}{codePayload[..9]}",
             codePayload[10..]);
 
         return true;
@@ -117,7 +117,7 @@ public static class LobbyCodeGenerator
         var secretBuilder = new StringBuilder(9);
 
         codeBuilder.Append(FullCodePrefix);
-        nameBuilder.Append(NetworkNameProfix);
+        nameBuilder.Append(NetworkNamePrefix);
 
         for (var i = 0; i < CodeLength; i++)
         {

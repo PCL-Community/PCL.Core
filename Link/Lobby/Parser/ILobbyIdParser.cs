@@ -5,7 +5,7 @@ namespace PCL.Core.Link.Lobby.Parser;
 /// <summary>
 /// 房间号解析器接口，用于解析各个联机服务生成的房间号
 /// </summary>
-public interface IParser
+public interface ILobbyIdParser
 {
     /// <summary>
     /// 解析指定的房间号并输出LobbyInfo对象

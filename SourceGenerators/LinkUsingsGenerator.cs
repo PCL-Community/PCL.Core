@@ -69,7 +69,7 @@ public class LinkUsingsGenerator : IIncrementalGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 所有解析器实例的列表");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public static readonly List<IParser> Parsers = new List<IParser>");
+        sb.AppendLine("    public static readonly List<ILobbyIdParser> Parsers = new List<ILobbyIdParser>");
         sb.AppendLine("    {");
 
         // 添加所有找到的解析器类型
@@ -77,7 +77,7 @@ public class LinkUsingsGenerator : IIncrementalGenerator
         {
             if (parserClass is not INamedTypeSymbol namedTypeSymbol) continue;
             var fullTypeName = namedTypeSymbol.ToDisplayString();
-            sb.AppendLine($"        new {fullTypeName}() as IParser,");
+            sb.AppendLine($"        new {fullTypeName}() as ILobbyIdParser,");
         }
 
         sb.AppendLine("    };");

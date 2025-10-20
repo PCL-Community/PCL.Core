@@ -6,10 +6,10 @@ using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 namespace PCL.Core.Link.Lobby.Parser;
 
 /// <summary>
-/// PCLCE启动器的LobbyId解析器，用于验证和解析PCLCE启动器生成的LobbyId
+/// PCLCE 启动器的房间号解析器，用于验证和解析 PCLCE 启动器生成的房间号
 /// </summary>
 [Parser]
-public class LobbyIdParser : IParser
+public class LobbyIdParser : ILobbyIdParser
 {
 
     /// <inheritdoc />

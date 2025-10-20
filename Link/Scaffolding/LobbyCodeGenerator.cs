@@ -15,7 +15,7 @@ public static class LobbyCodeGenerator
 {
     private const string Chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
     private const string FullCodePrefix = "U/";
-    private const string NetworkNameProfix = "scaffolding-mc-";
+    private const string NetworkNamePrefix = "scaffolding-mc-";
     private const int CodeLength = 16;
 
     private static readonly Dictionary<char, ulong> _CharToValueMap;

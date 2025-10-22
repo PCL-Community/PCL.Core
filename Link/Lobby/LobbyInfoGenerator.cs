@@ -25,7 +25,7 @@ public static class LobbyInfoGenerator
         {
             foreach (var parser in LinkUsings.Parsers)
             {
-                if (parser.TryParse(code, out var lobbyInfo) && lobbyInfo != null)
+                if (parser.TryParse(code, out var lobbyInfo))
                 {
                     return lobbyInfo;
                 }

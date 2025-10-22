@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
@@ -13,7 +14,7 @@ public class LobbyIdParser : ILobbyIdParser
 {
 
     /// <inheritdoc />
-    public bool TryParse(string code, out LobbyInfo? lobbyInfo)
+    public bool TryParse(string code, [NotNullWhen(true)] out LobbyInfo? lobbyInfo)
     {
         try
         {

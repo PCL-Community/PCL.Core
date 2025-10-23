@@ -58,6 +58,19 @@ public class ConfigItem<TValue>(
 
     private readonly IConfigProvider _provider = ConfigService.GetProvider(source);
 
+    private bool _enableCache = true;
+    private ConfigValueCache<TValue> _valueCache = new();
+
+    public bool EnableCache
+    {
+        get => _enableCache;
+        set
+        {
+            if (!_enableCache) _valueCache.InvalidateAll();
+            _enableCache = value;
+        }
+    }
+
     /// <summary>
     /// 获取配置值。
     /// </summary>
@@ -65,7 +78,13 @@ public class ConfigItem<TValue>(
     /// <returns>已设置的配置值或默认值</returns>
     public TValue GetValue(object? argument = null)
     {
-        var exists = _provider.GetValue<TValue>(Key, out var value, argument);
+        TValue? value = default; // 这个初始化是多余的，但是煞笔巨硬不初始化会报错
+        var exists = _enableCache && _valueCache.TryRead(out value, argument);
+        if (!exists)
+        {
+            exists = _provider.GetValue(Key, out value, argument);
+            if (exists && _enableCache) _valueCache.Write(value!, argument);
+        }
         var e = _TriggerEvent(ConfigEvent.Get, argument, value, true);
         if (e != null)
         {
@@ -95,6 +114,7 @@ public class ConfigItem<TValue>(
             if (e.NewValueReplacement != null) value = (TValue)e.NewValueReplacement;
         }
         _provider.SetValue(Key, value, argument);
+        if (_enableCache) _valueCache.Write(value, argument);
         _TriggerEvent(ConfigEvent.Set, argument, value, e: e, isPreview: false);
         return true;
     }
@@ -124,6 +144,7 @@ public class ConfigItem<TValue>(
         var e = _TriggerEvent(ConfigEvent.Reset, argument, null, isPreview: true);
         if (e is { Cancelled: true }) return false;
         _provider.Delete(Key, argument);
+        if (_enableCache) _valueCache.Invalidate(argument);
         _TriggerEvent(ConfigEvent.Reset, argument, null, isPreview: false);
         return true;
     }
@@ -203,6 +224,10 @@ public class ConfigItem<TValue>(
     #endregion
 }
 
+/// <summary>
+/// <see cref="ConfigItem{TValue}"/> 的非泛型方法抽象层，用于手动解决巨硬
+/// 2025 年仍未支持的极其先进的隐式去泛型化。
+/// </summary>
 // ReSharper disable once InconsistentNaming
 public interface ConfigItem
 {
@@ -290,4 +315,9 @@ public interface ConfigItem
     /// 我们都不想给非引用类型装箱，但是龙猫想。
     /// </summary>
     public object DefaultValueNoType { get; }
+
+    /// <summary>
+    /// 是否启用值缓存，默认为 <c>true</c>。设为 <c>false</c> 将清除已存在的缓存。
+    /// </summary>
+    public bool EnableCache { get; set; }
 }

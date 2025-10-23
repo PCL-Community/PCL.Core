@@ -1,4 +1,4 @@
-﻿using PCL.Core.App;
+using PCL.Core.App;
 using PCL.Core.Link.Natayark;
 using PCL.Core.Net;
 using PCL.Core.Utils.Exts;
@@ -22,10 +22,12 @@ public static class LobbyInfoProvider
         public required LobbyType Type { get; init; }
         public required string NetworkName { get; init; }
         public required string NetworkSecret { get; init; }
+
         /// <summary>
         /// 远程 IP 地址，需要先解析大厅类型再填充
         /// </summary>
         public string? Ip { get; init; }
+
         /// <summary>
         /// 目标游戏端口
         /// </summary>

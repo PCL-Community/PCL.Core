@@ -21,7 +21,7 @@ public class GetProtocolsHandler : IRequestHandler
             "c:protocols",
             "c:server_port",
             "c:player_ping",
-            "c:player_profile_list"
+            "c:player_profiles_list"
         ];
 
         var rseponseContent = string.Join('\0', protocols);

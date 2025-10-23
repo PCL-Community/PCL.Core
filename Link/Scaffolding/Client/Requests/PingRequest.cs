@@ -1,8 +1,8 @@
 using System;
 using System.Buffers;
-using PCL.Core.Link.Scaffolding.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
 
-namespace PCL.Core.Link.Scaffolding.Requests;
+namespace PCL.Core.Link.Scaffolding.Client.Requests;
 
 public sealed class PingRequest : IRequest<ReadOnlyMemory<byte>>
 {

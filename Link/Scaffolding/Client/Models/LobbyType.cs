@@ -1,6 +1,6 @@
-namespace PCL.Core.Link.Scaffolding.Models;
+namespace PCL.Core.Link.Scaffolding.Client.Models;
 
-public enum RoomType
+public enum LobbyType
 {
     // ReSharper disable once InconsistentNaming
     PCLCE,

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.Server.Abstractions;
 
 namespace PCL.Core.Link.Scaffolding.Server.Handlers;

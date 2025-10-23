@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.Server.Abstractions;
 
 namespace PCL.Core.Link.Scaffolding.Server;
@@ -14,11 +13,7 @@ public class ScaffoldingServerContext : IServerContext
     public int MinecraftServerProt { get; }
 
     /// <inheritdoc />
-    public IReadOnlyList<string> SupportedProtocols { get; }
-
-
-    /// <inheritdoc />
-    public RoomInfo UserRoomInfo { get; }
+    public LobbyInfo UserLobbyInfo { get; }
 
     /// <inheritdoc />
     public string PlayerName { get; }
@@ -26,14 +21,12 @@ public class ScaffoldingServerContext : IServerContext
     private ScaffoldingServerContext(
         ConcurrentDictionary<string, PlayerProfile> profiles,
         int mcPort,
-        IReadOnlyList<string> supportedProtocols,
-        RoomInfo info,
+        LobbyInfo info,
         string playerName)
     {
         PlayerProfiles = profiles;
         MinecraftServerProt = mcPort;
-        SupportedProtocols = supportedProtocols;
-        UserRoomInfo = info;
+        UserLobbyInfo = info;
         PlayerName = playerName;
     }
 
@@ -47,14 +40,11 @@ public class ScaffoldingServerContext : IServerContext
             Kind = PlayerKind.HOST
         };
 
-        IReadOnlyList<string> supportedProtocols =
-            ["c:ping", "c:protocols", "c:server_port", "c:player_ping", "c:player_profile_list"];
-
-        var roomCode = RoomCodeGenerator.Generate();
+        var roomCode = LobbyCodeGenerator.Generate();
 
         var dic = new ConcurrentDictionary<string, PlayerProfile>();
         _ = dic.TryAdd(string.Empty, profile);
 
-        return new ScaffoldingServerContext(dic, mcPort, supportedProtocols, roomCode, playerName);
+        return new ScaffoldingServerContext(dic, mcPort, roomCode, playerName);
     }
 }

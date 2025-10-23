@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace PCL.Core.Link.Scaffolding.Models;
+namespace PCL.Core.Link.Scaffolding.Client.Models;
 
 public record PlayerProfile
 {

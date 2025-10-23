@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using PCL.Core.Link.Scaffolding.Models;
+using PCL.Core.Link.Scaffolding.Client.Models;
 
 namespace PCL.Core.Link.Scaffolding.Server.Abstractions;
 
@@ -16,15 +15,11 @@ public interface IServerContext
     /// </summary>
     int MinecraftServerProt { get; }
 
-    /// <summary>
-    /// Gets the list of supported protocols by the server.
-    /// </summary>
-    IReadOnlyList<string> SupportedProtocols { get; }
 
     /// <summary>
     /// Gets the room information.
     /// </summary>
-    RoomInfo UserRoomInfo { get; }
+    LobbyInfo UserLobbyInfo { get; }
 
     /// <summary>
     /// Player name(Host).

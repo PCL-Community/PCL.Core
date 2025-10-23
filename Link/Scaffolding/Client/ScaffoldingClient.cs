@@ -4,16 +4,16 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Abstractions;
-using PCL.Core.Link.Scaffolding.Framing;
-using PCL.Core.Link.Scaffolding.Models;
-using PCL.Core.Link.Scaffolding.Requests;
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Framing;
+using PCL.Core.Link.Scaffolding.Client.Models;
+using PCL.Core.Link.Scaffolding.Client.Requests;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Link.Scaffolding;
+namespace PCL.Core.Link.Scaffolding.Client;
 
 /// <summary>
-/// A client for the scaffolding data exchange protocol.
+/// A client for the Scaffolding data exchange protocol.
 /// </summary>
 public sealed class ScaffoldingClient : IAsyncDisposable
 {
@@ -47,9 +47,9 @@ public sealed class ScaffoldingClient : IAsyncDisposable
     }
 
     /// <summary>
-    /// Connects to ht eSacffolding server.
+    /// Connects to a Scaffolding server.
     /// </summary>
-    public async Task ConnectedAsync(CancellationToken ct = default)
+    public async Task ConnectAsync(CancellationToken ct = default)
     {
         if (IsConnected)
         {
@@ -100,7 +100,7 @@ public sealed class ScaffoldingClient : IAsyncDisposable
             catch (Exception ex)
             {
                 LogWrapper.Error(ex, "[ScaffoldingClient]",
-                    "Failed when sending heartbeat message. Maybe server ws shutted down.");
+                    "Failed when sending heartbeat message. Maybe the server has been shut down.");
 
                 ServerShuttedDown?.Invoke();
                 break;

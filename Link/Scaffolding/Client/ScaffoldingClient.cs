@@ -36,6 +36,8 @@ public sealed class ScaffoldingClient : IAsyncDisposable
 
     #endregion
 
+    public IReadOnlyList<PlayerProfile>? PlayerList;
+
     public bool IsConnected => _tcpClient?.Connected ?? false;
 
     public ScaffoldingClient(string host, int scfPort, string playerName, string machineId, string vendor)
@@ -89,9 +91,9 @@ public sealed class ScaffoldingClient : IAsyncDisposable
 
                 await SendRequestAsync(_playerPingRequest, ct).ConfigureAwait(false);
 
-                var playerList = await SendRequestAsync(new GetPlayerProfileListRequest(), ct).ConfigureAwait(false);
+                PlayerList = await SendRequestAsync(new GetPlayerProfileListRequest(), ct).ConfigureAwait(false);
 
-                PlayerListUpdated?.Invoke(playerList);
+                PlayerListUpdated?.Invoke(PlayerList);
             }
             catch (OperationCanceledException)
             {

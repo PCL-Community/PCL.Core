@@ -52,7 +52,7 @@ public class EasyTierEntity
         var existEntities = Process.GetProcessesByName("easytier-core");
         foreach (var entity in existEntities)
         {
-            LogWrapper.Warn("EasyTier", $"Find exist EasyTier Entity, may influence some thing: {entity.Id}");
+            LogWrapper.Warn("EasyTier", $"Find exist EasyTier Entity, may affect something: {entity.Id}");
         }
 
         LogWrapper.Info("EasyTier", "Executable file path: {");
@@ -74,10 +74,10 @@ public class EasyTierEntity
     }
 
     /// <summary>
-    /// Launchs EasyTier process.
+    /// Launches EasyTier process.
     /// </summary>
     /// <returns>
-    /// - 1 means failed to launch EasyTire and never can launch again.<br/>
+    /// - 1 means failed to launch EasyTier and can never launch again.<br/>
     /// - 0 means successful launch.
     /// </returns>
     public int Launch()
@@ -89,7 +89,7 @@ public class EasyTierEntity
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, "EasyTire", "Failed to launch EasyTire.");
+            LogWrapper.Error(ex, "EasyTier", "Failed to launch EasyTier.");
             State = EtState.Stopped;
             _etProcess = null;
             return 1;
@@ -160,7 +160,7 @@ public class EasyTierEntity
             args.Add("i", "10.114.51.41")
                 .Add("host-name", $"scaffolding-mc-server-{_scfPort}")
                 .Add("tcp-whitelist", _scfPort.ToString())
-                .Add("tcp-whitelist", _mcPort.ToString())
+                .Add("udp-whitelist", _scfPort.ToString())
                 .Add("tcp-whitelist", _mcPort.ToString())
                 .Add("udp-whitelist", _mcPort.ToString())
                 .Add("l", "tcp://0.0.0.0:0")
@@ -176,7 +176,7 @@ public class EasyTierEntity
                 .Add("l", "udp://0.0.0.0:0");
         }
 
-        foreach (var relay in _GetEyRayList())
+        foreach (var relay in _GetEtRelayList())
         {
             args.Add("p", relay.Url);
         }
@@ -189,7 +189,7 @@ public class EasyTierEntity
         return process;
     }
 
-    private IReadOnlyList<ETRelay> _GetEyRayList()
+    private IReadOnlyList<ETRelay> _GetEtRelayList()
     {
         var relays = ETRelay.RelayList;
         var customedNodes = Config.Link.RelayServer.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -207,7 +207,7 @@ public class EasyTierEntity
             }
             else
             {
-                LogWrapper.Warn("EasyTier", $"Invalid cunstomed node URL: {node}.");
+                LogWrapper.Warn("EasyTier", $"Invalid custom node URL: {node}.");
             }
         }
 
@@ -297,7 +297,7 @@ public class EasyTierEntity
 
             if (!cliProcess.HasExited)
             {
-                LogWrapper.Warn("EasyTier", "Time outted when trying to get EasyTier peer info.");
+                LogWrapper.Warn("EasyTier", "Timeout when trying to get EasyTier peer info.");
             }
 
             if (JsonNode.Parse(output) is not JsonArray jArray)

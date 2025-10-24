@@ -12,7 +12,8 @@ namespace PCL.Core.Link.Scaffolding;
 public static class ScaffoldingFactory
 {
     // TODO: change pcl-ce version code when update
-    private const string LobbyVendor = $"PCL CE Ver 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
+    private const string LobbyVendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
+    private const string HostIp = "10.114.51.41";
 
     public static async Task<ScaffoldingClientEntity> CreateClientAsync(string playerName, string lobbyCode,
         LobbyType from)
@@ -21,7 +22,7 @@ public static class ScaffoldingFactory
 
         if (!LobbyCodeGenerator.TryParse(lobbyCode, out var info))
         {
-            throw new ArgumentException("Invalid lobby share code.", nameof(lobbyCode));
+            throw new ArgumentException("Invalid lobby code.", nameof(lobbyCode));
         }
 
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
@@ -31,22 +32,17 @@ public static class ScaffoldingFactory
 
         if (hostInfo is null)
         {
+            etEntity.Stop();
             throw new ArgumentNullException(nameof(hostInfo), "Can not get the host information.");
         }
 
-        var host = from switch
-        {
-            LobbyType.PCLCE => "10.114.51.41",
-            LobbyType.Terracotta => "10.144.144.1",
-            _ => throw new ArgumentOutOfRangeException(nameof(from), from, "Unsupported room type.")
-        };
-
         if (!int.TryParse(hostInfo.HostName[22..], out var scfPort))
         {
+            etEntity.Stop();
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
-        return new ScaffoldingClientEntity(new ScaffoldingClient(host, scfPort, playerName, machineId, LobbyVendor),
+        return new ScaffoldingClientEntity(new ScaffoldingClient(HostIp, scfPort, playerName, machineId, LobbyVendor),
             etEntity);
     }
 

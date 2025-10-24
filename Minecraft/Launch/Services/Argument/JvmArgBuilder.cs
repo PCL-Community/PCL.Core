@@ -369,9 +369,11 @@ public class JvmArgBuilder(IMcInstance instance) {
         switch (Config.Launch.PreferredIpStack) {
             case 0:
                 arguments.Add("-Djava.net.preferIPv4Stack=true");
+                arguments.Add("-Djava.net.preferIPv4Addresses=true");
                 break;
             case 2:
                 arguments.Add("-Djava.net.preferIPv6Stack=true");
+                arguments.Add("-Djava.net.preferIPv6Addresses=true");
                 break;
         }
     }

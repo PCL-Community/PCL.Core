@@ -24,11 +24,14 @@ namespace PCL.Core.Link.Lobby;
 
 public static class LobbyController
 {
+    public static ScaffoldingClientEntity? ScfClientEntity;
+    public static ScaffoldingServerEntity? ScfServerEntity;
+
     public static ScaffoldingClientEntity? LaunchClient(string username, string code)
     {
         if (TargetLobby == null) { return null; }
         
-        if (_sendTelemetry(false) == 1) { return null; }
+        if (_SendTelemetry(false) == 1) { return null; }
 
         try
         {
@@ -39,7 +42,8 @@ public static class LobbyController
             scfEntity.Client.ConnectAsync().GetAwaiter().GetResult();
             var port = scfEntity.Client.SendRequestAsync(new GetServerPortRequest()).GetAwaiter()
                 .GetResult();
-            string hostname = string.Empty;
+
+            var hostname = string.Empty;
             
             foreach (var profile in scfEntity.Client.PlayerList)
             {
@@ -49,7 +53,7 @@ public static class LobbyController
                 }
             }
             
-            string desc = hostname.IsNullOrWhiteSpace() ? " - " + hostname : string.Empty;
+            var desc = hostname.IsNullOrWhiteSpace() ? " - " + hostname : string.Empty;
 
             var tcpPortForForward = NetworkHelper.NewTcpPort();
             McForward = new TcpForward(IPAddress.Loopback, tcpPortForForward, IPAddress.Loopback, port);
@@ -88,7 +92,7 @@ public static class LobbyController
 
     public static ScaffoldingServerEntity? LaunchServer(string username, int port)
     {
-        if (_sendTelemetry(true) == 1) { return null; }
+        if (_SendTelemetry(true) == 1) { return null; }
         
         return ScaffoldingFactory.CreateServer(port, username);
     }
@@ -108,20 +112,31 @@ public static class LobbyController
     /// <summary>
     /// 退出大厅。这将同时关闭 EasyTier 和 MC 端口转发，需要自行清理 UI。
     /// </summary>
-    public static int Close()
+    public static async Task<int> Close()
     {
-        TargetLobby = null;
-        ETController.Exit();
+        // TargetLobby = null;
+        // ETController.Exit();
         McForward?.Stop();
         McBroadcast?.Stop();
+        if (ScfClientEntity != null)
+        {
+            await ScfClientEntity.Client.DisposeAsync();
+            ScfClientEntity.EasyTier.Stop();
+        } 
+        else if (ScfServerEntity != null)
+        {
+            await ScfServerEntity.Server.DisposeAsync();
+            ScfServerEntity.EasyTier.Stop();
+        }
         return 0;
     }
 
-    private static int _sendTelemetry(bool isHost)
+    private static int _SendTelemetry(bool isHost)
     {
         LogWrapper.Info("Link", "开始发送联机数据");
         var servers = Config.Link.RelayServer;
         var serverType = Config.Link.ServerType;
+
         if (Config.Link.ServerType != 2)
         {
             servers = (
@@ -130,6 +145,7 @@ public static class LobbyController
                 select relay
             ).Aggregate(servers, (current, relay) => current + $"{relay.Url};");
         }
+
         JsonObject data = new()
         {
             ["Tag"] = "Link",
@@ -138,11 +154,11 @@ public static class LobbyController
             ["NaidEmail"] = NaidProfile.Email,
             ["NaidLastIp"] = NaidProfile.LastIp,
             ["CustomName"] = Config.Link.Username,
-            ["NetworkName"] = TargetLobby.NetworkName,
             ["Servers"] = servers,
             ["IsHost"] = isHost
         };
         JsonObject sendData = new() { ["data"] = data };
+
         try
         {
             HttpContent httpContent = new StringContent(sendData.ToJsonString(), Encoding.UTF8, "application/json");

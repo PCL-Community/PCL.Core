@@ -31,8 +31,10 @@ public class EasyTierEntity
     private readonly LobbyInfo _lobby;
     private readonly int _mcPort;
     private readonly int _scfPort;
+
     public int ForwardPort { get; private set; }
     public EtState State { get; private set; }
+    public LobbyInfo Lobby  => _lobby;
 
     /// <summary>
     /// Constructor of EasyTierEntity

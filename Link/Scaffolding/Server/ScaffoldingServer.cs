@@ -7,11 +7,13 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.Server.Abstractions;
+using PCL.Core.Link.Scaffolding.Server.Handlers;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Link.Scaffolding.Server;
@@ -42,10 +44,14 @@ public sealed class ScaffoldingServer : IAsyncDisposable
         _listener = new TcpListener(IPAddress.Any, port);
         _context = context;
 
-        _handlers = typeof(IRequestHandler).Assembly.GetTypes()
-            .Where(ty => ty is { IsClass: true, IsAbstract: false } && typeof(IRequestHandler).IsAssignableFrom(ty))
-            .Select(ty => (IRequestHandler)Activator.CreateInstance(ty)!)
-            .ToDictionary(key => key.RequestType);
+        _handlers = new()
+        {
+            ["c:player_ping"] = new PlayerPingHandler(),
+            ["c:server_port"] = new GetServerPortHandler(),
+            ["c:player_profiles_list"] = new GetPlayerProfileListHandler(),
+            ["c:protocols"] = new GetProtocolsHandler(),
+            ["c:ping"] = new PingHandler()
+        };
     }
 
     public void Start()

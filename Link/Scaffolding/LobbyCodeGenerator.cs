@@ -54,16 +54,18 @@ public static class LobbyCodeGenerator
             return false;
         }
 
-        Span<char> payloadChars = stackalloc char[CodeLength];
-        var payloadIndex = 0;
+        UInt128 value = 0;
+        UInt128 multiplier = 1;
 
         var payloadSpan = input.AsSpan(FullCodePrefix.Length);
-        for (var i = 0; i < payloadSpan.Length; i++)
+        var charCount = 0;
+
+        for (var i = 0; i < payloadSpan.Length; i ++)
         {
             var ch = payloadSpan[i];
             if (ch == '-')
             {
-                if (i is not (4 or 9 or 14))
+                if (i != 4 && i != 9 && i != 14)
                 {
                     return false;
                 }
@@ -71,29 +73,25 @@ public static class LobbyCodeGenerator
                 continue;
             }
 
-            if (payloadIndex >= CodeLength)
+            if (charCount >= CodeLength)
             {
                 return false;
             }
 
-            payloadChars[payloadIndex++] = char.ToUpperInvariant(ch);
+            var upperChar = char.ToUpperInvariant(ch);
+            if (!_CharToValueMap.TryGetValue(upperChar, out var charValue))
+            {
+                return false;
+            }
+
+            value += charValue * multiplier;
+            multiplier *= 34;
+            charCount++;
         }
 
-        if (payloadIndex != CodeLength)
+        if (charCount != CodeLength)
         {
             return false;
-        }
-
-        UInt128 value = 0;
-        for (var i = CodeLength - 1; i >= 0; i--)
-        {
-            var ch = payloadChars[i];
-            if (!_CharToValueMap.TryGetValue(ch, out var charValue))
-            {
-                return false;
-            }
-
-            value += charValue * _Power(34, i);
         }
 
         if (value % 7 != 0)
@@ -112,46 +110,24 @@ public static class LobbyCodeGenerator
 
     private static LobbyInfo _Encode(UInt128 value)
     {
-        var codeBuilder = new StringBuilder(21);
-        var nameBuilder = new StringBuilder(28);
-        var secretBuilder = new StringBuilder(9);
-
-        codeBuilder.Append(FullCodePrefix);
-        nameBuilder.Append(NetworkNamePrefix);
+        var codePayloadBuilder = new StringBuilder(19);
+        UInt128 currentValue = value;
 
         for (var i = 0; i < CodeLength; i++)
         {
-            var v = Chars[(int)(value % 34)];
-            value /= 34;
-
-            if (i is 4 or 8 or 12)
+            if (i == 4 || i == 8 || i == 12)
             {
-                codeBuilder.Append('-');
+                codePayloadBuilder.Append('-');
             }
 
-            codeBuilder.Append(v);
-
-            if (i < 8)
-            {
-                if (i == 4)
-                {
-                    nameBuilder.Append('-');
-                }
-
-                nameBuilder.Append(v);
-            }
-            else
-            {
-                if (i == 12)
-                {
-                    secretBuilder.Append('-');
-                }
-
-                secretBuilder.Append(v);
-            }
+            codePayloadBuilder.Append(Chars[(int)(currentValue % 34)]);
+            currentValue /= 34;
         }
 
-        return new LobbyInfo(codeBuilder.ToString(), nameBuilder.ToString(), secretBuilder.ToString());
+        var codePayload = codePayloadBuilder.ToString();
+        var fullCode = FullCodePrefix + codePayload;
+
+        return new LobbyInfo(fullCode, $"{NetworkNamePrefix}{codePayload[..9]}", codePayload[10..]);
     }
 
     private static UInt128 _GetSecureRandomUInt128()
@@ -163,24 +139,5 @@ public static class LobbyCodeGenerator
         var upper = MemoryMarshal.Read<ulong>(bytes[8..]);
 
         return new UInt128(lower, upper);
-    }
-
-    private static UInt128 _Power(ulong b, int exp)
-    {
-        UInt128 res = 1;
-        UInt128 basis = b;
-
-        while (exp > 0)
-        {
-            if (exp % 2 == 1)
-            {
-                res *= basis;
-            }
-
-            basis *= basis;
-            exp /= 2;
-        }
-
-        return res;
     }
 }

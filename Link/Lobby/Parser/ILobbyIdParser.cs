@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using static PCL.Core.Link.Lobby.LobbyInfoProvider;
+using PCL.Core.Link.Scaffolding.Client.Models;
 
 namespace PCL.Core.Link.Lobby.Parser;
 

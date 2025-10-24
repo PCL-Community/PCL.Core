@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using PCL.Core.Link.Lobby;
 using PCL.Core.Link.Scaffolding.Client;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
@@ -18,8 +19,8 @@ public static class ScaffoldingFactory
         LobbyType from)
     {
         var machineId = Utils.Secret.Identify.LaunchId;
-
-        if (!LobbyCodeGenerator.TryParse(lobbyCode, out var info))
+        var info = LobbyInfoGenerator.Parse(lobbyCode);
+        if (info == null)
         {
             throw new ArgumentException("Invalid lobby share code.", nameof(lobbyCode));
         }

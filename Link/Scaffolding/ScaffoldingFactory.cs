@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using PCL.Core.Link.Scaffolding.Client;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
+using PCL.Core.Link.Scaffolding.Exceptions;
 using PCL.Core.Link.Scaffolding.Server;
 using PCL.Core.Net;
 
@@ -37,6 +38,13 @@ public static class ScaffoldingFactory
         }
         var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
         EasyPlayerInfo? hostInfo = null;
+        
+        // Local property alway be null.
+        if ( players.Players is null /*|| players.Local is null*/)
+        {
+            throw new FailedToGetPlayerException();
+        }
+
         foreach (var player in players.Players)
         {
             if (player.HostName.Contains("scaffolding-mc-server-"))

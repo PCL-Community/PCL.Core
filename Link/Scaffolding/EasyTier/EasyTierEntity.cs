@@ -43,7 +43,7 @@ public class EasyTierEntity
     /// <param name="mcPort">Minecraft port.</param>
     /// <param name="scfPort">The server port.</param>
     /// <param name="asHost">Indicates whether the entity acts as a host.</param>
-    /// <exception cref="InvalidOperationException">Thrown if EasyTier was broken.</exception>
+    /// <exception cref="FileNotFoundException">Thrown if EasyTier was broken.</exception>
     public EasyTierEntity(LobbyInfo lobby, int mcPort, int scfPort, bool asHost)
     {
         _lobby = lobby;
@@ -64,7 +64,7 @@ public class EasyTierEntity
         {
             LogWrapper.Error("EasyTier", "EasyTier was broken.");
 
-            throw new InvalidOperationException("EasyTier was broken.");
+            throw new FileNotFoundException("EasyTier was broken.");
         }
 
         State = EtState.Ready;

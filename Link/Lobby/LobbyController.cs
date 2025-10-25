@@ -10,7 +10,6 @@ using PCL.Core.Utils.Secret;
 using PCL.Core.Net;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
-using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Utils.OS;
@@ -28,15 +27,14 @@ public static class LobbyController
     public static ScaffoldingClientEntity? ScfClientEntity;
     public static ScaffoldingServerEntity? ScfServerEntity;
 
-    public static ScaffoldingClientEntity? LaunchClient(string username, string code)
+    public static async Task<ScaffoldingClientEntity?> LaunchClientAsync(string username, string code)
     {
-        if (_SendTelemetry(false) == 1) { return null; }
+        if (await _SendTelemetryAsync(false) == 1) { return null; }
 
         try
         {
-            var scfEntity = ScaffoldingFactory
-                .CreateClientAsync(username, code, LobbyType.Scaffolding).GetAwaiter()
-                .GetResult();
+            var scfEntity = await ScaffoldingFactory
+                .CreateClientAsync(username, code, LobbyType.Scaffolding).ConfigureAwait(false);
             
             scfEntity.Client.ConnectAsync().GetAwaiter().GetResult();
             var port = scfEntity.Client.SendRequestAsync(new GetServerPortRequest()).GetAwaiter()
@@ -46,7 +44,7 @@ public static class LobbyController
 
             while (scfEntity.Client.PlayerList == null)
             {
-                Task.Delay(800);
+                await Task.Delay(800).ConfigureAwait(false);
             }
             
             foreach (var profile in scfEntity.Client.PlayerList)
@@ -95,9 +93,9 @@ public static class LobbyController
         return null;
     }
 
-    public static ScaffoldingServerEntity? LaunchServer(string username, int port)
+    public async static Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
     {
-        if (_SendTelemetry(true) == 1) { return null; }
+        if (await _SendTelemetryAsync(true) == 1) { return null; }
         
         return ScaffoldingFactory.CreateServer(port, username);
     }
@@ -105,10 +103,10 @@ public static class LobbyController
     /// <summary>
     /// 检查主机的 MC 实例是否可用。
     /// </summary>
-    public static bool IsHostInstanceAvailable(int port)
+    public async static Task<bool >IsHostInstanceAvailableAsync(int port)
     {
         var ping = new McPing("127.0.0.1", port);
-        var info = ping.PingAsync().GetAwaiter().GetResult();
+        var info = await ping.PingAsync();
         if (info != null) return true;
         LogWrapper.Warn("Link", $"本地 MC 局域网实例 ({port}) 疑似已关闭");
         return false;
@@ -117,7 +115,7 @@ public static class LobbyController
     /// <summary>
     /// 退出大厅。这将同时关闭 EasyTier 和 MC 端口转发，需要自行清理 UI。
     /// </summary>
-    public static async Task<int> Close()
+    public static async Task<int> CloseAsync()
     {
         // TargetLobby = null;
         // ETController.Exit();
@@ -126,17 +124,17 @@ public static class LobbyController
         if (ScfClientEntity != null)
         {
             ScfClientEntity.EasyTier.Stop();
-            await ScfClientEntity.Client.DisposeAsync();
+            await ScfClientEntity.Client.DisposeAsync().ConfigureAwait(false);
         } 
         else if (ScfServerEntity != null)
         {
             ScfServerEntity.EasyTier.Stop();
-            await ScfServerEntity.Server.DisposeAsync();
+            await ScfServerEntity.Server.DisposeAsync().ConfigureAwait(false);
         }
         return 0;
     }
 
-    private static int _SendTelemetry(bool isHost)
+    private async static Task<int> _SendTelemetryAsync(bool isHost)
     {
         LogWrapper.Info("Link", "开始发送联机数据");
         var servers = Config.Link.RelayServer;
@@ -179,11 +177,12 @@ public static class LobbyController
             }
             else
             {
-                using var response = HttpRequestBuilder
+                using var response = await HttpRequestBuilder
                     .Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
                     .WithContent(httpContent)
                     .WithAuthentication(key)
-                    .SendAsync().Result;
+                    .SendAsync();
+
                 if (!response.IsSuccess)
                 {
                     if (RequiresLogin)

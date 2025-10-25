@@ -29,7 +29,7 @@ public class EasyTierEntity
     private Process? _etProcess;
     private readonly int _rpcPort;
     private readonly LobbyInfo _lobby;
-    private readonly int _mcPort;
+    public readonly int McPort;
     private readonly int _scfPort;
 
     public int ForwardPort { get; private set; }
@@ -47,7 +47,7 @@ public class EasyTierEntity
     public EasyTierEntity(LobbyInfo lobby, int mcPort, int scfPort, bool asHost)
     {
         _lobby = lobby;
-        _mcPort = mcPort;
+        McPort = mcPort;
         _scfPort = scfPort;
         State = EtState.Stopped;
 
@@ -57,7 +57,7 @@ public class EasyTierEntity
             LogWrapper.Warn("EasyTier", $"Find exist EasyTier Entity, may affect something: {entity.Id}");
         }
 
-        LogWrapper.Info("EasyTier", "Executable file path: {");
+        LogWrapper.Info("EasyTier", $"EasyTier folder path: {EasyTierMetadata.EasyTierFilePath}");
         if (!(File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\easytier-core.exe") &&
               File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe") &&
               File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\Packet.dll")))
@@ -146,15 +146,14 @@ public class EasyTierEntity
             .AddFlagIf(!Config.Link.TryPunchSym, "disable-sys-hole-punching")
             .AddFlagIf(!Config.Link.EnableIPv6, "disable-ipv6")
             .AddFlagIf(Config.Link.LatencyFirstMode, "latency-first")
-            .Add("encryption-algorithm", "aes")
+            .Add("encryption-algorithm", "aes-gcm")
             .Add("compression", "zstd")
             .Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLowerInvariant())
             .Add("network-name", _lobby.NetworkName)
             .Add("network-secret", _lobby.NetworkSecret)
             .Add("relay-network-whitelist", _lobby.NetworkName)
             .Add("machine-id", Utils.Secret.Identify.LaunchId)
-            .Add("rpc-portal", _rpcPort.ToString())
-            .Add("private-mode", "true");
+            .Add("rpc-portal", _rpcPort.ToString());
 
 
         if (asHost)
@@ -163,8 +162,8 @@ public class EasyTierEntity
                 .Add("host-name", $"scaffolding-mc-server-{_scfPort}")
                 .Add("tcp-whitelist", _scfPort.ToString())
                 .Add("udp-whitelist", _scfPort.ToString())
-                .Add("tcp-whitelist", _mcPort.ToString())
-                .Add("udp-whitelist", _mcPort.ToString())
+                .Add("tcp-whitelist", McPort.ToString())
+                .Add("udp-whitelist", McPort.ToString())
                 .Add("l", "tcp://0.0.0.0:0")
                 .Add("l", "udp://0.0.0.0:0");
         }
@@ -188,6 +187,15 @@ public class EasyTierEntity
             args.AddFlag("disable-p2p");
         }
 
+        if (!Config.Link.RelayForOthers)
+        {
+            args.Add("private-mode", "true");
+        }
+        
+        process.StartInfo.Arguments = args.GetResult();
+        
+        LogWrapper.Debug("EasyTier", process.StartInfo.Arguments);
+        
         return process;
     }
 
@@ -265,6 +273,57 @@ public class EasyTierEntity
         return 0;
     }
 
+    /// <summary>
+    /// Add a port forward to the EasyTier instance.
+    /// </summary>
+    /// <param name="targetIp">Remote IP</param>
+    /// <param name="targetPort">Remote Port</param>
+    /// <returns>Forwarded local port</returns>
+    public async Task<int> AddPortForward(string targetIp, int targetPort)
+    {
+        var localPort = NetworkHelper.NewTcpPort();
+        var cliProcess = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
+                WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
+                ErrorDialog = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
+                StandardInputEncoding = Encoding.UTF8
+            },
+            EnableRaisingEvents = true
+        };
+        try
+        {
+            cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp 0.0.0.0:{localPort} {targetIp}:{targetPort}";
+            cliProcess.Start();
+            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
+            
+            LogWrapper.Debug("ET Cli", await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
+                                       await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false));
+            
+            cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add udp 0.0.0.0:{localPort} {targetIp}:{targetPort}";
+            cliProcess.Start();
+            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
+            
+            LogWrapper.Debug("ET Cli", await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
+                                       await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false));
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e, "ET Cli", "Failed to add port forward.");
+        }
+        return localPort;
+    }
+    
     /// <exception cref="ArgumentException">Thrown if host is duplicated.</exception>
     public async Task<EtPlayerList> GetPlayersAsync()
     {
@@ -296,6 +355,8 @@ public class EasyTierEntity
 
             var output = await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
                          await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false);
+            
+            LogWrapper.Debug("[ET Cli] " + output);
 
             if (!cliProcess.HasExited)
             {
@@ -353,6 +414,7 @@ public class EasyTierEntity
         {
             IsHost = info.Hostname.StartsWith("scaffolding-mc-server", StringComparison.Ordinal),
             HostName = info.Hostname,
+            Ip = info.Ipv4,
             Ping = Math.Round(Convert.ToDouble(info.Ping != "-" ? info.Ping : "0")),
             Loss = Math.Round(Convert.ToDouble(info.Loss != "-" ? info.Loss.Replace("%", "") : "0")),
             NatType = info.NatType,

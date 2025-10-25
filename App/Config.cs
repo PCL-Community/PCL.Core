@@ -404,7 +404,7 @@ public static partial class Config
         [ConfigItem<LinkProtocolPreference>("LinkProtocolPreference", LinkProtocolPreference.Tcp)] public partial LinkProtocolPreference ProtocolPreference { get; set; }
 
         /// <summary>
-        /// 尝试打通对称性 NAT。
+        /// 尝试使用端口猜测打通对称性 NAT。
         /// </summary>
         [ConfigItem<bool>("LinkTryPunchSym", true)] public partial bool TryPunchSym { get; set; }
 
@@ -412,6 +412,11 @@ public static partial class Config
         /// 启用 IPv6。
         /// </summary>
         [ConfigItem<bool>("LinkEnableIPv6", true)] public partial bool EnableIPv6 { get; set; }
+        
+        /// <summary>
+        /// 允许为互联网上的其他用户中继流量。
+        /// </summary>
+        [ConfigItem<bool>("LinkRelayForOthers", false)] public partial bool RelayForOthers { get; set; }
     }
 
     /// <summary>

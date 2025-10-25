@@ -11,6 +11,7 @@ namespace PCL.Core.Link.Scaffolding;
 
 public static class ScaffoldingFactory
 {
+    // Please update ScaffoldingServerContext.cs at the same time.
     // TODO: change pcl-ce version code when update
     private const string LobbyVendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
     private const string HostIp = "10.114.51.41";
@@ -27,8 +28,22 @@ public static class ScaffoldingFactory
 
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
         etEntity.Launch();
+        var retrys = 0;
+        while (etEntity.State != EtState.Ready && retrys < 6)
+        {
+            await etEntity.CheckEasyTierStatusAsync();
+            await Task.Delay(800);
+            retrys++;
+        }
         var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
-        var hostInfo = players.Players?.FirstOrDefault();
+        EasyPlayerInfo? hostInfo = null;
+        foreach (var player in players.Players)
+        {
+            if (player.HostName.Contains("scaffolding-mc-server-"))
+            {
+                hostInfo = player;
+            }
+        }
 
         if (hostInfo is null)
         {
@@ -42,8 +57,10 @@ public static class ScaffoldingFactory
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
-        return new ScaffoldingClientEntity(new ScaffoldingClient(HostIp, scfPort, playerName, machineId, LobbyVendor),
-            etEntity);
+        var localPort = await etEntity.AddPortForward(hostInfo.Ip, scfPort);
+        
+        return new ScaffoldingClientEntity(new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
+            etEntity, hostInfo);
     }
 
     public static ScaffoldingServerEntity CreateServer(int mcPort, string playerName)
@@ -63,6 +80,6 @@ public static class ScaffoldingFactory
         new(lobby, mcPort, port, asHost);
 }
 
-public record ScaffoldingClientEntity(ScaffoldingClient Client, EasyTierEntity EasyTier);
+public record ScaffoldingClientEntity(ScaffoldingClient Client, EasyTierEntity EasyTier, EasyPlayerInfo HostInfo);
 
 public record ScaffoldingServerEntity(ScaffoldingServer Server, EasyTierEntity EasyTier);

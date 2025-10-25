@@ -38,7 +38,7 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     public event Action? ServerException;
 
     #endregion
-
+    
     public ScaffoldingServer(int port, IServerContext context)
     {
         _listener = new TcpListener(IPAddress.Any, port);

@@ -25,7 +25,7 @@ public class OldLobbyIdParser : ILobbyIdParser
             // 将Base32编码的代码转换为十进制字符串
             var info = code.FromB32ToB10();
 
-            lobbyInfo = new LobbyInfo(code, info[..8], info[8..10]);
+            lobbyInfo = new LobbyInfo(LobbyType.PCLCE ,code, info[..8], info[8..10]);
             return true;
         }
         catch (Exception ex)

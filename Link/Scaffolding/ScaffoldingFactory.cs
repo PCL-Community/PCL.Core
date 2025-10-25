@@ -27,18 +27,23 @@ public static class ScaffoldingFactory
             throw new ArgumentException("Invalid lobby code.", nameof(lobbyCode));
         }
 
+        if (info.Type != LobbyType.Scaffolding)
+        {
+            throw new ArgumentException("Invalid lobby type.", nameof(lobbyCode));
+        }
+
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
         etEntity.Launch();
-        var retrys = 0;
-        while (etEntity.State != EtState.Ready && retrys < 6)
+        var retries = 0;
+        while (etEntity.State != EtState.Ready && retries < 6)
         {
             await etEntity.CheckEasyTierStatusAsync();
             await Task.Delay(800);
-            retrys++;
+            retries++;
         }
         var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
         EasyPlayerInfo? hostInfo = null;
-        foreach (var player in players.Players)
+        foreach (var player in players.Players!)
         {
             if (player.HostName.Contains("scaffolding-mc-server-"))
             {

@@ -96,6 +96,6 @@ public static class LobbyInfoGenerator
         var codePayload = codePayloadBuilder.ToString();
         var fullCode = FullCodePrefix + codePayload;
 
-        return new LobbyInfo(fullCode, $"{NetworkNamePrefix}{codePayload[..9]}", codePayload[10..]);
+        return new LobbyInfo(LobbyType.Scaffolding, fullCode, $"{NetworkNamePrefix}{codePayload[..9]}", codePayload[10..]);
     }
 }

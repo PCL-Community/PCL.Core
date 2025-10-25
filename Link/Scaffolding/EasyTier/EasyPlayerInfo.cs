@@ -12,6 +12,7 @@ public record EasyPlayerInfo
 {
     public required bool IsHost { get; init; }
     public required string HostName { get; init; }
+    public required string Ip { get; init; }
     public string UserName { get; init; } = string.Empty;
     public string MinecraftName { get; init; } = string.Empty;
     public ConnectionWay Way { get; init; } = ConnectionWay.Unknown;

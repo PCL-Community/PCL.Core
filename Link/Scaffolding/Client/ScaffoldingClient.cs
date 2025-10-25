@@ -61,6 +61,7 @@ public sealed class ScaffoldingClient : IAsyncDisposable
         _tcpClient = new TcpClient();
         try
         {
+            LogWrapper.Info("Scaffolding", $"Trying to connect to server: {_host}:{_scfPort}");
             await _tcpClient.ConnectAsync(_host, _scfPort, ct).ConfigureAwait(false);
             var stream = _tcpClient.GetStream();
             _pipeReader = PipeReader.Create(stream);

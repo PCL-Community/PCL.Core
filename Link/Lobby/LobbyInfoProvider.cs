@@ -40,7 +40,8 @@ public static class LobbyInfoProvider
     {
         // ReSharper disable once InconsistentNaming
         PCLCE,
-        Terracotta
+        Terracotta,
+        PCL
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ public static class LobbyInfoProvider
             return null;
         }
 
-        if (code.Split("-".ToCharArray()).Length != 5) // PCL CE 大厅
+        if (code.Split("-".ToCharArray()).Length < 3) // PCL CE 大厅
         {
             try
             {
@@ -81,42 +82,61 @@ public static class LobbyInfoProvider
                 LogWrapper.Error(ex, "Link", "大厅编号解析失败，可能是无效的 PCL CE 大厅编号: " + code);
             }
         }
-        else // 陶瓦
+        else
         {
-            var matches = code.RegexSearch(RegexPatterns.TerracottaId);
-            if (matches.Count == 0)
+            if (code.Substring(1) != "P")
             {
-                LogWrapper.Error("Link", "大厅编号解析失败，可能是无效的陶瓦大厅编号: " + code);
+                LogWrapper.Error("Link","大厅编号解析失败，可能是无效的 PCL 大厅编号: " + code);
                 return null;
             }
-
-            foreach (var match in matches)
+            return new LobbyInfo
             {
-                var codeString = match.Replace("I", "1").Replace("O", "0").Replace("-", "");
-                BigInteger value = 0;
-                var checking = 0;
-                const string baseChars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-                for (var i = 0; i <= 23; i++) 
-                { 
-                    var j = baseChars.IndexOf(codeString[i]);
-                    value += BigInteger.Parse(j.ToString()) * BigInteger.Pow(34, i);
-                    checking = (j + checking) % 34;
-                }
-
-                if (checking != baseChars.IndexOf(codeString[24])) { return null; }
-                var port = (int)(value % 65536);
-                if (port < 100) { return null; }
-                return new LobbyInfo
-                {
-                    OriginalCode = code,
-                    NetworkName = codeString.Substring(0, 15).ToLower(),
-                    NetworkSecret = codeString.Substring(15, 10).ToLower(),
-                    Port = port,
-                    Type = LobbyType.Terracotta,
-                    Ip = "10.144.144.1"
-                };
-            }
+                OriginalCode = code,
+                NetworkName = code.Substring(11),
+                NetworkSecret = code.Substring(12, 5),
+                Port = Convert.ToInt32(code.Substring(1, 4), 16),
+                Type = LobbyType.PCL,
+                Ip = "10.114.51.41"
+            };
+            
         }
+        //emm 反正判断条件是错的 先注释掉吧
+        //else // 陶瓦
+        //{
+        //    var matches = code.RegexSearch(RegexPatterns.TerracottaId);
+        //    if (matches.Count == 0)
+        //    {
+        //        LogWrapper.Error("Link", "大厅编号解析失败，可能是无效的陶瓦大厅编号: " + code);
+        //        return null;
+        //    }
+
+        //    foreach (var match in matches)
+        //    {
+        //        var codeString = match.Replace("I", "1").Replace("O", "0").Replace("-", "");
+        //        BigInteger value = 0;
+        //        var checking = 0;
+        //        const string baseChars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        //        for (var i = 0; i <= 23; i++) 
+        //        { 
+        //            var j = baseChars.IndexOf(codeString[i]);
+        //            value += BigInteger.Parse(j.ToString()) * BigInteger.Pow(34, i);
+        //            checking = (j + checking) % 34;
+        //        }
+
+        //        if (checking != baseChars.IndexOf(codeString[24])) { return null; }
+        //        var port = (int)(value % 65536);
+        //        if (port < 100) { return null; }
+        //        return new LobbyInfo
+        //        {
+        //            OriginalCode = code,
+        //            NetworkName = codeString.Substring(0, 15).ToLower(),
+        //            NetworkSecret = codeString.Substring(15, 10).ToLower(),
+        //            Port = port,
+        //            Type = LobbyType.Terracotta,
+        //            Ip = "10.144.144.1"
+        //        };
+        //    }
+        //}
         return null;
     }
 

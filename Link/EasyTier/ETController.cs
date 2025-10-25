@@ -69,6 +69,9 @@ public static class ETController
                 case LobbyType.Terracotta:
                     name = "terracotta-mc-" + name;
                     break;
+                case LobbyType.PCL:
+                    // 无需处理
+                    break;
                 default:
                     throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type);
             }
@@ -100,31 +103,38 @@ public static class ETController
             }
 
             // 节点设置
-            var relays = ETRelay.RelayList;
-            var customNodes = Config.Link.RelayServer;
-            foreach (var node in customNodes.Split([';'], StringSplitOptions.RemoveEmptyEntries))
+            if (TargetLobby.Type == LobbyType.PCL)
             {
-                if (node.Contains("tcp://") || node.Contains("udp://"))
-                {
-                    relays.Add(new ETRelay
-                    {
-                        Url = node,
-                        Name = "Custom",
-                        Type = ETRelayType.Custom
-                    });
-                }
-                else
-                {
-                    LogWrapper.Warn("Link", $"无效的自定义节点 URL: {node}");
-                }
+                arguments.Add("p", "tcp://public2.easytier.cn:54321");
             }
-            foreach (var relay in
-                from relay in relays
-                let serverType = Config.Link.ServerType
-                where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
-                select relay)
+            else
             {
-                arguments.Add("p", relay.Url);
+                var relays = ETRelay.RelayList;
+                var customNodes = Config.Link.RelayServer;
+                foreach (var node in customNodes.Split([';'], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (node.Contains("tcp://") || node.Contains("udp://"))
+                    {
+                        relays.Add(new ETRelay
+                        {
+                            Url = node,
+                            Name = "Custom",
+                            Type = ETRelayType.Custom
+                        });
+                    }
+                    else
+                    {
+                        LogWrapper.Warn("Link", $"无效的自定义节点 URL: {node}");
+                    }
+                }
+                foreach (var relay in
+                    from relay in relays
+                    let serverType = Config.Link.ServerType
+                    where (relay.Type == ETRelayType.Selfhosted && serverType != 2) || (relay.Type == ETRelayType.Community && serverType == 1) || relay.Type == ETRelayType.Custom
+                    select relay)
+                {
+                    arguments.Add("p", relay.Url);
+                }
             }
 
             // 中继行为设置
@@ -159,8 +169,15 @@ public static class ETController
                 showName = NaidProfile.Username;
             }
 
-            arguments.Add("hostname",
-                (isHost ? "H|" : "J|") + showName + (!string.IsNullOrWhiteSpace(hostname) ? "|" + hostname : ""));
+            if (TargetLobby.Type == LobbyType.PCL)
+            {
+                arguments.Add("hostname", "Client" + showName);
+            }
+            else
+            {
+                arguments.Add("hostname",
+                    (isHost ? "H|" : "J|") + showName + (!string.IsNullOrWhiteSpace(hostname) ? "|" + hostname : ""));
+            }
 
             // 指定 RPC 端口以避免与其他 ET 实例冲突
             ETRpcPort = NetworkHelper.NewTcpPort();

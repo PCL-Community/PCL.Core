@@ -24,13 +24,12 @@ namespace PCL.Core.Link.Lobby;
 
 public static class LobbyController
 {
+    public static bool IsHost = false;
     public static ScaffoldingClientEntity? ScfClientEntity;
     public static ScaffoldingServerEntity? ScfServerEntity;
 
     public static ScaffoldingClientEntity? LaunchClient(string username, string code)
     {
-        if (TargetLobby == null) { return null; }
-        
         if (_SendTelemetry(false) == 1) { return null; }
 
         try
@@ -44,6 +43,11 @@ public static class LobbyController
                 .GetResult();
 
             var hostname = string.Empty;
+
+            while (scfEntity.Client.PlayerList == null)
+            {
+                Task.Delay(800);
+            }
             
             foreach (var profile in scfEntity.Client.PlayerList)
             {
@@ -52,11 +56,12 @@ public static class LobbyController
                     hostname = profile.Name;
                 }
             }
-            
+
+            var localPort = scfEntity.EasyTier.AddPortForward(scfEntity.HostInfo.Ip, port).GetAwaiter().GetResult();
             var desc = hostname.IsNullOrWhiteSpace() ? " - " + hostname : string.Empty;
 
             var tcpPortForForward = NetworkHelper.NewTcpPort();
-            McForward = new TcpForward(IPAddress.Loopback, tcpPortForForward, IPAddress.Loopback, port);
+            McForward = new TcpForward(IPAddress.Loopback, tcpPortForForward, IPAddress.Loopback, localPort);
             McBroadcast = new Broadcast($"§ePCL CE 大厅{desc}", tcpPortForForward);
             McForward.Start();
             McBroadcast.Start();
@@ -120,13 +125,13 @@ public static class LobbyController
         McBroadcast?.Stop();
         if (ScfClientEntity != null)
         {
-            await ScfClientEntity.Client.DisposeAsync();
             ScfClientEntity.EasyTier.Stop();
+            await ScfClientEntity.Client.DisposeAsync();
         } 
         else if (ScfServerEntity != null)
         {
-            await ScfServerEntity.Server.DisposeAsync();
             ScfServerEntity.EasyTier.Stop();
+            await ScfServerEntity.Server.DisposeAsync();
         }
         return 0;
     }

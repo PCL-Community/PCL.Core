@@ -4,5 +4,6 @@ public enum LobbyType
 {
     // ReSharper disable once InconsistentNaming
     PCLCE,
-    Terracotta
+    Terracotta,
+    Scaffolding
 }

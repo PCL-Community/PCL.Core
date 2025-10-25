@@ -5,7 +5,7 @@ using PCL.Core.Link.Scaffolding.Client.Abstractions;
 
 namespace PCL.Core.Link.Scaffolding.Client.Requests;
 
-public sealed class GetServerProtRequest : IRequest<ushort>
+public sealed class GetServerPortRequest : IRequest<ushort>
 {
     /// <inheritdoc />
     public string RequestType { get; } = "c:server_port";

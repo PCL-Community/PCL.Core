@@ -57,7 +57,7 @@ public static class LobbyInfoGenerator
     /// 生成一个CE大厅
     /// </summary>
     /// <returns>返回一个<see cref="LobbyInfo"/></returns>
-    public static LobbyInfo Generate(int port)
+    public static LobbyInfo Generate()
     {
         var randomValue = _GetSecureRandomUInt128();
         var remainder = randomValue % 7;
@@ -79,45 +79,23 @@ public static class LobbyInfoGenerator
     
     private static LobbyInfo _Encode(UInt128 value)
     {
-        var codeBuilder = new StringBuilder(21);
-        var nameBuilder = new StringBuilder(28);
-        var secretBuilder = new StringBuilder(9);
-
-        codeBuilder.Append(FullCodePrefix);
-        nameBuilder.Append(NetworkNamePrefix);
+        var codePayloadBuilder = new StringBuilder(19);
+        var currentValue = value;
 
         for (var i = 0; i < CodeLength; i++)
         {
-            var v = Chars[(int)(value % 34)];
-            value /= 34;
-
             if (i is 4 or 8 or 12)
             {
-                codeBuilder.Append('-');
+                codePayloadBuilder.Append('-');
             }
 
-            codeBuilder.Append(v);
-
-            if (i < 8)
-            {
-                if (i == 4)
-                {
-                    nameBuilder.Append('-');
-                }
-
-                nameBuilder.Append(v);
-            }
-            else
-            {
-                if (i == 12)
-                {
-                    secretBuilder.Append('-');
-                }
-
-                secretBuilder.Append(v);
-            }
+            codePayloadBuilder.Append(Chars[(int)(currentValue % 34)]);
+            currentValue /= 34;
         }
 
-        return new LobbyInfo(codeBuilder.ToString(), nameBuilder.ToString(), secretBuilder.ToString());
+        var codePayload = codePayloadBuilder.ToString();
+        var fullCode = FullCodePrefix + codePayload;
+
+        return new LobbyInfo(fullCode, $"{NetworkNamePrefix}{codePayload[..9]}", codePayload[10..]);
     }
 }

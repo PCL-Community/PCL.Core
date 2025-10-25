@@ -88,6 +88,7 @@ public class LobbyIdParser : ILobbyIdParser
 
         var codePayload = payloadSpan.ToString().ToUpperInvariant();
         lobbyInfo = new LobbyInfo(
+            LobbyType.Scaffolding,
             FullCodePrefix + codePayload,
             $"{NetworkNamePrefix}{codePayload[..9]}",
             codePayload[10..]);

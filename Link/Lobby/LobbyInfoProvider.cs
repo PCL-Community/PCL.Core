@@ -84,7 +84,7 @@ public static class LobbyInfoProvider
         }
         else
         {
-            if (code.Substring(1) != "P")
+            if (code[0] != 'P')
             {
                 LogWrapper.Error("Link","大厅编号解析失败，可能是无效的 PCL 大厅编号: " + code);
                 return null;
@@ -92,7 +92,7 @@ public static class LobbyInfoProvider
             return new LobbyInfo
             {
                 OriginalCode = code,
-                NetworkName = code.Substring(11),
+                NetworkName = code.Substring(0,11),
                 NetworkSecret = code.Substring(12, 5),
                 Port = Convert.ToInt32(code.Substring(1, 4), 16),
                 Type = LobbyType.PCL,

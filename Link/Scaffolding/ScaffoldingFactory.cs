@@ -29,7 +29,10 @@ public static class ScaffoldingFactory
 
         if (info.Type != LobbyType.Scaffolding)
         {
-            throw new ArgumentException("Invalid lobby type.", nameof(lobbyCode));
+            throw new ArgumentException(info.Type == LobbyType.PCLCE 
+                ? "Outdated lobby type."
+                : "Invalid lobby type."
+                , nameof(lobbyCode));
         }
 
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);

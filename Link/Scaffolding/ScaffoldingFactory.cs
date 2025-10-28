@@ -1,12 +1,11 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using PCL.Core.Link.Scaffolding.Client;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
 using PCL.Core.Link.Scaffolding.Exceptions;
 using PCL.Core.Link.Scaffolding.Server;
 using PCL.Core.Net;
+using System;
+using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding;
 
@@ -17,8 +16,11 @@ public static class ScaffoldingFactory
     private const string LobbyVendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
     private const string HostIp = "10.114.51.41";
 
-    public static async Task<ScaffoldingClientEntity> CreateClientAsync(string playerName, string lobbyCode,
-        LobbyType from)
+    /// <exception cref="ArgumentException">Invalid lobby code.</exception>
+    /// <exception cref="FailedToGetPlayerException">Thrown if fialed to get host player info..</exception>
+    /// <exception cref="ArgumentNullException">Can not get the host information. <paramref name="hostInfo"/></exception>
+    public static async Task<ScaffoldingClientEntity> CreateClientAsync
+        (string playerName, string lobbyCode, LobbyType from)
     {
         var machineId = Utils.Secret.Identify.LaunchId;
 
@@ -29,31 +31,24 @@ public static class ScaffoldingFactory
 
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
         etEntity.Launch();
+
         var retrys = 0;
         while (etEntity.State != EtState.Ready && retrys < 6)
         {
-            await etEntity.CheckEasyTierStatusAsync();
-            await Task.Delay(800);
+            await etEntity.CheckEasyTierStatusAsync().ConfigureAwait(false);
+            await Task.Delay(800).ConfigureAwait(false);
             retrys++;
         }
+
         var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
-        EasyPlayerInfo? hostInfo = null;
-        
-        // Local property alway be null.
-        if ( players.Players is null /*|| players.Local is null*/)
+        var hostInfo = players.Host;
+
+        if (players.Players is null)
         {
             throw new FailedToGetPlayerException();
         }
 
-        foreach (var player in players.Players)
-        {
-            if (player.HostName.Contains("scaffolding-mc-server-"))
-            {
-                hostInfo = player;
-            }
-        }
-
-        if (hostInfo is null)
+        if (hostInfo is null) // TODO: in there, we cannot found host
         {
             etEntity.Stop();
             throw new ArgumentNullException(nameof(hostInfo), "Can not get the host information.");
@@ -65,9 +60,10 @@ public static class ScaffoldingFactory
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
-        var localPort = await etEntity.AddPortForward(hostInfo.Ip, scfPort);
-        
-        return new ScaffoldingClientEntity(new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
+        var localPort = await etEntity.AddPortForward(hostInfo.Ip, scfPort).ConfigureAwait(false);
+
+        return new ScaffoldingClientEntity(
+            new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
             etEntity, hostInfo);
     }
 

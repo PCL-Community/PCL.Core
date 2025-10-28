@@ -1,22 +1,27 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Link.EasyTier;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils;
+using Polly;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding.EasyTier;
 
+/// <summary>
+/// Demonstrates the state of EasyTier entity.
+/// </summary>
 public enum EtState
 {
     Stopped,
@@ -24,17 +29,22 @@ public enum EtState
     Ready
 }
 
+/// <summary>
+/// An EasyTier entity that manages the EasyTier process and its interactions.
+/// </summary>
 public class EasyTierEntity
 {
-    private Process? _etProcess;
+    private readonly Lazy<Process> _etProcessLazy;
+
+    private Process? _EtProcess => _etProcessLazy.Value;
     private readonly int _rpcPort;
     private readonly LobbyInfo _lobby;
-    public readonly int McPort;
     private readonly int _scfPort;
 
     public int ForwardPort { get; private set; }
     public EtState State { get; private set; }
-    public LobbyInfo Lobby  => _lobby;
+    public LobbyInfo Lobby => _lobby;
+    public int McPort { get; private set; }
 
     /// <summary>
     /// Constructor of EasyTierEntity
@@ -70,9 +80,10 @@ public class EasyTierEntity
         State = EtState.Ready;
 
         _rpcPort = NetworkHelper.NewTcpPort();
+
         ForwardPort = NetworkHelper.NewTcpPort();
 
-        _etProcess = _BuildProcess(asHost);
+        _etProcessLazy = new Lazy<Process>(() => _BuildProcessAsync(asHost).GetAwaiter().GetResult());
     }
 
     /// <summary>
@@ -86,14 +97,13 @@ public class EasyTierEntity
     {
         try
         {
-            _etProcess!.Start();
+            _EtProcess!.Start();
             State = EtState.Active;
         }
         catch (Exception ex)
         {
             LogWrapper.Error(ex, "EasyTier", "Failed to launch EasyTier.");
             State = EtState.Stopped;
-            _etProcess = null;
             return 1;
         }
 
@@ -111,7 +121,7 @@ public class EasyTierEntity
     {
         try
         {
-            _etProcess!.Kill();
+            _EtProcess!.Kill();
             State = EtState.Stopped;
             return 0;
         }
@@ -119,12 +129,11 @@ public class EasyTierEntity
         {
             LogWrapper.Error(ex, "EasyTier", "Failed to stop EasyTier.");
             State = EtState.Stopped;
-            _etProcess = null;
             return 1;
         }
     }
 
-    private Process _BuildProcess(bool asHost)
+    private async Task<Process> _BuildProcessAsync(bool asHost)
     {
         var process = new Process
         {
@@ -151,7 +160,7 @@ public class EasyTierEntity
             .Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLowerInvariant())
             .Add("network-name", _lobby.NetworkName)
             .Add("network-secret", _lobby.NetworkSecret)
-            .Add("relay-network-whitelist", _lobby.NetworkName)
+            //.Add("relay-network-whitelist", _lobby.NetworkName)
             .Add("machine-id", Utils.Secret.Identify.LaunchId)
             .Add("rpc-portal", _rpcPort.ToString());
 
@@ -177,9 +186,9 @@ public class EasyTierEntity
                 .Add("l", "udp://0.0.0.0:0");
         }
 
-        foreach (var relay in _GetEtRelayList())
+        foreach (var address in await _GetEtRelayListAsync().ConfigureAwait(false))
         {
-            args.Add("p", relay.Url);
+            args.Add("p", address);
         }
 
         if (Config.Link.RelayType == 1)
@@ -191,15 +200,15 @@ public class EasyTierEntity
         {
             args.Add("private-mode", "true");
         }
-        
+
         process.StartInfo.Arguments = args.GetResult();
-        
+
         LogWrapper.Debug("EasyTier", process.StartInfo.Arguments);
-        
+
         return process;
     }
 
-    private IReadOnlyList<ETRelay> _GetEtRelayList()
+    private async Task<IReadOnlyList<string>> _GetEtRelayListAsync()
     {
         var relays = ETRelay.RelayList;
         var customedNodes = Config.Link.RelayServer.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -221,14 +230,61 @@ public class EasyTierEntity
             }
         }
 
-        var result = relays.Select(relay => new { relay, serverType = Config.Link.ServerType })
+        var setupRelayList = relays.Select(relay => new { relay, serverType = Config.Link.ServerType })
             .Where(rl =>
                 (rl.relay.Type == ETRelayType.Selfhosted && rl.serverType != 2) ||
                 (rl.relay.Type == ETRelayType.Community && rl.serverType == 1) ||
                 rl.relay.Type == ETRelayType.Custom)
-            .Select(rl => rl.relay).ToImmutableList();
+            .Select(rl => rl.relay.Url).ToImmutableList();
+
+        var pubNode = await _GetPublicNodeAsync().ConfigureAwait(false);
+
+        var result = setupRelayList
+            .Concat(pubNode)
+            .Take(6)
+            .ToImmutableList();
+
+        LogWrapper.Debug($"Get public node:\n{string.Join("\n\t", result)}");
 
         return result;
+    }
+
+    private readonly string[] _fallbackNodeLinks =
+    [
+        "tcp://public.easytier.top:11010",
+        "tcp://public2.easytier.cn:54321",
+    ];
+
+
+    private async Task<IReadOnlyList<string>> _GetPublicNodeAsync()
+    {
+        var rep = await Policy.Handle<HttpRequestException>()
+            .OrResult<HttpResponseHandler>(msg => !msg.IsSuccess)
+            .WaitAndRetryAsync(4, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)))
+            .ExecuteAsync(_SendPublicNodeGetReqAsync).ConfigureAwait(false);
+
+        ArgumentNullException.ThrowIfNull(rep);
+
+        var content = await rep.AsStringAsync().ConfigureAwait(false);
+        var dto = JsonSerializer.Deserialize<PublicNodeDto>(content);
+
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var result = dto.Data.Items
+            .Where(it => it is { IsActive: true, IsAllowRelay: true })
+            .Select(it => it.Host)
+            .Union(_fallbackNodeLinks)
+            .ToImmutableList();
+
+
+        return result;
+    }
+
+    private Task<HttpResponseHandler> _SendPublicNodeGetReqAsync()
+    {
+        return HttpRequestBuilder
+            .Create("https://uptime.easytier.cn/api/nodes?page=1&per_page=50&is_active=true", HttpMethod.Get)
+            .SendAsync();
     }
 
     #region Information
@@ -241,34 +297,39 @@ public class EasyTierEntity
     {
         var retryCount = 0;
 
-        while (_etProcess is null && retryCount < 10)
+        while (_EtProcess is null && retryCount < 10)
         {
             await Task.Delay(1000).ConfigureAwait(false);
             retryCount++;
         }
 
-        if (_etProcess is null)
+        if (_EtProcess is null)
         {
             return 1;
         }
 
         while (State is not EtState.Ready)
         {
-            var info = (await GetPlayersAsync().ConfigureAwait(false)).Players?.FirstOrDefault();
+            var info = (await GetPlayersAsync().ConfigureAwait(false)).Host;
             if (info is null)
             {
+                LogWrapper.Debug("EasyTierEntity", "Retry to get ET Info.");
                 await Task.Delay(1000).ConfigureAwait(false);
                 continue;
             }
 
-            if (info.Ping != 1000)
+            LogWrapper.Debug("EtEntity", "Successfully to get player info from ET Cli.");
+
+            if (info.Ping < 1000)
             {
                 State = EtState.Ready;
+                break;
             }
 
             await Task.Delay(1000).ConfigureAwait(false);
         }
 
+        LogWrapper.Debug("EtEntity", "EasyTier Entiry is ready!");
 
         return 0;
     }
@@ -306,14 +367,7 @@ public class EasyTierEntity
             cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp 0.0.0.0:{localPort} {targetIp}:{targetPort}";
             cliProcess.Start();
             await cliProcess.WaitForExitAsync().ConfigureAwait(false);
-            
-            LogWrapper.Debug("ET Cli", await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
-                                       await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false));
-            
-            cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add udp 0.0.0.0:{localPort} {targetIp}:{targetPort}";
-            cliProcess.Start();
-            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
-            
+
             LogWrapper.Debug("ET Cli", await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
                                        await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false));
         }
@@ -323,7 +377,7 @@ public class EasyTierEntity
         }
         return localPort;
     }
-    
+
     /// <exception cref="ArgumentException">Thrown if host is duplicated.</exception>
     public async Task<EtPlayerList> GetPlayersAsync()
     {
@@ -350,18 +404,20 @@ public class EasyTierEntity
 
         try
         {
+            LogWrapper.Debug("Et Cli", "Tried to get player info.");
+
             cliProcess.Start();
             await cliProcess.WaitForExitAsync().ConfigureAwait(false);
-
-            var output = await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
-                         await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false);
-            
-            LogWrapper.Debug("[ET Cli] " + output);
 
             if (!cliProcess.HasExited)
             {
                 LogWrapper.Warn("EasyTier", "Timeout when trying to get EasyTier peer info.");
             }
+
+            var output = await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
+                         await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false);
+
+            LogWrapper.Debug("ET Cli", output);
 
             if (JsonNode.Parse(output) is not JsonArray jArray)
             {
@@ -373,16 +429,22 @@ public class EasyTierEntity
             EasyPlayerInfo? host = null;
             foreach (var arr in jArray)
             {
+                LogWrapper.Debug("Et Cli", "Getting player info.");
+
                 var info = arr.Deserialize<ETPeerInfo>();
                 if (info == null)
                 {
+                    LogWrapper.Debug("Et Cli", "Player info is null.");
                     continue;
                 }
 
                 if (info.Hostname.StartsWith("scaffolding-mc-server-", StringComparison.Ordinal))
                 {
+                    LogWrapper.Debug("Et Cli", $"Find host player: {info.Hostname}");
+
                     if (host is not null)
                     {
+                        LogWrapper.Debug("Et Cli", "Duplicated host player.");
                         throw new ArgumentException("Duplicated host.", nameof(host));
                     }
 
@@ -390,12 +452,15 @@ public class EasyTierEntity
                     continue;
                 }
 
+                LogWrapper.Debug("Et Cli", $"Find player: {info.Hostname}");
                 players.Add(_ConvertPeerToPlayer(info));
             }
 
-            var result = host is not null ? [host, ..players] : players;
+            LogWrapper.Debug("Et Cli", "Return from GetPlayersAsync().");
 
-            return new EtPlayerList(result, null);
+            var result = host is null ? players : [host, .. players];
+
+            return new EtPlayerList(result, host);
         }
         catch (ArgumentException)
         {
@@ -427,4 +492,4 @@ public class EasyTierEntity
     #endregion
 }
 
-public record EtPlayerList(IReadOnlyList<EasyPlayerInfo>? Players, EasyPlayerInfo? Local);
+public record EtPlayerList(IReadOnlyList<EasyPlayerInfo>? Players, EasyPlayerInfo? Host);

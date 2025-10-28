@@ -1,23 +1,23 @@
+using PCL.Core.App;
+using PCL.Core.Link.EasyTier;
+using PCL.Core.Link.Scaffolding;
+using PCL.Core.Link.Scaffolding.Client.Models;
+using PCL.Core.Link.Scaffolding.Client.Requests;
+using PCL.Core.Logging;
+using PCL.Core.Net;
+using PCL.Core.Utils.Exts;
+using PCL.Core.Utils.OS;
+using PCL.Core.Utils.Secret;
 using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
-using PCL.Core.Link.EasyTier;
-using PCL.Core.Logging;
-using PCL.Core.Utils.Secret;
-using PCL.Core.Net;
-using static PCL.Core.Link.Natayark.NatayarkProfileManager;
-using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using System.Threading.Tasks;
-using PCL.Core.App;
-using PCL.Core.Utils.OS;
-using PCL.Core.Link.Scaffolding;
-using PCL.Core.Link.Scaffolding.Client.Models;
+using static PCL.Core.Link.Lobby.LobbyInfoProvider;
+using static PCL.Core.Link.Natayark.NatayarkProfileManager;
 using LobbyType = PCL.Core.Link.Scaffolding.Client.Models.LobbyType;
-using PCL.Core.Link.Scaffolding.Client.Requests;
-using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Link.Lobby;
 
@@ -29,14 +29,17 @@ public static class LobbyController
 
     public static async Task<ScaffoldingClientEntity?> LaunchClientAsync(string username, string code)
     {
-        if (await _SendTelemetryAsync(false) == 1) { return null; }
+        if (await _SendTelemetryAsync(false).ConfigureAwait(false) == 1)
+        {
+            return null;
+        }
 
         try
         {
             var scfEntity = await ScaffoldingFactory
                 .CreateClientAsync(username, code, LobbyType.Scaffolding).ConfigureAwait(false);
-            
-            scfEntity.Client.ConnectAsync().GetAwaiter().GetResult();
+
+            await scfEntity.Client.ConnectAsync().ConfigureAwait(false);
             var port = scfEntity.Client.SendRequestAsync(new GetServerPortRequest()).GetAwaiter()
                 .GetResult();
 
@@ -46,7 +49,7 @@ public static class LobbyController
             {
                 await Task.Delay(800).ConfigureAwait(false);
             }
-            
+
             foreach (var profile in scfEntity.Client.PlayerList)
             {
                 if (profile.Kind == PlayerKind.HOST)
@@ -63,7 +66,7 @@ public static class LobbyController
             McBroadcast = new Broadcast($"§ePCL CE 大厅{desc}", tcpPortForForward);
             McForward.Start();
             McBroadcast.Start();
-        
+
             return scfEntity;
         }
         catch (ArgumentNullException e)
@@ -95,18 +98,21 @@ public static class LobbyController
 
     public async static Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
     {
-        if (await _SendTelemetryAsync(true) == 1) { return null; }
-        
+        if (await _SendTelemetryAsync(true).ConfigureAwait(false) == 1)
+        {
+            return null;
+        }
+
         return ScaffoldingFactory.CreateServer(port, username);
     }
 
     /// <summary>
     /// 检查主机的 MC 实例是否可用。
     /// </summary>
-    public async static Task<bool >IsHostInstanceAvailableAsync(int port)
+    public static async Task<bool> IsHostInstanceAvailableAsync(int port)
     {
         var ping = new McPing("127.0.0.1", port);
-        var info = await ping.PingAsync();
+        var info = await ping.PingAsync().ConfigureAwait(false);
         if (info != null) return true;
         LogWrapper.Warn("Link", $"本地 MC 局域网实例 ({port}) 疑似已关闭");
         return false;
@@ -125,7 +131,7 @@ public static class LobbyController
         {
             ScfClientEntity.EasyTier.Stop();
             await ScfClientEntity.Client.DisposeAsync().ConfigureAwait(false);
-        } 
+        }
         else if (ScfServerEntity != null)
         {
             ScfServerEntity.EasyTier.Stop();
@@ -134,7 +140,7 @@ public static class LobbyController
         return 0;
     }
 
-    private async static Task<int> _SendTelemetryAsync(bool isHost)
+    private static async Task<int> _SendTelemetryAsync(bool isHost)
     {
         LogWrapper.Info("Link", "开始发送联机数据");
         var servers = Config.Link.RelayServer;
@@ -181,7 +187,7 @@ public static class LobbyController
                     .Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
                     .WithContent(httpContent)
                     .WithAuthentication(key)
-                    .SendAsync();
+                    .SendAsync().ConfigureAwait(false);
 
                 if (!response.IsSuccess)
                 {
@@ -194,7 +200,7 @@ public static class LobbyController
                 }
                 else
                 {
-                    var result = response.AsStringAsync().Result;
+                    var result = await response.AsStringAsync().ConfigureAwait(false);
                     if (result.Contains("数据已成功保存"))
                     {
                         LogWrapper.Info("Link", "联机数据已发送");

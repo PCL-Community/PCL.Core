@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding.EasyTier;
@@ -44,7 +45,7 @@ public class EasyTierEntity
     public int ForwardPort { get; private set; }
     public EtState State { get; private set; }
     public LobbyInfo Lobby => _lobby;
-    public int McPort { get; private set; }
+    public int McPort { get; init; }
 
     /// <summary>
     /// Constructor of EasyTierEntity
@@ -68,6 +69,7 @@ public class EasyTierEntity
         }
 
         LogWrapper.Info("EasyTier", $"EasyTier folder path: {EasyTierMetadata.EasyTierFilePath}");
+
         if (!(File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\easytier-core.exe") &&
               File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe") &&
               File.Exists($"{EasyTierMetadata.EasyTierFilePath}\\Packet.dll")))
@@ -276,16 +278,13 @@ public class EasyTierEntity
             .Union(_fallbackNodeLinks)
             .ToImmutableList();
 
-
         return result;
     }
 
-    private Task<HttpResponseHandler> _SendPublicNodeGetReqAsync()
-    {
-        return HttpRequestBuilder
+    private Task<HttpResponseHandler> _SendPublicNodeGetReqAsync() =>
+        HttpRequestBuilder
             .Create("https://uptime.easytier.cn/api/nodes?page=1&per_page=50&is_active=true", HttpMethod.Get)
             .SendAsync();
-    }
 
     #region Information
 
@@ -293,7 +292,7 @@ public class EasyTierEntity
     /// Checks the status of EasyTier network until it is ready or time-out.
     /// </summary>
     /// <returns>Returns 0 when the network is ready, otherwise returns 1 for timeout.</returns>
-    public async Task<int> CheckEasyTierStatusAsync()
+    public async Task<(bool, EtPlayerList?)> CheckEasyTierStatusAsync()
     {
         var retryCount = 0;
 
@@ -305,33 +304,37 @@ public class EasyTierEntity
 
         if (_EtProcess is null)
         {
-            return 1;
+            return (false, null);
         }
 
-        while (State is not EtState.Ready)
+        retryCount = 0;
+        while (State is not EtState.Ready && retryCount < 10)
         {
-            var info = (await GetPlayersAsync().ConfigureAwait(false)).Host;
-            if (info is null)
+            var info = await _GetPlayersAsync().ConfigureAwait(false);
+            if (info.Host is null)
             {
                 LogWrapper.Debug("EasyTierEntity", "Retry to get ET Info.");
                 await Task.Delay(1000).ConfigureAwait(false);
+                retryCount++;
                 continue;
             }
 
             LogWrapper.Debug("EtEntity", "Successfully to get player info from ET Cli.");
 
-            if (info.Ping < 1000)
+            if (info.Host.Ping < 1000)
             {
                 State = EtState.Ready;
-                break;
+
+                return (true, info);
             }
 
             await Task.Delay(1000).ConfigureAwait(false);
+            retryCount++;
         }
 
         LogWrapper.Debug("EtEntity", "EasyTier Entiry is ready!");
 
-        return 0;
+        return (false, null);
     }
 
     /// <summary>
@@ -340,28 +343,26 @@ public class EasyTierEntity
     /// <param name="targetIp">Remote IP</param>
     /// <param name="targetPort">Remote Port</param>
     /// <returns>Forwarded local port</returns>
-    public async Task<int> AddPortForward(string targetIp, int targetPort)
+    public async Task<int> AddPortForwardAsync(string targetIp, int targetPort)
     {
         var localPort = NetworkHelper.NewTcpPort();
-        var cliProcess = new Process
+        using var cliProcess = new Process();
+        cliProcess.StartInfo = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
-                WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
-                ErrorDialog = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8,
-                StandardInputEncoding = Encoding.UTF8
-            },
-            EnableRaisingEvents = true
+            FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
+            WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
+            ErrorDialog = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+            StandardInputEncoding = Encoding.UTF8
         };
+        cliProcess.EnableRaisingEvents = true;
         try
         {
             cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp 0.0.0.0:{localPort} {targetIp}:{targetPort}";
@@ -379,44 +380,42 @@ public class EasyTierEntity
     }
 
     /// <exception cref="ArgumentException">Thrown if host is duplicated.</exception>
-    public async Task<EtPlayerList> GetPlayersAsync()
+    private async Task<EtPlayerList> _GetPlayersAsync()
     {
-        var cliProcess = new Process
+        using var cliProcess = new Process();
+        cliProcess.StartInfo = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
-                WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
-                Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} -o json peer",
-                ErrorDialog = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8,
-                StandardInputEncoding = Encoding.UTF8
-            },
-            EnableRaisingEvents = true
+            FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
+            WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
+            Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} -o json peer",
+            ErrorDialog = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+            StandardInputEncoding = Encoding.UTF8
         };
+        cliProcess.EnableRaisingEvents = true;
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(5000));
 
         try
         {
             LogWrapper.Debug("Et Cli", "Tried to get player info.");
 
             cliProcess.Start();
-            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
+            cliProcess.StandardInput.Close();
 
-            if (!cliProcess.HasExited)
-            {
-                LogWrapper.Warn("EasyTier", "Timeout when trying to get EasyTier peer info.");
-            }
+            var stdOut = await cliProcess.StandardOutput.ReadToEndAsync(cts.Token).ConfigureAwait(false);
+            var stdErr = await cliProcess.StandardError.ReadToEndAsync(cts.Token).ConfigureAwait(false);
 
-            var output = await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
-                         await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false);
+            await cliProcess.WaitForExitAsync(cts.Token).ConfigureAwait(false);
 
+            var output = stdOut + stdErr;
             LogWrapper.Debug("ET Cli", output);
 
             if (JsonNode.Parse(output) is not JsonArray jArray)
@@ -461,6 +460,11 @@ public class EasyTierEntity
             var result = host is null ? players : [host, .. players];
 
             return new EtPlayerList(result, host);
+        }
+        catch (TaskCanceledException tce)
+        {
+            LogWrapper.Error(tce, "EasyTier", "Failed to read CLI output.");
+            return new EtPlayerList(null, null);
         }
         catch (ArgumentException)
         {

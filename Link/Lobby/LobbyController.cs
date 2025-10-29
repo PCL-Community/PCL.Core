@@ -58,7 +58,8 @@ public static class LobbyController
                 }
             }
 
-            var localPort = scfEntity.EasyTier.AddPortForward(scfEntity.HostInfo.Ip, port).GetAwaiter().GetResult();
+            var localPort = scfEntity.EasyTier.AddPortForwardAsync(scfEntity.HostInfo.Ip, port).GetAwaiter()
+                .GetResult();
             var desc = hostname.IsNullOrWhiteSpace() ? " - " + hostname : string.Empty;
 
             var tcpPortForForward = NetworkHelper.NewTcpPort();

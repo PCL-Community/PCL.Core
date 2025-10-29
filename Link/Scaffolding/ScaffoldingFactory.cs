@@ -17,8 +17,8 @@ public static class ScaffoldingFactory
     private const string HostIp = "10.114.51.41";
 
     /// <exception cref="ArgumentException">Invalid lobby code.</exception>
-    /// <exception cref="FailedToGetPlayerException">Thrown if fialed to get host player info..</exception>
-    /// <exception cref="ArgumentNullException">Can not get the host information. <paramref name="hostInfo"/></exception>
+    /// <exception cref="FailedToGetPlayerException">Thrown if fialed to get host player info.</exception>
+    /// <exception cref="InvalidOperationException">Failed to get EasyTier Info.</exception>
     public static async Task<ScaffoldingClientEntity> CreateClientAsync
         (string playerName, string lobbyCode, LobbyType from)
     {
@@ -32,26 +32,24 @@ public static class ScaffoldingFactory
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
         etEntity.Launch();
 
-        var retrys = 0;
-        while (etEntity.State != EtState.Ready && retrys < 6)
-        {
-            await etEntity.CheckEasyTierStatusAsync().ConfigureAwait(false);
-            await Task.Delay(800).ConfigureAwait(false);
-            retrys++;
-        }
+        var (etStatus, players) = await etEntity.CheckEasyTierStatusAsync().ConfigureAwait(false);
 
-        var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
-        var hostInfo = players.Host;
+        if (!etStatus || players is null)
+        {
+            throw new InvalidOperationException("Failed to get EasyTier Info.");
+        }
 
         if (players.Players is null)
         {
             throw new FailedToGetPlayerException();
         }
 
-        if (hostInfo is null) // TODO: in there, we cannot found host
+        var hostInfo = players.Host;
+
+        if (hostInfo is null)
         {
             etEntity.Stop();
-            throw new ArgumentNullException(nameof(hostInfo), "Can not get the host information.");
+            throw new FailedToGetPlayerException("Can not get the host information.");
         }
 
         if (!int.TryParse(hostInfo.HostName[22..], out var scfPort))
@@ -60,13 +58,19 @@ public static class ScaffoldingFactory
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
-        var localPort = await etEntity.AddPortForward(hostInfo.Ip, scfPort).ConfigureAwait(false);
+        var localPort = await etEntity.AddPortForwardAsync(hostInfo.Ip, scfPort).ConfigureAwait(false);
 
         return new ScaffoldingClientEntity(
             new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
             etEntity, hostInfo);
     }
 
+    /// <summary>
+    /// Create Scaffolding Server.
+    /// </summary>
+    /// <param name="mcPort">Target forward Miencraft shared port.</param>
+    /// <param name="playerName">Game player name.</param>
+    /// <returns></returns>
     public static ScaffoldingServerEntity CreateServer(int mcPort, string playerName)
     {
         var context = ScaffoldingServerContext.Create(playerName, mcPort);

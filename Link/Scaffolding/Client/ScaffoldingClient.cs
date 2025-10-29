@@ -1,24 +1,23 @@
+using PCL.Core.Link.Scaffolding.Client.Abstractions;
+using PCL.Core.Link.Scaffolding.Client.Framing;
+using PCL.Core.Link.Scaffolding.Client.Models;
+using PCL.Core.Link.Scaffolding.Client.Requests;
+using PCL.Core.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Client.Abstractions;
-using PCL.Core.Link.Scaffolding.Client.Framing;
-using PCL.Core.Link.Scaffolding.Client.Models;
-using PCL.Core.Link.Scaffolding.Client.Requests;
-using PCL.Core.Logging;
 
 namespace PCL.Core.Link.Scaffolding.Client;
 
 /// <summary>
 /// A client for the Scaffolding data exchange protocol.
 /// </summary>
-public sealed class ScaffoldingClient : IAsyncDisposable
+public sealed class ScaffoldingClient(string host, int scfPort, string playerName, string machineId, string vendor)
+    : IAsyncDisposable
 {
-    private readonly string _host;
-    private readonly int _scfPort;
     private readonly SemaphoreSlim _srLock = new(1, 1);
     private TcpClient? _tcpClient;
     private PipeReader? _pipeReader;
@@ -26,7 +25,7 @@ public sealed class ScaffoldingClient : IAsyncDisposable
 
     // Heart Beat
     private Task? _heartbeatTask;
-    private readonly PlayerPingRequest _playerPingRequest;
+    private readonly PlayerPingRequest _playerPingRequest = new(playerName, machineId, vendor);
     private CancellationTokenSource? _heartbeatCts;
 
     #region Events
@@ -39,14 +38,6 @@ public sealed class ScaffoldingClient : IAsyncDisposable
     public IReadOnlyList<PlayerProfile>? PlayerList;
 
     public bool IsConnected => _tcpClient?.Connected ?? false;
-
-    public ScaffoldingClient(string host, int scfPort, string playerName, string machineId, string vendor)
-    {
-        _host = host;
-        _scfPort = scfPort;
-
-        _playerPingRequest = new PlayerPingRequest(playerName, machineId, vendor);
-    }
 
     /// <summary>
     /// Connects to a Scaffolding server.
@@ -61,8 +52,8 @@ public sealed class ScaffoldingClient : IAsyncDisposable
         _tcpClient = new TcpClient();
         try
         {
-            LogWrapper.Info("Scaffolding", $"Trying to connect to server: {_host}:{_scfPort}");
-            await _tcpClient.ConnectAsync(_host, _scfPort, ct).ConfigureAwait(false);
+            LogWrapper.Info("Scaffolding", $"Trying to connect to server: {host}:{scfPort}");
+            await _tcpClient.ConnectAsync(host, scfPort, ct).ConfigureAwait(false);
             var stream = _tcpClient.GetStream();
             _pipeReader = PipeReader.Create(stream);
             _pipeWriter = PipeWriter.Create(stream);

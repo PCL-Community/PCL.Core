@@ -86,10 +86,10 @@ public static class LobbyInfoGenerator
         {
             if (i is 4 or 8 or 12)
             {
-                codePayloadBuilder.Append('-');
+                codePayloadBuilder.Insert(0, '-');
             }
 
-            codePayloadBuilder.Append(Chars[(int)(currentValue % 34)]);
+            codePayloadBuilder.Insert(0, Chars[(int)(currentValue % 34)]);
             currentValue /= 34;
         }
 

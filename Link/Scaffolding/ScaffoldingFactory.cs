@@ -60,6 +60,8 @@ public static class ScaffoldingFactory
 
         var localPort = await etEntity.AddPortForwardAsync(hostInfo.Ip, scfPort).ConfigureAwait(false);
 
+        await Task.Delay(200).ConfigureAwait(false);
+
         return new ScaffoldingClientEntity(
             new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
             etEntity, hostInfo);

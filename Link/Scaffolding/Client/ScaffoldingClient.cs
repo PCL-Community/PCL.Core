@@ -12,6 +12,15 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding.Client;
 
+internal enum ClientState
+{
+    Disconnected,
+    Connecting,
+    Handshaking, // 正在进行握手
+    Connected, // 握手成功，准备就绪
+    Disposing
+}
+
 /// <summary>
 /// A client for the Scaffolding data exchange protocol.
 /// </summary>
@@ -27,6 +36,7 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
     private Task? _heartbeatTask;
     private readonly PlayerPingRequest _playerPingRequest = new(playerName, machineId, vendor);
     private CancellationTokenSource? _heartbeatCts;
+    private ClientState _state = ClientState.Disconnected;
 
     #region Events
 
@@ -37,14 +47,15 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
 
     public IReadOnlyList<PlayerProfile>? PlayerList;
 
-    public bool IsConnected => _tcpClient?.Connected ?? false;
+    public bool IsConnected => _state == ClientState.Connected;
 
     /// <summary>
     /// Connects to a Scaffolding server.
     /// </summary>
+    /// <exception cref="Exception">Throws if fialed to connect to server.</exception>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        if (IsConnected)
+        if (_state is not ClientState.Disconnected)
         {
             return;
         }
@@ -52,19 +63,34 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
         _tcpClient = new TcpClient();
         try
         {
+            _state = ClientState.Connecting;
+
             LogWrapper.Info("Scaffolding", $"Trying to connect to server: {host}:{scfPort}");
+
             await _tcpClient.ConnectAsync(host, scfPort, ct).ConfigureAwait(false);
+
             var stream = _tcpClient.GetStream();
             _pipeReader = PipeReader.Create(stream);
             _pipeWriter = PipeWriter.Create(stream);
+
+            _state = ClientState.Handshaking;
+            LogWrapper.Info("Scaffolding", "Connecting established. Performing handshake...");
+
+            await SendRequestAsync(_playerPingRequest, ct).ConfigureAwait(false);
+
+            _state = ClientState.Connected;
+
+            _StartHeartbeats();
         }
         catch (Exception ex)
         {
             LogWrapper.Error(ex, "ScaffoldingClient", "Failed to connect to server.");
-            ServerShuttedDown?.Invoke();
-        }
 
-        _StartHeartbeats();
+            await DisposeAsync().ConfigureAwait(false);
+            ServerShuttedDown?.Invoke();
+
+            throw;
+        }
     }
 
     private void _StartHeartbeats()
@@ -102,11 +128,23 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
         }
     }
 
+    /// <summary>
+    /// Send TCP request to the Scaffolding server.
+    /// </summary>
+    /// <param name="request">Thr request type.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <typeparam name="TResponse">Response type.</typeparam>
+    /// <exception cref="InvalidOperationException">Throws when server is not ready.</exception>
     public async Task<TResponse> SendRequestAsync<TResponse>(
         IRequest<TResponse> request,
         CancellationToken ct = default)
     {
-        if (!IsConnected || _pipeWriter is null || _pipeReader is null)
+        if (_state < ClientState.Handshaking)
+        {
+            throw new InvalidOperationException("Client is not connected.");
+        }
+
+        if (_pipeWriter is null || _pipeReader is null)
         {
             throw new InvalidOperationException("Client is not connected.");
         }
@@ -129,10 +167,27 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        if (_state is ClientState.Disposing)
+        {
+            return;
+        }
+
+        _state = ClientState.Disposing;
+
+
         await CastAndDispose(_srLock).ConfigureAwait(false);
         if (_tcpClient != null) await CastAndDispose(_tcpClient).ConfigureAwait(false);
-        if (_heartbeatTask != null) await CastAndDispose(_heartbeatTask).ConfigureAwait(false);
-        if (_heartbeatCts != null) await CastAndDispose(_heartbeatCts).ConfigureAwait(false);
+        if (_heartbeatCts != null)
+        {
+            await _heartbeatCts.CancelAsync().ConfigureAwait(false);
+            await CastAndDispose(_heartbeatCts).ConfigureAwait(false);
+        }
+
+        if (_heartbeatTask != null)
+        {
+            await _heartbeatTask.ConfigureAwait(false);
+            await CastAndDispose(_heartbeatTask).ConfigureAwait(false);
+        }
 
         return;
 

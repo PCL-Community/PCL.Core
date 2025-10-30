@@ -39,9 +39,11 @@ public static class LobbyController
             var scfEntity = await ScaffoldingFactory
                 .CreateClientAsync(username, code, LobbyType.Scaffolding).ConfigureAwait(false);
 
+            ScfClientEntity = scfEntity;
+
             await scfEntity.Client.ConnectAsync().ConfigureAwait(false);
-            var port = scfEntity.Client.SendRequestAsync(new GetServerPortRequest()).GetAwaiter()
-                .GetResult();
+
+            var port = await scfEntity.Client.SendRequestAsync(new GetServerPortRequest()).ConfigureAwait(false);
 
             var hostname = string.Empty;
 
@@ -58,8 +60,8 @@ public static class LobbyController
                 }
             }
 
-            var localPort = scfEntity.EasyTier.AddPortForwardAsync(scfEntity.HostInfo.Ip, port).GetAwaiter()
-                .GetResult();
+            var localPort = await scfEntity.EasyTier.AddPortForwardAsync(scfEntity.HostInfo.Ip, port)
+                .ConfigureAwait(false);
             var desc = hostname.IsNullOrWhiteSpace() ? " - " + hostname : string.Empty;
 
             var tcpPortForForward = NetworkHelper.NewTcpPort();
@@ -97,14 +99,26 @@ public static class LobbyController
         return null;
     }
 
-    public async static Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
+    public static async Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
     {
         if (await _SendTelemetryAsync(true).ConfigureAwait(false) == 1)
         {
             return null;
         }
 
-        return ScaffoldingFactory.CreateServer(port, username);
+        try
+        {
+            var scfEntity = ScaffoldingFactory.CreateServer(port, username);
+            ScfServerEntity = scfEntity;
+
+            return scfEntity;
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e, "Occurred error when launching Scafolding Server.");
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -124,19 +138,19 @@ public static class LobbyController
     /// </summary>
     public static async Task<int> CloseAsync()
     {
-        // TargetLobby = null;
-        // ETController.Exit();
         McForward?.Stop();
         McBroadcast?.Stop();
         if (ScfClientEntity != null)
         {
             ScfClientEntity.EasyTier.Stop();
             await ScfClientEntity.Client.DisposeAsync().ConfigureAwait(false);
+            ScfClientEntity = null;
         }
         else if (ScfServerEntity != null)
         {
             ScfServerEntity.EasyTier.Stop();
             await ScfServerEntity.Server.DisposeAsync().ConfigureAwait(false);
+            ScfServerEntity = null;
         }
         return 0;
     }

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using PCL.Core.Link.Lobby;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using PCL.Core.Link.Scaffolding.EasyTier;
@@ -43,7 +42,7 @@ public class ScaffoldingServerContext : IServerContext
             Kind = PlayerKind.HOST
         };
 
-        var roomCode = LobbyInfoGenerator.Generate();
+        var roomCode = LobbyCodeGenerator.Generate();
 
         var dic = new ConcurrentDictionary<string, PlayerProfile>();
         _ = dic.TryAdd(string.Empty, profile);

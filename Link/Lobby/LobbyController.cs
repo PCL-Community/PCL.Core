@@ -78,10 +78,6 @@ public static class LobbyController
             {
                 LogWrapper.Error(e, "大厅编号无效");
             }
-            else if (e.Message.Contains("lobby type"))
-            {
-                LogWrapper.Error(e, e.Message.Contains("Outdated") ? "过时的大厅类型" : "非 scaffolding 的大厅类型");
-            }
             else if (e.Message.Contains("hostname"))
             {
                 LogWrapper.Error(e, "大厅创建者的用户名无效");

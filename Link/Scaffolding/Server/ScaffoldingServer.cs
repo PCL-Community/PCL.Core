@@ -26,15 +26,26 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     private readonly Dictionary<string, IRequestHandler> _handlers;
     private readonly CancellationTokenSource _cts = new();
     private Task? _listenTask;
+    private Task? _cleanupTask;
+
+    private static readonly TimeSpan _PlayerTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _CleanupInterval = TimeSpan.FromSeconds(5);
 
 
-    public ImmutableDictionary<string, PlayerProfile> CurrentPlayers => _context.PlayerProfiles.ToImmutableDictionary();
+    public ImmutableDictionary<string, PlayerProfile> CurrentPlayers =>
+        _context.TrackedPlayers.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value.Profile);
 
     #region Events
 
     public event Action? ServerStarted;
     public event Action? ServerStopped;
     public event Action? ServerException;
+    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfileChanged;
+
+    private void _OnContextPlayersChanged(IReadOnlyList<PlayerProfile> players)
+    {
+        PlayerProfileChanged?.Invoke(players);
+    }
 
     #endregion
 
@@ -42,6 +53,8 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     {
         _listener = new TcpListener(IPAddress.Any, port);
         _context = context;
+
+        _context.PlayerProfilesChanged += _OnContextPlayersChanged;
 
         _handlers = new()
         {
@@ -57,8 +70,63 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     {
         _listener.Start();
         _listenTask = _ListenForClientsAsync(_cts.Token);
+        _cleanupTask = _MonitorPlayerLivenessAsync(_cts.Token);
 
         ServerStarted?.Invoke();
+    }
+
+    private async Task _MonitorPlayerLivenessAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(_CleanupInterval, ct).ConfigureAwait(false);
+
+                var now = DateTime.UtcNow;
+                var timedOutPlayerKeys = new List<string>();
+
+                foreach (var (sessionId, trackedPlayer) in _context.TrackedPlayers)
+                {
+                    if (string.IsNullOrEmpty(sessionId))
+                    {
+                        continue;
+                    }
+
+                    if (now - trackedPlayer.LastSeenUtc > _PlayerTimeout)
+                    {
+                        timedOutPlayerKeys.Add(sessionId);
+                    }
+                }
+
+                if (timedOutPlayerKeys.Count > 0)
+                {
+                    bool listChanged = false;
+                    foreach (var key in timedOutPlayerKeys)
+                    {
+                        if (_context.TrackedPlayers.TryRemove(key, out var removedPlayer))
+                        {
+                            listChanged = true;
+                            LogWrapper.Info("ScaffoldingServer",
+                                $"Player '{removedPlayer.Profile.Name}' timed out and was removed.");
+                        }
+                    }
+
+                    if (listChanged)
+                    {
+                        _context.OnPlayerProfilesChanged();
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "ScaffoldingServer", "An error occurred in the player cleanup task.");
+            }
+        }
     }
 
     private async Task _ListenForClientsAsync(CancellationToken ct)
@@ -136,7 +204,11 @@ public sealed class ScaffoldingServer : IAsyncDisposable
             }
             finally
             {
-                _context.PlayerProfiles.TryRemove(sessionId, out _);
+                if (_context.TrackedPlayers.TryRemove(sessionId, out _))
+                {
+                    _context.OnPlayerProfilesChanged();
+                    LogWrapper.Info("ScaffoldingServer", $"Player with session {sessionId} disconnected.");
+                }
             }
         }
     }
@@ -144,9 +216,19 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        if (!_cts.IsCancellationRequested)
+        {
+            await _cts.CancelAsync().ConfigureAwait(false);
+        }
+
+        _listener.Stop();
+
         await CastAndDispose(_listener).ConfigureAwait(false);
-        await CastAndDispose(_cts).ConfigureAwait(false);
         if (_listenTask != null) await CastAndDispose(_listenTask).ConfigureAwait(false);
+        if (_cleanupTask != null) await CastAndDispose(_cleanupTask).ConfigureAwait(false);
+        await CastAndDispose(_cts).ConfigureAwait(false);
+
+        ServerStopped?.Invoke();
 
         return;
 

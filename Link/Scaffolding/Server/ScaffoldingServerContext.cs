@@ -4,28 +4,33 @@ using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding.Server;
 
 public class ScaffoldingServerContext : IServerContext
 {
-    private ConcurrentDictionary<string, PlayerProfile> _playerProfiles = [];
+    private ConcurrentDictionary<string, TrackedPlayerProfile> _trackedPlayers = [];
 
     /// <inheritdoc />
-    public ConcurrentDictionary<string, PlayerProfile> PlayerProfiles
+    public ConcurrentDictionary<string, TrackedPlayerProfile> TrackedPlayers
     {
-        get => _playerProfiles;
-        set
-        {
-            _playerProfiles = value;
-            IReadOnlyList<PlayerProfile> arg = [.. value.Values];
-            _ = Task.Run(() => PlayerProfilesChanged?.Invoke(arg));
-        }
+        get => _trackedPlayers;
+        private set => _trackedPlayers = value;
     }
+
+    public IReadOnlyList<PlayerProfile> PlayerProfiles =>
+        _trackedPlayers.Values.Select(player => player.Profile).ToList().AsReadOnly();
 
     /// <inheritdoc />
     public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfilesChanged;
+
+    public void OnPlayerProfilesChanged()
+    {
+        var currentProfiles = PlayerProfiles;
+        Task.Run(() => PlayerProfilesChanged?.Invoke(currentProfiles));
+    }
 
     /// <inheritdoc />
     public int MinecraftServerProt { get; }
@@ -37,12 +42,12 @@ public class ScaffoldingServerContext : IServerContext
     public string PlayerName { get; }
 
     private ScaffoldingServerContext(
-        ConcurrentDictionary<string, PlayerProfile> profiles,
+        ConcurrentDictionary<string, TrackedPlayerProfile> profiles,
         int mcPort,
         LobbyInfo info,
         string playerName)
     {
-        PlayerProfiles = profiles;
+        TrackedPlayers = profiles;
         MinecraftServerProt = mcPort;
         UserLobbyInfo = info;
         PlayerName = playerName;
@@ -59,10 +64,12 @@ public class ScaffoldingServerContext : IServerContext
             Kind = PlayerKind.HOST
         };
 
+        var tracked = new TrackedPlayerProfile { Profile = profile, LastSeenUtc = DateTime.UtcNow };
+
         var roomCode = LobbyCodeGenerator.Generate();
 
-        var dic = new ConcurrentDictionary<string, PlayerProfile>();
-        _ = dic.TryAdd(string.Empty, profile);
+        var dic = new ConcurrentDictionary<string, TrackedPlayerProfile>();
+        _ = dic.TryAdd(string.Empty, tracked);
 
         return new ScaffoldingServerContext(dic, mcPort, roomCode, playerName);
     }

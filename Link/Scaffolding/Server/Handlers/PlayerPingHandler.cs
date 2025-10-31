@@ -31,9 +31,22 @@ public class PlayerPingHandler : IRequestHandler
                 return Task.FromResult(((byte)32, ReadOnlyMemory<byte>.Empty));
             }
 
-            context.PlayerProfiles.AddOrUpdate(sessionId,
-                _ => profile with { Kind = PlayerKind.GUEST },
-                (_, _) => profile with { Kind = PlayerKind.GUEST });
+            var guestProfile = profile with { Kind = PlayerKind.GUEST };
+
+            context.TrackedPlayers.AddOrUpdate(sessionId,
+                _ =>
+                {
+                    var newPlayer = new TrackedPlayerProfile { Profile = profile, LastSeenUtc = DateTime.UtcNow };
+                    context.OnPlayerProfilesChanged();
+                    return newPlayer;
+                },
+                (_, existingPlayer) =>
+                {
+                    existingPlayer.Profile = guestProfile;
+                    existingPlayer.LastSeenUtc = DateTime.UtcNow;
+
+                    return existingPlayer;
+                });
 
             return Task.FromResult(((byte)0, ReadOnlyMemory<byte>.Empty));
         }

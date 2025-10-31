@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,11 +62,6 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// </summary>
     public static string? CurrentUserName { get; private set; }
 
-    /// <summary>
-    /// Procheck result.
-    /// </summary>
-    public static LobbyCheckResult CheckResult { get; set; } = new(false, string.Empty, CoreHintType.Info);
-
     #region UI Events
 
     /// <summary>
@@ -92,6 +88,11 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// Invoked when client ping happened.
     /// </summary>
     public static event Action<long>? OnClientPing;
+
+    /// <summary>
+    /// Invoked when server shutted down.
+    /// </summary>
+    public static event Action? OnServerShuttedDown;
 
     #endregion
 
@@ -221,11 +222,6 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// <param name="username">Player name.</param>
     public static async Task<bool> CreateLobbyAsync(int port, string username)
     {
-        if (!CheckResult.IsAbleToStart)
-        {
-            return false;
-        }
-
         if (_NotHaveNaid())
         {
             OnHint?.Invoke("请先登录 Natayark ID 再使用大厅！", CoreHintType.Critical);
@@ -247,6 +243,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
 
             CurrentLobbyCode = serverEntity.EasyTier.Lobby.FullCode;
 
+            serverEntity.Server.ServerStopped += () => OnServerShuttedDown?.Invoke();
+            serverEntity.Server.PlayerProfileChanged += _ServerOnPlayerListChanged;
+
             _SetState(LobbyState.Connected);
             _isGameWatcherRunnable = true;
         }
@@ -262,6 +261,29 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         return true;
     }
 
+    private static void _ServerOnPlayerListChanged(IReadOnlyList<PlayerProfile> players)
+    {
+        _ = _RunInUiAsync(() =>
+        {
+            var currentIds = new HashSet<string>(Players.Select(p => p.MachineId));
+            var newIds = new HashSet<string>(players.Select(p => p.MachineId));
+
+            if (currentIds.SetEquals(newIds))
+            {
+                return;
+            }
+
+            LogWrapper.Debug("LobbyService", "Player list changed, updating UI.");
+            var sortedPlayers = PlayerListHandler.Sort(players);
+
+            Players.Clear();
+            foreach (var player in sortedPlayers)
+            {
+                Players.Add(player);
+            }
+        });
+    }
+
     /// <summary>
     /// Join a exist lobby.
     /// </summary>
@@ -269,11 +291,6 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// <param name="username">Current use name.</param>
     public static async Task<bool> JoinLobbyAsync(string lobbyCode, string username)
     {
-        if (!CheckResult.IsAbleToStart)
-        {
-            return false;
-        }
-
         _SetState(LobbyState.Joining);
 
         LogWrapper.Info("LobbyService", $"Try to join lobby {lobbyCode}");
@@ -292,6 +309,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             }
 
             clientEntity.Client.Heartbeat += _ClientOnHeartbeat;
+            clientEntity.Client.ServerShuttedDown += ClientOnServerShuttedDown;
 
             _SetState(LobbyState.Connected);
         }
@@ -315,11 +333,37 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         return true;
     }
 
+    private static void ClientOnServerShuttedDown()
+    {
+        OnServerShuttedDown?.Invoke();
+
+        _ = LeaveLobbyAsync();
+    }
+
     private static void _ClientOnHeartbeat(IReadOnlyList<PlayerProfile> players, long latency)
     {
-        var sortedPlayers = PlayerListHandler.Sort(players);
-        Players = [.. sortedPlayers];
-        OnClientPing?.Invoke(latency);
+        _ = _RunInUiAsync(() =>
+        {
+            var currentIds = new HashSet<string>(Players.Select(p => p.MachineId));
+            var newIds = new HashSet<string>(players.Select(p => p.MachineId));
+
+            if (currentIds.SetEquals(newIds))
+            {
+                OnClientPing?.Invoke(latency);
+                return;
+            }
+
+            LogWrapper.Debug("LobbyService", "Player list changed, updating UI.");
+            var sortedPlayers = PlayerListHandler.Sort(players);
+
+            Players.Clear();
+            foreach (var player in sortedPlayers)
+            {
+                Players.Add(player);
+            }
+
+            OnClientPing?.Invoke(latency);
+        });
     }
 
 
@@ -335,7 +379,14 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         Players.Clear();
         CurrentLobbyCode = null;
         CurrentUserName = null;
+
+        if (_LobbyController.ScfClientEntity is not null)
+        {
+            _LobbyController.ScfClientEntity.Client.Heartbeat -= _ClientOnHeartbeat;
+        }
+
         await _LobbyController.CloseAsync().ConfigureAwait(false);
+
 
         _lobbyCts = new CancellationTokenSource();
         _SetState(LobbyState.Initialized);
@@ -365,7 +416,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             return;
         }
 
+#pragma warning disable CS8602 // 解引用可能出现空引用。 will not be null in there
         LobbyController.IsHostInstanceAvailableAsync(_LobbyController.ScfServerEntity.EasyTier.MinecraftPort)
+#pragma warning restore CS8602 // 解引用可能出现空引用。
             .ContinueWith(async (task) =>
             {
                 var isExist = await task.ConfigureAwait(false);
@@ -389,14 +442,6 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
 /// <param name="Name">World name.</param>
 /// <param name="Port">World share port.</param>
 public record FoundWorld(string Name, int Port);
-
-/// <summary>
-/// Lobby check result.
-/// </summary>
-/// <param name="IsAbleToStart">Demonstrate is lobby ready to start.</param>
-/// <param name="Message">Precheck result message.</param>
-/// <param name="HintType">Hint type.</param>
-public record LobbyCheckResult(bool IsAbleToStart, string Message, CoreHintType HintType);
 
 /// <summary>
 /// Hint type in PCL.Core (for UI display).

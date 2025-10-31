@@ -315,13 +315,13 @@ public class EasyTierEntity
             var info = await _GetPlayersAsync().ConfigureAwait(false);
             if (info.Host is null)
             {
-                LogWrapper.Debug("EasyTierEntity", "Retry to get ET Info.");
+                LogWrapper.Debug("EasyTierEntity", "Retry to get EasyTier Info.");
                 await Task.Delay(1000).ConfigureAwait(false);
                 retryCount++;
                 continue;
             }
 
-            LogWrapper.Debug("EtEntity", "Successfully to get player info from ET Cli.");
+            LogWrapper.Debug("EtEntity", "Successfully to get player info from EasyTier CLI.");
 
             if (info.Host.Ping < 1000)
             {
@@ -334,7 +334,7 @@ public class EasyTierEntity
             retryCount++;
         }
 
-        LogWrapper.Debug("EtEntity", "EasyTier Entiry is ready!");
+        LogWrapper.Debug("EtEntity", "Failed to get player info from EasyTier CLI.");
 
         return (false, null);
     }
@@ -367,7 +367,8 @@ public class EasyTierEntity
         cliProcess.EnableRaisingEvents = true;
         try
         {
-            cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp 0.0.0.0:{localPort} {targetIp}:{targetPort}";
+            cliProcess.StartInfo.Arguments =
+                $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp 127.0.0.1:{localPort} {targetIp}:{targetPort}";
             cliProcess.Start();
             await cliProcess.WaitForExitAsync().ConfigureAwait(false);
 
@@ -418,7 +419,7 @@ public class EasyTierEntity
             await cliProcess.WaitForExitAsync(cts.Token).ConfigureAwait(false);
 
             var output = stdOut + stdErr;
-            LogWrapper.Debug("ET Cli", output);
+            //LogWrapper.Debug("ET Cli", output);
 
             if (JsonNode.Parse(output) is not JsonArray jArray)
             {

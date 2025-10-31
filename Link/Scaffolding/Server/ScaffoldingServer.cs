@@ -1,20 +1,18 @@
+using PCL.Core.Link.Scaffolding.Client.Models;
+using PCL.Core.Link.Scaffolding.Server.Abstractions;
+using PCL.Core.Link.Scaffolding.Server.Handlers;
+using PCL.Core.Logging;
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Client.Models;
-using PCL.Core.Link.Scaffolding.Server.Abstractions;
-using PCL.Core.Link.Scaffolding.Server.Handlers;
-using PCL.Core.Logging;
 
 namespace PCL.Core.Link.Scaffolding.Server;
 
@@ -29,6 +27,7 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     private readonly CancellationTokenSource _cts = new();
     private Task? _listenTask;
 
+
     public ImmutableDictionary<string, PlayerProfile> CurrentPlayers => _context.PlayerProfiles.ToImmutableDictionary();
 
     #region Events
@@ -38,7 +37,7 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     public event Action? ServerException;
 
     #endregion
-    
+
     public ScaffoldingServer(int port, IServerContext context)
     {
         _listener = new TcpListener(IPAddress.Any, port);

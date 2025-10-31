@@ -13,7 +13,7 @@ public static class ScaffoldingFactory
 {
     // Please update ScaffoldingServerContext.cs at the same time.
     // TODO: change pcl-ce version code when update
-    private const string LobbyVendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
+    private const string LobbyVendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
     private const string HostIp = "10.114.51.41";
 
     /// <exception cref="ArgumentException">Invalid lobby code.</exception>

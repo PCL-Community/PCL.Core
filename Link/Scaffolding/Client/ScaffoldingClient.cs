@@ -5,6 +5,7 @@ using PCL.Core.Link.Scaffolding.Client.Requests;
 using PCL.Core.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading;
@@ -36,11 +37,26 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
     private Task? _heartbeatTask;
     private readonly PlayerPingRequest _playerPingRequest = new(playerName, machineId, vendor);
     private CancellationTokenSource? _heartbeatCts;
+    private readonly Stopwatch _heartbeatTimer = new();
+
     private ClientState _state = ClientState.Disconnected;
 
     #region Events
 
-    public event Action<IReadOnlyList<PlayerProfile>>? PlayerListUpdated;
+    /// <summary>
+    /// Occurs when a heartbeat signal is received, providing the current list of player profiles and the elapsed time
+    /// since the last heartbeat.
+    /// </summary>
+    /// <remarks>
+    /// Subscribers can use this event to monitor player activity or synchronize state at regular
+    /// intervals. The event provides a read-only list of player profiles and an integer representing the elapsed time,
+    /// typically in milliseconds or seconds, depending on the implementation.
+    /// </remarks>
+    public event Action<IReadOnlyList<PlayerProfile>, long>? Heartbeat;
+
+    /// <summary>
+    /// Occurs when the server has been shut down or is unreachable.
+    /// </summary>
     public event Action? ServerShuttedDown;
 
     #endregion
@@ -107,11 +123,16 @@ public sealed class ScaffoldingClient(string host, int scfPort, string playerNam
             {
                 await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
 
+                _heartbeatTimer.Start();
                 await SendRequestAsync(_playerPingRequest, ct).ConfigureAwait(false);
+                _heartbeatTimer.Stop();
+
+                var letancy = _heartbeatTimer.ElapsedMilliseconds;
+                _heartbeatTimer.Reset();
 
                 PlayerList = await SendRequestAsync(new GetPlayerProfileListRequest(), ct).ConfigureAwait(false);
 
-                PlayerListUpdated?.Invoke(PlayerList);
+                Heartbeat?.Invoke(PlayerList, letancy);
             }
             catch (OperationCanceledException)
             {

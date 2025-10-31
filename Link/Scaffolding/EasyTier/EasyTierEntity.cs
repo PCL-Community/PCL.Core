@@ -35,30 +35,30 @@ public enum EtState
 /// </summary>
 public class EasyTierEntity
 {
-    private readonly Lazy<Process> _etProcessLazy;
-
-    private Process? _EtProcess => _etProcessLazy.Value;
+    private readonly Process? _etProcess;
     private readonly int _rpcPort;
     private readonly LobbyInfo _lobby;
     private readonly int _scfPort;
 
     public int ForwardPort { get; private set; }
+    public int MinecraftPort { get; init; }
     public EtState State { get; private set; }
     public LobbyInfo Lobby => _lobby;
-    public int McPort { get; init; }
+
+    public event Action? EasyTierProcessExcited;
 
     /// <summary>
     /// Constructor of EasyTierEntity
     /// </summary>
     /// <param name="lobby">The room information.</param>
-    /// <param name="mcPort">Minecraft port.</param>
+    /// <param name="minecraftPort">Minecraft port.</param>
     /// <param name="scfPort">The server port.</param>
     /// <param name="asHost">Indicates whether the entity acts as a host.</param>
     /// <exception cref="FileNotFoundException">Thrown if EasyTier was broken.</exception>
-    public EasyTierEntity(LobbyInfo lobby, int mcPort, int scfPort, bool asHost)
+    public EasyTierEntity(LobbyInfo lobby, int minecraftPort, int scfPort, bool asHost)
     {
         _lobby = lobby;
-        McPort = mcPort;
+        MinecraftPort = minecraftPort;
         _scfPort = scfPort;
         State = EtState.Stopped;
 
@@ -85,7 +85,7 @@ public class EasyTierEntity
 
         ForwardPort = NetworkHelper.NewTcpPort();
 
-        _etProcessLazy = new Lazy<Process>(() => _BuildProcessAsync(asHost).GetAwaiter().GetResult());
+        _etProcess = _BuildProcessAsync(asHost).GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -99,8 +99,10 @@ public class EasyTierEntity
     {
         try
         {
-            _EtProcess!.Start();
+            _etProcess!.Start();
             State = EtState.Active;
+
+            _etProcess.Exited += (_, _) => EasyTierProcessExcited?.Invoke();
         }
         catch (Exception ex)
         {
@@ -123,7 +125,7 @@ public class EasyTierEntity
     {
         try
         {
-            _EtProcess!.Kill();
+            _etProcess!.Kill();
             State = EtState.Stopped;
             return 0;
         }
@@ -173,8 +175,8 @@ public class EasyTierEntity
                 .Add("host-name", $"scaffolding-mc-server-{_scfPort}")
                 .Add("tcp-whitelist", _scfPort.ToString())
                 .Add("udp-whitelist", _scfPort.ToString())
-                .Add("tcp-whitelist", McPort.ToString())
-                .Add("udp-whitelist", McPort.ToString())
+                .Add("tcp-whitelist", MinecraftPort.ToString())
+                .Add("udp-whitelist", MinecraftPort.ToString())
                 .Add("l", "tcp://0.0.0.0:0")
                 .Add("l", "udp://0.0.0.0:0");
         }
@@ -296,13 +298,13 @@ public class EasyTierEntity
     {
         var retryCount = 0;
 
-        while (_EtProcess is null && retryCount < 10)
+        while (_etProcess is null && retryCount < 10)
         {
             await Task.Delay(1000).ConfigureAwait(false);
             retryCount++;
         }
 
-        if (_EtProcess is null)
+        if (_etProcess is null)
         {
             return (false, null);
         }

@@ -1,14 +1,31 @@
-using System.Collections.Concurrent;
 using PCL.Core.Link.Scaffolding.Client.Models;
-using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using PCL.Core.Link.Scaffolding.EasyTier;
+using PCL.Core.Link.Scaffolding.Server.Abstractions;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding.Server;
 
 public class ScaffoldingServerContext : IServerContext
 {
+    private ConcurrentDictionary<string, PlayerProfile> _playerProfiles = [];
+
     /// <inheritdoc />
-    public ConcurrentDictionary<string, PlayerProfile> PlayerProfiles { get; }
+    public ConcurrentDictionary<string, PlayerProfile> PlayerProfiles
+    {
+        get => _playerProfiles;
+        set
+        {
+            _playerProfiles = value;
+            IReadOnlyList<PlayerProfile> arg = [.. value.Values];
+            _ = Task.Run(() => PlayerProfilesChanged?.Invoke(arg));
+        }
+    }
+
+    /// <inheritdoc />
+    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfilesChanged;
 
     /// <inheritdoc />
     public int MinecraftServerProt { get; }
@@ -37,8 +54,8 @@ public class ScaffoldingServerContext : IServerContext
         {
             Name = playerName,
             MachineId = Utils.Secret.Identify.LaunchId,
-            // Please update ScaffoldingFactory.cs at the same time.
-            Vendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
+            // TODO: Please update ScaffoldingFactory.cs at the same time.
+            Vendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
             Kind = PlayerKind.HOST
         };
 

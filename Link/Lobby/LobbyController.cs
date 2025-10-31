@@ -21,15 +21,35 @@ using LobbyType = PCL.Core.Link.Scaffolding.Client.Models.LobbyType;
 
 namespace PCL.Core.Link.Lobby;
 
-public static class LobbyController
+/// <summary>
+/// The controller of lobby that used for creating Scaffolding entity.
+/// </summary>
+public class LobbyController
 {
-    public static bool IsHost = false;
-    public static ScaffoldingClientEntity? ScfClientEntity;
-    public static ScaffoldingServerEntity? ScfServerEntity;
+    /// <summary>
+    /// Demonstrate the current lobby is host or joiner.
+    /// </summary>
+    public bool IsHost = false;
 
-    public static async Task<ScaffoldingClientEntity?> LaunchClientAsync(string username, string code)
+    /// <summary>
+    /// Scaffolding client entity.
+    /// </summary>
+    public ScaffoldingClientEntity? ScfClientEntity;
+
+    /// <summary>
+    /// Scaffolding server entity.
+    /// </summary>
+    public ScaffoldingServerEntity? ScfServerEntity;
+
+    /// <summary>
+    /// Launch a Scaffolding Client.
+    /// </summary>
+    /// <param name="username">Join user name.</param>
+    /// <param name="code">Lobby share code.</param>
+    /// <returns>Created <see cref="ScaffoldingClientEntity"/>.</returns>
+    public async Task<ScaffoldingClientEntity?> LaunchClientAsync(string username, string code)
     {
-        if (await _SendTelemetryAsync(false).ConfigureAwait(false) == 1)
+        if (!await _SendTelemetryAsync(false).ConfigureAwait(false))
         {
             return null;
         }
@@ -47,7 +67,7 @@ public static class LobbyController
 
             var hostname = string.Empty;
 
-            while (scfEntity.Client.PlayerList == null)
+            while (scfEntity.Client.PlayerList is null)
             {
                 await Task.Delay(800).ConfigureAwait(false);
             }
@@ -99,9 +119,15 @@ public static class LobbyController
         return null;
     }
 
-    public static async Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
+    /// <summary>
+    /// Launch a Scaffolding Server.
+    /// </summary>
+    /// <param name="username">Host user name.</param>
+    /// <param name="port">Minecraft port.</param>
+    /// <returns>Created <see cref="ScaffoldingServerEntity"/>.</returns>
+    public async Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
     {
-        if (await _SendTelemetryAsync(true).ConfigureAwait(false) == 1)
+        if (!await _SendTelemetryAsync(true).ConfigureAwait(false))
         {
             return null;
         }
@@ -128,15 +154,18 @@ public static class LobbyController
     {
         var ping = new McPing("127.0.0.1", port);
         var info = await ping.PingAsync().ConfigureAwait(false);
+
         if (info != null) return true;
+
         LogWrapper.Warn("Link", $"本地 MC 局域网实例 ({port}) 疑似已关闭");
+
         return false;
     }
 
     /// <summary>
     /// 退出大厅。这将同时关闭 EasyTier 和 MC 端口转发，需要自行清理 UI。
     /// </summary>
-    public static async Task<int> CloseAsync()
+    public async Task<int> CloseAsync()
     {
         McForward?.Stop();
         McBroadcast?.Stop();
@@ -155,7 +184,7 @@ public static class LobbyController
         return 0;
     }
 
-    private static async Task<int> _SendTelemetryAsync(bool isHost)
+    private static async Task<bool> _SendTelemetryAsync(bool isHost)
     {
         LogWrapper.Info("Link", "开始发送联机数据");
         var servers = Config.Link.RelayServer;
@@ -192,7 +221,7 @@ public static class LobbyController
                 if (RequiresLogin)
                 {
                     LogWrapper.Error("Link", "联机数据发送失败，未设置 TelemetryKey");
-                    return 1;
+                    return false;
                 }
                 LogWrapper.Warn("Link", "联机数据发送失败，未设置 TelemetryKey，跳过发送");
             }
@@ -209,7 +238,7 @@ public static class LobbyController
                     if (RequiresLogin)
                     {
                         LogWrapper.Error("Link", "联机数据发送失败，响应内容为空");
-                        return 1;
+                        return false;
                     }
                     LogWrapper.Warn("Link", "联机数据发送失败，响应内容为空，跳过发送");
                 }
@@ -225,7 +254,7 @@ public static class LobbyController
                         if (RequiresLogin)
                         {
                             LogWrapper.Error("Link", "联机数据发送失败，响应内容: " + result);
-                            return 1;
+                            return false;
                         }
                         LogWrapper.Warn("Link", "联机数据发送失败，跳过发送，响应内容: " + result);
                     }
@@ -238,11 +267,11 @@ public static class LobbyController
             {
                 LogWrapper.Error(ex, "Link",
                     ex.Message.Contains("429") ? "联机数据发送失败，请求过于频繁" : "联机数据发送失败");
-                return 1;
+                return false;
             }
             LogWrapper.Warn(ex, "Link", "联机数据发送失败，跳过发送");
         }
 
-        return 0;
+        return true;
     }
 }

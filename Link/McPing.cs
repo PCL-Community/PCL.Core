@@ -1,3 +1,5 @@
+using PCL.Core.Logging;
+using PCL.Core.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,8 +12,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Logging;
-using PCL.Core.Utils;
 
 namespace PCL.Core.Link;
 
@@ -43,7 +43,7 @@ public class McPing : IDisposable
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NullReferenceException">获取的结果出现字段缺失时</exception>
-    public async Task<McPingResult?> PingAsync(CancellationToken cancellationToken = default) 
+    public async Task<McPingResult?> PingAsync(CancellationToken cancellationToken = default)
     {
         using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
         using var timeoutCts = new CancellationTokenSource(_timeout);
@@ -113,23 +113,25 @@ public class McPing : IDisposable
         so.Close();
 
         var retBinary = res.ToArray();
-        var dataLength = Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
+        var dataLength =
+            Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
         LogWrapper.Debug("McPing", $"ServerDataLength: {dataLength}");
         if (dataLength > retBinary.Length) throw new Exception("The server data is too large");
         var retCtx = Encoding.UTF8.GetString(retBinary.Skip(1 + packDataHeaderLength).Take(dataLength).ToArray());
 
         var retJson = JsonNode.Parse(retCtx) ?? throw new NullReferenceException("服务器返回了错误的信息");
-    #if DEBUG
+#if DEBUG
         var resJsonDebug = retJson.DeepClone();
         if (resJsonDebug is JsonObject jsonObject && jsonObject.ContainsKey("favicon"))
         {
             jsonObject["favicon"] = "...";
         }
+
         LogWrapper.Debug("McPing", resJsonDebug.ToJsonString());
-    #endif
+#endif
         var versionNode = retJson["version"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失: version");
         var playersNode = retJson["players"] ?? new JsonObject();
-        var descNode = _convertJNodeToMcString(retJson["description"] ?? new JsonObject());
+        var descNode = _ConvertJNodeToMcString(retJson["description"] ?? new JsonObject());
         var modInfoNode = retJson["modinfo"];
         var ret = new McPingResult(
             new McPingVersionResult(
@@ -138,7 +140,8 @@ public class McPing : IDisposable
             new McPingPlayerResult(
                 Convert.ToInt32(playersNode["max"]?.ToString() ?? "0"),
                 Convert.ToInt32(playersNode["online"]?.ToString() ?? "0"),
-                (playersNode["sample"]?.AsArray() ?? []).Select(x => new McPingPlayerSampleResult(x!["name"]?.ToString() ?? "", x["id"]?.ToString() ?? "")).ToList()),
+                (playersNode["sample"]?.AsArray() ?? []).Select(x =>
+                    new McPingPlayerSampleResult(x!["name"]?.ToString() ?? "", x["id"]?.ToString() ?? "")).ToList()),
             descNode,
             retJson["favicon"]?.ToString() ?? string.Empty,
             watcher.ElapsedMilliseconds,
@@ -238,7 +241,7 @@ public class McPing : IDisposable
         return statusRequest.ToArray();
     }
 
-    private static string _convertJNodeToMcString(JsonNode? jsonNode)
+    private static string _ConvertJNodeToMcString(JsonNode? jsonNode)
     {
         if (jsonNode == null) return string.Empty;
         StringBuilder result = new();
@@ -253,54 +256,54 @@ public class McPing : IDisposable
             {
                 // 处理对象
                 case JsonValueKind.Object:
-                {
-                    var obj = current.AsObject();
-                    // LogWrapper.Debug("McPing",$"Treat {obj} as JObject");
-                    // 检查并处理 extra 数组
-                    if (obj.TryGetPropertyValue("extra", out var extraNode) && extraNode is JsonArray extraArray)
-                        // 逆序压栈保证原始顺序
-                        for (var i = extraArray.Count - 1; i >= 0; i--)
-                            if (extraArray[i] != null)
-                                stack.Push(extraArray[i]!);
-                    // 检查并处理 text 属性
-                    if (obj.TryGetPropertyValue("text", out _))
                     {
-                        var formatCode = _GetTextStyleString(
-                            obj["color"]?.ToString() ?? string.Empty,
-                            Convert.ToBoolean(obj["bold"]?.ToString() ?? "false"),
-                            Convert.ToBoolean(obj["obfuscated"]?.ToString() ?? "false"),
-                            Convert.ToBoolean(obj["strikethrough"]?.ToString() ?? "false"),
-                            Convert.ToBoolean(obj["underline"]?.ToString() ?? "false"),
-                            Convert.ToBoolean(obj["italic"]?.ToString() ?? "false")
+                        var obj = current.AsObject();
+                        // LogWrapper.Debug("McPing",$"Treat {obj} as JObject");
+                        // 检查并处理 extra 数组
+                        if (obj.TryGetPropertyValue("extra", out var extraNode) && extraNode is JsonArray extraArray)
+                            // 逆序压栈保证原始顺序
+                            for (var i = extraArray.Count - 1; i >= 0; i--)
+                                if (extraArray[i] != null)
+                                    stack.Push(extraArray[i]!);
+                        // 检查并处理 text 属性
+                        if (obj.TryGetPropertyValue("text", out _))
+                        {
+                            var formatCode = _GetTextStyleString(
+                                obj["color"]?.ToString() ?? string.Empty,
+                                Convert.ToBoolean(obj["bold"]?.ToString() ?? "false"),
+                                Convert.ToBoolean(obj["obfuscated"]?.ToString() ?? "false"),
+                                Convert.ToBoolean(obj["strikethrough"]?.ToString() ?? "false"),
+                                Convert.ToBoolean(obj["underline"]?.ToString() ?? "false"),
+                                Convert.ToBoolean(obj["italic"]?.ToString() ?? "false")
                             );
-                        result.Append($"{formatCode}{obj["text"] ?? string.Empty}");
-                    }
+                            result.Append($"{formatCode}{obj["text"] ?? string.Empty}");
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 // 处理字符串值
                 case JsonValueKind.String:
-                {
-                    // LogWrapper.Debug("McPing",$"Treat {value} as JValue");
-                    result.Append(current);
-                    break;
-                }
+                    {
+                        // LogWrapper.Debug("McPing",$"Treat {value} as JValue");
+                        result.Append(current);
+                        break;
+                    }
                 // 处理数组
                 // 逆序压栈保证原始顺序
                 case JsonValueKind.Array:
-                {
-                    var jArr = current.AsArray();
-                    // LogWrapper.Debug("McPing",$"Treat {array} as JArray");
-                    for (var i = jArr.Count - 1; i >= 0; i--)
-                        if (jArr[i] != null)
-                            stack.Push(jArr[i]!);
-                    break;
-                }
+                    {
+                        var jArr = current.AsArray();
+                        // LogWrapper.Debug("McPing",$"Treat {array} as JArray");
+                        for (var i = jArr.Count - 1; i >= 0; i--)
+                            if (jArr[i] != null)
+                                stack.Push(jArr[i]!);
+                        break;
+                    }
                 default:
-                {
-                    LogWrapper.Warn("McPing", $"解析到无法处理的 Motd 内容({current.GetValueKind()})：{current}");
-                    break;
-                }
+                    {
+                        LogWrapper.Warn("McPing", $"解析到无法处理的 Motd 内容({current.GetValueKind()})：{current}");
+                        break;
+                    }
             }
         }
 

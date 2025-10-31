@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using PCL.Core.Link.Lobby;
 using PCL.Core.Link.Scaffolding.Client;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
@@ -21,32 +20,24 @@ public static class ScaffoldingFactory
         LobbyType from)
     {
         var machineId = Utils.Secret.Identify.LaunchId;
-        var info = LobbyInfoGenerator.Parse(lobbyCode);
-        if (info == null)
+
+        if (!LobbyCodeGenerator.TryParse(lobbyCode, out var info))
         {
             throw new ArgumentException("Invalid lobby code.", nameof(lobbyCode));
         }
 
-        if (info.Type != LobbyType.Scaffolding)
-        {
-            throw new ArgumentException(info.Type == LobbyType.PCLCE 
-                ? "Outdated lobby type."
-                : "Invalid lobby type."
-                , nameof(lobbyCode));
-        }
-
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
         etEntity.Launch();
-        var retries = 0;
-        while (etEntity.State != EtState.Ready && retries < 6)
+        var retrys = 0;
+        while (etEntity.State != EtState.Ready && retrys < 6)
         {
             await etEntity.CheckEasyTierStatusAsync();
             await Task.Delay(800);
-            retries++;
+            retrys++;
         }
         var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
         EasyPlayerInfo? hostInfo = null;
-        foreach (var player in players.Players!)
+        foreach (var player in players.Players)
         {
             if (player.HostName.Contains("scaffolding-mc-server-"))
             {

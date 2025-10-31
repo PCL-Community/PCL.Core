@@ -12,60 +12,60 @@ using PCL.Core.UI;
 namespace PCL.Core.Minecraft.Launch.Services;
 
 /// <summary>
-/// Java版本选择服务
-/// 负责根据Minecraft版本要求选择合适的Java版本
+/// Java 版本选择服务
+/// 负责根据 Minecraft 版本要求选择合适的 Java 版本
 /// </summary>
 public class JavaSelectService(IMcInstance instance) {
     private const string UseGlobalSetting = "使用全局设置";
 
     /// <summary>
-    /// 根据当前实例版本要求选择最佳Java
+    /// 根据当前实例版本要求选择最佳 Java
     /// </summary>
-    /// <returns>选择的Java信息，如果选择失败则抛出异常</returns>
+    /// <returns>选择的 Java 信息，如果选择失败则抛出异常</returns>
     public async Task<JavaInfo> SelectBestJavaAsync() {
         var (minVersion, maxVersion) = _GetJavaVersionRequirements();
 
         var selectedJava = await _SelectJavaByPriorityAsync(minVersion, maxVersion);
         if (selectedJava != null) {
-            McLaunchUtils.Log($"成功选择Java：{selectedJava}");
+            McLaunchUtils.Log($"成功选择 Java：{selectedJava}");
             return selectedJava;
         }
 
-        McLaunchUtils.Log("未找到合适的Java，尝试自动下载");
+        McLaunchUtils.Log("未找到合适的 Java，尝试自动下载");
         var downloadedJava = await _HandleJavaDownloadAsync(minVersion, maxVersion);
 
-        return downloadedJava ?? throw new InvalidOperationException("无法获取合适的Java版本");
+        return downloadedJava ?? throw new InvalidOperationException("无法获取合适的 Java 版本");
     }
 
     /// <summary>
-    /// 按优先级选择Java：实例指定 > 全局指定 > 自动搜索
+    /// 按优先级选择 Java：实例指定 > 全局指定 > 自动搜索
     /// </summary>
     private async Task<JavaInfo?> _SelectJavaByPriorityAsync(Version minVersion, Version maxVersion) {
-        LogWrapper.Info($"开始选择Java - 最低版本：{minVersion}，最高版本：{maxVersion}，实例：{instance.Name}");
+        LogWrapper.Info($"开始选择 Java - 最低版本：{minVersion}，最高版本：{maxVersion}，实例：{instance.Name}");
 
-        // 1. 优先使用实例指定的Java
+        // 1. 优先使用实例指定的 Java
         var instanceJava = _GetInstanceSpecifiedJava();
         if (instanceJava != null) {
             if (!_IsJavaVersionSuitable(instanceJava.Version, minVersion, maxVersion)) {
-                HintWrapper.Show("当前实例指定的Java版本可能不合适，可能导致游戏崩溃");
+                HintWrapper.Show("当前实例指定的 Java 版本可能不合适，可能导致游戏崩溃");
             }
-            LogWrapper.Info($"使用实例指定Java：{instanceJava}");
+            LogWrapper.Info($"使用实例指定 Java：{instanceJava}");
             return instanceJava;
         }
 
-        // 2. 使用全局指定的Java
+        // 2. 使用全局指定的 Java
         var globalJava = _GetGlobalSpecifiedJava();
         if (globalJava != null) {
-            LogWrapper.Info($"使用全局指定Java：{globalJava}");
+            LogWrapper.Info($"使用全局指定 Java：{globalJava}");
             return globalJava;
         }
 
-        // 3. 自动搜索合适的Java
+        // 3. 自动搜索合适的 Java
         return await _SearchSuitableJavaAsync(minVersion, maxVersion);
     }
 
     /// <summary>
-    /// 处理Java自动下载逻辑
+    /// 处理 Java 自动下载逻辑
     /// </summary>
     private async Task<JavaInfo?> _HandleJavaDownloadAsync(Version minVersion, Version maxVersion) {
         var javaSpec = _DetermineRequiredJavaSpec(minVersion, maxVersion);
@@ -74,15 +74,15 @@ public class JavaSelectService(IMcInstance instance) {
             return null;
         }
 
-        // TODO: 实现Java下载逻辑
+        // TODO: 实现 Java 下载逻辑
         // return await DownloadJava(javaSpec.Code);
 
-        // 暂时返回null，等待下载逻辑实现
+        // 暂时返回 null，等待下载逻辑实现
         return await Task.FromResult<JavaInfo?>(null);
     }
 
     /// <summary>
-    /// 确定所需的Java规格
+    /// 确定所需的 Java 规格
     /// </summary>
     private JavaSpecification _DetermineRequiredJavaSpec(Version minVersion, Version maxVersion) {
         // Java 22+
@@ -95,23 +95,23 @@ public class JavaSelectService(IMcInstance instance) {
             return new JavaSpecification("Java 21", "21", false);
         }
 
-        // Java 17 (用于1.9+)
+        // Java 17 (用于 1.9+)
         if (minVersion >= new Version(1, 9)) {
             return new JavaSpecification("Java 17", "17", false);
         }
 
-        // Java 7 (用于1.8以下)
+        // Java 7 (用于 1.8 以下)
         if (maxVersion < new Version(1, 8)) {
             var hasForge = instance.InstanceInfo.HasPatch("forge");
             return new JavaSpecification("Java 7", "7", hasForge);
         }
 
-        // Java 8的各种情况
+        // Java 8 的各种情况
         return _DetermineJava8Specification(minVersion, maxVersion);
     }
 
     /// <summary>
-    /// 确定Java 8的具体规格
+    /// 确定 Java 8 的具体规格
     /// </summary>
     private static JavaSpecification _DetermineJava8Specification(Version minVersion, Version maxVersion) {
         if (minVersion > new Version(1, 8, 0, 140) && maxVersion < new Version(1, 8, 0, 321)) {
@@ -130,7 +130,7 @@ public class JavaSelectService(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 确认是否下载Java
+    /// 确认是否下载 Java
     /// </summary>
     private bool _ConfirmJavaDownload(JavaSpecification javaSpec) {
         if (javaSpec.RequiresManualDownload) {
@@ -170,7 +170,7 @@ public class JavaSelectService(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 获取Java版本要求范围
+    /// 获取 Java 版本要求范围
     /// </summary>
     private (Version minVersion, Version maxVersion) _GetJavaVersionRequirements() {
         return InstanceJavaService.GetCompatibleJavaVersionRange(
@@ -180,7 +180,7 @@ public class JavaSelectService(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 获取实例指定的Java
+    /// 获取实例指定的 Java
     /// </summary>
     private JavaInfo? _GetInstanceSpecifiedJava() {
         var userSetupVersion = Config.Instance.SelectedJava[instance.Path];
@@ -188,14 +188,14 @@ public class JavaSelectService(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 获取全局指定的Java
+    /// 获取全局指定的 Java
     /// </summary>
     private static JavaInfo? _GetGlobalSpecifiedJava() {
         return JavaInfo.Parse(Config.Launch.SelectedJava);
     }
 
     /// <summary>
-    /// 自动搜索合适的Java
+    /// 自动搜索合适的 Java
     /// </summary>
     private static async Task<JavaInfo?> _SearchSuitableJavaAsync(Version minVersion, Version maxVersion) {
         var javaManager = JavaService.JavaManager;
@@ -204,7 +204,7 @@ public class JavaSelectService(IMcInstance instance) {
         var suitableJava = (await javaManager.SelectSuitableJava(minVersion, maxVersion)).FirstOrDefault();
 
         if (suitableJava == null) {
-            LogWrapper.Info("首次搜索未找到合适Java，重新扫描后再试");
+            LogWrapper.Info("首次搜索未找到合适 Java，重新扫描后再试");
             await javaManager.ScanJavaAsync();
             suitableJava = (await javaManager.SelectSuitableJava(minVersion, maxVersion)).FirstOrDefault();
         }
@@ -214,14 +214,14 @@ public class JavaSelectService(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 检查Java版本是否合适
+    /// 检查 Java 版本是否合适
     /// </summary>
     private static bool _IsJavaVersionSuitable(Version javaVersion, Version minVersion, Version maxVersion) {
         return javaVersion >= minVersion && javaVersion <= maxVersion;
     }
 
     /// <summary>
-    /// Java规格定义
+    /// Java 规格定义
     /// </summary>
     private readonly struct JavaSpecification(string displayName, string code, bool requiresManualDownload) {
         public string DisplayName { get; } = displayName;
@@ -231,13 +231,13 @@ public class JavaSelectService(IMcInstance instance) {
 }
 
 /// <summary>
-/// JavaSelectService的静态工厂类，用于简化使用
+/// JavaSelectService 的静态工厂类，用于简化使用
 /// </summary>
 public static class JavaSelectServiceFactory {
     /// <summary>
-    /// 为当前实例创建JavaSelectService并选择最佳Java
+    /// 为当前实例创建 JavaSelectService 并选择最佳 Java
     /// </summary>
-    /// <returns>选择的Java信息</returns>
+    /// <returns>选择的 Java 信息</returns>
     public static async Task<JavaInfo> SelectBestJavaForCurrentInstanceAsync() {
         var currentInstance = FolderService.FolderManager.CurrentInst!;
 

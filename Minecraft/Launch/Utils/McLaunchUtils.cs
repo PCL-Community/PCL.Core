@@ -22,7 +22,7 @@ public static class McLaunchUtils {
         LogWrapper.Info("McLaunch", msg);
     }
 
-    // 检查是否满足rules条件
+    // 检查是否满足 rules 条件
     public static bool CheckRules(JsonObject? rulesObj) {
         if (rulesObj == null) return false;
 
@@ -62,7 +62,7 @@ public static class McLaunchUtils {
                 }
             }
 
-            // 根据action更新结果
+            // 根据 action 更新结果
             switch (rule.Action) {
                 case "allow":
                     if (ruleMatches) {

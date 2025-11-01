@@ -70,7 +70,7 @@ public static class ETInfoProvider
         bool IsContains(string str) => cost.Contains(str, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    private static readonly Process _cliProcess = new() { 
+    private static readonly Process _CliProcess = new() { 
         StartInfo = new ProcessStartInfo
         {
             FileName = $"{ETPath}\\easytier-cli.exe",
@@ -129,12 +129,12 @@ public static class ETInfoProvider
     {
         try
         {
-            _cliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{ETController.ETRpcPort} -o json peer";
-            _cliProcess.Start();
-            _cliProcess.WaitForExit(180);
+            _CliProcess.StartInfo.Arguments = $"--rpc-portal 127.0.0.1:{ETController.ETRpcPort} -o json peer";
+            _CliProcess.Start();
+            _CliProcess.WaitForExit(180);
 
-            var output = _cliProcess.StandardOutput.ReadToEnd() + _cliProcess.StandardError.ReadToEnd();
-            if (!_cliProcess.HasExited)
+            var output = _CliProcess.StandardOutput.ReadToEnd() + _CliProcess.StandardError.ReadToEnd();
+            if (!_CliProcess.HasExited)
             {
                 LogWrapper.Warn("Link", "Cli 获取结果超时(180 ms)，程序状态可能异常！");
                 LogWrapper.Warn("Link", "获取到 EasyTier Cli 信息: \r\n" + output);

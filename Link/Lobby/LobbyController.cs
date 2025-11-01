@@ -24,7 +24,7 @@ namespace PCL.Core.Link.Lobby;
 /// <summary>
 /// The controller of lobby that used for creating Scaffolding entity.
 /// </summary>
-public class LobbyController
+public sealed class LobbyController
 {
     /// <summary>
     /// Demonstrate the current lobby is host or joiner.
@@ -125,6 +125,9 @@ public class LobbyController
     /// <param name="username">Host user name.</param>
     /// <param name="port">Minecraft port.</param>
     /// <returns>Created <see cref="ScaffoldingServerEntity"/>.</returns>
+    /// <remarks>
+    /// Because of event handling of Scaffolding Server. You SHOULD start the server on your own.
+    /// </remarks>
     public async Task<ScaffoldingServerEntity?> LaunchServerAsync(string username, int port)
     {
         if (!await _SendTelemetryAsync(true).ConfigureAwait(false))
@@ -136,6 +139,8 @@ public class LobbyController
         {
             var scfEntity = ScaffoldingFactory.CreateServer(port, username);
             ScfServerEntity = scfEntity;
+
+            LogWrapper.Info("LobbyController", "Successfully to launch Scaffolding Server.");
 
             return scfEntity;
         }
@@ -171,13 +176,13 @@ public class LobbyController
         McBroadcast?.Stop();
         if (ScfClientEntity != null)
         {
-            ScfClientEntity.EasyTier.Stop();
+            await ScfClientEntity.EasyTier.StopAsync().ConfigureAwait(false);
             await ScfClientEntity.Client.DisposeAsync().ConfigureAwait(false);
             ScfClientEntity = null;
         }
         else if (ScfServerEntity != null)
         {
-            ScfServerEntity.EasyTier.Stop();
+            await ScfServerEntity.EasyTier.StopAsync().ConfigureAwait(false);
             await ScfServerEntity.Server.DisposeAsync().ConfigureAwait(false);
             ScfServerEntity = null;
         }

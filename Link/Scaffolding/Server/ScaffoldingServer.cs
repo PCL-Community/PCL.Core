@@ -6,7 +6,6 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -31,15 +30,11 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     private static readonly TimeSpan _PlayerTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _CleanupInterval = TimeSpan.FromSeconds(5);
 
-
-    public ImmutableDictionary<string, PlayerProfile> CurrentPlayers =>
-        _context.TrackedPlayers.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value.Profile);
-
     #region Events
 
-    public event Action? ServerStarted;
+    public event Action<IReadOnlyList<PlayerProfile>>? ServerStarted;
     public event Action? ServerStopped;
-    public event Action? ServerException;
+    public event Action<Exception?>? ServerException;
     public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfileChanged;
 
     private void _OnContextPlayersChanged(IReadOnlyList<PlayerProfile> players)
@@ -51,7 +46,7 @@ public sealed class ScaffoldingServer : IAsyncDisposable
 
     public ScaffoldingServer(int port, IServerContext context)
     {
-        _listener = new TcpListener(IPAddress.Any, port);
+        _listener = new TcpListener(IPAddress.Loopback, port);
         _context = context;
 
         _context.PlayerProfilesChanged += _OnContextPlayersChanged;
@@ -68,11 +63,39 @@ public sealed class ScaffoldingServer : IAsyncDisposable
 
     public void Start()
     {
-        _listener.Start();
+        try
+        {
+            _listener.Start();
+            LogWrapper.Info("ScaffoldingServer",
+                $"Successfully bound to {_listener.LocalEndpoint}. Starting to accept clients.");
+        }
+        catch (SocketException ex)
+        {
+            LogWrapper.Error(ex, "ScaffoldingServer",
+                $"Failed to start TCP listener on port {((IPEndPoint)_listener.LocalEndpoint).Port}. The port might be in use or blocked.");
+            ServerException?.Invoke(ex);
+            return; // 启动失败，直接返回
+        }
+
         _listenTask = _ListenForClientsAsync(_cts.Token);
         _cleanupTask = _MonitorPlayerLivenessAsync(_cts.Token);
 
-        ServerStarted?.Invoke();
+        _listenTask.ContinueWith(t =>
+        {
+            LogWrapper.Error(t.Exception, "ScaffoldingServer",
+                "The main listening task failed unexpectedly. The server is no longer accepting new connections.");
+            ServerException?.Invoke(t.Exception);
+        }, TaskContinuationOptions.OnlyOnFaulted);
+
+        _cleanupTask.ContinueWith(
+            t =>
+            {
+                LogWrapper.Error(t.Exception, "ScaffoldingServer", "The player cleanup task failed unexpectedly.");
+            }, TaskContinuationOptions.OnlyOnFaulted);
+
+        LogWrapper.Debug("ScaffoldingServer", "Successfully scheduled server background tasks.");
+
+        ServerStarted?.Invoke(_context.PlayerProfiles);
     }
 
     private async Task _MonitorPlayerLivenessAsync(CancellationToken ct)
@@ -136,26 +159,40 @@ public sealed class ScaffoldingServer : IAsyncDisposable
             try
             {
                 var tcpClient = await _listener.AcceptTcpClientAsync(ct).ConfigureAwait(false);
-
+                LogWrapper.Debug("ScaffoldingServer", $"Client connected: {tcpClient.Client.RemoteEndPoint}");
                 _ = _HandleClientAsync(tcpClient, ct);
             }
             catch (OperationCanceledException)
             {
+                LogWrapper.Debug("ScaffoldingServer", "Listening task cancelled.");
                 break;
             }
             catch (Exception ex)
             {
                 LogWrapper.Error(ex, "ScaffoldingServer", "Occurred an exception when server running.");
 
-                // TODO: choose a better way to handle exception.
+                try
+                {
+                    _listener.Stop();
+                }
+                catch (Exception lisEx)
+                {
+                    LogWrapper.Error(lisEx, "ScaffoldingServer", "Occurred an exception when stop listening port.");
+                }
+
+
+                ServerStopped?.Invoke();
                 break;
             }
+
+            LogWrapper.Debug("ScaffoldingServer", "Listening task finished.");
         }
     }
 
     private async Task _HandleClientAsync(TcpClient tcpClient, CancellationToken ct)
     {
         var sessionId = Guid.NewGuid().ToString();
+        LogWrapper.Debug("ScaffoldingServer", $"New client connected. Session ID: {sessionId}");
 
         using (tcpClient)
         {
@@ -163,81 +200,179 @@ public sealed class ScaffoldingServer : IAsyncDisposable
             var reader = PipeReader.Create(stream);
             var writer = PipeWriter.Create(stream);
 
-            var readResult = await reader.ReadAsync(ct).ConfigureAwait(false);
-            var buffer = readResult.Buffer;
+            try
+            {
+                while (true)
+                {
+                    var readResult = await reader.ReadAsync(ct).ConfigureAwait(false);
+                    var buffer = readResult.Buffer;
+
+                    // 在一个循环中处理缓冲区中所有可能存在的完整消息
+                    while (_TryParseFrame(ref buffer, out var requestFrame))
+                    {
+                        LogWrapper.Debug("ScaffoldingServer",
+                            $"Received complete frame. Type: {requestFrame.TypeInfo}, Body Length: {requestFrame.Body.Length}");
+
+                        if (_handlers.TryGetValue(requestFrame.TypeInfo, out var handler))
+                        {
+                            var (status, responseBody) =
+                                await handler.HandleAsync(requestFrame.Body, _context, sessionId, ct)
+                                    .ConfigureAwait(false);
+
+                            var responseHeader = new byte[5];
+                            responseHeader[0] = status;
+                            BinaryPrimitives.WriteUInt32BigEndian(responseHeader.AsSpan(1), (uint)responseBody.Length);
+
+                            await writer.WriteAsync(responseHeader, ct).ConfigureAwait(false);
+                            if (responseBody.Length > 0)
+                            {
+                                await writer.WriteAsync(responseBody, ct).ConfigureAwait(false);
+                            }
+
+                            // 在发送每个响应后都刷新，确保数据及时送出
+                            var flushResult = await writer.FlushAsync(ct).ConfigureAwait(false);
+
+                            LogWrapper.Debug("ScaffoldingServer",
+                                $"Response sent for request type: {requestFrame.TypeInfo}");
+
+                            // 如果客户端已经关闭，并且我们刷新失败，就没必要继续了
+                            if (flushResult.IsCanceled || flushResult.IsCompleted)
+                            {
+                                goto
+                                    ConnectionClosed; // i dont want to use goto, but that's better for logic in there.
+                            }
+                        }
+                        else
+                        {
+                            LogWrapper.Warn("ScaffoldingServer",
+                                $"No handler found for request type: {requestFrame.TypeInfo}");
+                        }
+                    }
+
+                    // 将缓冲区的已处理部分标记为消耗掉
+                    reader.AdvanceTo(buffer.Start, buffer.End);
+
+                    // 检查退出条件：客户端已关闭连接
+                    if (readResult.IsCompleted)
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                /* Client disconnected or server is shutting down */
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "ScaffoldingServer", $"An exception occurred while handling client {sessionId}.");
+            }
+
+        ConnectionClosed: // goto 标签
 
             try
             {
-                Span<byte> headerTypeLength = stackalloc byte[1];
-                buffer.Slice(0, 1).CopyTo(headerTypeLength);
-                var typeLength = headerTypeLength[0];
-                var typeInfoBytes = buffer.Slice(1, typeLength);
-                var typeInfo = Encoding.UTF8.GetString(typeInfoBytes.ToArray());
-
-                Span<byte> bodyLengthBuffer = stackalloc byte[4];
-                buffer.Slice(1 + typeLength, 4).CopyTo(bodyLengthBuffer);
-                var bodyLength = BinaryPrimitives.ReadUInt32BigEndian(bodyLengthBuffer);
-                var bodyBuffer = buffer.Slice(5 + typeLength, bodyLength);
-
-                if (_handlers.TryGetValue(typeInfo, out var handler))
-                {
-                    var (status, responseBody) =
-                        await handler.HandleAsync(bodyBuffer.ToArray(), _context, sessionId, ct).ConfigureAwait(false);
-
-                    Span<byte> responseHeader = stackalloc byte[5];
-                    responseHeader[0] = status;
-
-                    BinaryPrimitives.WriteUInt32BigEndian(responseHeader[1..], (uint)responseBody.Length);
-
-                    await writer.WriteAsync(responseHeader.ToArray(), ct).ConfigureAwait(false);
-                    if (responseBody.Length > 0)
-                    {
-                        await writer.WriteAsync(responseBody, ct).ConfigureAwait(false);
-                    }
-
-                    await writer.FlushAsync(ct).ConfigureAwait(false);
-                }
-                else
-                {
-                    LogWrapper.Warn("ScaffoldingServer", $"No handler found for request type: {typeInfo}");
-                }
+                await Task.Delay(TimeSpan.FromMilliseconds(200), ct).ConfigureAwait(false);
             }
-            finally
+            catch (OperationCanceledException)
             {
-                if (_context.TrackedPlayers.TryRemove(sessionId, out _))
-                {
-                    _context.OnPlayerProfilesChanged();
-                    LogWrapper.Info("ScaffoldingServer", $"Player with session {sessionId} disconnected.");
-                }
+                // ignore
             }
         }
+    }
+
+    private static bool _TryParseFrame(ref ReadOnlySequence<byte> buffer,
+        out (string TypeInfo, byte[] Body, SequencePosition End) frame)
+    {
+        frame = default;
+        if (buffer.Length < 1) return false;
+
+        var typeLength = buffer.FirstSpan[0];
+        long headerLength = 1 + typeLength + 4;
+        if (buffer.Length < headerLength) return false;
+
+        var headerSlice = buffer.Slice(0, headerLength);
+        ReadOnlySpan<byte> headerSpan;
+
+        if (headerSlice.IsSingleSegment)
+        {
+            headerSpan = headerSlice.FirstSpan;
+        }
+        else
+        {
+            Span<byte> tempBuffer = new byte[(int)headerLength];
+            headerSlice.CopyTo(tempBuffer);
+            headerSpan = tempBuffer;
+        }
+
+        var typeInfoSlice = headerSpan.Slice(1, typeLength);
+
+        var typeInfo = Encoding.UTF8.GetString(typeInfoSlice);
+
+        var bodyLengthSlice = headerSpan.Slice(1 + typeLength, 4);
+        var bodyLength = BinaryPrimitives.ReadUInt32BigEndian(bodyLengthSlice);
+
+        if (buffer.Length < headerLength + bodyLength) return false;
+
+        var bodyBuffer = buffer.Slice(headerLength, bodyLength);
+        var body = bodyBuffer.ToArray();
+
+        frame = (typeInfo, body, bodyBuffer.End);
+
+        buffer = buffer.Slice(frame.End);
+
+        return true;
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        LogWrapper.Debug("ScaffoldingServer", "Come into DisposeAsync().");
         if (!_cts.IsCancellationRequested)
         {
             await _cts.CancelAsync().ConfigureAwait(false);
         }
 
+        if (_listenTask != null)
+        {
+            try
+            {
+                await _listenTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "ScaffoldingServer",
+                    "An exception occurred while awaiting the listen task during disposal.");
+            }
+        }
+
+        if (_cleanupTask != null)
+        {
+            try
+            {
+                await _cleanupTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "ScaffoldingServer",
+                    "An exception occurred while awaiting the cleanup task during disposal.");
+            }
+        }
+
         _listener.Stop();
 
-        await CastAndDispose(_listener).ConfigureAwait(false);
-        if (_listenTask != null) await CastAndDispose(_listenTask).ConfigureAwait(false);
-        if (_cleanupTask != null) await CastAndDispose(_cleanupTask).ConfigureAwait(false);
-        await CastAndDispose(_cts).ConfigureAwait(false);
+        _cts.Dispose();
+
+        LogWrapper.Debug("ScaffoldingServer", "Server and all background tasks stopped gracefully.");
 
         ServerStopped?.Invoke();
-
-        return;
-
-        static async ValueTask CastAndDispose(IDisposable resource)
-        {
-            if (resource is IAsyncDisposable resourceAsyncDisposable)
-                await resourceAsyncDisposable.DisposeAsync().ConfigureAwait(false);
-            else
-                resource.Dispose();
-        }
     }
 }

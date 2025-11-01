@@ -48,23 +48,21 @@ public static class ScaffoldingFactory
 
         if (hostInfo is null)
         {
-            etEntity.Stop();
+            await etEntity.StopAsync().ConfigureAwait(false);
             throw new FailedToGetPlayerException("Can not get the host information.");
         }
 
         if (!int.TryParse(hostInfo.HostName[22..], out var scfPort))
         {
-            etEntity.Stop();
+            await etEntity.StopAsync().ConfigureAwait(false);
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
         var localPort = await etEntity.AddPortForwardAsync(hostInfo.Ip, scfPort).ConfigureAwait(false);
 
-        await Task.Delay(200).ConfigureAwait(false);
+        var client = new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor);
 
-        return new ScaffoldingClientEntity(
-            new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
-            etEntity, hostInfo);
+        return new ScaffoldingClientEntity(client, etEntity, hostInfo);
     }
 
     /// <summary>
@@ -73,13 +71,18 @@ public static class ScaffoldingFactory
     /// <param name="mcPort">Target forward Miencraft shared port.</param>
     /// <param name="playerName">Game player name.</param>
     /// <returns></returns>
+    /// <exception cref="InvalidOperationException">Fialed to launch EasyTier Core.</exception>
     public static ScaffoldingServerEntity CreateServer(int mcPort, string playerName)
     {
         var context = ScaffoldingServerContext.Create(playerName, mcPort);
         var scfPort = NetworkHelper.NewTcpPort();
 
         var etEntity = _CreateEasyTierEntity(context.UserLobbyInfo, mcPort, scfPort, true);
-        etEntity.Launch();
+        var res = etEntity.Launch();
+        if (res != 0)
+        {
+            throw new InvalidOperationException("Fialed to launch EasyTier Core.");
+        }
 
         var server = new ScaffoldingServer(scfPort, context);
 

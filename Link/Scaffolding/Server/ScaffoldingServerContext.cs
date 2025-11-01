@@ -9,15 +9,18 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding.Server;
 
+/// <summary>
+/// Scaffolding Server running context.
+/// </summary>
 public class ScaffoldingServerContext : IServerContext
 {
-    private ConcurrentDictionary<string, TrackedPlayerProfile> _trackedPlayers = [];
+    private readonly ConcurrentDictionary<string, TrackedPlayerProfile> _trackedPlayers = [];
 
     /// <inheritdoc />
     public ConcurrentDictionary<string, TrackedPlayerProfile> TrackedPlayers
     {
         get => _trackedPlayers;
-        private set => _trackedPlayers = value;
+        private init => _trackedPlayers = value;
     }
 
     public IReadOnlyList<PlayerProfile> PlayerProfiles =>
@@ -53,6 +56,11 @@ public class ScaffoldingServerContext : IServerContext
         PlayerName = playerName;
     }
 
+    /// <summary>
+    /// Create a <see cref="ScaffoldingServerContext"/>.
+    /// </summary>
+    /// <param name="playerName">Player name.</param>
+    /// <param name="mcPort">Minecraft shared port.</param>
     public static ScaffoldingServerContext Create(string playerName, int mcPort)
     {
         var profile = new PlayerProfile
@@ -68,9 +76,9 @@ public class ScaffoldingServerContext : IServerContext
 
         var roomCode = LobbyCodeGenerator.Generate();
 
-        var dic = new ConcurrentDictionary<string, TrackedPlayerProfile>();
-        _ = dic.TryAdd(string.Empty, tracked);
+        var profiles = new ConcurrentDictionary<string, TrackedPlayerProfile>();
+        profiles.TryAdd(string.Empty, tracked);
 
-        return new ScaffoldingServerContext(dic, mcPort, roomCode, playerName);
+        return new ScaffoldingServerContext(profiles, mcPort, roomCode, playerName);
     }
 }

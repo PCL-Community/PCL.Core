@@ -26,6 +26,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     private static readonly LobbyController _LobbyController = new();
     private static CancellationTokenSource _lobbyCts = new();
 
+    private static Task? _discoveringTask;
+    private static CancellationTokenSource _discoveringCts = new();
+
     private static readonly Timer _ServerGameWatcher =
         new(_CheckGameState, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15));
 
@@ -94,6 +97,14 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// </summary>
     public static event Action? OnServerShuttedDown;
 
+
+    /// <summary>
+    /// Invoked when server started successfully.
+    /// </summary>
+    public static event Action? OnServerStarted;
+
+    public static event Action<Exception>? OnServerException;
+
     #endregion
 
     /// <inheritdoc />
@@ -102,6 +113,15 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         _ = _LobbyController.CloseAsync();
         _ServerGameWatcher.Dispose();
         _lobbyCts.Dispose();
+
+        _discoveringCts.Cancel();
+        if (_discoveringTask is not null)
+        {
+            Task.WhenAll(_discoveringTask);
+            _discoveringTask.Dispose();
+        }
+
+        _discoveringCts.Dispose();
     }
 
     private static bool _IsEasyTierCoreFileNotExist() =>
@@ -149,6 +169,8 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
 
             _SetState(LobbyState.Initialized);
             LogWrapper.Info("LobbySerivce", "Lobby service initialized succefully.");
+
+            _ = DiscoverWorldAsync();
         }
         catch (Exception ex)
         {
@@ -163,15 +185,20 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// </summary>
     public static async Task DiscoverWorldAsync()
     {
+        if (_discoveringCts.IsCancellationRequested)
+        {
+            return;
+        }
+
         if (CurrentState is not LobbyState.Initialized && CurrentState is not LobbyState.Idle)
         {
             return;
         }
 
         _SetState(LobbyState.Discovering);
-        DiscoveredWorlds.Clear();
+        await _RunInUiAsync(() => DiscoveredWorlds.Clear()).ConfigureAwait(false);
 
-        await Task.Run(async () =>
+        _discoveringTask = Task.Run(async () =>
         {
             var recordedPorts = new ConcurrentSet<int>();
             using var listener = new BroadcastListener();
@@ -206,7 +233,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             listener.Start();
             await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
             listener.OnReceive -= handler;
-        }).ConfigureAwait(false);
+        }, _discoveringCts.Token);
 
         _SetState(LobbyState.Initialized);
     }
@@ -228,8 +255,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             return false;
         }
 
-        _SetState(LobbyState.Creating);
+        await _discoveringCts.CancelAsync().ConfigureAwait(false);
 
+        _SetState(LobbyState.Creating);
         try
         {
             CurrentUserName = username;
@@ -245,6 +273,15 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
 
             serverEntity.Server.ServerStopped += () => OnServerShuttedDown?.Invoke();
             serverEntity.Server.PlayerProfileChanged += _ServerOnPlayerListChanged;
+            serverEntity.Server.ServerStarted += _ServerOnServerStarted;
+            serverEntity.Server.ServerException += _ServerOnServerException;
+            //serverEntity.EasyTier.EasyTierProcessExcited += () =>
+            //{
+            //    OnHint?.Invoke("EasyTierCore异常退出", CoreHintType.Critical);
+            //    OnServerShuttedDown?.Invoke();
+            //}; this code will invoked when easytier process successfully exited, not in failed state.
+
+            serverEntity.Server.Start();
 
             _SetState(LobbyState.Connected);
             _isGameWatcherRunnable = true;
@@ -259,6 +296,23 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         }
 
         return true;
+    }
+
+    private static void _ServerOnServerException(Exception? ex)
+    {
+        if (ex is null)
+        {
+            return;
+        }
+
+        OnServerException?.Invoke(ex);
+    }
+
+    private static void _ServerOnServerStarted(IReadOnlyList<PlayerProfile> profiles)
+    {
+        LogWrapper.Debug("LobbyService", "Send server started event.");
+        OnServerStarted?.Invoke();
+        _ServerOnPlayerListChanged(profiles);
     }
 
     private static void _ServerOnPlayerListChanged(IReadOnlyList<PlayerProfile> players)
@@ -291,6 +345,8 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// <param name="username">Current use name.</param>
     public static async Task<bool> JoinLobbyAsync(string lobbyCode, string username)
     {
+        await _discoveringCts.CancelAsync().ConfigureAwait(false);
+
         _SetState(LobbyState.Joining);
 
         LogWrapper.Info("LobbyService", $"Try to join lobby {lobbyCode}");
@@ -309,7 +365,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             }
 
             clientEntity.Client.Heartbeat += _ClientOnHeartbeat;
-            clientEntity.Client.ServerShuttedDown += ClientOnServerShuttedDown;
+            clientEntity.Client.ServerShuttedDown += _ClientOnServerShuttedDown;
 
             _SetState(LobbyState.Connected);
         }
@@ -333,7 +389,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         return true;
     }
 
-    private static void ClientOnServerShuttedDown()
+    private static void _ClientOnServerShuttedDown()
     {
         OnServerShuttedDown?.Invoke();
 
@@ -374,24 +430,42 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     {
         _SetState(LobbyState.Leaving);
 
-        await _lobbyCts.CancelAsync().ConfigureAwait(false);
-
-        Players.Clear();
-        CurrentLobbyCode = null;
-        CurrentUserName = null;
-
-        if (_LobbyController.ScfClientEntity is not null)
+        try
         {
-            _LobbyController.ScfClientEntity.Client.Heartbeat -= _ClientOnHeartbeat;
+            await _lobbyCts.CancelAsync().ConfigureAwait(false);
+
+            Players.Clear();
+            CurrentLobbyCode = null;
+            CurrentUserName = null;
+
+            if (_LobbyController.ScfClientEntity?.Client != null)
+            {
+                _LobbyController.ScfClientEntity.Client.Heartbeat -= _ClientOnHeartbeat;
+            }
+
+            if (_LobbyController.ScfServerEntity?.Server != null)
+            {
+                _LobbyController.ScfServerEntity.Server.PlayerProfileChanged -= _ServerOnPlayerListChanged;
+                _LobbyController.ScfServerEntity.Server.ServerStarted -= _ServerOnServerStarted;
+            }
+
+            await _LobbyController.CloseAsync().ConfigureAwait(false);
+
+
+            _lobbyCts = new CancellationTokenSource();
+            _SetState(LobbyState.Initialized);
+
+            LogWrapper.Info("LobbyService", "Left lobby and cleaned up resources.");
+
+            _isGameWatcherRunnable = false;
+
+            _discoveringCts = new CancellationTokenSource();
+            _ = DiscoverWorldAsync();
         }
-
-        await _LobbyController.CloseAsync().ConfigureAwait(false);
-
-
-        _lobbyCts = new CancellationTokenSource();
-        _SetState(LobbyState.Initialized);
-
-        LogWrapper.Info("LobbyService", "Left lobby and cleaned up resources.");
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "LobbyService", "Failed when leave lobby.");
+        }
     }
 
     private static void _SetState(LobbyState newState)
@@ -416,9 +490,12 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             return;
         }
 
-#pragma warning disable CS8602 // 解引用可能出现空引用。 will not be null in there
+        if (_LobbyController.ScfServerEntity is null)
+        {
+            return;
+        }
+
         LobbyController.IsHostInstanceAvailableAsync(_LobbyController.ScfServerEntity.EasyTier.MinecraftPort)
-#pragma warning restore CS8602 // 解引用可能出现空引用。
             .ContinueWith(async (task) =>
             {
                 var isExist = await task.ConfigureAwait(false);

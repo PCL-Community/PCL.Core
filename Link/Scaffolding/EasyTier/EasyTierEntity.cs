@@ -35,7 +35,7 @@ public enum EtState
 /// </summary>
 public class EasyTierEntity
 {
-    private readonly Process? _etProcess;
+    private readonly Process _etProcess;
     private readonly int _rpcPort;
     private readonly LobbyInfo _lobby;
     private readonly int _scfPort;
@@ -97,9 +97,11 @@ public class EasyTierEntity
     /// </returns>
     public int Launch()
     {
+        LogWrapper.Info("EasyTier", "Launch EasyTier Core.");
+
         try
         {
-            _etProcess!.Start();
+            _etProcess.Start();
             State = EtState.Active;
 
             _etProcess.Exited += (_, _) => EasyTierProcessExcited?.Invoke();
@@ -121,20 +123,28 @@ public class EasyTierEntity
     /// - 1 means failed to stop EasyTier.<br/>
     /// - 0 means successful stop.
     /// </returns>
-    public int Stop()
+    public Task<int> StopAsync()
     {
-        try
+        return Task.Run(() =>
         {
-            _etProcess!.Kill();
-            State = EtState.Stopped;
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Error(ex, "EasyTier", "Failed to stop EasyTier.");
-            State = EtState.Stopped;
-            return 1;
-        }
+            try
+            {
+                if (!_etProcess.HasExited)
+                {
+                    _etProcess.Kill(true);
+                    _etProcess.WaitForExit(5000);
+                }
+
+                State = EtState.Stopped;
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "EasyTier", "Failed to stop EasyTier.");
+                State = EtState.Stopped;
+                return 1;
+            }
+        });
     }
 
     private async Task<Process> _BuildProcessAsync(bool asHost)
@@ -171,8 +181,8 @@ public class EasyTierEntity
 
         if (asHost)
         {
-            args.Add("i", "10.114.51.41")
-                .Add("host-name", $"scaffolding-mc-server-{_scfPort}")
+            args.AddWithSpace("i", "10.114.51.41")
+                .Add("hostname", $"scaffolding-mc-server-{_scfPort}")
                 .Add("tcp-whitelist", _scfPort.ToString())
                 .Add("udp-whitelist", _scfPort.ToString())
                 .Add("tcp-whitelist", MinecraftPort.ToString())

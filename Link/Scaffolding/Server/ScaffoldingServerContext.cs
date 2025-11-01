@@ -27,12 +27,12 @@ public class ScaffoldingServerContext : IServerContext
         _trackedPlayers.Values.Select(player => player.Profile).ToList().AsReadOnly();
 
     /// <inheritdoc />
-    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfilesChanged;
+    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfilesPing;
 
     public void OnPlayerProfilesChanged()
     {
         var currentProfiles = PlayerProfiles;
-        Task.Run(() => PlayerProfilesChanged?.Invoke(currentProfiles));
+        Task.Run(() => PlayerProfilesPing?.Invoke(currentProfiles));
     }
 
     /// <inheritdoc />
@@ -63,10 +63,11 @@ public class ScaffoldingServerContext : IServerContext
     /// <param name="mcPort">Minecraft shared port.</param>
     public static ScaffoldingServerContext Create(string playerName, int mcPort)
     {
+        var machineId = Utils.Secret.Identify.LaunchId;
         var profile = new PlayerProfile
         {
             Name = playerName,
-            MachineId = Utils.Secret.Identify.LaunchId,
+            MachineId = machineId,
             // TODO: Please update ScaffoldingFactory.cs at the same time.
             Vendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
             Kind = PlayerKind.HOST
@@ -77,7 +78,7 @@ public class ScaffoldingServerContext : IServerContext
         var roomCode = LobbyCodeGenerator.Generate();
 
         var profiles = new ConcurrentDictionary<string, TrackedPlayerProfile>();
-        profiles.TryAdd(string.Empty, tracked);
+        profiles.TryAdd(machineId, tracked);
 
         return new ScaffoldingServerContext(profiles, mcPort, roomCode, playerName);
     }

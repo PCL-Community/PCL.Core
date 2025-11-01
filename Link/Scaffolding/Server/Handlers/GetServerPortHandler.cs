@@ -1,7 +1,8 @@
+using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using System;
+using System.Buffers.Binary;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Server.Abstractions;
 
 namespace PCL.Core.Link.Scaffolding.Server.Handlers;
 
@@ -15,12 +16,17 @@ public class GetServerPortHandler : IRequestHandler
         IServerContext context, string sessionId, CancellationToken ct)
     {
         var port = context.MinecraftServerProt;
-        var portBytes = BitConverter.GetBytes(port);
 
         if (port == 0)
         {
             return Task.FromResult<(byte, ReadOnlyMemory<byte>)>((32, ReadOnlyMemory<byte>.Empty));
         }
+
+
+        var portBytes = new byte[2];
+        var portAsUshort = (ushort)port;
+
+        BinaryPrimitives.WriteUInt16BigEndian(portBytes.AsSpan(), portAsUshort);
 
         return Task.FromResult<(byte, ReadOnlyMemory<byte>)>((0, portBytes));
     }

@@ -25,7 +25,7 @@ public interface IServerContext
     /// <summary>
     /// Occurs when the list of player profiles changes.
     /// </summary>
-    event Action<IReadOnlyList<PlayerProfile>> PlayerProfilesChanged;
+    event Action<IReadOnlyList<PlayerProfile>> PlayerProfilesPing;
 
     /// <summary>
     /// Gets the prot of the running Minecraft server.

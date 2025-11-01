@@ -275,7 +275,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             serverEntity.Server.PlayerProfileChanged += _ServerOnPlayerListChanged;
             serverEntity.Server.ServerStarted += _ServerOnServerStarted;
             serverEntity.Server.ServerException += _ServerOnServerException;
-            //serverEntity.EasyTier.EasyTierProcessExcited += () =>
+            //serverEntity.EasyTier.EasyTierProcessExisted += () =>
             //{
             //    OnHint?.Invoke("EasyTierCore异常退出", CoreHintType.Critical);
             //    OnServerShutDown?.Invoke();
@@ -312,28 +312,43 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     {
         LogWrapper.Debug("LobbyService", "Send server started event.");
         OnServerStarted?.Invoke();
-        _ServerOnPlayerListChanged(profiles);
+        _ServerOnPlayerPing(profiles);
     }
 
-    private static void _ServerOnPlayerListChanged(IReadOnlyList<PlayerProfile> players)
+    private static void _ServerOnPlayerPing(IReadOnlyList<PlayerProfile> players)
     {
         _ = _RunInUiAsync(() =>
         {
-            var currentIds = new HashSet<string>(Players.Select(p => p.MachineId));
-            var newIds = new HashSet<string>(players.Select(p => p.MachineId));
+            var currentMachineIds = new HashSet<string>(Players.Select(p => p.MachineId));
+            var newMachineIds = new HashSet<string>(players.Select(p => p.MachineId));
 
-            if (currentIds.SetEquals(newIds))
+            if (currentMachineIds.SetEquals(newMachineIds))
             {
-                return;
+                return; // nothing was changed
             }
 
-            LogWrapper.Debug("LobbyService", "Player list changed, updating UI.");
-            var sortedPlayers = PlayerListHandler.Sort(players);
+            LogWrapper.Debug("LobbyService", "Player list membership has changed, updating UI.");
 
-            Players.Clear();
-            foreach (var player in sortedPlayers)
+            var sortedNewPlayers = PlayerListHandler.Sort(players);
+
+            var idsToRemove = currentMachineIds.Except(newMachineIds).ToList();
+            if (idsToRemove.Any())
             {
-                Players.Add(player);
+                var playersToRemove = Players.Where(p => idsToRemove.Contains(p.MachineId)).ToList();
+                foreach (var player in playersToRemove)
+                {
+                    Players.Remove(player);
+                }
+            }
+
+            var idsToAdd = newMachineIds.Except(currentMachineIds).ToList();
+            if (idsToAdd.Any())
+            {
+                var playersToAdd = sortedNewPlayers.Where(p => idsToAdd.Contains(p.MachineId)).ToList();
+                foreach (var player in playersToAdd)
+                {
+                    Players.Add(player);
+                }
             }
         });
     }
@@ -400,22 +415,36 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     {
         _ = _RunInUiAsync(() =>
         {
-            var currentIds = new HashSet<string>(Players.Select(p => p.MachineId));
-            var newIds = new HashSet<string>(players.Select(p => p.MachineId));
+            var currentMachineIds = new HashSet<string>(Players.Select(p => p.MachineId));
+            var newMachineIds = new HashSet<string>(players.Select(p => p.MachineId));
 
-            if (currentIds.SetEquals(newIds))
+            if (currentMachineIds.SetEquals(newMachineIds))
             {
-                OnClientPing?.Invoke(latency);
-                return;
+                return; // nothing was changed
             }
 
-            LogWrapper.Debug("LobbyService", "Player list changed, updating UI.");
-            var sortedPlayers = PlayerListHandler.Sort(players);
+            LogWrapper.Debug("LobbyService", "Player list membership has changed, updating UI.");
 
-            Players.Clear();
-            foreach (var player in sortedPlayers)
+            var sortedNewPlayers = PlayerListHandler.Sort(players);
+
+            var idsToRemove = currentMachineIds.Except(newMachineIds).ToList();
+            if (idsToRemove.Any())
             {
-                Players.Add(player);
+                var playersToRemove = Players.Where(p => idsToRemove.Contains(p.MachineId)).ToList();
+                foreach (var player in playersToRemove)
+                {
+                    Players.Remove(player);
+                }
+            }
+
+            var idsToAdd = newMachineIds.Except(currentMachineIds).ToList();
+            if (idsToAdd.Any())
+            {
+                var playersToAdd = sortedNewPlayers.Where(p => idsToAdd.Contains(p.MachineId)).ToList();
+                foreach (var player in playersToAdd)
+                {
+                    Players.Add(player);
+                }
             }
 
             OnClientPing?.Invoke(latency);

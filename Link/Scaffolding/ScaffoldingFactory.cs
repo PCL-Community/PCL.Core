@@ -4,7 +4,6 @@ using PCL.Core.Link.Scaffolding.EasyTier;
 using PCL.Core.Link.Scaffolding.Exceptions;
 using PCL.Core.Link.Scaffolding.Server;
 using PCL.Core.Net;
-using PCL.Core.App;
 using System;
 using System.Threading.Tasks;
 

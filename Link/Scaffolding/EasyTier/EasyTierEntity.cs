@@ -45,7 +45,7 @@ public class EasyTierEntity
     public EtState State { get; private set; }
     public LobbyInfo Lobby => _lobby;
 
-    public event Action? EasyTierProcessExcited;
+    public event Action? EasyTierProcessExisted;
 
     /// <summary>
     /// Constructor of EasyTierEntity
@@ -104,7 +104,7 @@ public class EasyTierEntity
             _etProcess.Start();
             State = EtState.Active;
 
-            _etProcess.Exited += (_, _) => EasyTierProcessExcited?.Invoke();
+            _etProcess.Exited += (_, _) => EasyTierProcessExisted?.Invoke();
         }
         catch (Exception ex)
         {

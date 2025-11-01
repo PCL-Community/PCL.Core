@@ -6,6 +6,7 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -35,11 +36,11 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     public event Action<IReadOnlyList<PlayerProfile>>? ServerStarted;
     public event Action? ServerStopped;
     public event Action<Exception?>? ServerException;
-    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfileChanged;
+    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfilePing;
 
-    private void _OnContextPlayersChanged(IReadOnlyList<PlayerProfile> players)
+    private void _OnContextPlayersPing(IReadOnlyList<PlayerProfile> players)
     {
-        PlayerProfileChanged?.Invoke(players);
+        PlayerProfilePing?.Invoke(players);
     }
 
     #endregion
@@ -49,7 +50,7 @@ public sealed class ScaffoldingServer : IAsyncDisposable
         _listener = new TcpListener(IPAddress.Loopback, port);
         _context = context;
 
-        _context.PlayerProfilesChanged += _OnContextPlayersChanged;
+        _context.PlayerProfilesPing += _OnContextPlayersPing;
 
         _handlers = new()
         {
@@ -109,22 +110,22 @@ public sealed class ScaffoldingServer : IAsyncDisposable
                 var now = DateTime.UtcNow;
                 var timedOutPlayerKeys = new List<string>();
 
-                foreach (var (sessionId, trackedPlayer) in _context.TrackedPlayers)
+                foreach (var (machineId, trackedPlayer) in _context.TrackedPlayers)
                 {
-                    if (string.IsNullOrEmpty(sessionId))
+                    if (trackedPlayer.Profile.Kind is PlayerKind.HOST)
                     {
                         continue;
                     }
 
                     if (now - trackedPlayer.LastSeenUtc > _PlayerTimeout)
                     {
-                        timedOutPlayerKeys.Add(sessionId);
+                        timedOutPlayerKeys.Add(machineId);
                     }
                 }
 
                 if (timedOutPlayerKeys.Count > 0)
                 {
-                    bool listChanged = false;
+                    var listChanged = false;
                     foreach (var key in timedOutPlayerKeys)
                     {
                         if (_context.TrackedPlayers.TryRemove(key, out var removedPlayer))
@@ -192,7 +193,8 @@ public sealed class ScaffoldingServer : IAsyncDisposable
     private async Task _HandleClientAsync(TcpClient tcpClient, CancellationToken ct)
     {
         var sessionId = Guid.NewGuid().ToString();
-        LogWrapper.Debug("ScaffoldingServer", $"New client connected. Session ID: {sessionId}");
+        var clientEndPoint = tcpClient.Client.RemoteEndPoint?.ToString() ?? "unknown";
+        LogWrapper.Debug("ScaffoldingServer", $"New connection {sessionId} from {clientEndPoint}.");
 
         using (tcpClient)
         {
@@ -202,124 +204,127 @@ public sealed class ScaffoldingServer : IAsyncDisposable
 
             try
             {
-                while (true)
+                while (!ct.IsCancellationRequested)
                 {
-                    var readResult = await reader.ReadAsync(ct).ConfigureAwait(false);
-                    var buffer = readResult.Buffer;
-
-                    // 在一个循环中处理缓冲区中所有可能存在的完整消息
-                    while (_TryParseFrame(ref buffer, out var requestFrame))
+                    ReadResult readResult;
+                    try
                     {
-                        LogWrapper.Debug("ScaffoldingServer",
-                            $"Received complete frame. Type: {requestFrame.TypeInfo}, Body Length: {requestFrame.Body.Length}");
+                        readResult = await reader.ReadAsync(ct).ConfigureAwait(false);
+                    }
+                    catch (IOException ex) when (ex.InnerException is SocketException se &&
+                                                 se.SocketErrorCode == SocketError.ConnectionReset)
+                    {
+                        LogWrapper.Info("ScaffoldingServer",
+                            $"Connection {sessionId} from {clientEndPoint} was closed by the client (Connection Reset).");
+                        break;
+                    }
 
+                    var buffer = readResult.Buffer;
+                    var consumedPosition = buffer.Start;
+
+                    // REFACTOR: 这是核心修改。我们现在循环处理一个缓冲区，直到无法再解析出完整的帧。
+                    while (_TryParseFrame(in buffer, out var requestFrame, out var frameEndPosition))
+                    {
+                        LogWrapper.Debug("ScaffoldingServer", $"[{sessionId}] Received frame: {requestFrame.TypeInfo}");
                         if (_handlers.TryGetValue(requestFrame.TypeInfo, out var handler))
                         {
-                            var (status, responseBody) =
-                                await handler.HandleAsync(requestFrame.Body, _context, sessionId, ct)
-                                    .ConfigureAwait(false);
+                            var (status, responseBody) = await handler
+                                .HandleAsync(requestFrame.Body, _context, sessionId, ct).ConfigureAwait(false);
 
                             var responseHeader = new byte[5];
                             responseHeader[0] = status;
                             BinaryPrimitives.WriteUInt32BigEndian(responseHeader.AsSpan(1), (uint)responseBody.Length);
-
                             await writer.WriteAsync(responseHeader, ct).ConfigureAwait(false);
                             if (responseBody.Length > 0)
                             {
                                 await writer.WriteAsync(responseBody, ct).ConfigureAwait(false);
                             }
 
-                            // 在发送每个响应后都刷新，确保数据及时送出
-                            var flushResult = await writer.FlushAsync(ct).ConfigureAwait(false);
-
-                            LogWrapper.Debug("ScaffoldingServer",
-                                $"Response sent for request type: {requestFrame.TypeInfo}");
-
-                            // 如果客户端已经关闭，并且我们刷新失败，就没必要继续了
-                            if (flushResult.IsCanceled || flushResult.IsCompleted)
-                            {
-                                goto
-                                    ConnectionClosed; // i dont want to use goto, but that's better for logic in there.
-                            }
+                            await writer.FlushAsync(ct).ConfigureAwait(false);
                         }
                         else
                         {
                             LogWrapper.Warn("ScaffoldingServer",
-                                $"No handler found for request type: {requestFrame.TypeInfo}");
+                                $"[{sessionId}] No handler for type: {requestFrame.TypeInfo}");
                         }
+
+                        // 将缓冲区切片到已处理帧的末尾，为下一次循环做准备
+                        consumedPosition = frameEndPosition;
+                        buffer = buffer.Slice(consumedPosition);
                     }
 
-                    // 将缓冲区的已处理部分标记为消耗掉
-                    reader.AdvanceTo(buffer.Start, buffer.End);
+                    // 告诉 PipeReader 我们已经检查了直到 readResult.Buffer.End 的所有数据，
+                    // 并且我们已经处理了直到 consumedPosition 的数据。
+                    reader.AdvanceTo(consumedPosition, buffer.End);
 
-                    // 检查退出条件：客户端已关闭连接
                     if (readResult.IsCompleted)
                     {
                         break;
                     }
                 }
             }
+            catch (InvalidDataException ex)
+            {
+                LogWrapper.Warn("ScaffoldingServer",
+                    $"Malformed packet from {clientEndPoint} on connection {sessionId}. Closing connection. Reason: {ex.Message}");
+            }
             catch (OperationCanceledException)
             {
-                /* Client disconnected or server is shutting down */
+                LogWrapper.Debug("ScaffoldingServer", $"Connection {sessionId} was canceled.");
             }
             catch (Exception ex)
             {
-                LogWrapper.Error(ex, "ScaffoldingServer", $"An exception occurred while handling client {sessionId}.");
+                LogWrapper.Error(ex, "ScaffoldingServer", $"Unexpected error on connection {sessionId}.");
             }
 
-        ConnectionClosed: // goto 标签
-
-            try
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(200), ct).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // ignore
-            }
+            LogWrapper.Debug("ScaffoldingServer", $"Connection {sessionId} from {clientEndPoint} has ended.");
         }
     }
 
-    private static bool _TryParseFrame(ref ReadOnlySequence<byte> buffer,
-        out (string TypeInfo, byte[] Body, SequencePosition End) frame)
+    private static bool _TryParseFrame
+        (in ReadOnlySequence<byte> buffer, out (string TypeInfo, byte[] Body) frame, out SequencePosition consumed)
     {
         frame = default;
+        consumed = buffer.Start;
+
+        const int maxTypeLength = 128;
+        const int maxBodyLength = 65536;
+
+        var reader = new SequenceReader<byte>(buffer);
+
+        // 检查头部是否完整 (1字节类型长度 + 4字节内容长度)
         if (buffer.Length < 1) return false;
+        if (!reader.TryRead(out var typeLength)) return false;
 
-        var typeLength = buffer.FirstSpan[0];
-        long headerLength = 1 + typeLength + 4;
-        if (buffer.Length < headerLength) return false;
+        if (typeLength is 0 or > maxTypeLength)
+            throw new InvalidDataException($"Invalid frame type length: {typeLength}.");
 
-        var headerSlice = buffer.Slice(0, headerLength);
-        ReadOnlySpan<byte> headerSpan;
+        if (reader.Remaining < typeLength + 4) return false;
 
-        if (headerSlice.IsSingleSegment)
-        {
-            headerSpan = headerSlice.FirstSpan;
-        }
-        else
-        {
-            Span<byte> tempBuffer = new byte[(int)headerLength];
-            headerSlice.CopyTo(tempBuffer);
-            headerSpan = tempBuffer;
-        }
+        // 读取类型信息
+        Span<byte> typeInfoSpan = stackalloc byte[typeLength];
+        if (!reader.TryCopyTo(typeInfoSpan)) return false;
+        reader.Advance(typeLength);
+        var typeInfo = Encoding.UTF8.GetString(typeInfoSpan);
 
-        var typeInfoSlice = headerSpan.Slice(1, typeLength);
+        // 读取内容长度
+        if (!reader.TryReadBigEndian(out int bodyLength32)) return false;
+        var bodyLength = (uint)bodyLength32;
+        if (bodyLength > maxBodyLength)
+            throw new InvalidDataException($"Frame body length {bodyLength} exceeds maximum of {maxBodyLength}.");
 
-        var typeInfo = Encoding.UTF8.GetString(typeInfoSlice);
+        // 检查内容是否完整
+        if (reader.Remaining < bodyLength) return false;
 
-        var bodyLengthSlice = headerSpan.Slice(1 + typeLength, 4);
-        var bodyLength = BinaryPrimitives.ReadUInt32BigEndian(bodyLengthSlice);
-
-        if (buffer.Length < headerLength + bodyLength) return false;
-
-        var bodyBuffer = buffer.Slice(headerLength, bodyLength);
+        // 提取内容
+        var bodyBuffer = reader.Sequence.Slice(reader.Position, bodyLength);
         var body = bodyBuffer.ToArray();
 
-        frame = (typeInfo, body, bodyBuffer.End);
+        // 构造帧
+        frame = (typeInfo, body);
 
-        buffer = buffer.Slice(frame.End);
+        reader.Advance(bodyLength);
+        consumed = reader.Position;
 
         return true;
     }

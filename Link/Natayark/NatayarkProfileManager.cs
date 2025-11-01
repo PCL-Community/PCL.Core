@@ -1,14 +1,13 @@
-﻿using System;
+using PCL.Core.App;
+using PCL.Core.Logging;
+using PCL.Core.Net;
+using PCL.Core.UI;
+using PCL.Core.Utils.OS;
+using System;
 using System.Net.Http;
 using System.Text;
-using System.Threading;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using PCL.Core.App;
-using PCL.Core.Utils.OS;
-using PCL.Core.Net;
-using PCL.Core.Logging;
-using PCL.Core.UI;
 
 namespace PCL.Core.Link.Natayark;
 
@@ -51,30 +50,39 @@ public static class NatayarkProfileManager
                 $"&client_secret={EnvironmentInterop.GetSecret("NAID_CLIENT_SECRET")}" +
                 $"&{(isRefresh ? "refresh_token" : "code")}={token}" +
                 $"&redirect_uri=http://localhost:29992/callback";
+
             var httpContent = new StringContent(requestData, Encoding.UTF8, "application/x-www-form-urlencoded");
+
             using var oauthResponse = await HttpRequestBuilder
                 .Create("https://account.naids.com/api/oauth2/token", HttpMethod.Post)
                 .WithContent(httpContent)
-                .SendAsync(true);
-            var result = await oauthResponse.AsStringAsync();
+                .SendAsync(true).ConfigureAwait(false);
+
+            var result = await oauthResponse.AsStringAsync().ConfigureAwait(false);
+
             if (result == null) throw new Exception("获取 AccessToken 与 RefreshToken 失败，返回内容为空");
 
             var data = JsonNode.Parse(result);
             var accessToken = data?["access_token"]?.ToString();
             var refreshToken = data?["refresh_token"]?.ToString();
+
             if (data == null || accessToken == null || refreshToken == null)
                 throw new Exception("获取 AccessToken 与 RefreshToken 失败，解析返回内容失败");
+
             NaidProfile.AccessToken = accessToken;
             NaidProfile.RefreshToken = refreshToken;
+
             var expiresAt = data["refresh_token_expires_at"]!.ToString();
 
             // 获取用户信息
             using var userDataResponse = await HttpRequestBuilder
                 .Create("https://account.naids.com/api/api/user/data", HttpMethod.Get)
                 .WithBearerToken(NaidProfile.AccessToken)
-                .SendAsync(true);
+                .SendAsync(true).ConfigureAwait(false);
+
             var receivedUserData = await userDataResponse.AsStringAsync();
             if (receivedUserData == null) throw new Exception("获取 Natayark 用户信息失败，返回内容为空");
+
             var userData = JsonNode.Parse(receivedUserData)?["data"];
             if (userData == null) throw new Exception("获取 Natayark 用户信息失败，解析返回内容失败");
 
@@ -99,11 +107,11 @@ public static class NatayarkProfileManager
             }
             else
             {
-                if(ex.Message.Contains("invalid access token"))
+                if (ex.Message.Contains("invalid access token"))
                 {
                     WarnLog("Naid Access Token 无效，尝试刷新登录");
-                    Thread.Sleep(50); // 搁这让电脑休息半秒吗
-                    await GetNaidDataAsync(Config.Link.NaidRefreshToken, true, true);
+                    await Task.Delay(TimeSpan.FromMilliseconds(50)).ConfigureAwait(false); // 搁这让电脑休息半秒吗
+                    await GetNaidDataAsync(Config.Link.NaidRefreshToken, true, true).ConfigureAwait(false);
                 }
                 else if (ex.Message.Contains("invalid_grant"))
                 {

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Link.Scaffolding.Client.Abstractions;
-using PCL.Core.Link.Scaffolding.Client.Exceptions;
+using PCL.Core.Link.Scaffolding.Exceptions;
 
 namespace PCL.Core.Link.Scaffolding.Client.Framing;
 

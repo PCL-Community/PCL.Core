@@ -1,6 +1,6 @@
 using System;
 
-namespace PCL.Core.Link.Scaffolding.Client.Exceptions;
+namespace PCL.Core.Link.Scaffolding.Exceptions;
 
 /// <summary>
 /// Exception thrown when a scaffolding request fails with a non-success status code.

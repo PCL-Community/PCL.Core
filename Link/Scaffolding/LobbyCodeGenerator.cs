@@ -1,13 +1,12 @@
 // This code is from terracota project.
 // Thanks for Burning_TNT's contribution!
 
+using PCL.Core.Link.Scaffolding.Client.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
-using PCL.Core.Link.Scaffolding.Client.Models;
 
 namespace PCL.Core.Link.Scaffolding;
 
@@ -16,13 +15,23 @@ public static class LobbyCodeGenerator
     private const string Chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
     private const string FullCodePrefix = "U/";
     private const string NetworkNamePrefix = "scaffolding-mc-";
-    private const int CodeLength = 16;
+    private const int BaseVal = 34;
 
-    private static readonly Dictionary<char, ulong> _CharToValueMap;
+    private const int DataLength = 16; // NNNN NNNN SSSS SSSS (16 chars)
+    private const int HyphenCount = 3;
+    private const int PayloadLength = DataLength + HyphenCount; // 19
+    private const int CodeLength = PayloadLength + 2; // 21 ("U/")
+
+    private static readonly UInt128 _EncodingMaxValue;
+
+    private static readonly Dictionary<char, byte> _CharToValueMap;
 
     static LobbyCodeGenerator()
     {
-        _CharToValueMap = new Dictionary<char, ulong>(36);
+        _EncodingMaxValue = _CalculatePower(BaseVal, DataLength);
+
+
+        _CharToValueMap = new Dictionary<char, byte>(36);
         for (byte i = 0; i < Chars.Length; i++)
         {
             _CharToValueMap[Chars[i]] = i;
@@ -35,7 +44,8 @@ public static class LobbyCodeGenerator
     public static LobbyInfo Generate()
     {
         var randomValue = _GetSecureRandomUInt128();
-        var remainder = randomValue % 7;
+        var valueInRange = randomValue % _EncodingMaxValue;
+        var remainder = valueInRange % 7;
         var validValue = randomValue - remainder;
 
         return _Encode(validValue);
@@ -44,23 +54,19 @@ public static class LobbyCodeGenerator
     public static bool TryParse(string input, [NotNullWhen(true)] out LobbyInfo? roomInfo)
     {
         roomInfo = null;
-        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith(FullCodePrefix, StringComparison.Ordinal))
+
+        if (string.IsNullOrWhiteSpace(input) ||
+            !input.StartsWith(FullCodePrefix, StringComparison.Ordinal) ||
+            input.Length != 21)
         {
             return false;
         }
 
-        if (input.Length != 21)
-        {
-            return false;
-        }
-
-        UInt128 value = 0;
-        UInt128 multiplier = 1;
-
+        Span<byte> values = stackalloc byte[DataLength];
+        var valueIndex = 0;
         var payloadSpan = input.AsSpan(FullCodePrefix.Length);
-        var charCount = 0;
 
-        for (var i = 0; i < payloadSpan.Length; i ++)
+        for (var i = 0; i < payloadSpan.Length; i++)
         {
             var ch = payloadSpan[i];
             if (ch == '-')
@@ -73,25 +79,24 @@ public static class LobbyCodeGenerator
                 continue;
             }
 
-            if (charCount >= CodeLength)
+            if (valueIndex >= DataLength ||
+                !_CharToValueMap.TryGetValue(char.ToUpperInvariant(ch), out var charValue))
             {
                 return false;
             }
 
-            var upperChar = char.ToUpperInvariant(ch);
-            if (!_CharToValueMap.TryGetValue(upperChar, out var charValue))
-            {
-                return false;
-            }
-
-            value += charValue * multiplier;
-            multiplier *= 34;
-            charCount++;
+            values[valueIndex++] = charValue;
         }
 
-        if (charCount != CodeLength)
+        if (valueIndex != DataLength)
         {
             return false;
+        }
+
+        UInt128 value = 0;
+        for (var i = DataLength - 1; i >= 0; i--)
+        {
+            value = value * BaseVal + values[i];
         }
 
         if (value % 7 != 0)
@@ -99,35 +104,44 @@ public static class LobbyCodeGenerator
             return false;
         }
 
-        var codePayload = payloadSpan.ToString().ToUpperInvariant();
+        var networkNamePayload = payloadSpan[..9];
+        var networkSecretPayload = payloadSpan[10..];
+
         roomInfo = new LobbyInfo(
-            FullCodePrefix + codePayload,
-            $"{NetworkNamePrefix}{codePayload[..9]}",
-            codePayload[10..]);
+            string.Concat(FullCodePrefix, payloadSpan).ToUpperInvariant(),
+            string.Concat(NetworkNamePrefix, networkNamePayload),
+            networkSecretPayload.ToString());
 
         return true;
     }
 
     private static LobbyInfo _Encode(UInt128 value)
     {
-        var codePayloadBuilder = new StringBuilder(19);
-        UInt128 currentValue = value;
-
-        for (var i = 0; i < CodeLength; i++)
+        var codePayload = string.Create(PayloadLength, value, (span, val) =>
         {
-            if (i == 4 || i == 8 || i == 12)
+            Span<char> tempChars = stackalloc char[DataLength];
+            for (var i = 0; i < DataLength; i++)
             {
-                codePayloadBuilder.Append('-');
+                tempChars[i] = Chars[(int)(val % BaseVal)];
+                val /= BaseVal;
             }
 
-            codePayloadBuilder.Append(Chars[(int)(currentValue % 34)]);
-            currentValue /= 34;
-        }
+            tempChars[..4].CopyTo(span[..4]);
+            span[4] = '-';
+            tempChars[4..8].CopyTo(span[5..9]);
+            span[9] = '-';
+            tempChars[8..12].CopyTo(span[10..14]);
+            span[14] = '-';
+            tempChars[12..16].CopyTo(span[15..]);
+        });
 
-        var codePayload = codePayloadBuilder.ToString();
-        var fullCode = FullCodePrefix + codePayload;
+        var networkNamePayload = codePayload.AsSpan(0, 9);
+        var networkSecretPayload = codePayload.AsSpan(10);
 
-        return new LobbyInfo(fullCode, $"{NetworkNamePrefix}{codePayload[..9]}", codePayload[10..]);
+        return new LobbyInfo(
+            string.Concat(FullCodePrefix, codePayload),
+            string.Concat(NetworkNamePrefix, networkNamePayload),
+            networkSecretPayload.ToString());
     }
 
     private static UInt128 _GetSecureRandomUInt128()
@@ -139,5 +153,16 @@ public static class LobbyCodeGenerator
         var upper = MemoryMarshal.Read<ulong>(bytes[8..]);
 
         return new UInt128(lower, upper);
+    }
+
+    private static UInt128 _CalculatePower(uint baseVal, int exp)
+    {
+        UInt128 result = 1;
+        for (var i = 0; i < exp; i++)
+        {
+            result *= baseVal;
+        }
+
+        return result;
     }
 }

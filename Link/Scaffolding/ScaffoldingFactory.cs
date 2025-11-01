@@ -1,11 +1,11 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using PCL.Core.Link.Scaffolding.Client;
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
+using PCL.Core.Link.Scaffolding.Exceptions;
 using PCL.Core.Link.Scaffolding.Server;
 using PCL.Core.Net;
+using System;
+using System.Threading.Tasks;
 
 namespace PCL.Core.Link.Scaffolding;
 
@@ -13,11 +13,14 @@ public static class ScaffoldingFactory
 {
     // Please update ScaffoldingServerContext.cs at the same time.
     // TODO: change pcl-ce version code when update
-    private const string LobbyVendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
+    private const string LobbyVendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
     private const string HostIp = "10.114.51.41";
 
-    public static async Task<ScaffoldingClientEntity> CreateClientAsync(string playerName, string lobbyCode,
-        LobbyType from)
+    /// <exception cref="ArgumentException">Invalid lobby code.</exception>
+    /// <exception cref="FailedToGetPlayerException">Thrown if fialed to get host player info.</exception>
+    /// <exception cref="InvalidOperationException">Failed to get EasyTier Info.</exception>
+    public static async Task<ScaffoldingClientEntity> CreateClientAsync
+        (string playerName, string lobbyCode, LobbyType from)
     {
         var machineId = Utils.Secret.Identify.LaunchId;
 
@@ -28,48 +31,58 @@ public static class ScaffoldingFactory
 
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);
         etEntity.Launch();
-        var retrys = 0;
-        while (etEntity.State != EtState.Ready && retrys < 6)
+
+        var (etStatus, players) = await etEntity.CheckEasyTierStatusAsync().ConfigureAwait(false);
+
+        if (!etStatus || players is null)
         {
-            await etEntity.CheckEasyTierStatusAsync();
-            await Task.Delay(800);
-            retrys++;
+            throw new InvalidOperationException("Failed to get EasyTier Info.");
         }
-        var players = await etEntity.GetPlayersAsync().ConfigureAwait(false);
-        EasyPlayerInfo? hostInfo = null;
-        foreach (var player in players.Players)
+
+        if (players.Players is null)
         {
-            if (player.HostName.Contains("scaffolding-mc-server-"))
-            {
-                hostInfo = player;
-            }
+            throw new FailedToGetPlayerException();
         }
+
+        var hostInfo = players.Host;
 
         if (hostInfo is null)
         {
-            etEntity.Stop();
-            throw new ArgumentNullException(nameof(hostInfo), "Can not get the host information.");
+            await etEntity.StopAsync().ConfigureAwait(false);
+            throw new FailedToGetPlayerException("Can not get the host information.");
         }
 
         if (!int.TryParse(hostInfo.HostName[22..], out var scfPort))
         {
-            etEntity.Stop();
+            await etEntity.StopAsync().ConfigureAwait(false);
             throw new ArgumentException("Invalid hostname.", nameof(hostInfo));
         }
 
-        var localPort = await etEntity.AddPortForward(hostInfo.Ip, scfPort);
-        
-        return new ScaffoldingClientEntity(new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor),
-            etEntity, hostInfo);
+        var localPort = await etEntity.AddPortForwardAsync(hostInfo.Ip, scfPort).ConfigureAwait(false);
+
+        var client = new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor);
+
+        return new ScaffoldingClientEntity(client, etEntity, hostInfo);
     }
 
+    /// <summary>
+    /// Create Scaffolding Server.
+    /// </summary>
+    /// <param name="mcPort">Target forward Miencraft shared port.</param>
+    /// <param name="playerName">Game player name.</param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException">Fialed to launch EasyTier Core.</exception>
     public static ScaffoldingServerEntity CreateServer(int mcPort, string playerName)
     {
         var context = ScaffoldingServerContext.Create(playerName, mcPort);
         var scfPort = NetworkHelper.NewTcpPort();
 
         var etEntity = _CreateEasyTierEntity(context.UserLobbyInfo, mcPort, scfPort, true);
-        etEntity.Launch();
+        var res = etEntity.Launch();
+        if (res != 0)
+        {
+            throw new InvalidOperationException("Fialed to launch EasyTier Core.");
+        }
 
         var server = new ScaffoldingServer(scfPort, context);
 

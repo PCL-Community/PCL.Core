@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using PCL.Core.Link.Lobby;
 
 namespace PCL.Core.Link.Scaffolding.Server;
 
@@ -66,7 +67,7 @@ public class ScaffoldingServerContext : IServerContext
 
         var tracked = new TrackedPlayerProfile { Profile = profile, LastSeenUtc = DateTime.UtcNow };
 
-        var roomCode = LobbyCodeGenerator.Generate();
+        var roomCode = LobbyInfoGenerator.Generate();
 
         var dic = new ConcurrentDictionary<string, TrackedPlayerProfile>();
         _ = dic.TryAdd(string.Empty, tracked);

@@ -9,10 +9,10 @@ namespace PCL.Core.Link.Lobby.Parser;
 public interface ILobbyIdParser
 {
     /// <summary>
-    /// 解析指定的房间号并输出LobbyInfo对象
+    /// 解析指定的房间号并输出 LobbyInfo 对象
     /// </summary>
     /// <param name="code">要解析的房间号</param>
-    /// <param name="lobbyInfo">解析成功时输出的LobbyInfo对象，解析失败时为null</param>
+    /// <param name="lobbyInfo">解析成功时输出的 LobbyInfo 对象，解析失败时为 null</param>
     /// <returns>是否解析成功</returns>
     public bool TryParse(string code, [NotNullWhen(true)] out LobbyInfo? lobbyInfo);
 }

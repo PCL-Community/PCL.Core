@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,7 +18,14 @@ public static class LobbyInfoGenerator
     private const string Chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
     private const string FullCodePrefix = "U/";
     private const string NetworkNamePrefix = "scaffolding-mc-";
-    private const int CodeLength = 16;
+    private const int BaseVal = 34;
+
+    private const int DataLength = 16; // NNNN NNNN SSSS SSSS (16 chars)
+    private const int HyphenCount = 3;
+    private const int PayloadLength = DataLength + HyphenCount; // 19
+
+    private static readonly UInt128 _EncodingMaxValue = _CalculatePower(BaseVal, DataLength);
+    
     /// <summary>
     /// 房间号解析器列表
     /// </summary>
@@ -25,31 +33,33 @@ public static class LobbyInfoGenerator
         new OldLobbyIdParser(),
         new LobbyIdParser()
     ];
-    
+
     /// <summary>
-    /// 解析一个LobbyId
+    /// 解析指定的房间号并输出 LobbyInfo 对象
     /// </summary>
-    /// <param name="code">LobbyId</param>
-    /// <returns>返回一个<see cref="LobbyInfo"/></returns>
-    public static LobbyInfo? Parse(string code)
+    /// <param name="code">要解析的房间号</param>
+    /// <param name="lobbyInfo">解析成功时输出的 LobbyInfo 对象，解析失败时为 null</param>
+    /// <returns>是否解析成功</returns>
+    public static bool TryParse(string code, [NotNullWhen(true)] out LobbyInfo? lobbyInfo)
     {
+        lobbyInfo = null;
         try
         {
             foreach (var parser in _Parsers)
             {
-                if (parser.TryParse(code, out var lobbyInfo))
+                if (parser.TryParse(code, out lobbyInfo))
                 {
-                    return lobbyInfo;
+                    return true;
                 }
             }
             
-            LogWrapper.Warn("Link", $"无法解析LobbyId, 可能为无效或无法识别的房间号");
-            return null;
+            LogWrapper.Warn("Link", $"无法解析房间号, 可能为无效或无法识别的房间号");
+            return false;
         }
         catch (Exception ex)
         {
             LogWrapper.Error(ex, "Link", "解析房间号时发生异常");
-            return null;
+            return false;
         }
     }
     
@@ -60,7 +70,8 @@ public static class LobbyInfoGenerator
     public static LobbyInfo Generate()
     {
         var randomValue = _GetSecureRandomUInt128();
-        var remainder = randomValue % 7;
+        var valueInRange = randomValue % _EncodingMaxValue;
+        var remainder = valueInRange % 7;
         var validValue = randomValue - remainder;
 
         return _Encode(validValue);
@@ -79,23 +90,42 @@ public static class LobbyInfoGenerator
     
     private static LobbyInfo _Encode(UInt128 value)
     {
-        var codePayloadBuilder = new StringBuilder(19);
-        var currentValue = value;
-
-        for (var i = 0; i < CodeLength; i++)
+        var codePayload = string.Create(PayloadLength, value, (span, val) =>
         {
-            if (i is 4 or 8 or 12)
+            Span<char> tempChars = stackalloc char[DataLength];
+            for (var i = 0; i < DataLength; i++)
             {
-                codePayloadBuilder.Insert(0, '-');
+                tempChars[i] = Chars[(int)(val % BaseVal)];
+                val /= BaseVal;
             }
 
-            codePayloadBuilder.Insert(0, Chars[(int)(currentValue % 34)]);
-            currentValue /= 34;
+            tempChars[..4].CopyTo(span[..4]);
+            span[4] = '-';
+            tempChars[4..8].CopyTo(span[5..9]);
+            span[9] = '-';
+            tempChars[8..12].CopyTo(span[10..14]);
+            span[14] = '-';
+            tempChars[12..16].CopyTo(span[15..]);
+        });
+
+        var networkNamePayload = codePayload.AsSpan(0, 9);
+        var networkSecretPayload = codePayload.AsSpan(10);
+
+        return new LobbyInfo(
+            LobbyType.Scaffolding,
+            string.Concat(FullCodePrefix, codePayload),
+            string.Concat(NetworkNamePrefix, networkNamePayload),
+            networkSecretPayload.ToString());
+    }
+
+    private static UInt128 _CalculatePower(uint baseVal, int exp)
+    {
+        UInt128 result = 1;
+        for (var i = 0; i < exp; i++)
+        {
+            result *= baseVal;
         }
 
-        var codePayload = codePayloadBuilder.ToString();
-        var fullCode = FullCodePrefix + codePayload;
-
-        return new LobbyInfo(LobbyType.Scaffolding, fullCode, $"{NetworkNamePrefix}{codePayload[..9]}", codePayload[10..]);
+        return result;
     }
 }

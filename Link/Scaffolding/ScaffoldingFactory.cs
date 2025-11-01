@@ -6,6 +6,7 @@ using PCL.Core.Link.Scaffolding.Server;
 using PCL.Core.Net;
 using System;
 using System.Threading.Tasks;
+using PCL.Core.Link.Lobby;
 
 namespace PCL.Core.Link.Scaffolding;
 
@@ -24,9 +25,14 @@ public static class ScaffoldingFactory
     {
         var machineId = Utils.Secret.Identify.LaunchId;
 
-        if (!LobbyCodeGenerator.TryParse(lobbyCode, out var info))
+        if (!LobbyInfoGenerator.TryParse(lobbyCode, out var info))
         {
             throw new ArgumentException("Invalid lobby code.", nameof(lobbyCode));
+        }
+        
+        if (info.Type != from)
+        {
+            throw new ArgumentException("Invalid lobby type.", nameof(lobbyCode));
         }
 
         var etEntity = _CreateEasyTierEntity(info, 0, 0, false);

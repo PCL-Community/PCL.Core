@@ -176,7 +176,8 @@ public class EasyTierEntity
             .Add("network-secret", _lobby.NetworkSecret)
             //.Add("relay-network-whitelist", _lobby.NetworkName)
             .Add("machine-id", Utils.Secret.Identify.LaunchId)
-            .Add("rpc-portal", _rpcPort.ToString());
+            .Add("rpc-portal", _rpcPort.ToString())
+            .Add("private-mode", "true");
 
 
         if (asHost)
@@ -208,11 +209,6 @@ public class EasyTierEntity
         if (Config.Link.RelayType == 1)
         {
             args.AddFlag("disable-p2p");
-        }
-
-        if (!Config.Link.RelayForOthers)
-        {
-            args.Add("private-mode", "true");
         }
 
         process.StartInfo.Arguments = args.GetResult();

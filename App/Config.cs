@@ -414,9 +414,9 @@ public static partial class Config
         [ConfigItem<bool>("LinkEnableIPv6", true)] public partial bool EnableIPv6 { get; set; }
         
         /// <summary>
-        /// 允许为互联网上的其他用户中继流量。
+        /// 在日志中输出 Cli 信息以用于调试。
         /// </summary>
-        [ConfigItem<bool>("LinkRelayForOthers", false)] public partial bool RelayForOthers { get; set; }
+        [ConfigItem<bool>("LinkEnableCliOutput", false)] public partial bool EnableCliOutput { get; set; }
     }
 
     /// <summary>

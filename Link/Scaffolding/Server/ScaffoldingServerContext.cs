@@ -1,6 +1,7 @@
 using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
 using PCL.Core.Link.Scaffolding.Server.Abstractions;
+using PCL.Core.App;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -67,8 +68,8 @@ public class ScaffoldingServerContext : IServerContext
         {
             Name = playerName,
             MachineId = Utils.Secret.Identify.LaunchId,
-            // TODO: Please update ScaffoldingFactory.cs at the same time.
-            Vendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
+            // Please update ScaffoldingFactory.cs at the same time.
+            Vendor = $"PCL CE {Basics.VersionName}, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
             Kind = PlayerKind.HOST
         };
 

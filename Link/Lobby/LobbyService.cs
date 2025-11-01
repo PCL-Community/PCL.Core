@@ -18,7 +18,7 @@ using System.Windows;
 namespace PCL.Core.Link.Lobby;
 
 /// <summary>
-/// Lobby server. For auto-mangement
+/// Lobby server. For auto-management
 /// </summary>
 [LifecycleService(LifecycleState.Loaded)]
 public class LobbyService() : GeneralService("lobby", "LobbyService")
@@ -51,7 +51,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     public static ObservableCollection<PlayerProfile> Players { get; private set; } = [];
 
     /// <summary>
-    /// Demonstrate wheather the current user is the host of the lobby.
+    /// Demonstrate whether the current user is the host of the lobby.
     /// </summary>
     public static bool IsHost => _LobbyController.IsHost;
 
@@ -61,14 +61,14 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     public static string? CurrentLobbyCode { get; private set; }
 
     /// <summary>
-    /// Current lobby user name.
+    /// Current lobby username.
     /// </summary>
     public static string? CurrentUserName { get; private set; }
 
     #region UI Events
 
     /// <summary>
-    /// Invoked when lobby state changed. (first arg is old state; second arg is new satte.)
+    /// Invoked when lobby state changed. (first arg is the old state; second arg is the new state.)
     /// </summary>
     public static event Action<LobbyState, LobbyState>? StateChanged;
 
@@ -93,9 +93,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     public static event Action<long>? OnClientPing;
 
     /// <summary>
-    /// Invoked when server shutted down.
+    /// Invoked when server shut down.
     /// </summary>
-    public static event Action? OnServerShuttedDown;
+    public static event Action? OnServerShutDown;
 
 
     /// <summary>
@@ -125,9 +125,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     }
 
     private static bool _IsEasyTierCoreFileNotExist() =>
-        !File.Exists(Path.Combine(EasyTierMetadata.EasyTierFilePath, "easyiter-core.exe")) &&
+        !File.Exists(Path.Combine(EasyTierMetadata.EasyTierFilePath, "easytier-core.exe")) &&
         !File.Exists(Path.Combine(EasyTierMetadata.EasyTierFilePath, "Packet.dll")) &&
-        !File.Exists(Path.Combine(EasyTierMetadata.EasyTierFilePath, "easyiter-cli.exe"));
+        !File.Exists(Path.Combine(EasyTierMetadata.EasyTierFilePath, "easytier-cli.exe"));
 
 
     public static async Task InitializeAsync()
@@ -168,7 +168,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             }
 
             _SetState(LobbyState.Initialized);
-            LogWrapper.Info("LobbySerivce", "Lobby service initialized succefully.");
+            LogWrapper.Info("LobbyService", "Lobby service initialized successfully.");
 
             _ = DiscoverWorldAsync();
         }
@@ -245,7 +245,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     /// <summary>
     /// Create a new lobby.
     /// </summary>
-    /// <param name="port">Minceaft share port.</param>
+    /// <param name="port">Minecraft share port.</param>
     /// <param name="username">Player name.</param>
     public static async Task<bool> CreateLobbyAsync(int port, string username)
     {
@@ -271,15 +271,15 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
 
             CurrentLobbyCode = serverEntity.EasyTier.Lobby.FullCode;
 
-            serverEntity.Server.ServerStopped += () => OnServerShuttedDown?.Invoke();
+            serverEntity.Server.ServerStopped += () => OnServerShutDown?.Invoke();
             serverEntity.Server.PlayerProfileChanged += _ServerOnPlayerListChanged;
             serverEntity.Server.ServerStarted += _ServerOnServerStarted;
             serverEntity.Server.ServerException += _ServerOnServerException;
             //serverEntity.EasyTier.EasyTierProcessExcited += () =>
             //{
             //    OnHint?.Invoke("EasyTierCore异常退出", CoreHintType.Critical);
-            //    OnServerShuttedDown?.Invoke();
-            //}; this code will invoked when easytier process successfully exited, not in failed state.
+            //    OnServerShutDown?.Invoke();
+            //}; this code will be invoked when EasyTier process successfully exited, not in failed state.
 
             serverEntity.Server.Start();
 
@@ -288,7 +288,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, "LobbyService", "Fialed to create lobby.");
+            LogWrapper.Error(ex, "LobbyService", "Failed to create lobby.");
             OnHint?.Invoke("创建大厅失败，请检查日志或向开发者反馈。", CoreHintType.Critical);
             await LeaveLobbyAsync().ConfigureAwait(false);
 
@@ -339,7 +339,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
     }
 
     /// <summary>
-    /// Join a exist lobby.
+    /// Join an exist lobby.
     /// </summary>
     /// <param name="lobbyCode">Lobby share code.</param>
     /// <param name="username">Current use name.</param>
@@ -365,21 +365,21 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             }
 
             clientEntity.Client.Heartbeat += _ClientOnHeartbeat;
-            clientEntity.Client.ServerShuttedDown += _ClientOnServerShuttedDown;
+            clientEntity.Client.ServerShuttedDown += _ClientOnServerShutDown;
 
             _SetState(LobbyState.Connected);
         }
         catch (ArgumentException codeEx)
         {
-            LogWrapper.Error(codeEx, "LobbyService", $"Fialed to join lobby {lobbyCode}.");
-            OnHint?.Invoke("房间码不正确，请检查！", CoreHintType.Critical);
+            LogWrapper.Error(codeEx, "LobbyService", $"Failed to join lobby {lobbyCode}.");
+            OnHint?.Invoke("大厅编号不正确，请检查后再试！", CoreHintType.Critical);
             await LeaveLobbyAsync().ConfigureAwait(false);
 
             return false;
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, "LobbyService", $"Fialed to join lobby {lobbyCode}.");
+            LogWrapper.Error(ex, "LobbyService", $"Failed to join lobby {lobbyCode}.");
             OnHint?.Invoke(ex.Message, CoreHintType.Critical);
             await LeaveLobbyAsync().ConfigureAwait(false);
 
@@ -389,9 +389,9 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         return true;
     }
 
-    private static void _ClientOnServerShuttedDown()
+    private static void _ClientOnServerShutDown()
     {
-        OnServerShuttedDown?.Invoke();
+        OnServerShutDown?.Invoke();
 
         _ = LeaveLobbyAsync();
     }

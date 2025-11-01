@@ -12,12 +12,11 @@ namespace PCL.Core.Link.Scaffolding;
 public static class ScaffoldingFactory
 {
     // Please update ScaffoldingServerContext.cs at the same time.
-    // TODO: change pcl-ce version code when update
-    private const string LobbyVendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
+    private static readonly string _LobbyVendor = $"PCL CE {Basics.VersionName}, EasyTier {EasyTierMetadata.CurrentEasyTierVer}";
     private const string HostIp = "10.114.51.41";
 
     /// <exception cref="ArgumentException">Invalid lobby code.</exception>
-    /// <exception cref="FailedToGetPlayerException">Thrown if fialed to get host player info.</exception>
+    /// <exception cref="FailedToGetPlayerException">Thrown if failed to get host player info.</exception>
     /// <exception cref="InvalidOperationException">Failed to get EasyTier Info.</exception>
     public static async Task<ScaffoldingClientEntity> CreateClientAsync
         (string playerName, string lobbyCode, LobbyType from)
@@ -60,7 +59,7 @@ public static class ScaffoldingFactory
 
         var localPort = await etEntity.AddPortForwardAsync(hostInfo.Ip, scfPort).ConfigureAwait(false);
 
-        var client = new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, LobbyVendor);
+        var client = new ScaffoldingClient("127.0.0.1", localPort, playerName, machineId, _LobbyVendor);
 
         return new ScaffoldingClientEntity(client, etEntity, hostInfo);
     }
@@ -81,7 +80,7 @@ public static class ScaffoldingFactory
         var res = etEntity.Launch();
         if (res != 0)
         {
-            throw new InvalidOperationException("Fialed to launch EasyTier Core.");
+            throw new InvalidOperationException("Failed to launch EasyTier Core.");
         }
 
         var server = new ScaffoldingServer(scfPort, context);

@@ -1,12 +1,12 @@
-﻿using System;
+using PCL.Core.Utils;
+using PCL.Core.Utils.OS;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Utils;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.Link;
 
@@ -26,24 +26,24 @@ public class BroadcastListener(bool receiveLocalOnly = true) : IDisposable
     {
         if (_client is not null || _clientV6 is not null) return;
         _cts = new CancellationTokenSource();
-        
+
         // IPv4
         _client = new UdpClient();
         _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _client.Client.Bind(new IPEndPoint(IPAddress.Any, 4445));
         _client.JoinMulticastGroup(_MulticastAddress);
-        
+
         // IPv6
         _clientV6 = new UdpClient(AddressFamily.InterNetworkV6);
         _clientV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _clientV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, 4445));
         _clientV6.JoinMulticastGroup(_MulticastAddressV6);
 
-        _listenTask = _listenThreadAsync(_client);
-        _listenTaskV6 = _listenThreadAsync(_clientV6);
+        _listenTask = _ListenThreadAsync(_client);
+        _listenTaskV6 = _ListenThreadAsync(_clientV6);
     }
 
-    private async Task _listenThreadAsync(UdpClient? client)
+    private async Task _ListenThreadAsync(UdpClient? client)
     {
         while (_cts is not null && client is not null && !_cts.IsCancellationRequested)
         {

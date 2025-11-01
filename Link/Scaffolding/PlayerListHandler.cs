@@ -1,11 +1,11 @@
-using System.Collections.Generic;
 using PCL.Core.Link.Scaffolding.Client.Models;
+using System.Collections.Generic;
 
 namespace PCL.Core.Link.Scaffolding;
 
 public class PlayerListHandler
 {
-    public static List<PlayerProfile> Sort(List<PlayerProfile> list)
+    public static List<PlayerProfile> Sort(IReadOnlyList<PlayerProfile> list)
     {
         var sorted = new List<PlayerProfile>();
         foreach (var profile in list)

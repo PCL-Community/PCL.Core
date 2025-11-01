@@ -1,14 +1,37 @@
-using System.Collections.Concurrent;
 using PCL.Core.Link.Scaffolding.Client.Models;
-using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using PCL.Core.Link.Scaffolding.EasyTier;
+using PCL.Core.Link.Scaffolding.Server.Abstractions;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using PCL.Core.Link.Lobby;
 
 namespace PCL.Core.Link.Scaffolding.Server;
 
 public class ScaffoldingServerContext : IServerContext
 {
+    private ConcurrentDictionary<string, TrackedPlayerProfile> _trackedPlayers = [];
+
     /// <inheritdoc />
-    public ConcurrentDictionary<string, PlayerProfile> PlayerProfiles { get; }
+    public ConcurrentDictionary<string, TrackedPlayerProfile> TrackedPlayers
+    {
+        get => _trackedPlayers;
+        private set => _trackedPlayers = value;
+    }
+
+    public IReadOnlyList<PlayerProfile> PlayerProfiles =>
+        _trackedPlayers.Values.Select(player => player.Profile).ToList().AsReadOnly();
+
+    /// <inheritdoc />
+    public event Action<IReadOnlyList<PlayerProfile>>? PlayerProfilesChanged;
+
+    public void OnPlayerProfilesChanged()
+    {
+        var currentProfiles = PlayerProfiles;
+        Task.Run(() => PlayerProfilesChanged?.Invoke(currentProfiles));
+    }
 
     /// <inheritdoc />
     public int MinecraftServerProt { get; }
@@ -20,12 +43,12 @@ public class ScaffoldingServerContext : IServerContext
     public string PlayerName { get; }
 
     private ScaffoldingServerContext(
-        ConcurrentDictionary<string, PlayerProfile> profiles,
+        ConcurrentDictionary<string, TrackedPlayerProfile> profiles,
         int mcPort,
         LobbyInfo info,
         string playerName)
     {
-        PlayerProfiles = profiles;
+        TrackedPlayers = profiles;
         MinecraftServerProt = mcPort;
         UserLobbyInfo = info;
         PlayerName = playerName;
@@ -37,15 +60,17 @@ public class ScaffoldingServerContext : IServerContext
         {
             Name = playerName,
             MachineId = Utils.Secret.Identify.LaunchId,
-            // Please update ScaffoldingFactory.cs at the same time.
-            Vendor = $"PCL CE 0.0.0, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
+            // TODO: Please update ScaffoldingFactory.cs at the same time.
+            Vendor = $"PCL CE, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
             Kind = PlayerKind.HOST
         };
 
-        var roomCode = LobbyCodeGenerator.Generate();
+        var tracked = new TrackedPlayerProfile { Profile = profile, LastSeenUtc = DateTime.UtcNow };
 
-        var dic = new ConcurrentDictionary<string, PlayerProfile>();
-        _ = dic.TryAdd(string.Empty, profile);
+        var roomCode = LobbyInfoGenerator.Generate();
+
+        var dic = new ConcurrentDictionary<string, TrackedPlayerProfile>();
+        _ = dic.TryAdd(string.Empty, tracked);
 
         return new ScaffoldingServerContext(dic, mcPort, roomCode, playerName);
     }

@@ -1,11 +1,10 @@
+using PCL.Core.Link.Scaffolding.Client.Models;
+using PCL.Core.Link.Scaffolding.Server.Abstractions;
 using System;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Link.Scaffolding.Client.Models;
-using PCL.Core.Link.Scaffolding.Server.Abstractions;
 
 namespace PCL.Core.Link.Scaffolding.Server.Handlers;
 
@@ -32,8 +31,7 @@ public class GetPlayerProfileListHandler : IRequestHandler
             Kind = PlayerKind.HOST
         };
 
-        var allProfiles = context.PlayerProfiles.Values.ToList();
-        allProfiles.Add(hostProfile);
+        var allProfiles = context.PlayerProfiles;
 
         var responseBody = JsonSerializer.SerializeToUtf8Bytes(allProfiles, _JsonOptions);
 

@@ -21,15 +21,6 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
 
 #if DEBUG
     private static readonly bool _EnableTrace = Basics.CommandLineArguments.Contains("--trace-traffic");
-    private static readonly JsonSerializerOptions _SerializerOptions = new()
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
-#else
-    private static readonly JsonSerializerOptions _SerializerOptions = new()
-    {
-        Encoder = JavaScriptEncoder.Default
-    };
 #endif
 
     /// <summary>
@@ -79,6 +70,11 @@ public abstract class TrafficCenter : ITrafficCenter, IConfigProvider
         }
 #endif
     }
+
+    private static readonly JsonSerializerOptions _SerializerOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     private string _GenerateDiagnosticsInfo<TInput, TOutput>(PreviewTrafficEventArgs<TInput, TOutput> e, bool appendCallStack = false)
     {

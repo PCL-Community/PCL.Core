@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using PCL.Core.App;
 using PCL.Core.Minecraft.Instance.Handler;
 using PCL.Core.Minecraft.Instance.Interface;
-using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Minecraft.Instance.Impl;
 
@@ -14,7 +12,7 @@ namespace PCL.Core.Minecraft.Instance.Impl;
 /// 表示一个 Minecraft 实例的版本信息和附加组件信息。
 /// </summary>
 public class PatchInstanceInfo {
-    private static readonly FrozenDictionary<string, string> PatchersImageMap =
+    private static readonly FrozenDictionary<string, string> _PatchersImageMap =
         new Dictionary<string, string> {
             { "neoforge", "Blocks/NeoForge.png" },
             { "fabric", "Blocks/Fabric.png" },
@@ -82,26 +80,25 @@ public class PatchInstanceInfo {
     public string GetLogo() {
         switch (VersionType) {
             case McVersionType.Fool:
-                return Path.Combine(Basics.ImagePath, "Blocks/GoldBlock.png");
+                return Basics.GetAppImagePath("Blocks/GoldBlock.png");
             case McVersionType.Old:
-                return Path.Combine(Basics.ImagePath, "Blocks/CobbleStone.png");
+                return Basics.GetAppImagePath("Blocks/CobbleStone.png");
             case McVersionType.Snapshot:
-                return Path.Combine(Basics.ImagePath, "Blocks/CommandBlock.png");
+                return Basics.GetAppImagePath("Blocks/CommandBlock.png");
             case McVersionType.Release:
                 break;
             default:
-                return Path.Combine(Basics.ImagePath, "Blocks/RedstoneBlock.png");
+                return Basics.GetAppImagePath("Blocks/RedstoneBlock.png");
         }
 
         // 其次判断加载器等
         foreach (var loader in new[] { "neoforge", "fabric", "legacyFabric", "forge", "liteloader", "quilt", "cleanroom", "labymod", "optifine" }) {
             if (Patches.Any(p => p.Id.Equals(loader, StringComparison.OrdinalIgnoreCase))) {
-                return Path.Combine(Basics.ImagePath, PatchersImageMap[loader]);
+                return Basics.GetAppImagePath(_PatchersImageMap[loader]);
             }
         }
 
         // 正常版本
-        return Path.Combine(Basics.ImagePath, "Blocks/Grass.png");
+        return Basics.GetAppImagePath("Blocks/Grass.png");
     }
 }
-

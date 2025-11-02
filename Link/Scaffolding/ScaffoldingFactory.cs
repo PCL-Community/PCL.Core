@@ -3,6 +3,7 @@ using PCL.Core.Link.Scaffolding.Client.Models;
 using PCL.Core.Link.Scaffolding.EasyTier;
 using PCL.Core.Link.Scaffolding.Exceptions;
 using PCL.Core.Link.Scaffolding.Server;
+using PCL.Core.App;
 using PCL.Core.Net;
 using System;
 using System.Threading.Tasks;

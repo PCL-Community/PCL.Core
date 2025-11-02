@@ -272,7 +272,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             CurrentLobbyCode = serverEntity.EasyTier.Lobby.FullCode;
 
             serverEntity.Server.ServerStopped += () => OnServerShutDown?.Invoke();
-            serverEntity.Server.PlayerProfileChanged += _ServerOnPlayerListChanged;
+            serverEntity.Server.PlayerProfilePing += _ServerOnPlayerPing;
             serverEntity.Server.ServerStarted += _ServerOnServerStarted;
             serverEntity.Server.ServerException += _ServerOnServerException;
             //serverEntity.EasyTier.EasyTierProcessExisted += () =>
@@ -321,9 +321,10 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         {
             var currentMachineIds = new HashSet<string>(Players.Select(p => p.MachineId));
             var newMachineIds = new HashSet<string>(players.Select(p => p.MachineId));
-
+            
             if (currentMachineIds.SetEquals(newMachineIds))
             {
+                LogWrapper.Debug("Player list has not changed");
                 return; // nothing was changed
             }
 
@@ -376,7 +377,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             if (clientEntity is null)
             {
                 throw new InvalidOperationException(
-                    "Failed to join lobby. The LobbyCode might be incorrect or the lobby is not exist.");
+                    "加入大厅失败，可能是大厅不存在或已被解散");
             }
 
             clientEntity.Client.Heartbeat += _ClientOnHeartbeat;
@@ -474,7 +475,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
 
             if (_LobbyController.ScfServerEntity?.Server != null)
             {
-                _LobbyController.ScfServerEntity.Server.PlayerProfileChanged -= _ServerOnPlayerListChanged;
+                _LobbyController.ScfServerEntity.Server.PlayerProfilePing -= _ServerOnPlayerPing;
                 _LobbyController.ScfServerEntity.Server.ServerStarted -= _ServerOnServerStarted;
             }
 

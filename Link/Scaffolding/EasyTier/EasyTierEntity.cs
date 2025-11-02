@@ -104,6 +104,8 @@ public class EasyTierEntity
             _etProcess.Start();
             State = EtState.Active;
 
+            var cli = _GetCliOutputDebug();
+            
             _etProcess.Exited += (_, _) => EasyTierProcessExisted?.Invoke();
         }
         catch (Exception ex)
@@ -377,6 +379,21 @@ public class EasyTierEntity
                 $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp 127.0.0.1:{localPort} {targetIp}:{targetPort}";
             cliProcess.Start();
             await cliProcess.WaitForExitAsync().ConfigureAwait(false);
+            
+            cliProcess.StartInfo.Arguments =
+                $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add udp 127.0.0.1:{localPort} {targetIp}:{targetPort}";
+            cliProcess.Start();
+            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
+            
+            cliProcess.StartInfo.Arguments =
+                $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add tcp [::]:{localPort} {targetIp}:{targetPort}";
+            cliProcess.Start();
+            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
+            
+            cliProcess.StartInfo.Arguments =
+                $"--rpc-portal 127.0.0.1:{_rpcPort} port-forward add udp [::]:{localPort} {targetIp}:{targetPort}";
+            cliProcess.Start();
+            await cliProcess.WaitForExitAsync().ConfigureAwait(false);
 
             LogWrapper.Debug("ET Cli", await cliProcess.StandardOutput.ReadToEndAsync().ConfigureAwait(false) +
                                        await cliProcess.StandardError.ReadToEndAsync().ConfigureAwait(false));
@@ -388,6 +405,53 @@ public class EasyTierEntity
         return localPort;
     }
 
+    private async Task _GetCliOutputDebug()
+    {
+        while (State != EtState.Stopped && Config.Link.EnableCliOutput)
+        {
+            using var cliProcess = new Process();
+            cliProcess.StartInfo = new ProcessStartInfo
+            {
+                FileName = $"{EasyTierMetadata.EasyTierFilePath}\\easytier-cli.exe",
+                WorkingDirectory = EasyTierMetadata.EasyTierFilePath,
+                Arguments = $"--rpc-portal 127.0.0.1:{_rpcPort} peer",
+                ErrorDialog = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
+                StandardInputEncoding = Encoding.UTF8
+            };
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(5000));
+        
+            try
+            {
+                cliProcess.Start();
+                cliProcess.StandardInput.Close();
+
+                var stdOut = await cliProcess.StandardOutput.ReadToEndAsync(cts.Token).ConfigureAwait(false);
+                var stdErr = await cliProcess.StandardError.ReadToEndAsync(cts.Token).ConfigureAwait(false);
+
+                await cliProcess.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                
+                var output = stdOut + stdErr;
+                
+                LogWrapper.Info("EasyTier Cli Debug", "EasyTier Cli 抽样输出: \n" + output);
+            }
+            catch (Exception e)
+            {
+                LogWrapper.Error(e, "EasyTier Cli", "Failed to get EasyTier Cli info");
+            }
+
+            await Task.Delay(30000);
+        }
+    }
+    
     /// <exception cref="ArgumentException">Thrown if host is duplicated.</exception>
     private async Task<EtPlayerList> _GetPlayersAsync()
     {
@@ -414,7 +478,7 @@ public class EasyTierEntity
 
         try
         {
-            LogWrapper.Debug("Et Cli", "Tried to get player info.");
+            LogWrapper.Debug("Et Cli", "Trying to get player info.");
 
             cliProcess.Start();
             cliProcess.StandardInput.Close();

@@ -388,7 +388,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
         catch (ArgumentException codeEx)
         {
             LogWrapper.Error(codeEx, "LobbyService", $"Failed to join lobby {lobbyCode}.");
-            OnHint?.Invoke("大厅编号不正确，请检查后再试！", CoreHintType.Critical);
+            OnHint?.Invoke(codeEx.Message, CoreHintType.Critical);
             await LeaveLobbyAsync().ConfigureAwait(false);
 
             return false;

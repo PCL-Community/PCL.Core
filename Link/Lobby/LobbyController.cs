@@ -101,16 +101,15 @@ public sealed class LobbyController
         {
             if (e.Message.Contains("lobby code"))
             {
-                LogWrapper.Error(e, "大厅编号无效");
+                throw new ArgumentException("大厅编号无效", e);
             }
-            else if (e.Message.Contains("hostname"))
+
+            if (e.Message.Contains("hostname"))
             {
-                LogWrapper.Error(e, "大厅创建者的用户名无效");
+                throw new ArgumentException("大厅创建者的用户名无效", e);
             }
-            else
-            {
-                LogWrapper.Error(e, "在加入大厅时出现意外的无效参数");
-            }
+
+            throw new ArgumentException("在加入大厅时出现意外的无效参数", e);
         }
         catch (Exception e)
         {

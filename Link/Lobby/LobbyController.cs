@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using PCL.Core.UI;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
 using LobbyType = PCL.Core.Link.Scaffolding.Client.Models.LobbyType;
@@ -44,7 +45,7 @@ public sealed class LobbyController
     /// <summary>
     /// Launch a Scaffolding Client.
     /// </summary>
-    /// <param name="username">Join user name.</param>
+    /// <param name="username">Join username.</param>
     /// <param name="code">Lobby share code.</param>
     /// <returns>Created <see cref="ScaffoldingClientEntity"/>.</returns>
     public async Task<ScaffoldingClientEntity?> LaunchClientAsync(string username, string code)
@@ -74,11 +75,10 @@ public sealed class LobbyController
 
             foreach (var profile in scfEntity.Client.PlayerList)
             {
-                if (profile.Kind == PlayerKind.HOST)
-                {
-                    hostname = profile.Name;
-                    LogWrapper.Debug($"大厅创建者的用户名: {hostname}");
-                }
+                if (profile.Kind != PlayerKind.HOST) continue;
+                
+                hostname = profile.Name;
+                LogWrapper.Debug($"大厅创建者的用户名: {hostname}");
             }
 
             var localPort = await scfEntity.EasyTier.AddPortForwardAsync(scfEntity.HostInfo.Ip, port)
@@ -96,20 +96,24 @@ public sealed class LobbyController
         catch (ArgumentNullException e)
         {
             LogWrapper.Error(e, "大厅创建者的用户名为空");
+            HintWrapper.Show("大厅创建者的用户名为空", HintType.Critical);
         }
         catch (ArgumentException e)
         {
             if (e.Message.Contains("lobby code"))
             {
                 LogWrapper.Error(e, "大厅编号无效");
+                HintWrapper.Show("大厅编号无效", HintType.Critical);
             }
             else if (e.Message.Contains("hostname"))
             {
                 LogWrapper.Error(e, "大厅创建者的用户名无效");
+                HintWrapper.Show("大厅创建者的用户名无效", HintType.Critical);
             }
             else
             {
                 LogWrapper.Error(e, "在加入大厅时出现意外的无效参数");
+                HintWrapper.Show("在加入大厅时出现意外的无效参数", HintType.Critical);
             }
         }
         catch (Exception e)
@@ -123,7 +127,7 @@ public sealed class LobbyController
     /// <summary>
     /// Launch a Scaffolding Server.
     /// </summary>
-    /// <param name="username">Host user name.</param>
+    /// <param name="username">Host username.</param>
     /// <param name="port">Minecraft port.</param>
     /// <returns>Created <see cref="ScaffoldingServerEntity"/>.</returns>
     /// <remarks>
@@ -147,7 +151,7 @@ public sealed class LobbyController
         }
         catch (Exception e)
         {
-            LogWrapper.Error(e, "Occurred error when launching Scafolding Server.");
+            LogWrapper.Error(e, "Occurred error when launching Scaffolding Server.");
         }
 
         return null;

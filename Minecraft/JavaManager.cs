@@ -201,23 +201,32 @@ public class JavaManager
     {
         // 准备欲搜索目录
         var programFilesPaths = new HashSet<string>()
+    {
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    };
+
+        // 搜索 PCL 文件夹
+        var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        var pclJavaPath = Path.Combine(appDirectory, "PCL");
+        if (Directory.Exists(pclJavaPath))
         {
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-        };
+            programFilesPaths.Add(pclJavaPath);
+        }
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // 特定目录搜索
             string[] keyFolders =
             [
                 "Program Files",
-                "Program Files (x86)"
+            "Program Files (x86)"
             ];
             var suitableDrives = DriveInfo.GetDrives().Where(d => d is { IsReady: true, DriveType: DriveType.Fixed }).ToArray();
             foreach (var folder in from driver in suitableDrives
-                     from keyFolder in keyFolders
-                     select Path.Combine(driver.Name, keyFolder))
+                                   from keyFolder in keyFolders
+                                   select Path.Combine(driver.Name, keyFolder))
             {
                 programFilesPaths.Add(folder);
             }
@@ -235,8 +244,8 @@ public class JavaManager
 
                 if (subDirs is null) continue;
                 foreach (var folder in from dir in subDirs
-                         where _MostPossibleKeyWords.Any(x => Path.GetFileName(dir).Contains(x, StringComparison.OrdinalIgnoreCase))
-                         select dir)
+                                       where _MostPossibleKeyWords.Any(x => Path.GetFileName(dir).Contains(x, StringComparison.OrdinalIgnoreCase))
+                                       select dir)
                 {
                     programFilesPaths.Add(folder);
                 }
@@ -246,15 +255,15 @@ public class JavaManager
         {
             var programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var programFilesX86Path = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            
+
             if (!programFilesPath.IsNullOrEmpty() && Directory.Exists(programFilesPath))
                 programFilesPaths.Add(programFilesPath);
-                
+
             if (!programFilesX86Path.IsNullOrEmpty() && Directory.Exists(programFilesX86Path))
                 programFilesPaths.Add(programFilesX86Path);
         }
         LogWrapper.Info($"[Java] 对下列目录进行广度关键词搜索{Environment.NewLine}{string.Join(Environment.NewLine, programFilesPaths)}");
-        
+
         // 使用 广度优先搜索 查找 Java 文件
         foreach (var rootPath in programFilesPaths)
         {

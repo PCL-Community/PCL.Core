@@ -285,6 +285,12 @@ public static partial class Config
             [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string CustomPassword { get; set; }
         }
 
+        [ConfigGroup("NetworkConfig")]
+        partial class NetworkConfigGroup
+        {
+            [ConfigItem<bool>("SystemNetEnableDoH", true)] public partial bool EnableDoH { get; set; }
+        }
+
         [ConfigGroup("Debug")] partial class DebugConfigGroup
         {
             [ConfigItem<bool>("SystemDebugMode", false)] public partial bool Enabled { get; set; }

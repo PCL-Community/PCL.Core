@@ -129,11 +129,7 @@ public class PreLaunchService(IMcInstance instance, JavaInfo selectedJava) {
         await GpuAdjustmentSemaphore.WaitAsync(cancellationToken);
 
         try {
-            var result1 = ProcessInterop.SetGpuPreference(selectedJava.JavawExePath, Config.Launch.SetGpuPreference);
-            var result2 = ProcessInterop.SetGpuPreference(Basics.ExecutableName, Config.Launch.SetGpuPreference);
-            if (!result1 || !result2) {
-                McLaunchUtils.Log("显卡设置调整失败，可能需要管理员权限");
-            }
+            ProcessInterop.SetGpuPreference(selectedJava.JavawExePath, Config.Launch.SetGpuPreference);
         } catch (Exception ex) {
             await HandleGpuAdjustmentFailureAsync(ex, cancellationToken);
         }
@@ -297,7 +293,7 @@ public class PreLaunchService(IMcInstance instance, JavaInfo selectedJava) {
     }
 
     private static async Task UpdateWindowSettingsAsync(string filePath, CancellationToken cancellationToken) {
-        switch (Config.Launch.WindowType) {
+        switch (Config.Launch.GameWindowMode) {
             case 0: // Fullscreen
                 await UpdateFullscreenSettingAsync(filePath, true, cancellationToken);
                 break;

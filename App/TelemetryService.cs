@@ -22,7 +22,6 @@ public class TelemetryService : GeneralService
 
     // ReSharper disable UnusedAutoPropertyAccessor.Local
 
-    [JsonSerializable(typeof(TelemetryData))]
     private class TelemetryData
     {
         public required string Tag { get; set; }

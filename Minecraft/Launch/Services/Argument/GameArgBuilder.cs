@@ -11,7 +11,7 @@ using PCL.Core.Minecraft.Launch.Utils;
 namespace PCL.Core.Minecraft.Launch.Services.Argument;
 
 /// <summary>
-/// 构建Minecraft游戏启动参数
+/// 构建 Minecraft 游戏启动参数
 /// </summary>
 public class GameArgBuilder(IMcInstance instance) {
     private readonly IJsonBasedInstance _jsonBasedInstance = (IJsonBasedInstance)instance;
@@ -49,7 +49,7 @@ public class GameArgBuilder(IMcInstance instance) {
     #region 私有方法 - 参数构建
 
     /// <summary>
-    /// 添加RetroWrapper相关参数
+    /// 添加 RetroWrapper 相关参数
     /// </summary>
     private void AddRetroWrapperArgs(List<string> arguments) {
         if (LaunchEnvUtils.NeedRetroWrapper(instance)) {
@@ -58,7 +58,7 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 添加旧版本Minecraft参数
+    /// 添加旧版本 Minecraft 参数
     /// </summary>
     private void AddLegacyMinecraftArgs(List<string> arguments) {
         var minecraftArgs = GetMinecraftArgumentsFromJson();
@@ -71,14 +71,14 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 从JSON中获取Minecraft参数
+    /// 从 JSON 中获取 Minecraft 参数
     /// </summary>
     private string GetMinecraftArgumentsFromJson() {
         return _jsonBasedInstance.VersionJson?["minecraftArguments"]?.ToString() ?? string.Empty;
     }
 
     /// <summary>
-    /// 从JSON中提取游戏参数
+    /// 从 JSON 中提取游戏参数
     /// </summary>
     private List<string> ExtractJsonGameArguments() {
         var arguments = new List<string>();
@@ -159,7 +159,7 @@ public class GameArgBuilder(IMcInstance instance) {
     #region 私有方法 - OptiFine处理
 
     /// <summary>
-    /// 处理OptiFine Tweaker参数
+    /// 处理 OptiFine Tweaker 参数
     /// </summary>
     private List<string> ProcessOptiFineTweaker(List<string> arguments) {
         if (!ShouldProcessOptiFine()) {
@@ -170,7 +170,7 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 检查是否需要处理OptiFine
+    /// 检查是否需要处理 OptiFine
     /// </summary>
     private bool ShouldProcessOptiFine() {
         var instanceInfo = instance.InstanceInfo;
@@ -181,7 +181,7 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 修正OptiFine Tweaker的顺序
+    /// 修正 OptiFine Tweaker 的顺序
     /// </summary>
     private List<string> FixOptiFineTweakerOrder(List<string> arguments) {
         var argumentsString = string.Join(" ", arguments);
@@ -198,7 +198,7 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 确保OptiFineForgeTweaker在最后
+    /// 确保 OptiFineForgeTweaker 在最后
     /// </summary>
     private List<string> EnsureOptiFineForgeTweakerIsLast(List<string> arguments, string tweakerClass) {
         var argumentsString = string.Join(" ", arguments);
@@ -222,7 +222,7 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 替换为OptiFineForgeTweaker
+    /// 替换为 OptiFineForgeTweaker
     /// </summary>
     private List<string> ReplaceWithOptiFineForgeTweaker(List<string> arguments) {
         var argumentsString = string.Join(" ", arguments);
@@ -248,7 +248,7 @@ public class GameArgBuilder(IMcInstance instance) {
     }
 
     /// <summary>
-    /// 更新实例JSON文件
+    /// 更新实例 JSON 文件
     /// </summary>
     private void UpdateInstanceJsonFile() {
         try {

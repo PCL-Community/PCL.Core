@@ -87,10 +87,10 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     /// 计算游戏窗口大小
     /// </summary>
     private Size CalculateGameWindowSize() {
-        var gameSize = Config.Launch.WindowType switch {
+        var gameSize = Config.Launch.GameWindowMode switch {
             2 => CalculateMainWindowSize(),
-            3 => new Size(Math.Max(100, Config.Launch.WindowWidthLaunch),
-                Math.Max(100, Config.Launch.WindowHeightLaunch)),
+            3 => new Size(Math.Max(100, Config.Launch.GameWindowWidth),
+                Math.Max(100, Config.Launch.GameWindowHeight)),
             _ => new Size(854, 480)
         };
 
@@ -108,11 +108,11 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
 
     /// <summary>
-    /// 应用DPI修复（如果需要）
+    /// 应用 DPI 修复（如果需要）
     /// </summary>
     private Size ApplyDpiFixIfNeeded(Size gameSize) {
         if (NeedsDpiFix()) {
-            McLaunchUtils.Log($"应用窗口大小DPI修复（Java版本：{selectedJava.Version.Revision}）");
+            McLaunchUtils.Log($"应用窗口大小 DPI 修复（Java 版本：{selectedJava.Version.Revision}）");
             var dpiScale = UiHelper.GetSystemDpi() / 96.0;
             gameSize.Width /= dpiScale;
             gameSize.Height /= dpiScale;
@@ -122,7 +122,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
 
     /// <summary>
-    /// 判断是否需要DPI修复
+    /// 判断是否需要 DPI 修复
     /// </summary>
     private bool NeedsDpiFix() {
         return instance.InstanceInfo.McVersionBuild <= MINECRAFT_LEGACY_VERSION_BUILD &&
@@ -133,7 +133,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
 
     /// <summary>
-    /// 获取Natives文件夹路径
+    /// 获取 Natives 文件夹路径
     /// </summary>
     private string GetNativesFolder() {
         var primaryPath = Path.Combine(instance.Path, instance.Name, "-natives");
@@ -151,7 +151,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
     
     /// <summary>
-    /// 构建ClassPath字符串
+    /// 构建 ClassPath 字符串
     /// </summary>
     private async Task<string> BuildClassPathAsync() {
         var cpStrings = new List<string> {

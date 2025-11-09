@@ -20,7 +20,7 @@ public class LaunchMonitorService(IMcInstance instance, JavaInfo selectedJava) {
         // McLaunchUtils.Log("PCL 版本：" + VersionBaseName + " (" + VersionCode + ")");
         McLaunchUtils.Log("游戏版本：" + instance.InstanceInfo.McVersion);
         McLaunchUtils.Log("资源版本：" + McLaunchUtils.GetAssetsIndexName(_jsonBasedInstance));
-        McLaunchUtils.Log("分配的内存：" + InstanceRamService.GetInstanceMemoryAllocation(instance, !selectedJava.Is64Bit) + " GB（" + Math.Round(InstanceRamService.GetInstanceMemoryAllocation(instance, !selectedJava.Is64Bit) * 1024) + " MB）");
+        McLaunchUtils.Log("分配的内存：" + InstanceRamService.GetInstanceMemoryAllocation(instance, !selectedJava.Is64Bit) + " GB (" + Math.Round(InstanceRamService.GetInstanceMemoryAllocation(instance, !selectedJava.Is64Bit) * 1024) + " MB)");
         McLaunchUtils.Log("MC 文件夹：" + instance.Folder.Path);
         McLaunchUtils.Log("实例文件夹：" + instance.Path);
         McLaunchUtils.Log("版本隔离：" + (instance.IsolatedPath == instance.Path));
@@ -31,9 +31,9 @@ public class LaunchMonitorService(IMcInstance instance, JavaInfo selectedJava) {
         McLaunchUtils.Log("~ 档案参数 ~");
         /*
         McLaunchUtils.Log("玩家用户名：" + McLoginLoader.Output.Name);
-        McLaunchUtils.Log("AccessToken：" + McLoginLoader.Output.AccessToken);
-        McLaunchUtils.Log("ClientToken：" + McLoginLoader.Output.ClientToken);
-        McLaunchUtils.Log("UUID：" + McLoginLoader.Output.Uuid);
+        McLaunchUtils.Log("AccessToken:" + McLoginLoader.Output.AccessToken);
+        McLaunchUtils.Log("ClientToken:" + McLoginLoader.Output.ClientToken);
+        McLaunchUtils.Log("UUID:" + McLoginLoader.Output.Uuid);
         McLaunchUtils.Log("验证方式：" + McLoginLoader.Output.Type);
         */
         McLaunchUtils.Log("");

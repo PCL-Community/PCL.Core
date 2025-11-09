@@ -106,7 +106,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
     #region 私有辅助方法
 
     /// <summary>
-    /// 检查是否有现代版本的JVM参数
+    /// 检查是否有现代版本的 JVM 参数
     /// </summary>
     private bool HasModernJvmArguments() {
         return _jsonBasedInstance.VersionJson!.TryGetPropertyValue("arguments", out var argumentNode) &&
@@ -115,7 +115,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
     }
 
     /// <summary>
-    /// 检查是否有传统的Minecraft参数
+    /// 检查是否有传统的 Minecraft 参数
     /// </summary>
     private bool HasLegacyMinecraftArguments() {
         return !string.IsNullOrEmpty(_jsonBasedInstance.VersionJson!["minecraftArguments"]?.ToString());
@@ -219,7 +219,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
     }
 
     /// <summary>
-    /// 修复Windows操作系统名称参数
+    /// 修复 Windows 操作系统名称参数
     /// </summary>
     private void FixWindowsOsNameArgument() {
         const string targetArg = "-Dos.name=Windows 10";
@@ -235,7 +235,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
     /// 添加全屏参数
     /// </summary>
     private void AddFullscreenArgument() {
-        if (Config.Launch.WindowType == 0) {
+        if (Config.Launch.GameWindowMode == 0) {
             _arguments.Add("--fullscreen");
         }
     }

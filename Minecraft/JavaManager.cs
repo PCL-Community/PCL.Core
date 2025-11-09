@@ -205,10 +205,9 @@ public class JavaManager
         {
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Path.Combine(Basics.ExecutableDirectory, "PCL")
         };
-        var pclJavaPath = Path.Combine(Basics.ExecutableDirectory, "PCL");
-        programFilesPaths.Add(pclJavaPath);
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {

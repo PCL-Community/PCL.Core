@@ -45,6 +45,7 @@
     <!-- NuGet 引用 -->
     <ItemGroup>
         <!-- WPF Behaviors -->
+        <PackageReference Include="DnsClientX" Version="1.0.4" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <!-- 语言和系统特性 -->
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" PrivateAssets="all" />
@@ -80,5 +81,8 @@
     <ItemGroup>
         <AdditionalFiles Include="App\LifecycleState.cs" />
         <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+    <ItemGroup>
+      <Content Remove="C:\Users\26979\.nuget\packages\dnsclientx\1.0.4\contentFiles\any\net8.0\DnsClientX.ico" />
     </ItemGroup>
 </Project>

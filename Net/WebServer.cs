@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using PCL.Core.Utils;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -25,6 +27,8 @@ public class WebServer : IDisposable
     
     private bool _started;
     private bool _running;
+
+    public int Port {get;init;}
     
     private WebClientRequest _RequestCallback => _requestCallback ?? _DefaultRequestCallback;
 
@@ -44,6 +48,8 @@ public class WebServer : IDisposable
     [Obsolete("")]
     public WebServer(string listen = "127.0.0.1:8080", WebClientRequest? requestCallback = null)
     {
+        int.TryParse(listen.Split(":")[1],out var port);
+        Port = port;
         _listener.Prefixes.Add($"http://{listen}/");
         _requestCallback = requestCallback;
         _listener.Start();

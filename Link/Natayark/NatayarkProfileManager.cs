@@ -135,7 +135,7 @@ public static class NatayarkProfileManager
             void WarnLog(string msg)
             {
                 LogWrapper.Warn(ex, LogModule, msg);
-                HintWrapper.Show(msg, HintTheme.Error);
+                HintWrapper.Show(msg, HintType.Critical);
             }
         }
         finally

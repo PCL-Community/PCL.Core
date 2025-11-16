@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.App;
+namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
 public sealed class UpdateService : GeneralService

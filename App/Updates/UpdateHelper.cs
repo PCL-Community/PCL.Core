@@ -2,11 +2,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection.Metadata;
 using System.Threading;
 using PCL.Core.Logging;
 
-namespace PCL.Core.App;
+namespace PCL.Core.App.Updates;
 
 public static class UpdateHelper
 {

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace PCL.Core.App.Updates;
+namespace PCL.Core.App.Updates.Models;
 
 public class VersionAnnouncementDataModel
 {

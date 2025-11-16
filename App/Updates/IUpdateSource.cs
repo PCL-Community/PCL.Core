@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using PCL.Core.App.Updates.Models;
 using PCL.Core.Utils;
 
 namespace PCL.Core.App.Updates;

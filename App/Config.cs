@@ -49,11 +49,6 @@ public static partial class Config
         [ConfigItem<bool>("HintHandInstall", false)] public partial bool ManualInstall { get; set; }
 
         /// <summary>
-        /// 购买正版提示。
-        /// </summary>
-        [ConfigItem<bool>("HintBuy", false)] public partial bool BuyGame { get; set; }
-
-        /// <summary>
         /// 清理垃圾提示。
         /// </summary>
         [ConfigItem<int>("HintClearRubbish", 0)] public partial int CleanJunkFile { get; set; }

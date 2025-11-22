@@ -681,6 +681,7 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenSetupLaunch", false, ConfigSource.Local)] public partial bool SetupLaunch { get; set; }
             [ConfigItem<bool>("UiHiddenSetupUi", false, ConfigSource.Local)] public partial bool SetupUi { get; set; }
             [ConfigItem<bool>("UiHiddenSetupSystem", false, ConfigSource.Local)] public partial bool SetupSystem { get; set; }
+            [ConfigItem<bool>("UiHiddenSetupUpdate", false, ConfigSource.Local)] public partial bool SetupUpdate { get; set; }
             [ConfigItem<bool>("UiHiddenOtherHelp", false, ConfigSource.Local)] public partial bool OtherHelp { get; set; }
             [ConfigItem<bool>("UiHiddenOtherFeedback", false, ConfigSource.Local)] public partial bool OtherFeedback { get; set; }
             [ConfigItem<bool>("UiHiddenOtherLog", false, ConfigSource.Local)] public partial bool OtherLog { get; set; }

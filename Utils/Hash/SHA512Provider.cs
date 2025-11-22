@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Hash;
 
@@ -15,19 +16,11 @@ public class SHA512Provider : IHashProvider
         var originalPosition = input.Position;
         try
         {
-            using var hash = SHA512.Create();
-            var res = hash.ComputeHash(input);
-            var sb = new StringBuilder(Length);
-            foreach (var b in res)
-            {
-                sb.Append(b.ToString("x2"));
-            }
-
-            return sb.ToString();
+            return HashResultHandler.ConvertResultToString(SHA512.HashData(input), Length);
         }
         catch (Exception e)
         {
-            LogWrapper.Error(e, "Hash", "Compute hash failed");
+            LogWrapper.Error(e, "Hash", "Compute SHA512 failed");
             throw;
         }
         finally
@@ -35,7 +28,11 @@ public class SHA512Provider : IHashProvider
             input.Position = originalPosition;
         }
     }
-    public string ComputeHash(byte[] input) => ComputeHash(new MemoryStream(input));
+
+    public string ComputeHash(byte[] input) => HashResultHandler.ConvertResultToString(SHA512.HashData(input), Length);
+
+    public string ComputeHash(ReadOnlySpan<byte> input) =>
+        HashResultHandler.ConvertResultToString(SHA512.HashData(input), Length);
     public string ComputeHash(string input, Encoding? en = null) => ComputeHash(
         en == null
             ? Encoding.UTF8.GetBytes(input)

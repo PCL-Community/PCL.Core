@@ -82,7 +82,4 @@
         <AdditionalFiles Include="App\LifecycleState.cs" />
         <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
-    <ItemGroup>
-      <Content Remove="C:\Users\26979\.nuget\packages\dnsclientx\1.0.4\contentFiles\any\net8.0\DnsClientX.ico" />
-    </ItemGroup>
 </Project>

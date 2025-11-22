@@ -179,7 +179,7 @@ public class LaunchArgBuilder(IMcInstance instance, JavaInfo selectedJava, bool 
         _arguments.Add($"--server {host} --port {port}");
 
         if (instance.InstanceInfo.HasPatch("optifine")) {
-            HintWrapper.Show("OptiFine 与自动进入服务器可能不兼容，有概率导致材质丢失甚至游戏崩溃！", HintTheme.Error);
+            HintWrapper.Show("OptiFine 与自动进入服务器可能不兼容，有概率导致材质丢失甚至游戏崩溃！", HintType.Critical);
         }
     }
 

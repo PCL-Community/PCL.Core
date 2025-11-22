@@ -1,23 +1,35 @@
 ﻿namespace PCL.Core.UI;
 
-public enum HintTheme
+/// <summary>
+/// 提示信息的种类W
+/// </summary>
+public enum HintType
 {
-    Normal,
-    Success,
-    Error
+    /// <summary>
+    /// 信息
+    /// </summary>
+    Info,
+    /// <summary>
+    /// 已完成
+    /// </summary>
+    Finish,
+    /// <summary>
+    /// 错误
+    /// </summary>
+    Critical
 }
 
 public delegate void HintHandler(
     string message,
-    HintTheme theme
+    HintType type
 );
 
 public static class HintWrapper
 {
     public static event HintHandler? OnShow;
 
-    public static void Show(string message, HintTheme theme = HintTheme.Normal)
+    public static void Show(string message, HintType type = HintType.Info)
     {
-        OnShow?.Invoke(message, theme);
+        OnShow?.Invoke(message, type);
     }
 }

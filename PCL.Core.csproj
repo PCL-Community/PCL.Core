@@ -45,7 +45,7 @@
     <!-- NuGet 引用 -->
     <ItemGroup>
         <!-- WPF Behaviors -->
-        <PackageReference Include="DnsClientX" Version="1.0.4" />
+        <PackageReference Include="Ae.Dns.Client" Version="3.1.0" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <!-- 语言和系统特性 -->
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" PrivateAssets="all" />

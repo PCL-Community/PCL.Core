@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Sockets;
-using DnsClientX;
+using Ae.Dns.Client;
+using Ae.Dns.Protocol;
+using Ae.Dns.Protocol.Enums;
+using Ae.Dns.Protocol.Records;
 using PCL.Core.Logging;
-using PCL.Core.Utils.OS;
+using System.Runtime.Caching;
 
 namespace PCL.Core.Net;
 
@@ -18,23 +20,29 @@ public class HostConnectionHandler
     public static HostConnectionHandler Instance { get; } = new();
     private const string ModuleName = "DoH";
 
-    private static DnsMultiResolver? _resolver;
+    private static IDnsClient? _resolver;
 
     private HostConnectionHandler()
     {
-        var endpoints = EndpointParser.TryParseMany([
-            "https://doh.pub/dns-query",
-            "https://doh.pysio.online/dns-query",
-            "https://cloudflare-dns.com/dns-query"
-        ], out var errors);
-        if (errors.Count != 0)
-            LogWrapper.Error(ModuleName, $"Failed to resolve DoH endpoints: {string.Join(", ", errors)}");
+        // 使用Ae.Dns创建DoH客户端，支持多个DoH服务器
+        IDnsClient[] clients =
+        [
+            new DnsHttpClient(new HttpClient()
+            {
+                BaseAddress = new Uri("https://doh.pub/")
+            }),
+            new DnsHttpClient(new HttpClient()
+            {
+                BaseAddress = new Uri("https://doh.pysio.online/")
+            }),
+            new DnsHttpClient(new HttpClient()
+            {
+                BaseAddress = new Uri("https://cloudflare-dns.com/")
+            })
+        ];
 
-        _resolver = new DnsMultiResolver(endpoints, new MultiResolverOptions
-        {
-            Strategy = MultiResolverStrategy.FastestWins,
-            RespectEndpointTimeout = true
-        });
+        // 使用DnsRacerClient实现快速获胜策略
+        _resolver = new DnsCachingClient(new DnsRacerClient(clients), new MemoryCache("DNS Query Cache"));
     }
 
     public async ValueTask<Stream> GetConnectionAsync(SocketsHttpConnectionContext context, CancellationToken cts)
@@ -44,24 +52,28 @@ public class HostConnectionHandler
         var host = context.DnsEndPoint.Host;
         var port = context.DnsEndPoint.Port;
 
-        // 并行解析 IPv4 和 IPv6 地址
-        var resolveTasks = new List<Task<DnsResponse>>()
+        // 使用Ae.Dns解析IPv4和IPv6地址
+
+        var queryA = _resolver.Query(DnsQueryFactory.CreateQuery(host), cts);
+        var queryAAAA = _resolver.Query(DnsQueryFactory.CreateQuery(host, DnsQueryType.AAAA), cts);
+
+        var resolveTasks = new List<Task<DnsMessage>>()
         {
-            _resolver.QueryAsync(host, DnsRecordType.A, cts),
-            _resolver.QueryAsync(host, DnsRecordType.AAAA, cts)
+            queryA,
+            queryAAAA
         };
 
         var results = await Task.WhenAll(resolveTasks).ConfigureAwait(false);
         var addresses = (from result in results
-            from record in result.Answers
-            where record.Type is DnsRecordType.A or DnsRecordType.AAAA
-            select record.Data).ToArray();
+            from answer in result.Answers
+            where answer.Resource is DnsIpAddressResource
+            select ((answer.Resource as DnsIpAddressResource)!).IPAddress).ToArray();
 
         if (addresses.Length == 0)
             throw new HttpRequestException($"No IP address for {host}");
 
         // 并行连接所有地址，返回第一个成功的连接
-        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip, port, cts)).ToList();
+        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip.ToString(), port, cts)).ToList();
 
         try
         {
@@ -84,7 +96,7 @@ public class HostConnectionHandler
         }
         catch
         {
-            throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses)}");
+            throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses.Select(x => x.ToString()))}");
         }
     }
 

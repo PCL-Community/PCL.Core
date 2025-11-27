@@ -114,7 +114,7 @@ public class HostConnectionHandler
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ModuleName, $"No address reachable for {host}: {ex.Message}");
+            LogWrapper.Error(ex, ModuleName, $"No address reachable for {host}");
             throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses.Select(x => x.ToString()))}", ex);
         }
     }
@@ -135,10 +135,10 @@ public class HostConnectionHandler
             socket.Dispose();
             throw new OperationCanceledException($"Connection to {ip}:{port} was cancelled");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             socket.Dispose();
-            throw new HttpRequestException($"Failed to connect to {ip}:{port}");
+            throw new HttpRequestException($"Failed to connect to {ip}:{port}", ex);
         }
     }
 }

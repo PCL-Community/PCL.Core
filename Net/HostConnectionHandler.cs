@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ public class HostConnectionHandler
     public static HostConnectionHandler Instance { get; } = new();
     private const string ModuleName = "DoH";
 
-    private static IDnsClient? _resolver;
+    private readonly DnsCachingClient? _resolver;
 
     private HostConnectionHandler()
     {
@@ -52,22 +53,35 @@ public class HostConnectionHandler
         var host = context.DnsEndPoint.Host;
         var port = context.DnsEndPoint.Port;
 
-        // 使用Ae.Dns解析IPv4和IPv6地址
-
-        var queryA = _resolver.Query(DnsQueryFactory.CreateQuery(host), cts);
-        var queryAAAA = _resolver.Query(DnsQueryFactory.CreateQuery(host, DnsQueryType.AAAA), cts);
-
-        var resolveTasks = new List<Task<DnsMessage>>()
+        if (IPEndPoint.TryParse(host, out _)) // 是否为纯 IP 地址
         {
-            queryA,
-            queryAAAA
-        };
+            return await _ConnectToAddressAsync(host, port, cts);
+        }
 
-        var results = await Task.WhenAll(resolveTasks).ConfigureAwait(false);
-        var addresses = (from result in results
-            from answer in result.Answers
-            where answer.Resource is DnsIpAddressResource
-            select ((answer.Resource as DnsIpAddressResource)!).IPAddress).ToArray();
+        IPAddress[] addresses;
+        try
+        {
+            // 使用Ae.Dns解析IPv4和IPv6地址
+            var queryA = _resolver.Query(DnsQueryFactory.CreateQuery(host), cts);
+            var queryAAAA = _resolver.Query(DnsQueryFactory.CreateQuery(host, DnsQueryType.AAAA), cts);
+
+            var resolveTasks = new List<Task<DnsMessage>>()
+            {
+                queryA,
+                queryAAAA
+            };
+
+            var results = await Task.WhenAll(resolveTasks).ConfigureAwait(false);
+            addresses = (from result in results
+                from answer in result.Answers
+                where answer.Resource is DnsIpAddressResource
+                select (answer.Resource as DnsIpAddressResource)!.IPAddress).ToArray();
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Warn(ModuleName, $"Failed to resolve DNS for {host}: {ex.Message}, use system default DNS");
+            addresses = await Dns.GetHostAddressesAsync(host, cts);
+        }
 
         if (addresses.Length == 0)
             throw new HttpRequestException($"No IP address for {host}");
@@ -88,15 +102,20 @@ public class HostConnectionHandler
                     {
                         t.Result?.Dispose();
                     }
+                    else if (t.Exception != null)
+                    {
+                        LogWrapper.Debug(ModuleName, $"Connection to alternative address failed: {t.Exception.GetBaseException().Message}");
+                    }
                 }, cts);
             }
 
             LogWrapper.Debug(ModuleName, $"Success resolve DoH endpoint: {host} -> {stream.Socket.RemoteEndPoint}");
             return stream;
         }
-        catch
+        catch (Exception ex)
         {
-            throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses.Select(x => x.ToString()))}");
+            LogWrapper.Error(ModuleName, $"No address reachable for {host}: {ex.Message}");
+            throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses.Select(x => x.ToString()))}", ex);
         }
     }
 
@@ -106,15 +125,20 @@ public class HostConnectionHandler
         try
         {
             using var ctsSocket = CancellationTokenSource.CreateLinkedTokenSource(cts);
-            ctsSocket.CancelAfter(5000); // 5秒超时
-            
+            ctsSocket.CancelAfter(TimeSpan.FromSeconds(10)); // 10秒超时
+
             await socket.ConnectAsync(ip, port, ctsSocket.Token);
             return new NetworkStream(socket, ownsSocket: true);
         }
-        catch
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
             socket.Dispose();
-            throw;
+            throw new OperationCanceledException($"Connection to {ip}:{port} was cancelled");
+        }
+        catch (Exception)
+        {
+            socket.Dispose();
+            throw new HttpRequestException($"Failed to connect to {ip}:{port}");
         }
     }
 }

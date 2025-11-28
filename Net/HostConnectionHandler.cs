@@ -121,12 +121,10 @@ public class HostConnectionHandler
     private static async Task<NetworkStream> _ConnectToAddressAsync(string ip, int port, CancellationToken cts)
     {
         var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        socket.NoDelay = true;
         try
         {
-            using var ctsSocket = CancellationTokenSource.CreateLinkedTokenSource(cts);
-            ctsSocket.CancelAfter(TimeSpan.FromSeconds(10)); // 10秒超时
-
-            await socket.ConnectAsync(ip, port, ctsSocket.Token);
+            await socket.ConnectAsync(ip, port, cts);
             return new NetworkStream(socket, ownsSocket: true);
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)

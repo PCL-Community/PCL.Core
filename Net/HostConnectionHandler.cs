@@ -42,7 +42,6 @@ public class HostConnectionHandler
             })
         ];
 
-        // 使用DnsRacerClient实现快速获胜策略
         _resolver = new DnsCachingClient(new DnsRacerClient(clients), new MemoryCache("DNS Query Cache"));
     }
 
@@ -87,7 +86,7 @@ public class HostConnectionHandler
             throw new HttpRequestException($"No IP address for {host}");
 
         // 并行连接所有地址，返回第一个成功的连接
-        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip.ToString(), port, cts)).ToList();
+        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip.ToString(), port, cts)).ToArray();
 
         try
         {
@@ -100,7 +99,7 @@ public class HostConnectionHandler
                 _ = task.ContinueWith(t => {
                     if (t.IsCompletedSuccessfully)
                     {
-                        t.Result?.Dispose();
+                        t.Result.Dispose();
                     }
                     else if (t.Exception != null)
                     {

@@ -238,13 +238,11 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         }
         catch (NullReferenceException nre)
         {
-            LogWrapper.Warn(nre, "Update", "获取版本信息失败，可能是远程数据格式有误");
-            throw;
+            throw new InvalidOperationException("获取版本信息失败，可能是远程数据格式有误", nre);
         }
         catch (Exception ex)
         {
-            LogWrapper.Warn(ex, "Update", "获取版本信息失败");
-            throw;
+            throw new InvalidOperationException("获取版本信息失败", ex);
         }
     }
     

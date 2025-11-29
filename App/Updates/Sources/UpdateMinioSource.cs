@@ -100,7 +100,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         try
         {
             bool patchUpdate;
-            var tempPath = Path.Combine(Path.GetTempPath(), "Cache", "Update", "Downloads");
+            var tempPath = Path.Combine(Basics.TempPath, "Cache", "Update", "Download");
             if (!Directory.Exists(tempPath))
                 Directory.CreateDirectory(tempPath);
 
@@ -268,7 +268,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     /// <exception cref="InvalidOperationException">获取信息失败时抛出</exception>
     private async Task<JsonObject?> _GetRemoteInfoByName(string name, string path = "")
     {
-        var localInfoFile = Path.Combine(Path.GetTempPath(), "Cache", "Update", $"{name}.json");
+        var localInfoFile = Path.Combine(Basics.TempPath, "Cache", "Update", $"{name}.json");
 
         if (_RemoteCache.TryGetValue(name, out var expectedHash) && _IsCacheValid($"{name}.json", expectedHash))
         {
@@ -306,7 +306,6 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         }
 
         LogWrapper.Info("Update", "正在缓存远程信息到本地...");
-        Directory.CreateDirectory(Path.GetDirectoryName(localInfoFile) ?? Path.GetTempPath());
         await File.WriteAllTextAsync(localInfoFile, response).ConfigureAwait(false);
         LogWrapper.Info("Update", "远程信息缓存完成");
         
@@ -321,7 +320,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     /// <returns>是否有效</returns>
     private static bool _IsCacheValid(string fileName, string expectedHash)
     {
-        var cacheFile = Path.Combine(Path.GetTempPath(), "Cache", "Update", fileName);
+        var cacheFile = Path.Combine(Basics.TempPath, "Cache", "Update", fileName);
         var fileInfo = new FileInfo(cacheFile);
         return fileInfo.Exists && 
                (DateTime.Now - fileInfo.LastWriteTime).TotalHours < 1 && 

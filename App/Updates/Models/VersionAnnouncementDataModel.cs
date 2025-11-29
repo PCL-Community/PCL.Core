@@ -4,22 +4,22 @@ namespace PCL.Core.App.Updates.Models;
 
 public class VersionAnnouncementDataModel
 {
-    public required List<VersionAnnouncementContentModel> Contents { get; set; }
+    public required List<VersionAnnouncementContentModel> Contents { get; init; }
 }
 
 public class VersionAnnouncementContentModel
 {
-    public required string Title { get; set; }
-    public required string Detail { get; set; }
-    public required string Id { get; set; }
-    public required string Date { get; set; }
-    public required AnnouncementBtnInfoModel Btn1 { get; set; }
-    public required AnnouncementBtnInfoModel Btn2 { get; set; }
+    public required string Title { get; init; }
+    public required string Detail { get; init; }
+    public required string Id { get; init; }
+    public required string Date { get; init; }
+    public required AnnouncementBtnInfoModel? Btn1 { get; init; }
+    public required AnnouncementBtnInfoModel? Btn2 { get; init; }
 }
 
 public class AnnouncementBtnInfoModel
 {
-    public required string Text { get; set; }
-    public required string Command { get; set; }
-    public required string CommandParameter { get; set; }
+    public required string Text { get; init; }
+    public required string Command { get; init; }
+    public required string CommandParameter { get; init; }
 }

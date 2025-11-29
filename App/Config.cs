@@ -49,11 +49,6 @@ public static partial class Config
         [ConfigItem<bool>("HintHandInstall", false)] public partial bool ManualInstall { get; set; }
 
         /// <summary>
-        /// 购买正版提示。
-        /// </summary>
-        [ConfigItem<bool>("HintBuy", false)] public partial bool BuyGame { get; set; }
-
-        /// <summary>
         /// 清理垃圾提示。
         /// </summary>
         [ConfigItem<int>("HintClearRubbish", 0)] public partial int CleanJunkFile { get; set; }
@@ -283,6 +278,12 @@ public static partial class Config
             [ConfigItem<int>("SystemHttpProxyType", 1)] public partial int Type { get; set; }
             [ConfigItem<string>("SystemHttpProxyCustomUsername", "")] public partial string CustomUsername { get; set; }
             [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string CustomPassword { get; set; }
+        }
+
+        [ConfigGroup("NetworkConfig")]
+        partial class NetworkConfigGroup
+        {
+            [ConfigItem<bool>("SystemNetEnableDoH", true)] public partial bool EnableDoH { get; set; }
         }
 
         [ConfigGroup("Debug")] partial class DebugConfigGroup

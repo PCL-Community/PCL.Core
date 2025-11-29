@@ -21,7 +21,7 @@
         <UseWPF>true</UseWPF>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <LangVersion>13.0</LangVersion>
+        <LangVersion>14.0</LangVersion>
         <Nullable>enable</Nullable>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
@@ -39,12 +39,13 @@
     <PropertyGroup Condition="'$(Configuration)' == 'Beta' Or '$(Configuration)' == 'Release' Or '$(Configuration)' == 'Publish'">
         <DebugType>none</DebugType>
         <Optimize>true</Optimize>
-        <DefineConstants Condition="'$(Configuration)' == 'Release'">RELEASE;PUBLISH</DefineConstants>
+        <DefineConstants Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'Publish'">RELEASE;PUBLISH</DefineConstants>
         <DefineConstants Condition="'$(Configuration)' == 'Beta'">BETA;PUBLISH</DefineConstants>
     </PropertyGroup>
     <!-- NuGet 引用 -->
     <ItemGroup>
         <!-- WPF Behaviors -->
+        <PackageReference Include="Ae.Dns.Client" Version="3.1.0" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <!-- 语言和系统特性 -->
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" PrivateAssets="all" />

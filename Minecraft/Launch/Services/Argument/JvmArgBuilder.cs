@@ -203,7 +203,7 @@ public class JvmArgBuilder(IMcInstance instance) {
             }
             catch (HttpRequestException ex)
             {
-                throw new Exception($"无法连接到第三方登录服务器 ({server ?? "null"})\n详细信息: {ex.Message}", ex);
+                throw new Exception($"无法连接到第三方登录服务器 ({server ?? "null"})\n详细信息：{ex.Message}", ex);
             }
             catch (Exception ex)
             {

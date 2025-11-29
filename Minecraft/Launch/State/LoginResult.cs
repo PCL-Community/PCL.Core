@@ -1,7 +1,7 @@
 ﻿namespace PCL.Core.Minecraft.Launch.State;
 /*
 /// <summary>
-/// Minecraft登录结果
+/// Minecraft 登录结果
 /// </summary>
 public class LoginResult {
     /// <summary>
@@ -10,7 +10,7 @@ public class LoginResult {
     public string Name { get; set; }
 
     /// <summary>
-    /// 玩家UUID
+    /// 玩家 UUID
     /// </summary>
     public string Uuid { get; set; }
 
@@ -30,7 +30,7 @@ public class LoginResult {
     public string ClientToken { get; set; }
 
     /// <summary>
-    /// 微软登录时返回的profile信息（JSON格式）
+    /// 微软登录时返回的 profile 信息（JSON 格式）
     /// </summary>
     public string ProfileJson { get; set; }
 

@@ -49,11 +49,6 @@ public static partial class Config
         [ConfigItem<bool>("HintHandInstall", false)] public partial bool ManualInstall { get; set; }
 
         /// <summary>
-        /// 购买正版提示。
-        /// </summary>
-        [ConfigItem<bool>("HintBuy", false)] public partial bool BuyGame { get; set; }
-
-        /// <summary>
         /// 清理垃圾提示。
         /// </summary>
         [ConfigItem<int>("HintClearRubbish", 0)] public partial int CleanJunkFile { get; set; }
@@ -285,6 +280,12 @@ public static partial class Config
             [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string CustomPassword { get; set; }
         }
 
+        [ConfigGroup("NetworkConfig")]
+        partial class NetworkConfigGroup
+        {
+            [ConfigItem<bool>("SystemNetEnableDoH", true)] public partial bool EnableDoH { get; set; }
+        }
+
         [ConfigGroup("Debug")] partial class DebugConfigGroup
         {
             [ConfigItem<bool>("SystemDebugMode", false)] public partial bool Enabled { get; set; }
@@ -404,7 +405,7 @@ public static partial class Config
         [ConfigItem<LinkProtocolPreference>("LinkProtocolPreference", LinkProtocolPreference.Tcp)] public partial LinkProtocolPreference ProtocolPreference { get; set; }
 
         /// <summary>
-        /// 尝试打通对称性 NAT。
+        /// 尝试使用端口猜测打通对称性 NAT。
         /// </summary>
         [ConfigItem<bool>("LinkTryPunchSym", true)] public partial bool TryPunchSym { get; set; }
 
@@ -412,6 +413,11 @@ public static partial class Config
         /// 启用 IPv6。
         /// </summary>
         [ConfigItem<bool>("LinkEnableIPv6", true)] public partial bool EnableIPv6 { get; set; }
+        
+        /// <summary>
+        /// 在日志中输出 Cli 信息以用于调试。
+        /// </summary>
+        [ConfigItem<bool>("LinkEnableCliOutput", false)] public partial bool EnableCliOutput { get; set; }
     }
 
     /// <summary>
@@ -676,7 +682,6 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenSetupSystem", false, ConfigSource.Local)] public partial bool SetupSystem { get; set; }
             [ConfigItem<bool>("UiHiddenOtherHelp", false, ConfigSource.Local)] public partial bool OtherHelp { get; set; }
             [ConfigItem<bool>("UiHiddenOtherFeedback", false, ConfigSource.Local)] public partial bool OtherFeedback { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherVote", false, ConfigSource.Local)] public partial bool OtherVote { get; set; }
             [ConfigItem<bool>("UiHiddenOtherAbout", false, ConfigSource.Local)] public partial bool OtherAbout { get; set; }
             [ConfigItem<bool>("UiHiddenOtherTest", false, ConfigSource.Local)] public partial bool OtherTest { get; set; }
             [ConfigItem<bool>("UiHiddenVersionEdit", false, ConfigSource.Local)] public partial bool InstanceEdit { get; set; }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Win32;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
+using PCL.Core.App;
 
 namespace PCL.Core.Minecraft;
 
@@ -204,8 +205,10 @@ public class JavaManager
         {
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Path.Combine(Basics.ExecutableDirectory, "PCL")
         };
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // 特定目录搜索

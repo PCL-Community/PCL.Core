@@ -23,35 +23,43 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     {
         get
         {
-            if (field != null) return field;
-            
-            // 发送 GET 请求获取远程缓存 JSON
-            LogWrapper.Info("Update", "正在拉取远程缓存...");
-            var builder = HttpRequestBuilder.Create($"{baseUrl}apiv2/cache.json", HttpMethod.Get);
-            var response = builder.SendAsync()
-                .ConfigureAwait(false)
-                .GetAwaiter().GetResult()
-                .AsStringContent();
-            LogWrapper.Info("Update", "远程缓存拉取完成");
-
-            // 解析 JSON 并转换为字典
-            LogWrapper.Info("Update", "正在解析远程缓存...");
-            if (JsonNode.Parse(response) is not JsonObject remoteCache)
+            try
             {
-                LogWrapper.Error("Update", "无法解析远程缓存 JSON");
-                throw new InvalidOperationException("远程缓存解析失败");
+                if (field != null) return field;
+
+                // 发送 GET 请求获取远程缓存 JSON
+                LogWrapper.Info("Update", "正在拉取远程缓存...");
+                var builder = HttpRequestBuilder.Create($"{baseUrl}apiv2/cache.json", HttpMethod.Get);
+                var response = builder.SendAsync()
+                    .ConfigureAwait(false)
+                    .GetAwaiter().GetResult()
+                    .AsStringContent();
+                LogWrapper.Info("Update", "远程缓存拉取完成");
+
+                // 解析 JSON 并转换为字典
+                LogWrapper.Info("Update", "正在解析远程缓存...");
+                if (JsonNode.Parse(response) is not JsonObject remoteCache)
+                {
+                    LogWrapper.Error("Update", "无法解析远程缓存 JSON");
+                    throw new InvalidOperationException("远程缓存解析失败");
+                }
+
+                LogWrapper.Info("Update", "远程缓存解析完成");
+
+                // 使用 LINQ 将 JsonNode 转为字符串并赋值到本地缓存
+                LogWrapper.Info("Update", "正在赋值远程缓存...");
+                field = remoteCache.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value?.GetValue<string>() ?? string.Empty
+                );
+                LogWrapper.Info("Update", "远程缓存赋值完成");
+
+                return field;
             }
-            LogWrapper.Info("Update", "远程缓存解析完成");
-
-            // 使用 LINQ 将 JsonNode 转为字符串并赋值到本地缓存
-            LogWrapper.Info("Update", "正在赋值远程缓存...");
-            field = remoteCache.ToDictionary(
-                pair => pair.Key,
-                pair => pair.Value?.GetValue<string>() ?? string.Empty
-            );
-            LogWrapper.Info("Update", "远程缓存赋值完成");
-
-            return field;
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("获取远程缓存失败", ex);
+            }
         }
     }
 

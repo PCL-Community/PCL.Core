@@ -6,12 +6,12 @@ using PCL.Core.Utils.Exts;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
-public sealed class UpdateService : GeneralService
+public sealed class UpdateArgumentsService : GeneralService
 {
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
 
-    private UpdateService() : base("update", "更新", false) { _context = ServiceContext; }
+    private UpdateArgumentsService() : base("update", "更新参数检查", false) { _context = ServiceContext; }
 
     public override void Start()
     {

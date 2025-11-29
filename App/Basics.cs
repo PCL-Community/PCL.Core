@@ -2,8 +2,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using PCL.Core.App.Updates;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -22,6 +24,16 @@ public static class Basics
     /// 当前版本号。
     /// </summary>
     public static int VersionNumber { get; set; } = 0;
+    
+    /// <summary>
+    /// 当前更新通道。
+    /// </summary>
+    public static UpdateChannel CurrentUpdateChannel => (UpdateChannel)Config.System.UpdateBranch;
+
+    /// <summary>
+    /// 当前系统架构是否为 Arm64。
+    /// </summary>
+    public static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
 
     #endregion
 

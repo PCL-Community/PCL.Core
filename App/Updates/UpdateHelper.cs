@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using PCL.Core.Logging;
 
@@ -86,4 +87,10 @@ public static class UpdateHelper
             // 忽略其他启动异常以保持方法简洁（可按需记录）
         }
     }
+}
+
+public enum UpdateChannel
+{
+    Stable,
+    Beta
 }

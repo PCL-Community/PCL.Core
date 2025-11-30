@@ -683,6 +683,7 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenSetupUpdate", false, ConfigSource.Local)] public partial bool SetupUpdate { get; set; }
             [ConfigItem<bool>("UiHiddenOtherHelp", false, ConfigSource.Local)] public partial bool OtherHelp { get; set; }
             [ConfigItem<bool>("UiHiddenOtherFeedback", false, ConfigSource.Local)] public partial bool OtherFeedback { get; set; }
+            [ConfigItem<bool>("UiHiddenOtherLog", false, ConfigSource.Local)] public partial bool OtherLog { get; set; }
             [ConfigItem<bool>("UiHiddenOtherAbout", false, ConfigSource.Local)] public partial bool OtherAbout { get; set; }
             [ConfigItem<bool>("UiHiddenOtherTest", false, ConfigSource.Local)] public partial bool OtherTest { get; set; }
             [ConfigItem<bool>("UiHiddenVersionEdit", false, ConfigSource.Local)] public partial bool InstanceEdit { get; set; }

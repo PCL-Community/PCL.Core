@@ -39,7 +39,7 @@ public class FolderManager {
 
             foreach (var folder in Config.Launch.Folders.Split('|', StringSplitOptions.RemoveEmptyEntries)) {
                 if (!folder.Contains('>') || !folder.EndsWith('\\')) {
-                    HintWrapper.Show($"无效的 Minecraft 文件夹：{folder}", HintTheme.Error);
+                    HintWrapper.Show($"无效的 Minecraft 文件夹：{folder}", HintType.Critical);
                     continue;
                 }
 

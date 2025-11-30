@@ -27,6 +27,7 @@ public static class TaskExtensions
         {
             var completed = await Task.WhenAny(remaining);
             remaining.Remove(completed);
+            if (completed.IsFaulted || completed.IsCanceled) continue;
 
             try
             {

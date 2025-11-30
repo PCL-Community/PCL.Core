@@ -30,13 +30,16 @@ public delegate void HintHandler(
 
 public static class HintWrapper
 {
-    [Obsolete("请使用 OnShow 事件而不是 OldOnShow 事件")]
-    public static event OldHintHandler? OldOnShow;
-
     [Obsolete("请使用 Show 方法的 HintType 重载")]
     public static void Show(string message, HintTheme theme = HintTheme.Normal)
     {
-        OldOnShow?.Invoke(message, theme);
+        Show(message, theme switch
+        {
+            HintTheme.Normal => HintType.Info,
+            HintTheme.Success => HintType.Finish,
+            HintTheme.Error => HintType.Critical,
+            _ => HintType.Info
+        });
     }
     
     public static event HintHandler? OnShow;

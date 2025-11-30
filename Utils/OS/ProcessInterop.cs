@@ -83,12 +83,11 @@ public class ProcessInterop {
     /// </summary>
     /// <param name="executable">可执行文件路径。</param>
     /// <param name="wantHighPerformance">是否使用高性能显卡，默认为 true。</param>
-    /// <returns>操作是否成功</returns>
     /// <exception cref="ArgumentException">当可执行文件路径无效时抛出</exception>
     /// <exception cref="UnauthorizedAccessException">当没有足够权限访问注册表时抛出</exception>
     /// <exception cref="SecurityException">当安全策略不允许访问注册表时抛出</exception>
     /// <exception cref="InvalidOperationException">当注册表操作失败时抛出</exception>
-    public static bool SetGpuPreference(string executable, bool wantHighPerformance = true) {
+    public static void SetGpuPreference(string executable, bool wantHighPerformance = true) {
         // 参数验证
         if (string.IsNullOrWhiteSpace(executable)) {
             throw new ArgumentException("可执行文件路径不能为空或仅包含空白字符", nameof(executable));
@@ -100,7 +99,7 @@ public class ProcessInterop {
             if (!File.Exists(fullPath)) {
                 LogWrapper.Warn("System", $"指定的可执行文件不存在: {executable}");
             }
-        } catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is PathTooLongException) {
+        } catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
             throw new ArgumentException($"无效的可执行文件路径: {executable}", nameof(executable), ex);
         }
 
@@ -116,11 +115,11 @@ public class ProcessInterop {
             // 如果当前设置已经是期望的设置，则无需修改
             if (isCurrentHighPerformance == wantHighPerformance) {
                 LogWrapper.Info("System", $"程序 ({executable}) 的显卡设置已经是期望的设置，无需修改");
-                return true;
+                return;
             }
 
             // 写入新设置
-            return SetGpuPreferenceValue(executable, wantHighPerformance, gpuPreferenceRegKey,
+            SetGpuPreferenceValue(executable, wantHighPerformance, gpuPreferenceRegKey,
                 gpuPreferenceRegValueHigh, gpuPreferenceRegValueDefault);
         } catch (UnauthorizedAccessException ex) {
             var errorMsg = "没有足够的权限访问注册表。请以管理员身份运行程序或检查用户权限设置。";
@@ -131,7 +130,7 @@ public class ProcessInterop {
             LogWrapper.Error(ex, "System", errorMsg);
             throw new SecurityException(errorMsg, ex);
         } catch (Exception ex) {
-            var errorMsg = $"设置GPU偏好时发生未预期的错误: {ex.Message}";
+            var errorMsg = $"设置 GPU 偏好时发生未预期的错误: {ex.Message}";
             LogWrapper.Error(ex, "System", errorMsg);
             throw new InvalidOperationException(errorMsg, ex);
         }
@@ -144,14 +143,14 @@ public class ProcessInterop {
         try {
             using var readOnlyKey = Registry.CurrentUser.OpenSubKey(regKey, false);
             if (readOnlyKey == null) {
-                LogWrapper.Info("System", "GPU偏好注册表键不存在，将在需要时创建");
+                LogWrapper.Info("System", "GPU 偏好注册表键不存在，将在需要时创建");
                 return false;
             }
 
             var currentValue = readOnlyKey.GetValue(executable)?.ToString();
             return string.Equals(currentValue, highPerfValue, StringComparison.OrdinalIgnoreCase);
         } catch (Exception ex) {
-            LogWrapper.Warn(ex, "System", $"读取当前GPU偏好设置时出现错误: {ex.Message}");
+            LogWrapper.Warn(ex, "System", $"读取当前 GPU 偏好设置时出现错误: {ex.Message}");
             return false; // 假设当前不是高性能模式
         }
     }
@@ -168,7 +167,7 @@ public class ProcessInterop {
 
             // 如果键不存在，创建它
             if (writeKey == null) {
-                LogWrapper.Info("System", "创建GPU偏好注册表键");
+                LogWrapper.Info("System", "创建 GPU 偏好注册表键");
                 writeKey = Registry.CurrentUser.CreateSubKey(regKey);
 
                 if (writeKey == null) {

@@ -203,7 +203,7 @@ public class JvmArgBuilder(IMcInstance instance) {
             }
             catch (HttpRequestException ex)
             {
-                throw new Exception($"无法连接到第三方登录服务器 ({server ?? "null"})\n详细信息: {ex.Message}", ex);
+                throw new Exception($"无法连接到第三方登录服务器 ({server ?? "null"})\n详细信息：{ex.Message}", ex);
             }
             catch (Exception ex)
             {
@@ -369,9 +369,11 @@ public class JvmArgBuilder(IMcInstance instance) {
         switch (Config.Launch.PreferredIpStack) {
             case 0:
                 arguments.Add("-Djava.net.preferIPv4Stack=true");
+                arguments.Add("-Djava.net.preferIPv4Addresses=true");
                 break;
             case 2:
                 arguments.Add("-Djava.net.preferIPv6Stack=true");
+                arguments.Add("-Djava.net.preferIPv6Addresses=true");
                 break;
         }
     }

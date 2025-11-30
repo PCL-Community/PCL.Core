@@ -15,51 +15,37 @@ namespace PCL.Core.App.Updates.Sources;
 
 public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateSource
 {
+    public bool IsAvailable => !string.IsNullOrEmpty(baseUrl);
+    
     public string SourceName { get; set; } = name;
 
-    public bool IsAvailable => !string.IsNullOrEmpty(baseUrl);
-
-    private Dictionary<string, string> _RemoteCache
+    private async Task<Dictionary<string, string>> _GetRemoteCacheAsync()
     {
-        get
+        try
         {
-            try
+            LogWrapper.Info("Update", "正在拉取远程缓存...");
+            var builder = HttpRequestBuilder.Create($"{baseUrl}apiv2/cache.json", HttpMethod.Get);
+            var response = (await builder.SendAsync().ConfigureAwait(false)).AsStringContent();
+            LogWrapper.Info("Update", "远程缓存拉取完成");
+
+            var parsed = JsonNode.Parse(response);
+            if (parsed is not JsonObject remoteCache)
             {
-                if (field != null) return field;
-
-                // 发送 GET 请求获取远程缓存 JSON
-                LogWrapper.Info("Update", "正在拉取远程缓存...");
-                var builder = HttpRequestBuilder.Create($"{baseUrl}apiv2/cache.json", HttpMethod.Get);
-                var response = builder.SendAsync()
-                    .ConfigureAwait(false)
-                    .GetAwaiter().GetResult()
-                    .AsStringContent();
-                LogWrapper.Info("Update", "远程缓存拉取完成");
-
-                // 解析 JSON 并转换为字典
-                LogWrapper.Info("Update", "正在解析远程缓存...");
-                if (JsonNode.Parse(response) is not JsonObject remoteCache)
-                {
-                    LogWrapper.Error("Update", "无法解析远程缓存 JSON");
-                    throw new InvalidOperationException("远程缓存解析失败");
-                }
-
-                LogWrapper.Info("Update", "远程缓存解析完成");
-
-                // 使用 LINQ 将 JsonNode 转为字符串并赋值到本地缓存
-                LogWrapper.Info("Update", "正在赋值远程缓存...");
-                field = remoteCache.ToDictionary(
-                    pair => pair.Key,
-                    pair => pair.Value?.GetValue<string>() ?? string.Empty
-                );
-                LogWrapper.Info("Update", "远程缓存赋值完成");
-
-                return field;
+                LogWrapper.Error("Update", "无法解析远程缓存 JSON");
+                throw new InvalidOperationException("远程缓存解析失败");
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("获取远程缓存失败", ex);
-            }
+
+            LogWrapper.Info("Update", "正在赋值远程缓存...");
+            var dict = remoteCache.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value?.GetValue<string>() ?? string.Empty
+            );
+            LogWrapper.Info("Update", "远程缓存赋值完成");
+            return dict;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("获取远程缓存失败", ex);
         }
     }
 
@@ -108,14 +94,17 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         try
         {
             bool patchUpdate;
-            var tempPath = Path.Combine(Basics.TempPath, "Cache", "Update", "Download");
-            if (!Directory.Exists(tempPath))
-                Directory.CreateDirectory(tempPath);
+            var tempPathBase = Path.Combine(Basics.TempPath, "Cache", "Update", "Download");
+            Directory.CreateDirectory(tempPathBase);
 
             LogWrapper.Info("Update", "开始获取版本信息");
             var versionJsonData = await _GetVersionJsonData().ConfigureAwait(false);
+            if (versionJsonData is null) throw new InvalidOperationException("版本信息为空");
+
             var selfSha256 = await Files.GetFileSHA256Async(Basics.ExecutableName).ConfigureAwait(false);
-            var updateSha256 = versionJsonData["sha256"]!.GetValue<string>();
+            var updateSha256 = versionJsonData["sha256"]?.GetValue<string>();
+            if (string.IsNullOrEmpty(updateSha256)) throw new InvalidOperationException("远程版本信息缺少 sha256");
+
             var patchFileName = $"{selfSha256}-{updateSha256}.patch";
             var patches = versionJsonData["patches"]?.AsArray();
             LogWrapper.Info("Update", "版本信息获取完成");
@@ -123,41 +112,47 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             LogWrapper.Info("Update", "开始下载更新文件");
             var downloader = new Downloader();
             DownloadItem downloadItem;
-            
+
             if (patches != null && patches.Contains(patchFileName))
             {
                 patchUpdate = true;
-                tempPath = Path.Combine(tempPath, patchFileName);
+                var tempPath = Path.Combine(tempPathBase, patchFileName);
                 downloadItem = new DownloadItem(new Uri($"{baseUrl}static/patch/{patchFileName}"), tempPath);
             }
             else
             {
                 patchUpdate = false;
-                tempPath = Path.Combine(tempPath, $"{updateSha256}.bin");
+                var tempPath = Path.Combine(tempPathBase, $"{updateSha256}.bin");
+                var downloads = versionJsonData["downloads"]?.AsArray();
+                if (downloads == null || downloads.Count == 0) throw new InvalidOperationException("远程版本信息缺少下载地址");
                 var downloadUrl = RandomUtils.PickRandom(
-                    (versionJsonData["downloads"]!.AsArray())
-                    .Select(item => item!.GetValue<string>())
-                    .ToList());
+                    downloads.Select(item => item!.GetValue<string>()).ToList()
+                );
                 downloadItem = new DownloadItem(new Uri(downloadUrl), tempPath);
             }
+
             downloader.AddItem(downloadItem);
             downloader.Start();
             LogWrapper.Info("Update", "下载器已启动");
 
-            while (downloadItem.Status is not 
-                   (DownloadItemStatus.Success or 
-                   DownloadItemStatus.Cancelled or 
-                   DownloadItemStatus.Failed));
-            if (downloadItem.Status is DownloadItemStatus.Failed or DownloadItemStatus.Cancelled)
+            // 用异步轮询替代忙等，降低 CPU 占用
+            while (true)
             {
-                LogWrapper.Warn("Update", "更新文件下载失败");
-                return;
+                var status = downloadItem.Status;
+                if (status is DownloadItemStatus.Success) break;
+                if (status is DownloadItemStatus.Failed or DownloadItemStatus.Cancelled)
+                {
+                    LogWrapper.Warn("Update", "更新文件下载失败或被取消");
+                    return;
+                }
+                await Task.Delay(200).ConfigureAwait(false);
             }
+
             LogWrapper.Info("Update", "更新文件下载完成");
         }
-        catch (NullReferenceException nre)
+        catch (InvalidOperationException ioe)
         {
-            LogWrapper.Warn(nre, "Update", "下载更新失败，可能是远程数据格式有误");
+            LogWrapper.Warn(ioe, "Update", "下载更新失败（数据不完整或格式问题）");
         }
         catch (Exception ex)
         {
@@ -271,31 +266,44 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     /// <param name="name">名称</param>
     /// <param name="path">保存路径</param>
     /// <returns>远程信息</returns>
-    /// <exception cref="InvalidOperationException">获取信息失败时抛出</exception>
-    private async Task<JsonObject?> _GetRemoteInfoByName(string name, string path = "")
+   private async Task<JsonObject?> _GetRemoteInfoByName(string name, string path = "") 
     {
         var localInfoFile = Path.Combine(Basics.TempPath, "Cache", "Update", $"{name}.json");
 
-        if (_RemoteCache.TryGetValue(name, out var expectedHash) && _IsCacheValid($"{name}.json", expectedHash))
+        // 尝试从远程 cache.json 获取预期哈希并命中本地缓存
+        Dictionary<string, string>? remoteCache = null;
+        try
+        {
+            remoteCache = await _GetRemoteCacheAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Warn(ex, "Update", "拉取远程 cache 失败，继续尝试远程获取具体信息");
+        }
+
+        if (remoteCache != null && remoteCache.TryGetValue(name, out var expectedHash))
         {
             try
             {
-                LogWrapper.Info("Update", "正在读取本地缓存信息...");
-                var localContent = await File.ReadAllTextAsync(localInfoFile).ConfigureAwait(false);
-                LogWrapper.Info("Update", "本地缓存信息读取完成");
-                
-                if (JsonNode.Parse(localContent) is JsonObject json)
+                if (await _IsCacheValidAsync($"{name}.json", expectedHash).ConfigureAwait(false))
                 {
-                    LogWrapper.Info("Update", "本地缓存信息解析成功，使用本地缓存");
-                    return json;
+                    LogWrapper.Info("Update", "正在读取本地缓存信息...");
+                    var localContent = await File.ReadAllTextAsync(localInfoFile).ConfigureAwait(false);
+                    LogWrapper.Info("Update", "本地缓存信息读取完成");
+
+                    var parsedLocal = JsonNode.Parse(localContent);
+                    if (parsedLocal is JsonObject json)
+                    {
+                        LogWrapper.Info("Update", "本地缓存信息解析成功，使用本地缓存");
+                        return json;
+                    }
+
+                    LogWrapper.Warn("Update", "本地缓存解析失败，从远程获取信息");
                 }
-                // 若解析失败则回退到远程获取
-                LogWrapper.Warn("Update", "本地缓存解析失败，从远程获取信息");
             }
-            catch
+            catch (Exception ex)
             {
-                // 读取或解析失败，回退到远程获取
-                LogWrapper.Warn("Update", "本地缓存读取或解析失败，从远程获取信息");
+                LogWrapper.Warn(ex, "Update", "本地缓存读取或校验失败，从远程获取信息");
             }
         }
 
@@ -305,16 +313,26 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         var response = (await builder.SendAsync().ConfigureAwait(false)).AsStringContent();
         LogWrapper.Info("Update", "远程信息获取完成");
 
-        if (JsonNode.Parse(response) is not JsonObject remoteInfo)
+        var parsed = JsonNode.Parse(response);
+        if (parsed is not JsonObject remoteInfo)
         {
             LogWrapper.Warn("Update", "无法解析远程信息 JSON");
             return null;
         }
 
-        LogWrapper.Info("Update", "正在缓存远程信息到本地...");
-        await File.WriteAllTextAsync(localInfoFile, response).ConfigureAwait(false);
-        LogWrapper.Info("Update", "远程信息缓存完成");
-        
+        // 缓存到本地
+        try
+        {
+            LogWrapper.Info("Update", "正在缓存远程信息到本地...");
+            Directory.CreateDirectory(Path.GetDirectoryName(localInfoFile) ?? Basics.TempPath);
+            await File.WriteAllTextAsync(localInfoFile, response).ConfigureAwait(false);
+            LogWrapper.Info("Update", "远程信息缓存完成");
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Warn(ex, "Update", "本地缓存写入失败（非致命），仍返回远端信息");
+        }
+
         return remoteInfo;
     }
     
@@ -324,12 +342,13 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     /// <param name="fileName">缓存文件名</param>
     /// <param name="expectedHash">预期哈希值</param>
     /// <returns>是否有效</returns>
-    private static bool _IsCacheValid(string fileName, string expectedHash)
+    private static async Task<bool> _IsCacheValidAsync(string fileName, string expectedHash)
     {
         var cacheFile = Path.Combine(Basics.TempPath, "Cache", "Update", fileName);
         var fileInfo = new FileInfo(cacheFile);
-        return fileInfo.Exists && 
-               (DateTime.Now - fileInfo.LastWriteTime).TotalHours < 1 && 
-               Files.GetFileMD5Async(cacheFile).GetAwaiter().GetResult() == expectedHash;
+        return fileInfo.Exists &&
+               (DateTime.Now - fileInfo.LastWriteTime).TotalHours >= 1 &&
+               await Files.GetFileMD5Async(cacheFile).ConfigureAwait(false) == expectedHash;
     }
+
 }

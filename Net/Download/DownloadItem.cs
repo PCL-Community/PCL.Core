@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.Logging;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Download;
 
 /// <summary>
 /// 分块下载中断处理。
@@ -53,6 +54,8 @@ public class DownloadItem(
     public LinkedList<DownloadSegment> Segments { get; } = [];
     
     public DownloadItemStatus Status { get; private set; } = DownloadItemStatus.Waiting;
+
+    private AutoResetEvent _finishEvent = new(false);
 
     public event Action? Finished;
 
@@ -125,6 +128,7 @@ public class DownloadItem(
                         _finishedCount++;
                         if (_finishedCount != Segments.Count) return;
                         Status = DownloadItemStatus.Success;
+                        _finishEvent.Set();
                         Finished?.Invoke();
                     }
                     else if (seg.Status != DownloadSegmentStatus.Cancelled)
@@ -157,6 +161,22 @@ public class DownloadItem(
             node.Value = segment;
         }
         await task;
+    }
+    
+    public void WaitForFinish()
+    {
+        _finishEvent.WaitOne();
+    }
+    
+    public bool JoinDownloadQueue()
+    {
+        if (Status is not (DownloadItemStatus.Success or DownloadItemStatus.Running or DownloadItemStatus.Starting))
+        {
+            return DownloadService.AddItem(this);
+        }
+        
+        LogWrapper.Warn("Download", $"下载项已在队列中或已完成: {this}");
+        return false;
     }
 
     public override string ToString() => $"[{SourceUri}] -> [{TargetPath}]";

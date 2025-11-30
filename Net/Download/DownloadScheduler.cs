@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Logging;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Download;
 
-public class Downloader(
+public class DownloadScheduler(
     int maxParallels = int.MaxValue,
     int? refreshInterval = null,
     TimeSpan? timeout = null)

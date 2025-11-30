@@ -6,7 +6,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Download;
 
 /// <summary>
 /// 下载分片的状态。<br/>

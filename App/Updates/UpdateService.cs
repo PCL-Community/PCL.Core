@@ -23,7 +23,7 @@ public class CheckUpdateService : GeneralService
     {
         _source = new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/",
             "Pysio");
-        CheckUpdate().ConfigureAwait(false).GetAwaiter().GetResult();
+        CheckUpdate().Wait();
         Context.DeclareStopped();
     }
 

@@ -47,7 +47,7 @@ public class JavaSelectService(IMcInstance instance) {
         var instanceJava = _GetInstanceSpecifiedJava();
         if (instanceJava != null) {
             if (!_IsJavaVersionSuitable(instanceJava.Version, minVersion, maxVersion)) {
-                HintWrapper.Show("当前实例指定的 Java 版本可能不合适，可能导致游戏崩溃");
+                HintWrapper.Show("当前实例指定的 Java 版本可能不合适，可能导致游戏崩溃", HintTheme.Normal);
             }
             LogWrapper.Info($"使用实例指定 Java：{instanceJava}");
             return instanceJava;

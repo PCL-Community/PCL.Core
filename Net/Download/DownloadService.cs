@@ -1,4 +1,5 @@
-﻿using PCL.Core.App;
+﻿using System;
+using PCL.Core.App;
 
 namespace PCL.Core.Net.Download;
 
@@ -12,7 +13,7 @@ public class DownloadService : GeneralService
     /// <summary>
     /// 下载任务调度器
     /// </summary>
-    private static DownloadScheduler? _downloader;
+    private static DownloadScheduler? _scheduler;
     
     public DownloadService() : base("download", "下载管理服务")
     {
@@ -22,19 +23,21 @@ public class DownloadService : GeneralService
     public override void Start()
     {
         base.Start();
-        _downloader = new DownloadScheduler();
+        _scheduler = new DownloadScheduler();
         Context.Info("下载器已初始化");
+        _scheduler.Start();
+        Context.Info("下载器调度器已启动, 可以添加下载任务了");
     }
 
     public static bool AddItem(DownloadItem item)
     {
-        if (_downloader == null)
+        if (_scheduler == null)
         {
             Context.Warn("下载器未初始化，无法添加下载项");
             return false;
         }
         
-        _downloader.AddItem(item);
+        _scheduler.AddItem(item);
         Context.Info($"{item.SourceUri} 已添加入下载队列");
         return true;
     }
@@ -42,10 +45,10 @@ public class DownloadService : GeneralService
     public override void Stop()
     {
         base.Stop();
-        if (_downloader == null) return;
+        if (_scheduler == null) return;
         
-        _downloader.Cancel();
-        _downloader = null;
+        _scheduler.Cancel();
+        _scheduler = null;
         Context.Info("下载器已释放");
     }
 }

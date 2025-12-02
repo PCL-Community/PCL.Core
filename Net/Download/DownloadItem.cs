@@ -54,9 +54,7 @@ public class DownloadItem(
     public LinkedList<DownloadSegment> Segments { get; } = [];
     
     public DownloadItemStatus Status { get; private set; } = DownloadItemStatus.Waiting;
-
-    private AutoResetEvent _finishEvent = new(false);
-
+    
     public event Action? Finished;
 
     public long CalculateTransferredLength()
@@ -128,7 +126,6 @@ public class DownloadItem(
                         _finishedCount++;
                         if (_finishedCount != Segments.Count) return;
                         Status = DownloadItemStatus.Success;
-                        _finishEvent.Set();
                         Finished?.Invoke();
                     }
                     else if (seg.Status != DownloadSegmentStatus.Cancelled)
@@ -163,9 +160,31 @@ public class DownloadItem(
         await task;
     }
     
-    public void WaitForFinish()
+    public async Task WaitForFinish(CancellationToken cancellationToken = default)
     {
-        _finishEvent.WaitOne();
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            switch (Status)
+            {
+                case DownloadItemStatus.Success:
+                    LogWrapper.Info("Download", $"下载完成: {this}");
+                    return;
+                case DownloadItemStatus.Failed:
+                    LogWrapper.Error("Download", $"下载失败: {this}");
+                    return;
+                case DownloadItemStatus.Cancelled:
+                    LogWrapper.Warn("Download", $"下载已被取消: {this}");
+                    return;
+                case DownloadItemStatus.Waiting:
+                case DownloadItemStatus.Starting:
+                case DownloadItemStatus.Running:
+                    break;
+                default:
+                    throw new IndexOutOfRangeException("未知的下载项状态");
+            }
+
+            await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+        }
     }
     
     public bool JoinDownloadQueue()

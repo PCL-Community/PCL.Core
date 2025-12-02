@@ -49,14 +49,14 @@ public class CheckUpdateService : GeneralService
                 Context.Info("当前已是最新版本");
                 if (!silent)
                 {
-                    HintWrapper.Show("当前已是最新版本"); // 无新版本时根据参数决定是否提示用户
+                    HintWrapper.Show($"当前已是最新版本 {Basics.VersionName}，无需更新啦", HintType.Finish); // 无新版本时根据参数决定是否提示用户
                 }
                 return;
             }
             case CheckUpdateResultType.CheckFailed:
             {
                 Context.Warn("检查更新失败");
-                HintWrapper.Show("检查更新失败，可能是网络问题导致"); // 失败时无论如何都提示用户
+                HintWrapper.Show("检查更新失败，可能是网络问题导致", HintType.Critical); // 失败时无论如何都提示用户
                 return;
             }
             default:

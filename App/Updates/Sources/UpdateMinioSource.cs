@@ -19,10 +19,14 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     
     public string SourceName { get; set; } = name;
 
+    private Dictionary<string, string>? _remoteCache;
+
     private async Task<Dictionary<string, string>> _GetRemoteCacheAsync()
     {
         try
         {
+            if (_remoteCache != null) return _remoteCache;
+            
             LogWrapper.Info("Update", "正在拉取远程缓存...");
             var builder = HttpRequestBuilder.Create($"{baseUrl}apiv2/cache.json", HttpMethod.Get);
             var response = (await builder.SendAsync().ConfigureAwait(false)).AsStringContent();
@@ -41,6 +45,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
                 pair => pair.Value?.GetValue<string>() ?? string.Empty
             );
             LogWrapper.Info("Update", "远程缓存赋值完成");
+            _remoteCache = dict;
             return dict;
         }
         catch (Exception ex)
@@ -89,7 +94,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     }
 
     /// <inheritdoc/>
-    public async Task DownloadAsync(string outputPath)
+    public async Task<bool> DownloadAsync(string outputPath)
     {
         try
         {
@@ -143,12 +148,13 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
                 if (status is DownloadItemStatus.Failed or DownloadItemStatus.Cancelled)
                 {
                     LogWrapper.Warn("Update", "更新文件下载失败或被取消");
-                    return;
+                    return false;
                 }
-                await Task.Delay(200).ConfigureAwait(false);
+                await Task.Delay(500).ConfigureAwait(false);
             }
 
             LogWrapper.Info("Update", "更新文件下载完成");
+            return true;
         }
         catch (InvalidOperationException ioe)
         {
@@ -158,6 +164,8 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         {
             LogWrapper.Warn(ex, "Update", "下载更新失败");
         }
+
+        return false;
     }
 
     /// <inheritdoc/>

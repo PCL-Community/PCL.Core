@@ -53,11 +53,12 @@ public static class UpdateHelper
     {
         try
         {
-            var fileName = Path.GetFullPath(Path.Combine(Basics.ExecutableDirectory, "PCL", "Plain Craft Launcher Community Edition.exe"));
+            var fileName = Path.GetFullPath(Path.Combine(Basics.ExecutableDirectory, "PCL", 
+                "Plain Craft Launcher Community Edition.exe"));
 
             if (!File.Exists(fileName))
             {
-                LogWrapper.Warn("System", "更新启动器文件不存在，无法启动更新程序");
+                LogWrapper.Warn("Update", "更新启动器文件不存在，无法启动更新程序");
                 return;
             }
 
@@ -71,11 +72,11 @@ public static class UpdateHelper
             };
 
             Process.Start(startInfo);
-            LogWrapper.Info("System", "已启动更新程序,参数: " + args);
+            LogWrapper.Info("Update", "已启动更新程序,参数: " + args);
 
             if (!triggerRestartAndByEnd) return;
             
-            LogWrapper.Info("System", "已由于更新强制结束程序");
+            LogWrapper.Info("Update", "已由于更新强制结束程序");
             Environment.Exit(0);
         }
         catch (Win32Exception)

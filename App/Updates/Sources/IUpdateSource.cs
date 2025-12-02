@@ -22,7 +22,7 @@ public interface IUpdateSource
     /// 下载更新文件
     /// </summary>
     /// <param name="outputPath">输出路径</param>
-    public Task DownloadAsync(string outputPath);
+    public Task<bool> DownloadAsync(string outputPath);
     
     /// <summary>
     /// 更新源名称

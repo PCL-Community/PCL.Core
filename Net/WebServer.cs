@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using PCL.Core.Utils;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -22,8 +25,10 @@ public class WebServer : IDisposable
     private static readonly WebClientRequest _DefaultRequestCallback = ctx => { ctx.Response.StatusCode = (int)HttpStatusCode.NoContent; };
     private WebClientRequest? _requestCallback;
     
-    private bool _started = false;
+    private bool _started;
     private bool _running;
+
+    public int Port {get;init;}
     
     private WebClientRequest _RequestCallback => _requestCallback ?? _DefaultRequestCallback;
 
@@ -40,9 +45,27 @@ public class WebServer : IDisposable
     /// </summary>
     /// <param name="listen">监听地址</param>
     /// <param name="requestCallback">客户端请求回调</param>
+    [Obsolete("")]
     public WebServer(string listen = "127.0.0.1:8080", WebClientRequest? requestCallback = null)
     {
+        int.TryParse(listen.Split(":")[1],out var port);
+        Port = port;
         _listener.Prefixes.Add($"http://{listen}/");
+        _requestCallback = requestCallback;
+        _listener.Start();
+    }
+
+    public WebServer(WebClientRequest? requestCallback = null,IPAddress[]? address = null,uint port = 0){
+        address ??= [IPAddress.Loopback,IPAddress.IPv6Loopback];
+        if(port == 0){
+            using var sock = new Socket(SocketType.Stream,ProtocolType.Tcp);
+            sock.SetSocketOption(SocketOptionLevel.Tcp,SocketOptionName.ReuseAddress,true);
+            sock.Bind(IPEndPoint.Parse($"{address}:{port}"));
+            port = (uint)((IPEndPoint)sock.LocalEndPoint!).Port;
+        }
+        foreach (var addr in address){
+            _listener.Prefixes.Add($"http://{addr}:{port}/");
+        }
         _requestCallback = requestCallback;
         _listener.Start();
     }

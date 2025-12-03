@@ -17,12 +17,6 @@ public enum HintType
     Critical
 }
 
-[Obsolete("请使用 HintHandler 而不是 OldHintHandler")]
-public delegate void OldHintHandler(
-    string message,
-    HintTheme theme
-);
-
 public delegate void HintHandler(
     string message,
     HintType type

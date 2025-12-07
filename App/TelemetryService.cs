@@ -59,10 +59,11 @@ public class TelemetryService : GeneralService
             Is64Bit = Environment.Is64BitOperatingSystem,
             IsArm64 = RuntimeInformation.OSArchitecture.Equals(Architecture.Arm64),
             Launcher = Basics.VersionName,
-            LauncherBranch = Config.System.UpdateBranch switch
+            LauncherBranch = Config.System.Update.UpdateChannel switch
             {
-                0 => "Slow Ring",
-                1 => "Fast Ring",
+                0 => "Release",
+                1 => "Beta",
+                2 => "Dev",
                 _ => "Unknown"
             },
             UsedOfficialPcl =

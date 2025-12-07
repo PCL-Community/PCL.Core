@@ -233,16 +233,6 @@ public static partial class Config
         [ConfigItem<string>("SystemSystemCache", "")] public partial string CacheDirectory { get; set; }
 
         /// <summary>
-        /// 检查更新。
-        /// </summary>
-        [ConfigItem<int>("SystemSystemUpdate", 0, ConfigSource.Local)] public partial int UpdateSolution { get; set; }
-
-        /// <summary>
-        /// 更新分支。
-        /// </summary>
-        [ConfigItem<int>("SystemSystemUpdateBranch", 0, ConfigSource.Local)] public partial int UpdateBranch { get; set; }
-
-        /// <summary>
         /// 启动器公告。
         /// </summary>
         [ConfigItem<int>("SystemSystemActivity", 0, ConfigSource.Local)] public partial int AnnounceSolution { get; set; }
@@ -271,6 +261,19 @@ public static partial class Config
         /// 识别码。
         /// </summary>
         [ConfigItem<string>("LaunchUuid", "")] public partial string LaunchUuid { get; set; }
+
+        [ConfigGroup("Update")] partial class UpdateConfigGroup
+        {
+            /// <summary>
+            /// 检查更新。
+            /// </summary>
+            [ConfigItem<int>("SystemSystemUpdate", 0, ConfigSource.Local)] public partial int UpdateMode { get; set; }
+
+            /// <summary>
+            /// 更新分支。
+            /// </summary>
+            [ConfigItem<int>("SystemUpdateChannel", 0, ConfigSource.Local)] public partial int UpdateChannel { get; set; }
+        }
 
         [ConfigGroup("HttpProxy")] partial class HttpProxyConfigGroup
         {

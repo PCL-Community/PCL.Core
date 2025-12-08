@@ -17,14 +17,14 @@ public sealed class UpdateHandler() : GeneralHandler("Update")
             {
                 File.Delete(toDelete);
                 ParentContext.Debug("更新来源文件已删除");
-                return HandleResult.Handled;
+                return new HandleResult(HandleResultType.Handled);
             }
             case ["update_failed", var reason]:
             {
                 ParentContext.Error(
                     $"更新失败: {reason}\n你可以手动将 exe 文件替换为 PCL 目录中的新版本" +
                     $"或再次尝试更新，若再次尝试仍然失败，请尽快反馈这个问题");
-                return HandleResult.Handled;
+                return new HandleResult(HandleResultType.Handled);
             }
             case ["update", 
                 var strOldPid,
@@ -73,12 +73,12 @@ public sealed class UpdateHandler() : GeneralHandler("Update")
                     ParentContext.Error("更新过程出错", ex);
                 }
 
-                return HandleResult.HandledAndExit;
+                return new HandleResult(HandleResultType.HandledAndExit);
             }
             default:
             {
                 ParentContext.Debug("非更新参数");
-                return HandleResult.NotHandled;
+                return new HandleResult(HandleResultType.NotHandled);
             }
         }
     }

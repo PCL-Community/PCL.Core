@@ -32,15 +32,15 @@ public partial class ArgumentsService : GeneralService
         foreach (var handler in _handlers)
         {
             var result = handler.Handle(args);
-            switch (result)
+            switch (result.ResultType)
             {
-                case HandleResult.NotHandled: break;
-                case HandleResult.Handled:
+                case HandleResultType.NotHandled: break;
+                case HandleResultType.Handled:
                     Context.Info($"参数已被处理器 {handler.Identifier} 处理");
                     return;
-                case HandleResult.HandledAndExit:
+                case HandleResultType.HandledAndExit:
                     Context.Info($"参数已被处理器 {handler.Identifier} 处理，程序将退出");
-                    Context.RequestExit();
+                    Context.RequestExit(result.ExitCode);
                     return;
                 default:
                     throw new IndexOutOfRangeException();

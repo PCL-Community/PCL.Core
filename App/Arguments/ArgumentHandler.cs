@@ -23,7 +23,7 @@ public abstract class GeneralHandler(string identifier) : IArgumentHandler
 [AttributeUsage(AttributeTargets.Class)]
 public class ArgumentHandlerAttribute : Attribute;
 
-public enum HandleResult
+public enum HandleResultType
 {
     /// <summary>
     /// 参数未被处理
@@ -38,3 +38,5 @@ public enum HandleResult
     /// </summary>
     HandledAndExit,
 }
+
+public record HandleResult(HandleResultType ResultType, int ExitCode = 0);

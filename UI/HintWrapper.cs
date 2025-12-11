@@ -1,5 +1,8 @@
-﻿namespace PCL.Core.UI;
+﻿using System;
 
+namespace PCL.Core.UI;
+
+[Obsolete("请使用 HintType 而不是 HintTheme")]
 public enum HintTheme
 {
     Normal,
@@ -7,17 +10,36 @@ public enum HintTheme
     Error
 }
 
+public enum HintType
+{
+    Info,
+    Finish,
+    Critical
+}
+
 public delegate void HintHandler(
     string message,
-    HintTheme theme
+    HintType type
 );
 
 public static class HintWrapper
 {
-    public static event HintHandler? OnShow;
-
+    [Obsolete("请使用 Show 方法的 HintType 重载")]
     public static void Show(string message, HintTheme theme = HintTheme.Normal)
     {
-        OnShow?.Invoke(message, theme);
+        Show(message, theme switch
+        {
+            HintTheme.Normal => HintType.Info,
+            HintTheme.Success => HintType.Finish,
+            HintTheme.Error => HintType.Critical,
+            _ => HintType.Info
+        });
+    }
+    
+    public static event HintHandler? OnShow;
+    
+    public static void Show(string message, HintType type = HintType.Info)
+    {
+        OnShow?.Invoke(message, type);
     }
 }

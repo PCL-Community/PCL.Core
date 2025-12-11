@@ -226,7 +226,7 @@ public class McPing : IDisposable
         if (binaryIp.Length > 255) throw new Exception("服务器地址过长");
         handshake.AddRange(VarIntHelper.Encode((uint)binaryIp.Length)); //服务器地址长度
         handshake.AddRange(binaryIp); //服务器地址
-        handshake.AddRange(BitConverter.GetBytes((ushort)serverPort).Reverse()); //服务器端口
+        handshake.AddRange(BitConverter.GetBytes((ushort)serverPort).AsEnumerable().Reverse()); //服务器端口
         handshake.AddRange(VarIntHelper.Encode(1)); //1 表明当前状态为 ping 2 表明当前的状态为连接
 
         handshake.InsertRange(0, VarIntHelper.Encode((uint)handshake.Count)); //包长度

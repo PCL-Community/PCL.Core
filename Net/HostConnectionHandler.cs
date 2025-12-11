@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Sockets;
-using DnsClientX;
+using Ae.Dns.Client;
+using Ae.Dns.Protocol;
+using Ae.Dns.Protocol.Enums;
+using Ae.Dns.Protocol.Records;
 using PCL.Core.Logging;
-using PCL.Core.Utils.OS;
+using System.Runtime.Caching;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -18,23 +22,28 @@ public class HostConnectionHandler
     public static HostConnectionHandler Instance { get; } = new();
     private const string ModuleName = "DoH";
 
-    private static DnsMultiResolver? _resolver;
+    private readonly DnsCachingClient? _resolver;
 
     private HostConnectionHandler()
     {
-        var endpoints = EndpointParser.TryParseMany([
-            "https://doh.pub/dns-query",
-            "https://doh.pysio.online/dns-query",
-            "https://cloudflare-dns.com/dns-query"
-        ], out var errors);
-        if (errors.Count != 0)
-            LogWrapper.Error(ModuleName, $"Failed to resolve DoH endpoints: {string.Join(", ", errors)}");
+        // 使用Ae.Dns创建DoH客户端，支持多个DoH服务器
+        IDnsClient[] clients =
+        [
+            new DnsHttpClient(new HttpClient()
+            {
+                BaseAddress = new Uri("https://doh.pub/")
+            }),
+            new DnsHttpClient(new HttpClient()
+            {
+                BaseAddress = new Uri("https://doh.pysio.online/")
+            }),
+            new DnsHttpClient(new HttpClient()
+            {
+                BaseAddress = new Uri("https://cloudflare-dns.com/")
+            })
+        ];
 
-        _resolver = new DnsMultiResolver(endpoints, new MultiResolverOptions
-        {
-            Strategy = MultiResolverStrategy.FastestWins,
-            RespectEndpointTimeout = true
-        });
+        _resolver = new DnsCachingClient(new DnsRacerClient(clients), new MemoryCache("DNS Query Cache"));
     }
 
     public async ValueTask<Stream> GetConnectionAsync(SocketsHttpConnectionContext context, CancellationToken cts)
@@ -44,28 +53,45 @@ public class HostConnectionHandler
         var host = context.DnsEndPoint.Host;
         var port = context.DnsEndPoint.Port;
 
-        // 并行解析 IPv4 和 IPv6 地址
-        var resolveTasks = new List<Task<DnsResponse>>()
+        if (IPEndPoint.TryParse(host, out var remoteAddr)) // 是否为纯 IP 地址
         {
-            _resolver.QueryAsync(host, DnsRecordType.A, cts),
-            _resolver.QueryAsync(host, DnsRecordType.AAAA, cts)
-        };
+            return await _ConnectToAddressAsync(remoteAddr.Address, port, cts);
+        }
 
-        var results = await Task.WhenAll(resolveTasks).ConfigureAwait(false);
-        var addresses = (from result in results
-            from record in result.Answers
-            where record.Type is DnsRecordType.A or DnsRecordType.AAAA
-            select record.Data).ToArray();
+        IPAddress[] addresses;
+        try
+        {
+            // 使用Ae.Dns解析IPv4和IPv6地址
+            var queryA = _resolver.Query(DnsQueryFactory.CreateQuery(host), cts);
+            var queryAAAA = _resolver.Query(DnsQueryFactory.CreateQuery(host, DnsQueryType.AAAA), cts);
+
+            var resolveTasks = new List<Task<DnsMessage>>()
+            {
+                queryA,
+                queryAAAA
+            };
+
+            var results = await Task.WhenAll(resolveTasks).ConfigureAwait(false);
+            addresses = (from result in results
+                from answer in result.Answers
+                where answer.Resource is DnsIpAddressResource
+                select (answer.Resource as DnsIpAddressResource)!.IPAddress).ToArray();
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Warn(ModuleName, $"Failed to resolve DNS for {host}: {ex.Message}, use system default DNS");
+            addresses = await Dns.GetHostAddressesAsync(host, cts);
+        }
 
         if (addresses.Length == 0)
             throw new HttpRequestException($"No IP address for {host}");
 
         // 并行连接所有地址，返回第一个成功的连接
-        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip, port, cts)).ToList();
+        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip, port, cts)).ToArray();
 
         try
         {
-            var completedTask = await Task.WhenAny(connectionTasks).ConfigureAwait(false);
+            var completedTask = await connectionTasks.WhenAnySuccess().ConfigureAwait(false);
             var stream = await completedTask.ConfigureAwait(false);
 
             // 取消其他连接任务
@@ -74,7 +100,11 @@ public class HostConnectionHandler
                 _ = task.ContinueWith(t => {
                     if (t.IsCompletedSuccessfully)
                     {
-                        t.Result?.Dispose();
+                        t.Result.Dispose();
+                    }
+                    else if (t is { IsFaulted: true, Exception: not null })
+                    {
+                        LogWrapper.Debug(ModuleName, $"Connection to alternative address failed: {t.Exception.GetBaseException().Message}");
                     }
                 }, cts);
             }
@@ -82,27 +112,31 @@ public class HostConnectionHandler
             LogWrapper.Debug(ModuleName, $"Success resolve DoH endpoint: {host} -> {stream.Socket.RemoteEndPoint}");
             return stream;
         }
-        catch
+        catch (Exception ex)
         {
-            throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses)}");
+            LogWrapper.Error(ex, ModuleName, $"No address reachable for {host}");
+            throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses.Select(x => x.ToString()))}", ex);
         }
     }
 
-    private static async Task<NetworkStream> _ConnectToAddressAsync(string ip, int port, CancellationToken cts)
+    private static async Task<NetworkStream> _ConnectToAddressAsync(IPAddress ip, int port, CancellationToken cts)
     {
         var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        socket.NoDelay = true;
         try
         {
-            using var ctsSocket = CancellationTokenSource.CreateLinkedTokenSource(cts);
-            ctsSocket.CancelAfter(5000); // 5秒超时
-            
-            await socket.ConnectAsync(ip, port, ctsSocket.Token);
+            await socket.ConnectAsync(ip, port, cts);
             return new NetworkStream(socket, ownsSocket: true);
         }
-        catch
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
             socket.Dispose();
-            throw;
+            throw new OperationCanceledException($"Connection to {ip}:{port} was cancelled");
+        }
+        catch (Exception ex)
+        {
+            socket.Dispose();
+            throw new HttpRequestException($"Failed to connect to {ip}:{port}", ex);
         }
     }
 }

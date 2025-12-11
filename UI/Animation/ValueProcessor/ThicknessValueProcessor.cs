@@ -4,7 +4,6 @@ namespace PCL.Core.UI.Animation.ValueProcessor;
 
 public class ThicknessValueProcessor : IValueProcessor<Thickness>
 {
-    // Thickness 不需要过滤
     public Thickness Filter(Thickness value) => value;
 
     public Thickness Add(Thickness value1, Thickness value2)
@@ -30,4 +29,6 @@ public class ThicknessValueProcessor : IValueProcessor<Thickness>
             value.Right * factor,
             value.Bottom * factor);
     }
+    
+    public Thickness DefaultValue() => new();
 }

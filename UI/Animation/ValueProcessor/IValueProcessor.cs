@@ -35,4 +35,10 @@ public interface IValueProcessor<T>
     /// <param name="factor">缩放因子。</param>
     /// <returns>返回缩放后的值。</returns>
     T Scale(T value, double factor);
+
+    /// <summary>
+    /// 获取某种类型的初始值。
+    /// </summary>
+    /// <returns>初始值。</returns>
+    T DefaultValue();
 }

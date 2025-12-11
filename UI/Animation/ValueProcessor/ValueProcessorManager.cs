@@ -5,7 +5,8 @@ namespace PCL.Core.UI.Animation.ValueProcessor;
 
 public static class ValueProcessorManager
 {
-    private static readonly Dictionary<Type, Func<object, object>> _Filters = new();
+    private static readonly Dictionary<Type, Func<object, object>> Filters = new();
+    private static readonly Dictionary<Type, Func<object, object, object>> Adders = new();
     
     private static class Cache<T>
     {
@@ -17,7 +18,8 @@ public static class ValueProcessorManager
         ArgumentNullException.ThrowIfNull(processor);
         Cache<T>.Processor = processor;
         
-        _Filters[typeof(T)] = o => processor.Filter((T)o)!;
+        Filters[typeof(T)] = o => processor.Filter((T)o)!;
+        Adders[typeof(T)] = (o1, o2) => processor.Add((T)o1, (T)o2)!;
     }
 
     public static T Filter<T>(T value)
@@ -29,7 +31,7 @@ public static class ValueProcessorManager
     public static object Filter(object value)
     {
         var t = value.GetType();
-        return _Filters.TryGetValue(t, out var func)
+        return Filters.TryGetValue(t, out var func)
             ? func(value)
             : value;
     }
@@ -39,6 +41,15 @@ public static class ValueProcessorManager
         var p = Cache<T>.Processor
                 ?? throw new InvalidOperationException($"类型未注册：{typeof(T)}");
         return p.Add(value1, value2);
+    }
+    
+    public static object Add(object value1, object value2)
+    {
+        var t = value1.GetType();
+        if (t != value2.GetType())
+            throw new InvalidOperationException($"类型不一致：{t} vs {value2.GetType()}");
+
+        return Adders.TryGetValue(t, out var func) ? func(value1, value2) : value2;
     }
     
     public static T Subtract<T>(T value1, T value2)
@@ -53,5 +64,12 @@ public static class ValueProcessorManager
         var p = Cache<T>.Processor
                 ?? throw new InvalidOperationException($"类型未注册：{typeof(T)}");
         return p.Scale(value, factor);
+    }
+    
+    public static T DefaultValue<T>()
+    {
+        var p = Cache<T>.Processor
+                ?? throw new InvalidOperationException($"类型未注册：{typeof(T)}");
+        return p.DefaultValue();
     }
 }

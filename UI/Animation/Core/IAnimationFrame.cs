@@ -6,5 +6,7 @@ namespace PCL.Core.UI.Animation.Core;
 public interface IAnimationFrame
 {
     IAnimatable Target { get; }
+    object StartValue { get; }
+    object Value { get; }
     object GetAbsoluteValue();
 }

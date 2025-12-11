@@ -30,7 +30,7 @@ public interface IAnimation
     /// </summary>
     void Cancel();
     /// <summary>
-    /// 计算下一帧。。
+    /// 计算下一帧。
     /// </summary>
     /// <param name="target">被动画的对象。</param>
     /// <returns>动画帧。</returns>

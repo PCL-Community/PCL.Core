@@ -10,4 +10,5 @@ public class DoubleValueProcessor : IValueProcessor<double>
 
     public double Subtract(double value1, double value2) => value1 - value2;
     public double Scale(double value, double factor) => value * factor;
+    public double DefaultValue() => 0;
 }

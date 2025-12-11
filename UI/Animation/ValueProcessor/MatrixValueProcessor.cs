@@ -29,4 +29,6 @@ public class MatrixValueProcessor : IValueProcessor<Matrix>
             value.M21 * factor, value.M22 * factor,
             value.OffsetX * factor, value.OffsetY * factor);
     }
+
+    public Matrix DefaultValue() => new();
 }

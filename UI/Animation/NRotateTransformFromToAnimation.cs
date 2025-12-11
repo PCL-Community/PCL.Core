@@ -5,7 +5,7 @@ using PCL.Core.UI.Animation.ValueProcessor;
 
 namespace PCL.Core.UI.Animation;
 
-public class MatrixFromToAnimation : FromToAnimationBase<Matrix>
+public class NRotateTransformFromToAnimation : FromToAnimationBase<NRotateTransform>
 {
     public override IAnimationFrame? ComputeNextFrame(IAnimatable target)
     {

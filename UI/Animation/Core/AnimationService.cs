@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -20,7 +22,7 @@ public sealed class AnimationService : GeneralService
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
     
-    private AnimationService() : base("animation", "动画计算以及赋值") { _context = ServiceContext; }
+    private AnimationService() : base("animation", "动画") { _context = ServiceContext; }
     
     
     public override void Start()
@@ -41,12 +43,16 @@ public sealed class AnimationService : GeneralService
         ValueProcessorManager.Register(new DoubleValueProcessor());
         ValueProcessorManager.Register(new MatrixValueProcessor());
         ValueProcessorManager.Register(new NColorValueProcessor());
+        ValueProcessorManager.Register(new NRotateTransformValueProcessor());
+        ValueProcessorManager.Register(new NScaleTransformValueProcessor());
         ValueProcessorManager.Register(new PointValueProcessor());
         ValueProcessorManager.Register(new ThicknessValueProcessor());
     }
     
     private static Channel<(IAnimation, IAnimatable)> _animationChannel = null!;
-    private static Channel<IAnimationFrame> _frameChannel = null!;
+    //private static Channel<IAnimationFrame> _frameChannel = null!;
+    private static ConcurrentDictionary<IAnimatable, IAnimationFrame> _frameDictionary = null!;
+    private static SemaphoreSlim _signal = null!;
     private static IClock _clock = null!;
     private static AsyncCountResetEvent _resetEvent = null!;
     private static int _taskCount;
@@ -59,9 +65,12 @@ public sealed class AnimationService : GeneralService
     
     private static void _Initialize()
     {
-        // 初始化 Channel
+        // 初始化 Channel 与 Dictionary
         _animationChannel = Channel.CreateUnbounded<(IAnimation, IAnimatable)>();
-        _frameChannel = Channel.CreateUnbounded<IAnimationFrame>();
+        _frameDictionary = new ConcurrentDictionary<IAnimatable, IAnimationFrame>();
+        
+        // 创建信号量
+        _signal = new SemaphoreSlim(0);
         
         // 根据核心数量来确定动画计算 Task 数量
         _taskCount = Environment.ProcessorCount;
@@ -78,17 +87,28 @@ public sealed class AnimationService : GeneralService
         UIAccessProvider = new WpfUIAccessProvider(Lifecycle.CurrentApplication.Dispatcher);
         _ = UIAccessProvider.InvokeAsync(async () =>
         {
-            if (_cts.IsCancellationRequested) return;
+            // if (_cts.IsCancellationRequested) return;
             
             // 取出所有动画帧并赋值
-            while (await _frameChannel.Reader.WaitToReadAsync())
+            // while (await _frameChannel.Reader.WaitToReadAsync())
+            // {
+            //     while (_frameChannel.Reader.TryRead(out var frame))
+            //     {
+            //         frame.Target.SetValue(frame.GetAbsoluteValue());
+            //     }
+            //
+            //     await Task.Yield();
+            // }
+
+            while (!_cts.IsCancellationRequested)
             {
-                while (_frameChannel.Reader.TryRead(out var frame))
+                await _signal.WaitAsync();
+
+                foreach (var frame in _frameDictionary.Values.ToArray())
                 {
                     frame.Target.SetValue(frame.GetAbsoluteValue());
+                    _frameDictionary.TryRemove(frame.Target, out _);
                 }
-        
-                await Task.Yield();
             }
         });
 
@@ -160,13 +180,22 @@ public sealed class AnimationService : GeneralService
                     animationList.RemoveAt(i);
                     continue;
                 }
-                            
+                
                 // 计算动画的下一帧
                 var frame = animation.Item1.ComputeNextFrame(animation.Item2);
                 // 如果没有计算帧（当动画为 SequentialAnimationGroup 或 ParallelAnimationGroup 这种动画集合时），跳过
                 if (frame is null) continue;
-                // 将动画帧写入 Channel
-                _frameChannel.Writer.TryWrite(frame);
+                // 将动画帧写入 Dictionary
+                //_frameChannel.Writer.TryWrite(frame);
+                _frameDictionary.AddOrUpdate(animation.Item2, frame, (_, oldFrame) =>
+                {
+                    var type = oldFrame.GetType();
+                    
+                    return (IAnimationFrame)Activator.CreateInstance(type, oldFrame.Target, frame.StartValue,
+                        ValueProcessorManager.Add(frame.Value, oldFrame.Value))!;
+                });
+                // 释放信号量
+                _signal.Release();
                 // 增加当前帧计数
                 animation.Item1.CurrentFrame++;
             }

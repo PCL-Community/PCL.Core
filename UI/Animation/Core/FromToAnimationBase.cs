@@ -7,11 +7,21 @@ using PCL.Core.UI.Animation.ValueProcessor;
 
 namespace PCL.Core.UI.Animation.Core;
 
-public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation where T : struct
+public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
 {
     public IEasing Easing { get; set; } = new LinearEasing();
-    public T? From { get; set; }
-    public T To { get; set; }
+    private bool _hasFromValue;
+    private T _from = default!;
+    public T From
+    {
+        get => _from;
+        set
+        {
+            _hasFromValue = true;
+            _from = value;
+        }
+    }
+    public T? To { get; set; }
     public AnimationValueType ValueType { get; set; } = AnimationValueType.Relative;
     public TimeSpan Duration { get; set; }
     public TimeSpan Delay { get; set; }
@@ -32,7 +42,7 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation where T : 
     public override bool IsCompleted => CurrentFrame >= TotalFrames;
     public override int CurrentFrame { get; set; }
     
-    private T _startValue;
+    private T? _startValue;
 
     public override async Task RunAsync(IAnimatable target)
     {
@@ -71,14 +81,17 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation where T : 
         _startValue = (T)target.GetValue()!;
 
         // 如果 From 为空，则根据动画值类型设置初始值
-        From ??= ValueType == AnimationValueType.Relative ? default : _startValue;
+        if (!_hasFromValue)
+        {
+           From = ValueType == AnimationValueType.Relative ? ValueProcessorManager.DefaultValue<T>() : _startValue;
+        }
 
         // 计算总帧数
         TotalFrames = (int)Math.Round(Duration.TotalSeconds * AnimationService.Fps / AnimationService.Scale);
 
         // 进行初始赋值
-        target.SetValue(
-            ValueType == AnimationValueType.Relative ? ValueProcessorManager.Add(From!.Value, _startValue) : From!);
+        // target.SetValue(
+        //     ValueType == AnimationValueType.Relative ? ValueProcessorManager.Add(From, _startValue)! : From!);
     }
 
     public override void Cancel()
@@ -93,9 +106,9 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation where T : 
         {
             Target = target,
             Value = ValueType == AnimationValueType.Relative
-                ? CurrentValue!.Value
-                : ValueProcessorManager.Subtract(CurrentValue!.Value, From!.Value),
-            StartValue = ValueType == AnimationValueType.Relative ? _startValue : From!.Value
+                ? CurrentValue!
+                : ValueProcessorManager.Subtract(CurrentValue!, From!),
+            StartValue = ValueType == AnimationValueType.Relative ? _startValue! : From!
         };
     }
 }

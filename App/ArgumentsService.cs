@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace PCL.Core.App.Arguments;
+namespace PCL.Core.App;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
 public partial class ArgumentsService : GeneralService
@@ -17,7 +16,7 @@ public partial class ArgumentsService : GeneralService
 
     public override void Start()
     {
-        _InitializeHandlers();
+        _Initialize();
         _HandleArguments();
         Context.DeclareStopped();
     }
@@ -25,21 +24,23 @@ public partial class ArgumentsService : GeneralService
     
     #region Arguments Handle
     
+    private readonly Dictionary<string, Func<string[],HandleResult>> _handlers = [];
+    
     private void _HandleArguments()
     {
         var args = Basics.CommandLineArguments;
 
-        foreach (var handler in _handlers)
+        foreach (var (name, handler) in _handlers)
         {
-            var result = handler.Handle(args);
+            var result = handler(args);
             switch (result.ResultType)
             {
                 case HandleResultType.NotHandled: break;
                 case HandleResultType.Handled:
-                    Context.Info($"参数已被处理器 {handler.Identifier} 处理");
+                    Context.Info($"参数已被处理器 {name} 处理");
                     return;
                 case HandleResultType.HandledAndExit:
-                    Context.Info($"参数已被处理器 {handler.Identifier} 处理，程序将退出");
+                    Context.Info($"参数已被处理器 {name} 处理，程序将退出");
                     Context.RequestExit(result.ExitCode);
                     return;
                 default:
@@ -51,3 +52,27 @@ public partial class ArgumentsService : GeneralService
     }
     #endregion
 }
+
+[AttributeUsage(AttributeTargets.Method)]
+public class ArgumentHandlerAttribute(string identifier) : Attribute
+{
+    public string Identifier { get; init; } = identifier;
+}
+
+public enum HandleResultType
+{
+    /// <summary>
+    /// 参数未被处理
+    /// </summary>
+    NotHandled,
+    /// <summary>
+    /// 参数已被处理
+    /// </summary>
+    Handled,
+    /// <summary>
+    /// 参数已被处理，且请求程序退出
+    /// </summary>
+    HandledAndExit,
+}
+
+public record HandleResult(HandleResultType ResultType, int ExitCode = 0);

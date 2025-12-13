@@ -6,11 +6,12 @@ using System.Security;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using Microsoft.Win32;
+using PCL.Core.App;
 using PCL.Core.Logging;
 
 namespace PCL.Core.Utils.OS;
 
-public class ProcessInterop {
+public static class ProcessInterop {
     /// <summary>
     /// 检查当前程序是否以管理员权限运行。
     /// </summary>
@@ -192,6 +193,23 @@ public class ProcessInterop {
             throw new InvalidOperationException(errorMsg, ex);
         } finally {
             writeKey?.Dispose();
+        }
+    }
+    
+    [ArgumentHandler("GPU")]
+    public static HandleResult HandleArgument(string[] args)
+    {
+        if (args is not ["--gpu", var mode]) return new HandleResult(HandleResultType.NotHandled);
+        try
+        {
+            SetGpuPreference(mode.Trim('\"'));
+            LogWrapper.Info("Argument", $"已将显卡设置调整为 {mode}");
+            return new HandleResult(HandleResultType.HandledAndExit);
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e, "Argument", "设置显卡偏好时发生错误");
+            return new HandleResult(HandleResultType.HandledAndExit, (int)ProcessExitCode.Failed);
         }
     }
 }

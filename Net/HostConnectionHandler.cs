@@ -26,18 +26,22 @@ public class HostConnectionHandler
 
     private HostConnectionHandler()
     {
+        var proxyHandler = new HttpClientHandler()
+        {
+            Proxy = HttpProxyManager.Instance
+        };
         // 使用Ae.Dns创建DoH客户端，支持多个DoH服务器
         IDnsClient[] clients =
         [
-            new DnsHttpClient(new HttpClient()
+            new DnsHttpClient(new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://doh.pub/")
             }),
-            new DnsHttpClient(new HttpClient()
+            new DnsHttpClient(new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://doh.pysio.online/")
             }),
-            new DnsHttpClient(new HttpClient()
+            new DnsHttpClient(new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://cloudflare-dns.com/")
             })

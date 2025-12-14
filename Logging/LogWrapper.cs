@@ -101,22 +101,22 @@ public class LogItem(
     /// <summary>
     /// 日志消息内容 (不包含时间戳和线程名, 包含模块, 生命周期服务等信息)
     /// </summary>
-    public string Message { get; init; } = message;
+    public string Message { get; } = message;
 
     /// <summary>
     /// 相关异常对象，若无则为 null
     /// </summary>
-    public Exception? Exception { get; init; } = exception;
+    public Exception? Exception { get; } = exception;
 
     /// <summary>
     /// 日志等级
     /// </summary>
-    public LogLevel Level { get; init; } = level;
+    public LogLevel Level { get; } = level;
 
     /// <summary>
     /// 该日志项对应的操作等级
     /// </summary>
-    public ActionLevel ActionLevel { get; init; } = actionLevel ?? level.DefaultActionLevel();
+    public ActionLevel ActionLevel { get; } = actionLevel ?? level.DefaultActionLevel();
 
     public LogItem(
         ILifecycleService source,

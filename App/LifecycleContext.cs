@@ -7,9 +7,7 @@ namespace PCL.Core.App;
 /// 若要获取服务项自身的上下文实例，请使用 <see cref="Lifecycle.GetContext"/> 。
 /// </summary>
 public class LifecycleContext(
-    ILifecycleService service,
-    Action<LifecycleLogItem> onLog,
-    Action<int> onRequestExit,
+    ILifecycleService service,Action<int> onRequestExit,
     Action<string?> onRequestRestart,
     Action onDeclareStopped,
     Action onRequestStopLoading)
@@ -19,7 +17,7 @@ public class LifecycleContext(
         Exception? ex = null,
         LogLevel level = LogLevel.Trace,
         ActionLevel? actionLevel = null
-    ) => onLog(new LifecycleLogItem(service, message, ex, level, actionLevel ?? level.DefaultActionLevel()));
+    ) => LogWrapper.PushLog(new LogItem(service, message, ex, level, actionLevel ?? level.DefaultActionLevel()));
     
     public void Trace(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Trace, actionLevel);
     public void Debug(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Debug, actionLevel);

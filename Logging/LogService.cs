@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
 using System.Windows;
 using PCL.Core.App;
 using PCL.Core.UI;
@@ -28,14 +27,10 @@ public class LogService : ILifecycleLogService
         Context.Trace("正在初始化 Logger 实例");
         var config = new LoggerConfiguration(Path.Combine(Basics.ExecutableDirectory, "PCL", "Log"));
         _logger = new Logger(config);
-        Context.Trace("正在注册日志事件");
-        LogWrapper.OnLog += _OnWrapperLog;
-        _wrapperRegistered = true;
     }
 
     public void Stop()
     {
-        if (_wrapperRegistered) LogWrapper.OnLog -= _OnWrapperLog;
         _logger?.Dispose();
     }
 
@@ -79,14 +74,6 @@ public class LogService : ILifecycleLogService
         }
     }
 
-    private static void _OnWrapperLog(LogLevel level, string msg, string? module, Exception? ex)
-    {
-        var thread = Thread.CurrentThread.Name ?? $"#{Environment.CurrentManagedThreadId}";
-        if (module != null) module = $"[{module}] ";
-        var result = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}{msg}";
-        _LogAction(level.DefaultActionLevel(), (ex == null) ? result : $"{result}\n{ex}", msg, ex);
-    }
-
-    public void OnLog(LifecycleLogItem item) =>
+    public void OnLog(LogItem item) =>
         _LogAction(item.ActionLevel, item.ComposeMessage(), item.Message, item.Exception);
 }

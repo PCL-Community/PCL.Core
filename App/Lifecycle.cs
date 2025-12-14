@@ -37,9 +37,9 @@ public sealed class Lifecycle : ILifecycleService
     #region 日志管理
 
     private static ILifecycleLogService? _logService;
-    private static readonly List<LifecycleLogItem> _PendingLogs = [];
+    private static readonly List<LogItem> _PendingLogs = [];
 
-    private static void _PushLog(LifecycleLogItem item, ILifecycleLogService service)
+    private static void _PushLog(LogItem item, ILifecycleLogService service)
     {
         service.OnLog(item);
     }
@@ -145,6 +145,7 @@ public sealed class Lifecycle : ILifecycleService
             foreach (var item in _PendingLogs) _PushLog(item, logService);
             _PendingLogs.Clear();
             _logService = logService;
+            LogWrapper.CurrentLogService = logService;
         }
     }
 
@@ -669,15 +670,6 @@ public sealed class Lifecycle : ILifecycleService
     /// <returns>上下文实例</returns>
     public static LifecycleContext GetContext(ILifecycleService self) => new(
         service: self,
-        onLog: item =>
-        {
-            lock (_PendingLogs)
-            {
-                if (_logService == null) _PendingLogs.Add(item);
-                else _PushLog(item, _logService);
-            }
-            if (item.ActionLevel == ActionLevel.MsgBoxFatal) _FatalExit();
-        },
         onRequestExit: statusCode =>
         {
             if (CurrentState != LifecycleState.BeforeLoading)

@@ -36,4 +36,21 @@ public class DynamicCacheTrafficCenter : SyncTrafficCenter
         }
         value?.Request(e);
     }
+
+    protected override void OnStop()
+    {
+        foreach (var item in _cache.Values) item.Stop();
+        _cache.Clear();
+    }
+
+    public bool InvalidateCache(object context)
+    {
+        var result = _cache.TryGetValue(context, out var center);
+        if (result)
+        {
+            center?.Stop();
+            _cache.Remove(context);
+        }
+        return result;
+    }
 }

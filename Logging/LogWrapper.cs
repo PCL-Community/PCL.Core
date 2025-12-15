@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using PCL.Core.App;
 
@@ -7,8 +6,6 @@ namespace PCL.Core.Logging;
 
 public static class LogWrapper
 {
-    private static readonly List<LogItem> _PendingLogs = [];
-    
     // Fatal: can handle exceptions
     public static void Fatal(Exception? ex, string? module, string msg) => _LogAction(LogLevel.Fatal, msg, module, ex);
     public static void Fatal(Exception? ex, string msg) => Fatal(ex, null, msg);
@@ -39,40 +36,15 @@ public static class LogWrapper
     public static void Trace(string? module, string msg) => _LogAction(LogLevel.Trace, msg, module);
     public static void Trace(string msg) => Trace(null, msg);
 
-    public static ILifecycleLogService? CurrentLogService
-    {
-        get;
-        set
-        {
-            field = value;
-            if (_PendingLogs.Count == 0) return;
-            
-            // 清空待处理日志
-            _PendingLogs.ForEach(item => field?.OnLog(item));
-            _PendingLogs.Clear();
-        }
-    }
-
     public static Logger CurrentLogger => LogService.Logger;
 
     private static void _LogAction(LogLevel level, string msg, string? module = null, Exception? ex = null)
     {
         if (module == null)
         {
-            PushLog(new LogItem(msg, ex, level, level.DefaultActionLevel()));
+            LogController.PushLog(new LogItem(msg, ex, level));
             return;
         }
-        PushLog(new LogItem(module, msg, ex, level, level.DefaultActionLevel()));
-    }
-    
-    public static void PushLog(LogItem item)
-    {
-        if (CurrentLogService != null)
-        {
-            CurrentLogService.OnLog(item);
-            return;
-        }
-
-        _PendingLogs.Add(item);
+        LogController.PushLog(new LogItem(module, msg, ex, level));
     }
 }

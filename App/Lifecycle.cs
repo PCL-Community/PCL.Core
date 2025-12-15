@@ -145,7 +145,7 @@ public sealed class Lifecycle : ILifecycleService
             foreach (var item in _PendingLogs) _PushLog(item, logService);
             _PendingLogs.Clear();
             _logService = logService;
-            LogWrapper.CurrentLogService = logService;
+            LogController.CurrentLogService = logService;
         }
     }
 

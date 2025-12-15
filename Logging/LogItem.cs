@@ -16,7 +16,7 @@ public class LogItem(
     string message,
     Exception? exception,
     LogLevel level,
-    ActionLevel? actionLevel)
+    ActionLevel? actionLevel = null)
 {
     /// <summary>
     /// 创建该日志项的时间
@@ -61,7 +61,7 @@ public class LogItem(
         string message,
         Exception? exception,
         LogLevel level,
-        ActionLevel? actionLevel) : this($" [{source.Name}|{source.Identifier}] {message}", exception, level, actionLevel)
+        ActionLevel? actionLevel = null) : this($" [{source.Name}|{source.Identifier}] {message}", exception, level, actionLevel)
     {}
     
     /// <summary>
@@ -78,7 +78,7 @@ public class LogItem(
         string message,
         Exception? exception,
         LogLevel level,
-        ActionLevel? actionLevel) : this($" [{module}] {message}", exception, level, actionLevel)
+        ActionLevel? actionLevel = null) : this($" [{module}] {message}", exception, level, actionLevel)
     {}
 
     public override string ToString()

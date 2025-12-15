@@ -5,11 +5,9 @@ using PCL.Core.App;
 
 namespace PCL.Core.Logging;
 
-public delegate void LogHandler(LogLevel level, string msg, string? module = null, Exception? ex = null);
-
 public static class LogWrapper
 {
-    public static readonly List<LogItem> PendingLogs = [];
+    private static readonly List<LogItem> _PendingLogs = [];
     
     // Fatal: can handle exceptions
     public static void Fatal(Exception? ex, string? module, string msg) => _LogAction(LogLevel.Fatal, msg, module, ex);
@@ -47,10 +45,11 @@ public static class LogWrapper
         set
         {
             field = value;
-            if (PendingLogs.Count != 0)
-            {
-                PendingLogs.ForEach(item => field?.OnLog(item));
-            }
+            if (_PendingLogs.Count == 0) return;
+            
+            // 清空待处理日志
+            _PendingLogs.ForEach(item => field?.OnLog(item));
+            _PendingLogs.Clear();
         }
     }
 
@@ -74,75 +73,6 @@ public static class LogWrapper
             return;
         }
 
-        PendingLogs.Add(item);
-    }
-}
-
-/// <summary>
-/// 日志项
-/// </summary>
-[Serializable]
-public class LogItem(
-    string message,
-    Exception? exception,
-    LogLevel level,
-    ActionLevel? actionLevel)
-{
-    /// <summary>
-    /// 创建该日志项的时间
-    /// </summary>
-    public DateTime Time { get; } = DateTime.Now;
-
-    /// <summary>
-    /// 创建该日志项的线程名
-    /// </summary>
-    public string ThreadName { get; } = Thread.CurrentThread.Name ?? $"#{Environment.CurrentManagedThreadId}";
-    
-    /// <summary>
-    /// 日志消息内容 (不包含时间戳和线程名, 包含模块, 生命周期服务等信息)
-    /// </summary>
-    public string Message { get; } = message;
-
-    /// <summary>
-    /// 相关异常对象，若无则为 null
-    /// </summary>
-    public Exception? Exception { get; } = exception;
-
-    /// <summary>
-    /// 日志等级
-    /// </summary>
-    public LogLevel Level { get; } = level;
-
-    /// <summary>
-    /// 该日志项对应的操作等级
-    /// </summary>
-    public ActionLevel ActionLevel { get; } = actionLevel ?? level.DefaultActionLevel();
-
-    public LogItem(
-        ILifecycleService source,
-        string message,
-        Exception? exception,
-        LogLevel level,
-        ActionLevel? actionLevel) : this($" [{source.Name}|{source.Identifier}] {message}", exception, level, actionLevel)
-    {}
-    
-    public LogItem(
-        string module,
-        string message,
-        Exception? exception,
-        LogLevel level,
-        ActionLevel? actionLevel) : this($" [{module}] {message}", exception, level, actionLevel)
-    {}
-
-    public override string ToString()
-    {
-        return Exception == null ? $"[{Time:HH:mm:ss.fff}] {Message}" : $"[{Time:HH:mm:ss.fff}] ({Message}) {Exception.GetType().FullName}: {Exception.Message}";
-    }
-
-    public string ComposeMessage()
-    {
-        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}]{Message}";
-        if (Exception != null) result += $"\n{Exception}";
-        return result;
+        _PendingLogs.Add(item);
     }
 }

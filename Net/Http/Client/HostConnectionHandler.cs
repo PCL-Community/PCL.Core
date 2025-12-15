@@ -4,25 +4,27 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
+using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Net.Sockets;
 using Ae.Dns.Client;
 using Ae.Dns.Protocol;
 using Ae.Dns.Protocol.Enums;
 using Ae.Dns.Protocol.Records;
 using PCL.Core.Logging;
-using System.Runtime.Caching;
+using PCL.Core.Net.Dns;
 using PCL.Core.Utils.Exts;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Http.Client;
 
 public class HostConnectionHandler
 {
     public static HostConnectionHandler Instance { get; } = new();
-    private const string ModuleName = "DoH";
+    private const string ModuleName = "CustomHttpHandler";
 
     private readonly DnsCachingClient? _resolver;
+    private readonly DnsQuery _dnsQuery = DnsQuery.Instance;
 
     private HostConnectionHandler()
     {
@@ -62,32 +64,9 @@ public class HostConnectionHandler
             return await _ConnectToAddressAsync(remoteAddr.Address, port, cts);
         }
 
-        IPAddress[] addresses;
-        try
-        {
-            // 使用Ae.Dns解析IPv4和IPv6地址
-            var queryA = _resolver.Query(DnsQueryFactory.CreateQuery(host), cts);
-            var queryAAAA = _resolver.Query(DnsQueryFactory.CreateQuery(host, DnsQueryType.AAAA), cts);
+        var addresses = await _dnsQuery.QueryForIPAsync(host, cts);
 
-            var resolveTasks = new List<Task<DnsMessage>>()
-            {
-                queryA,
-                queryAAAA
-            };
-
-            var results = await Task.WhenAll(resolveTasks).ConfigureAwait(false);
-            addresses = (from result in results
-                from answer in result.Answers
-                where answer.Resource is DnsIpAddressResource
-                select (answer.Resource as DnsIpAddressResource)!.IPAddress).ToArray();
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Warn(ModuleName, $"Failed to resolve DNS for {host}: {ex.Message}, use system default DNS");
-            addresses = await Dns.GetHostAddressesAsync(host, cts);
-        }
-
-        if (addresses.Length == 0)
+        if (addresses == null || addresses.Length == 0)
             throw new HttpRequestException($"No IP address for {host}");
 
         // 并行连接所有地址，返回第一个成功的连接

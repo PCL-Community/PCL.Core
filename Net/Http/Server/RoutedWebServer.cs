@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using PCL.Core.Utils;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Http.Server;
 
 /// <summary>
 /// 用于 <see cref="RoutedWebServer"/> 响应客户端请求的服务端响应结构。
@@ -20,32 +20,32 @@ public struct RoutedResponse()
     /// HTTP 状态码
     /// </summary>
     public HttpStatusCode? StatusCode = null;
-    
+
     /// <summary>
     /// 此响应 <see cref="InputStream"/> 使用的字符编码
     /// </summary>
     public Encoding? ContentEncoding = null;
-    
+
     /// <summary>
     /// [Header] 内容 MIME 类型
     /// </summary>
     public string? ContentType = null;
-    
+
     /// <summary>
     /// [Header] 重定向目标 URL 或路径。
     /// </summary>
     public string? RedirectLocation = null;
-    
+
     /// <summary>
     /// [Header] 是否使用分块传输编码。
     /// </summary>
     public bool? SendChunked = null;
-    
+
     /// <summary>
     /// 随响应添加的 Cookies。
     /// </summary>
     public CookieCollection? Cookies = null;
-    
+
     /// <summary>
     /// 用于传输响应内容的输入流，若非空值，该流将被直接 <c>CopyTo</c> 到实际响应的 <c>OutputStream</c> 中。
     /// </summary>
@@ -65,7 +65,7 @@ public struct RoutedResponse()
         if (Cookies is {} cookies) target.Cookies = cookies;
         if (InputStream is {} inputStream) inputStream.CopyTo(target.OutputStream);
     }
-    
+
     /// <summary>
     /// 返回指定 HTTP 状态码的空响应
     /// </summary>
@@ -163,11 +163,11 @@ public class RoutedWebServer : WebServer
 {
     private readonly LinkedList<string> _pathList = [];
     private readonly Dictionary<string, RoutedClientRequestWithContext> _pathCallbackMap = [];
-    
+
     private void _RoutedCallback(HttpListenerContext context)
     {
         var path = context.Request.Url?.AbsolutePath ?? string.Empty;
-        var callbackPath = _pathList.FirstOrDefault(p => path.StartsWith(p));
+        var callbackPath = _pathList.FirstOrDefault(p => path.StartsWith((string)p));
         if (callbackPath == null)
         {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;

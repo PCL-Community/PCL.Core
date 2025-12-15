@@ -4,7 +4,7 @@ using Microsoft.Win32;
 using PCL.Core.Logging;
 using PCL.Core.Utils.OS;
 
-namespace PCL.Core.Net;
+namespace PCL.Core.Net.Http.Client;
 
 public class HttpProxyManager : IWebProxy, IDisposable
 {

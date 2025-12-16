@@ -13,6 +13,7 @@ namespace PCL.Core.Logging;
 /// <param name="actionLevel">该日志项对应的操作等级</param>
 [Serializable]
 public class LogItem(
+    string others,
     string message,
     Exception? exception,
     LogLevel level,
@@ -27,9 +28,14 @@ public class LogItem(
     /// 创建该日志项的线程名
     /// </summary>
     public string ThreadName { get; } = Thread.CurrentThread.Name ?? $"#{Environment.CurrentManagedThreadId}";
+
+    /// <summary>
+    /// 其他信息（如日志来源模块等）
+    /// </summary>
+    public string Others { get; } = others;
     
     /// <summary>
-    /// 日志消息内容 (不包含时间戳和线程名, 包含模块, 生命周期服务等信息)
+    /// 日志消息内容
     /// </summary>
     public string Message { get; } = message;
 
@@ -61,7 +67,7 @@ public class LogItem(
         string message,
         Exception? exception,
         LogLevel level,
-        ActionLevel? actionLevel = null) : this($" [{source.Name}|{source.Identifier}] {message}", exception, level, actionLevel)
+        ActionLevel? actionLevel = null) : this($"[{source.Name}|{source.Identifier}]", message, exception, level, actionLevel)
     {}
     
     /// <summary>
@@ -72,24 +78,30 @@ public class LogItem(
     /// <param name="exception">相关异常对象，若无则为 null</param>
     /// <param name="level">日志等级</param>
     /// <param name="actionLevel">该日志项对应的操作等级</param>
-
     public LogItem(
-        string module,
+        LogModule module,
         string message,
         Exception? exception,
         LogLevel level,
-        ActionLevel? actionLevel = null) : this($" [{module}] {message}", exception, level, actionLevel)
+        ActionLevel? actionLevel = null) : this(module.ToString(), message, exception, level, actionLevel)
     {}
 
     public override string ToString()
     {
-        return Exception == null ? $"[{Time:HH:mm:ss.fff}] {Message}" : $"[{Time:HH:mm:ss.fff}] ({Message}) {Exception.GetType().FullName}: {Exception.Message}";
+        return Exception == null 
+            ? $"[{Time:HH:mm:ss.fff}] {Message}"
+            : $"[{Time:HH:mm:ss.fff}] ({Message}) {Exception.GetType().FullName}: {Exception.Message}";
     }
 
     public string ComposeMessage()
     {
-        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}]{Message}";
+        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}] {Others} {Message}";
         if (Exception != null) result += $"\n{Exception}";
         return result;
     }
+}
+
+public record LogModule(string Module)
+{
+    public override string ToString() => $"[{Module}]";
 }

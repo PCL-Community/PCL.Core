@@ -2,9 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -34,47 +32,6 @@ public sealed class Lifecycle : ILifecycleService
 
     #endregion
 
-    #region 日志管理
-
-    private static ILifecycleLogService? _logService;
-    private static readonly List<LogItem> _PendingLogs = [];
-
-    private static void _PushLog(LogItem item, ILifecycleLogService service)
-    {
-        service.OnLog(item);
-    }
-
-    public static string PendingLogDirectory { get; set; } = @"PCL\Log";
-    public static string PendingLogFileName { get; set; } = "LastPending.log";
-
-    private static void _SavePendingLogs()
-    {
-        if (_PendingLogs.Count == 0)
-        {
-            Console.WriteLine("[Lifecycle] No pending logs");
-            return;
-        }
-        try
-        {
-            // 直接写入剩余未输出日志到程序目录
-            var path = Path.Combine(PendingLogDirectory, PendingLogFileName);
-            if (!Path.IsPathRooted(path)) path = Path.Combine(Basics.ExecutableDirectory, path);
-            Directory.CreateDirectory(Basics.GetParentPathOrDefault(path));
-            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
-            using var writer = new StreamWriter(stream, Encoding.UTF8);
-            foreach (var item in _PendingLogs) writer.WriteLine(item.ComposeMessage());
-            Console.WriteLine($"[Lifecycle] Pending logs saved to {path}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            Console.WriteLine("[Lifecycle] Error saving pending logs, writing to stdout...");
-            foreach (var item in _PendingLogs) Console.WriteLine(item.ComposeMessage());
-        }
-    }
-
-    #endregion
-
     #region 服务管理
 
     private static readonly ConcurrentDictionary<string, LifecycleServiceInfo> _RunningServiceInfoMap = [];
@@ -100,7 +57,7 @@ public sealed class Lifecycle : ILifecycleService
         // 检测日志服务
         if (service is ILifecycleLogService ls)
         {
-            if (_logService != null) throw new InvalidOperationException("日志服务只能有一个");
+            if (IsLogServiceStarted) throw new InvalidOperationException("日志服务只能有一个");
             logService = ls;
         }
         var state = manual ? LifecycleState.Manual : CurrentState;
@@ -140,13 +97,7 @@ public sealed class Lifecycle : ILifecycleService
         }
         // 若日志服务已启动则清空日志缓冲
         if (logService == null) return;
-        lock (_PendingLogs)
-        {
-            foreach (var item in _PendingLogs) _PushLog(item, logService);
-            _PendingLogs.Clear();
-            _logService = logService;
-            LogController.CurrentLogService = logService;
-        }
+        LogController.CurrentLogService = logService;
     }
 
     private static Type[] _GetServiceTypes(LifecycleState state) => LifecycleServiceTypes.GetServiceTypes(state);
@@ -304,7 +255,7 @@ public sealed class Lifecycle : ILifecycleService
             logService.Stop();
             Console.WriteLine("[Lifecycle] Log service stopped");
         }
-        _SavePendingLogs();
+        LogController.SavePendingLogs();
 #if TRACE
         // 输出仍在运行的线程
         Console.WriteLine("[Lifecycle] Thread(s) still in working:");
@@ -557,7 +508,7 @@ public sealed class Lifecycle : ILifecycleService
     /// <summary>
     /// 日志服务启动状态
     /// </summary>
-    public static bool IsLogServiceStarted => _logService != null;
+    public static bool IsLogServiceStarted => LogController.CurrentLogService != null;
 
     /// <summary>
     /// 是否正在关闭程序

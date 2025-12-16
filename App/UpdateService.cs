@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.App;
@@ -45,8 +46,8 @@ public sealed class UpdateService : GeneralService
         try
         {
             Context.Info("开始更新");
-            Lifecycle.PendingLogDirectory = Path.Combine(Basics.ExecutableDirectory, "Log");
-            Lifecycle.PendingLogFileName = "LastPending_Update.log";
+            LogController.PendingLogDirectory = Path.Combine(Basics.ExecutableDirectory, "Log");
+            LogController.PendingLogFileName = "LastPending_Update.log";
 
             var oldProcessId = args[1].Convert<int>();
             Context.Debug($"旧版本进程 ID: {oldProcessId}");

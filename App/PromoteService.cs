@@ -7,6 +7,7 @@ using System.IO.Pipes;
 using System.Text.Json;
 using System.Threading;
 using PCL.Core.IO;
+using PCL.Core.Logging;
 using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
@@ -298,7 +299,7 @@ public sealed class PromoteService : GeneralService
             AddJsonOperationFunction<ProcessStartInfo>("start-json", _StartProcessWithInfo);
             AddOperationFunction("kill", _KillProcess);
             // 结束生命周期管理，启动提权操作线程
-            Lifecycle.PendingLogFileName = "LastPending_Promote.log";
+            LogController.PendingLogFileName = "LastPending_Promote.log";
             new Thread(() => _PerformAsPromoteProcess(args[2])) { Name = "Promote" }.Start();
             Context.RequestStopLoading();
             Context.DeclareStopped();

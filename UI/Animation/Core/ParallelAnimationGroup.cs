@@ -9,24 +9,41 @@ namespace PCL.Core.UI.Animation.Core;
 /// </summary>
 public sealed class ParallelAnimationGroup : AnimationGroup
 {
-    public override Task RunAsync(IAnimatable target)
+    public override async Task<IAnimation> RunAsync(IAnimatable target)
     {
-        // 取出所有子动画的任务，并等待它们全部完成
-        var tasks = Children.Select(child =>
+        AnimationService.PushAnimationFireAndForget(this, target);
+
+        ChildrenCore.Clear();
+
+        var tasks = Children.Select(async child =>
         {
             var childTarget = ResolveTarget(child, target);
-            return child.RunAsync(childTarget);
+            
+            var runChild = await child.RunAsync(childTarget);
+
+            lock (ChildrenCore)
+            {
+                ChildrenCore.Add(runChild);
+            }
         });
-        
-        return Task.WhenAll(tasks);
+
+        await Task.WhenAll(tasks);
+        return this;
     }
 
-    public override void RunFireAndForget(IAnimatable target)
+    public override IAnimation RunFireAndForget(IAnimatable target)
     {
+        AnimationService.PushAnimationFireAndForget(this, target);
+
+        ChildrenCore.Clear();
+
         foreach (var child in Children)
         {
             var childTarget = ResolveTarget(child, target);
-            child.RunFireAndForget(childTarget);
+            var runChild = child.RunFireAndForget(childTarget);
+            ChildrenCore.Add(runChild);
         }
+
+        return this;
     }
 }

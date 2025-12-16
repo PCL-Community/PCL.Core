@@ -19,12 +19,12 @@ public interface IAnimation
     /// </summary>
     /// <param name="target">被动画的对象。</param>
     /// <returns>返回表示异步动画操作的任务。</returns>
-    Task RunAsync(IAnimatable target);
+    Task<IAnimation> RunAsync(IAnimatable target);
     /// <summary>
     /// 一发即忘方式运行动画。
     /// </summary>
     /// <param name="target">被动画的对象。</param>
-    void RunFireAndForget(IAnimatable target);
+    IAnimation RunFireAndForget(IAnimatable target);
     /// <summary>
     /// 取消动画。
     /// </summary>

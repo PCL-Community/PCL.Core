@@ -44,20 +44,24 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
     
     private T? _startValue;
 
-    public override async Task RunAsync(IAnimatable target)
+    public override async Task<IAnimation> RunAsync(IAnimatable target)
     {
         _RunCore(target);
+        var clone = (FromToAnimationBase<T>)MemberwiseClone();
 
         // 延迟
         await Task.Delay(Delay);
 
         // 将该动画推送到动画服务
-        await AnimationService.PushAnimationAsync((FromToAnimationBase<T>)MemberwiseClone(), target);
+        await AnimationService.PushAnimationAsync(clone, target);
+
+        return clone;
     }
 
-    public override void RunFireAndForget(IAnimatable target)
+    public override IAnimation RunFireAndForget(IAnimatable target)
     {
         _RunCore(target);
+        var clone = (FromToAnimationBase<T>)MemberwiseClone();
 
         _ = Task.Run(async () =>
         {
@@ -65,8 +69,10 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
             await Task.Delay(Delay);
 
             // 将该动画推送到动画服务
-            AnimationService.PushAnimationFireAndForget((FromToAnimationBase<T>)MemberwiseClone(), target);
+            AnimationService.PushAnimationFireAndForget(clone, target);
         });
+        
+        return clone;
     }
 
     private void _RunCore(IAnimatable target)

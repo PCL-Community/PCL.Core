@@ -1,6 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using PCL.Core.UI.Animation.Animatable;
@@ -14,21 +15,58 @@ namespace PCL.Core.UI.Animation.Core;
 [ContentProperty(nameof(Children))]
 public abstract class AnimationGroup : AnimationBase
 {
-    public static readonly DependencyProperty ChildrenProperty = DependencyProperty.Register(
-        nameof(Children), typeof(ObservableCollection<IAnimation>), typeof(SequentialAnimationGroup));
+    public static readonly DependencyProperty ChildrenProperty =
+        DependencyProperty.Register(
+            nameof(Children),
+            typeof(ObservableCollection<IAnimation>),
+            typeof(AnimationGroup),
+            new PropertyMetadata(null, OnChildrenChanged));
 
     public ObservableCollection<IAnimation> Children
     {
         get => (ObservableCollection<IAnimation>)GetValue(ChildrenProperty);
         set => SetValue(ChildrenProperty, value);
     }
-    
+
+    protected List<IAnimation> ChildrenCore { get; } = [];
+
     protected AnimationGroup()
     {
-        SetCurrentValue(ChildrenProperty, new ObservableCollection<IAnimation>());
+        var oc = new ObservableCollection<IAnimation>();
+        SetCurrentValue(ChildrenProperty, oc);
+
+        // 初始化时同步一次
+        SyncChildren(oc);
+    }
+
+    private static void OnChildrenChanged(
+        DependencyObject d,
+        DependencyPropertyChangedEventArgs e)
+    {
+        var self = (AnimationGroup)d;
+
+        if (e.OldValue is ObservableCollection<IAnimation> oldCol)
+            oldCol.CollectionChanged -= self.OnChildrenCollectionChanged;
+
+        if (e.NewValue is not ObservableCollection<IAnimation> newCol) return;
+        newCol.CollectionChanged += self.OnChildrenCollectionChanged;
+        self.SyncChildren(newCol);
+    }
+
+    private void OnChildrenCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        SyncChildren((ObservableCollection<IAnimation>)sender!);
+    }
+
+    private void SyncChildren(ObservableCollection<IAnimation> source)
+    {
+        ChildrenCore.Clear();
+        ChildrenCore.AddRange(source);
     }
     
-    public override bool IsCompleted => Children.All(child => child.IsCompleted);
+    public override bool IsCompleted
+        => ChildrenCore.All(child => child.IsCompleted);
+
     public override int CurrentFrame { get; set; }
 
     public override void Cancel()

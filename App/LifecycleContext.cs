@@ -17,7 +17,8 @@ public class LifecycleContext(
         Exception? ex = null,
         LogLevel level = LogLevel.Trace,
         ActionLevel? actionLevel = null
-    ) => LogController.PushLog(new LogItem(service, message, ex, level, actionLevel ?? level.DefaultActionLevel()));
+    ) => LogController.PushLog(
+        new LogItem(new LogModule(service), message, ex, level, actionLevel ?? level.DefaultActionLevel()));
     
     public void Trace(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Trace, actionLevel);
     public void Debug(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Debug, actionLevel);

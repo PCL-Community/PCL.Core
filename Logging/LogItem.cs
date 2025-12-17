@@ -13,7 +13,7 @@ namespace PCL.Core.Logging;
 /// <param name="actionLevel">该日志项对应的操作等级</param>
 [Serializable]
 public class LogItem(
-    string others,
+    LogModule logModule,
     string message,
     Exception? exception,
     LogLevel level,
@@ -29,10 +29,7 @@ public class LogItem(
     /// </summary>
     public string ThreadName { get; } = Thread.CurrentThread.Name ?? $"#{Environment.CurrentManagedThreadId}";
 
-    /// <summary>
-    /// 其他信息（如日志来源模块等）
-    /// </summary>
-    public string Others { get; } = others;
+    public LogModule LogModule { get; } = logModule;
     
     /// <summary>
     /// 日志消息内容
@@ -53,55 +50,57 @@ public class LogItem(
     /// 该日志项对应的操作等级
     /// </summary>
     public ActionLevel ActionLevel { get; } = actionLevel ?? level.DefaultActionLevel();
-    
-    /// <summary>
-    /// 使用生命周期服务作为日志来源创建日志项
-    /// </summary>
-    /// <param name="source">源服务</param>
-    /// <param name="message">日志消息内容</param>
-    /// <param name="exception">相关异常对象，若无则为 null</param>
-    /// <param name="level">日志等级</param>
-    /// <param name="actionLevel">该日志项对应的操作等级</param>
-    public LogItem(
-        ILifecycleService source,
-        string message,
-        Exception? exception,
-        LogLevel level,
-        ActionLevel? actionLevel = null) : this($"[{source.Name}|{source.Identifier}]", message, exception, level, actionLevel)
-    {}
-    
-    /// <summary>
-    /// 使用模块名称作为日志来源创建日志项
-    /// </summary>
-    /// <param name="module">模块名称</param>
-    /// <param name="message">日志消息内容</param>
-    /// <param name="exception">相关异常对象，若无则为 null</param>
-    /// <param name="level">日志等级</param>
-    /// <param name="actionLevel">该日志项对应的操作等级</param>
-    public LogItem(
-        LogModule module,
-        string message,
-        Exception? exception,
-        LogLevel level,
-        ActionLevel? actionLevel = null) : this(module.ToString(), message, exception, level, actionLevel)
-    {}
 
+    public LogItem(
+        string message,
+        Exception? exception,
+        LogLevel level,
+        ActionLevel? actionLevel = null) : this(new LogModule(), message, exception, level, actionLevel)
+    {}
+        
+    
     public override string ToString()
     {
         return Exception == null 
-            ? $"[{Time:HH:mm:ss.fff}] {Message}"
-            : $"[{Time:HH:mm:ss.fff}] ({Message}) {Exception.GetType().FullName}: {Exception.Message}";
+            ? $"[{Time:HH:mm:ss.fff}] {LogModule}{Message}"
+            : $"[{Time:HH:mm:ss.fff}] ({LogModule}{Message}) {Exception.GetType().FullName}: {Exception.Message}";
     }
 
     public string ComposeMessage()
     {
-        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}] {Others} {Message}";
+        var result = $"[{Time:HH:mm:ss.fff}] [{Level.RealLevel().PrintName()}] [{ThreadName}] {LogModule}{Message}";
         if (Exception != null) result += $"\n{Exception}";
         return result;
     }
 }
 
-public record LogModule(string Module)
+public class LogModule
 {
-    public override string ToString() => $"[{Module}]";
+    public LogModule()
+    {
+        _Module = null;
+    }
+    
+    /// <summary>
+    /// 使用自定义模块名创建日志模块
+    /// </summary>
+    /// <param name="module">源模块名</param>
+    public LogModule(string module)
+    {
+        _Module = module;
+    }
+    /// <summary>
+    /// 使用生命周期服务信息创建日志模块
+    /// </summary>
+    /// <param name="lifecycleService">源生命周期服务</param>
+    public LogModule(ILifecycleService lifecycleService)
+    {
+        _Module = $"{lifecycleService.Name}|{lifecycleService.Identifier}";
+    }
+
+    private string? _Module { get; }
+
+    public override string ToString() => _Module == null 
+            ? " " 
+            : $"[{_Module}] ";
 }

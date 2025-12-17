@@ -40,7 +40,7 @@ public static class LogWrapper
     {
         if (module == null)
         {
-            LogController.PushLog(new LogItem("", msg, ex, level));
+            LogController.PushLog(new LogItem(msg, ex, level));
             return;
         }
         LogController.PushLog(new LogItem(new LogModule(module), msg, ex, level));

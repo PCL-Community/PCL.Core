@@ -181,7 +181,7 @@ public class RoutedWebServer : WebServer
     /// 创建基于路径路由的 HTTP 服务端实例。
     /// </summary>
     /// <param name="listen"></param>
-    public RoutedWebServer(string listen = "127.0.0.1:8080") : base(listen)
+    public RoutedWebServer(string[] listen) : base(listen)
     {
         base.SetRequestCallback(_RoutedCallback);
     }

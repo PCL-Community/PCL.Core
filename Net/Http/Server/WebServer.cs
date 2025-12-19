@@ -40,9 +40,12 @@ public class WebServer : IDisposable
     /// </summary>
     /// <param name="listen">监听地址</param>
     /// <param name="requestCallback">客户端请求回调</param>
-    public WebServer(string listen = "127.0.0.1:8080", WebClientRequest? requestCallback = null)
+    public WebServer(string[] listen, WebClientRequest? requestCallback = null)
     {
-        _listener.Prefixes.Add($"http://{listen}/");
+        foreach (var listenAddr in listen)
+        {
+            _listener.Prefixes.Add($"http://{listenAddr}/");
+        }
         _requestCallback = requestCallback;
         _listener.Start();
     }

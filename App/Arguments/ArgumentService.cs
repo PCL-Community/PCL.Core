@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PCL.Core.App;
+namespace PCL.Core.App.Arguments;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
-public partial class ArgumentsService : GeneralService
+public partial class ArgumentService : GeneralService
 {
     #region Lifecycle
     
     private static LifecycleContext? _context;
 
-    private static LifecycleContext Context => _context!;
+    public static LifecycleContext Context => _context!;
     
-    public ArgumentsService() : base("args", "参数处理", false) { _context = ServiceContext; }
+    public ArgumentService() : base("args", "参数处理", false) { _context = ServiceContext; }
 
     public override void Start()
     {

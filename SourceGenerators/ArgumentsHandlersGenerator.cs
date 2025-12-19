@@ -78,8 +78,8 @@ public class ArgumentsHandlersGenerator : IIncrementalGenerator
         builder.AppendLine("using System;");
         builder.AppendLine("using System.Collections.Generic;");
         builder.AppendLine();
-        builder.AppendLine("namespace PCL.Core.App;");
-        builder.AppendLine("public sealed partial class ArgumentsService");
+        builder.AppendLine("namespace PCL.Core.App.Arguments;");
+        builder.AppendLine("public sealed partial class ArgumentService");
         builder.AppendLine("{");
         builder.AppendLine("    private void _Initialize()");
         builder.AppendLine("    {");

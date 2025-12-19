@@ -195,23 +195,6 @@ public static class ProcessInterop {
             writeKey?.Dispose();
         }
     }
-    
-    [ArgumentHandler("GPU")]
-    public static HandleResult HandleArgument(string[] args)
-    {
-        if (args is not ["--gpu", var mode]) return new HandleResult(HandleResultType.NotHandled);
-        try
-        {
-            SetGpuPreference(mode.Trim('\"'));
-            LogWrapper.Info("Argument", $"已将显卡设置调整为 {mode}");
-            return new HandleResult(HandleResultType.HandledAndExit);
-        }
-        catch (Exception e)
-        {
-            LogWrapper.Error(e, "Argument", "设置显卡偏好时发生错误");
-            return new HandleResult(HandleResultType.HandledAndExit, (int)ProcessExitCode.Failed);
-        }
-    }
 }
 
 public enum ProcessExitCode {

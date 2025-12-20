@@ -295,6 +295,7 @@ public static partial class Config
             [ConfigItem<int>("SystemDebugAnim", 9)] public partial int AnimationSpeed { get; set; }
             [ConfigItem<bool>("SystemDebugDelay", false)] public partial bool AddRandomDelay { get; set; }
             [ConfigItem<bool>("SystemDebugSkipCopy", false)] public partial bool DontCopy { get; set; }
+            [ConfigItem<bool>("SystemDebugAllowRestrictedFeature", false)] public partial bool AllowRestrictedFeature { get; set; }
         }
     }
 

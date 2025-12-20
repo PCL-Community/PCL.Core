@@ -52,7 +52,7 @@ public class LogService : ILifecycleLogService
         // hint
         if (level is ActionLevel.Hint or ActionLevel.HintErr)
         {
-            HintWrapper.Show(plain, (level == ActionLevel.Hint) ? HintTheme.Normal : HintTheme.Error);
+            HintWrapper.Show(plain, (level == ActionLevel.Hint) ? HintTheme.Info : HintTheme.Error);
         }
 
         // message box

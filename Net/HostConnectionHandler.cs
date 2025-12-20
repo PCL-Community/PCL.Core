@@ -13,6 +13,7 @@ using Ae.Dns.Protocol.Enums;
 using Ae.Dns.Protocol.Records;
 using PCL.Core.Logging;
 using System.Runtime.Caching;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net;
 
@@ -25,18 +26,22 @@ public class HostConnectionHandler
 
     private HostConnectionHandler()
     {
+        var proxyHandler = new HttpClientHandler()
+        {
+            Proxy = HttpProxyManager.Instance
+        };
         // 使用Ae.Dns创建DoH客户端，支持多个DoH服务器
         IDnsClient[] clients =
         [
-            new DnsHttpClient(new HttpClient()
+            new DnsHttpClient(new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://doh.pub/")
             }),
-            new DnsHttpClient(new HttpClient()
+            new DnsHttpClient(new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://doh.pysio.online/")
             }),
-            new DnsHttpClient(new HttpClient()
+            new DnsHttpClient(new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://cloudflare-dns.com/")
             })
@@ -52,9 +57,9 @@ public class HostConnectionHandler
         var host = context.DnsEndPoint.Host;
         var port = context.DnsEndPoint.Port;
 
-        if (IPEndPoint.TryParse(host, out _)) // 是否为纯 IP 地址
+        if (IPEndPoint.TryParse(host, out var remoteAddr)) // 是否为纯 IP 地址
         {
-            return await _ConnectToAddressAsync(host, port, cts);
+            return await _ConnectToAddressAsync(remoteAddr.Address, port, cts);
         }
 
         IPAddress[] addresses;
@@ -86,11 +91,11 @@ public class HostConnectionHandler
             throw new HttpRequestException($"No IP address for {host}");
 
         // 并行连接所有地址，返回第一个成功的连接
-        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip.ToString(), port, cts)).ToArray();
+        var connectionTasks = addresses.Select(ip => _ConnectToAddressAsync(ip, port, cts)).ToArray();
 
         try
         {
-            var completedTask = await Task.WhenAny(connectionTasks).ConfigureAwait(false);
+            var completedTask = await connectionTasks.WhenAnySuccess().ConfigureAwait(false);
             var stream = await completedTask.ConfigureAwait(false);
 
             // 取消其他连接任务
@@ -101,7 +106,7 @@ public class HostConnectionHandler
                     {
                         t.Result.Dispose();
                     }
-                    else if (t.Exception != null)
+                    else if (t is { IsFaulted: true, Exception: not null })
                     {
                         LogWrapper.Debug(ModuleName, $"Connection to alternative address failed: {t.Exception.GetBaseException().Message}");
                     }
@@ -118,7 +123,7 @@ public class HostConnectionHandler
         }
     }
 
-    private static async Task<NetworkStream> _ConnectToAddressAsync(string ip, int port, CancellationToken cts)
+    private static async Task<NetworkStream> _ConnectToAddressAsync(IPAddress ip, int port, CancellationToken cts)
     {
         var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
         socket.NoDelay = true;

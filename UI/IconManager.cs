@@ -10,12 +10,12 @@ namespace PCL.Core.UI;
 public class IconManager : INotifyPropertyChanged {
     private readonly Dictionary<string, IconModel> _iconIndex = new();
 
-    private IconModel? _selectedIcon;
-    public IconModel? SelectedIcon {
-        get => _selectedIcon;
+    public IconModel? SelectedIcon
+    {
+        get;
         set
         {
-            _selectedIcon = value;
+            field = value;
             OnPropertyChanged(nameof(SelectedIcon));
         }
     }

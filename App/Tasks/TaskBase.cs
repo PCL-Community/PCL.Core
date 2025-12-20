@@ -48,32 +48,31 @@ public class TaskBase<TResult> : IObservableTaskStateSource, IObservableProgress
     public event StateChangedHandler<double>? ProgressChanged;
     public event StateChangedHandler<TaskState>? StateChanged;
 
-    private double _progress = 0;
     /// <summary>
     /// 任务处理进度
     /// </summary>
-    public double Progress {
-        get => _progress; 
-        set 
+    public double Progress
+    {
+        get;
+        set
         {
-            ProgressChanged?.Invoke(this, _progress, value);
-            _progress = value;
-        } 
-    }
+            ProgressChanged?.Invoke(this, field, value);
+            field = value;
+        }
+    } = 0;
 
     public string Name { get; }
     public string? Description { get; }
 
-    private TaskState _state = TaskState.Waiting;
     public TaskState State
     {
-        get => _state;
+        get;
         set
         {
-            StateChanged?.Invoke(this, _state, value);
-            _state = value;
+            StateChanged?.Invoke(this, field, value);
+            field = value;
         }
-    }
+    } = TaskState.Waiting;
 
     private TResult? _result;
     public TResult? Result

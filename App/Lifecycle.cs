@@ -17,7 +17,7 @@ namespace PCL.Core.App;
 /// 启动器生命周期管理
 /// </summary>
 [LifecycleService(LifecycleState.BeforeLoading, Priority = int.MaxValue)]
-public sealed class Lifecycle : ILifecycleService
+public sealed partial class Lifecycle : ILifecycleService
 {
     #region ILifecycleService 实现
 
@@ -352,7 +352,31 @@ public sealed class Lifecycle : ILifecycleService
 
     #region 状态控制
 
-    private static LifecycleState _currentState = LifecycleState.BeforeLoading;
+    /// <summary>
+    /// 当前的生命周期状态，会随生命周期变化随时更新。
+    /// </summary>
+    public static LifecycleState CurrentState
+    {
+        get;
+        private set
+        {
+            Context.Debug($"状态改变: {value}");
+            field = value;
+            try
+            {
+                StateChanged?.Invoke(value);
+            }
+            catch (Exception ex)
+            {
+                Context.Warn("状态更改事件出错", ex);
+            }
+        }
+    } = LifecycleState.BeforeLoading;
+
+    /// <summary>
+    /// WPF 应用程序容器，在 <see cref="LifecycleState.BeforeLoading"/> 阶段为空值
+    /// </summary>
+    public static Application CurrentApplication { get; set; } = null!;
 
     private static void _NextState(LifecycleState? enforce = null)
     {
@@ -528,30 +552,6 @@ public sealed class Lifecycle : ILifecycleService
     #endregion
 
     #region 公共 API
-
-    /// <summary>
-    /// 当前的生命周期状态，会随生命周期变化随时更新。
-    /// </summary>
-    public static LifecycleState CurrentState
-    {
-        get => _currentState;
-        private set
-        {
-            Context.Debug($"状态改变: {value}");
-            _currentState = value;
-            try
-            {
-                StateChanged?.Invoke(value);
-            }
-            catch (Exception ex)
-            {
-                Context.Warn($"状态更改事件出错", ex);
-            }
-        }
-    }
-
-    private static Application? _currentApplication;
-    public static Application CurrentApplication { get => _currentApplication!; set => _currentApplication = value; }
 
     /// <summary>
     /// 日志服务启动状态

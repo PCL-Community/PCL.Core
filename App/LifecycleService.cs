@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using PCL.Core.Logging;
 
 namespace PCL.Core.App;
@@ -30,12 +31,12 @@ public interface ILifecycleService
     /// <summary>
     /// 启动该服务。应由生命周期管理自动调用，若无特殊情况，请勿手动调用。
     /// </summary>
-    public void Start();
+    public Task StartAsync();
 
     /// <summary>
     /// 停止该服务。应由生命周期管理自动调用，若无特殊情况，请勿手动调用。
     /// </summary>
-    public void Stop();
+    public Task StopAsync();
 }
 
 /// <summary>
@@ -151,7 +152,6 @@ public record LifecycleServiceInfo
     /// <param name="startState">启动的生命周期状态</param>
     public LifecycleServiceInfo(ILifecycleService service, LifecycleState startState)
     {
-        service.Start();
         _service = service;
         StartState = startState;
         StartTime = DateTime.Now;

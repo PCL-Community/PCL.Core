@@ -21,7 +21,6 @@ public class HttpProxyManager : IWebProxy, IDisposable
     private ProxyMode _mode = ProxyMode.SystemProxy;
     private readonly WebProxy _customWebProxy = new() {BypassProxyOnLocal = true};
     private readonly WebProxy _systemWebProxy = new() {BypassProxyOnLocal = true};
-    private bool _bypassOnLocal = true;
     private const string ProxyRegPathFull = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
     private const string ProxyRegPath = @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
     private readonly RegistryChangeMonitor _proxyMonitor = new(ProxyRegPath);
@@ -80,16 +79,16 @@ public class HttpProxyManager : IWebProxy, IDisposable
 
     public bool BypassOnLocal
     {
-        get { lock (_lock) return _bypassOnLocal; }
+        get { lock (_lock) return field; }
         set
         {
             lock (_lock)
             {
-                _bypassOnLocal = value;
+                field = value;
                 _systemWebProxy.BypassProxyOnLocal = value;
             }
         }
-    }
+    } = true;
 
     public Uri? GetProxy(Uri destination)
     {

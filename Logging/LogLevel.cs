@@ -32,19 +32,21 @@ public static class LogLevelExtensions
         [LogLevel.Fatal] = "FTL!"
     };
 
-    public static string PrintName(this LogLevel level) => _LevelNameMap[level];
-
-    public static ActionLevel DefaultActionLevel(this LogLevel level) => (ActionLevel)((int)level % 100);
-
-    public static LogLevel RealLevel(this LogLevel level) => (int)level switch
+    extension(LogLevel level)
     {
-        < 100 => LogLevel.Trace,
-        < 200 => LogLevel.Debug,
-        < 300 => LogLevel.Info,
-        < 400 => LogLevel.Warning,
-        < 500 => LogLevel.Error,
-        _ => LogLevel.Fatal,
-    };
+        public string PrintName() => _LevelNameMap[level];
+        public ActionLevel DefaultActionLevel() => (ActionLevel)((int)level % 100);
 
-    public static int Header(this LogLevel level) => (int)level / 100 * 100;
+        public LogLevel RealLevel() => (int)level switch
+        {
+            < 100 => LogLevel.Trace,
+            < 200 => LogLevel.Debug,
+            < 300 => LogLevel.Info,
+            < 400 => LogLevel.Warning,
+            < 500 => LogLevel.Error,
+            _ => LogLevel.Fatal,
+        };
+
+        public int Header() => (int)level / 100 * 100;
+    }
 }

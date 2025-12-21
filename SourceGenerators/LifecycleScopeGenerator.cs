@@ -55,9 +55,8 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
             ScopeAttributeType,
             static (node, _) =>
             {
-                // 过滤 partial class
                 if (node is not ClassDeclarationSyntax syntax) return false;
-                return syntax.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword));
+                return syntax.Modifiers.Any(m => m.ValueText == "partial");
             },
             static (INamedTypeSymbol TypeSymbol, ScopeModel Model)? (ctx, _) =>
             {
@@ -81,9 +80,9 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
             }
         ).Where(static i => i != null).Select(static (i, _) => i.GetValueOrDefault());
         var collected = candidates.Collect();
-        context.RegisterSourceOutput(collected, static (spc, types) =>
+        context.RegisterSourceOutput(collected, static (spc, models) =>
         {
-            foreach (var (symbol, model) in types)
+            foreach (var (symbol, model) in models)
             {
                 model.Methods.Clear();
                 foreach (var member in symbol.GetMembers())
@@ -91,7 +90,7 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
                     var attrTypeName = string.Empty;
                     var attr = member.GetAttributes().FirstOrDefault(data =>
                     {
-                        attrTypeName = data.AttributeClass?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                        attrTypeName = data.AttributeClass?.ToDisplayString();
                         return attrTypeName != null && _MethodAttributeTypes.Contains(attrTypeName);
                     });
                     if (attr == null) continue;
@@ -107,7 +106,7 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
                     {
                         var args = attr.ConstructorArguments;
                         var argumentName = args[0].Value!.ToString();
-                        var argumentTypeName = attr.AttributeClass!.TypeArguments.First().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                        var argumentTypeName = attr.AttributeClass!.TypeArguments.First().ToDisplayString();
                         var argumentDefaultValue = args.Length > 1 ? args[1].ToCSharpString() : $"new {argumentTypeName}()";
                         return new ArgumentHandlerMethodModel
                         {
@@ -131,6 +130,7 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
         sb.AppendLine("// 此文件由 Source Generator 自动生成，请勿手动修改");
         sb.AppendLine();
         sb.AppendLine("using PCL.Core.App;");
+        sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine();
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
@@ -139,13 +139,13 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
 
         sb.AppendLine($"partial class {model.TypeName} : ILifecycleService");
         sb.AppendLine("{");
+        sb.AppendLine("    private static LifecycleContext? _context;");
+        sb.AppendLine($"    private {model.TypeName}() {{ _context = Lifecycle.GetContext(this); }}");
+        sb.AppendLine();
         sb.AppendLine($"    public string Identifier => \"{model.Identifier}\";");
         sb.AppendLine($"    public string Name => \"{model.Name}\";");
         sb.AppendLine($"    public bool SupportAsyncStart => {(model.AsyncStart ? "true" : "false")};");
         sb.AppendLine("    private static LifecycleContext Context => _context!;");
-        sb.AppendLine();
-        sb.AppendLine("    private static LifecycleContext? _context;");
-        sb.AppendLine($"    private {model.TypeName}() {{ _context = Lifecycle.GetContext(this); }}");
 
         sb.AppendLine("}");
 

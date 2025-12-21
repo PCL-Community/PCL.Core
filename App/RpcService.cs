@@ -160,25 +160,20 @@ public delegate RpcResponse RpcFunction(string? argument, string? content, bool 
 /// RPC 服务项
 /// </summary>
 [LifecycleService(LifecycleState.Loaded)]
-[LifecycleScope("rpc", "远程执行服务", false)]
-public sealed class RpcService : GeneralService
+[LifecycleScope("rpc", "远程执行服务")]
+public sealed partial class RpcService
 {
-    
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-    private RpcService() : base("rpc", "远程执行服务") { _context = Lifecycle.GetContext(this); }
-
     private NamedPipeServerStream? _pipe;
 
     [LifecycleStart]
-    public override void Start()
+    public void Start()
     {
         _pipe = PipeComm.StartPipeServer("Echo", _EchoPipeName, _EchoPipeCallback);
     }
 
     [LifecycleStop]
     [LifecycleArgumentHandler<string>("", "")]
-    public override void Stop()
+    public void Stop()
     {
         _pipe?.Dispose();
     }

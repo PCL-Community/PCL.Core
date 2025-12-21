@@ -13,7 +13,7 @@ public class LogService : ILifecycleLogService
 {
     public string Identifier => "log";
     public string Name => "日志服务";
-    public bool SupportAsyncStart => false;
+    public bool SupportAsync => false;
 
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;

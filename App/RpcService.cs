@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using PCL.Core.IO;
 
@@ -166,16 +167,15 @@ public sealed partial class RpcService
     private NamedPipeServerStream? _pipe;
 
     [LifecycleStart]
-    public void Start()
+    private void _Start()
     {
         _pipe = PipeComm.StartPipeServer("Echo", _EchoPipeName, _EchoPipeCallback);
     }
 
     [LifecycleStop]
-    [LifecycleArgumentHandler<string>("", "")]
-    public void Stop()
+    private async Task _Stop()
     {
-        _pipe?.Dispose();
+        if (_pipe != null) await _pipe.DisposeAsync();
     }
 
     public const string PipePrefix = "PCLCE_RPC";

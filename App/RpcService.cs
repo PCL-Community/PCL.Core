@@ -126,13 +126,13 @@ public class RpcProperty
     public RpcProperty(string name, Func<string?> onGetValue, Action<string?>? onSetValue = null, bool settable = false)
     {
         Name = name;
-        GetValue += (out string? outValue) =>
+        GetValue += (out outValue) =>
         {
             outValue = onGetValue();
         };
         if (onSetValue != null)
         {
-            SetValue += (string? value, ref bool _) =>
+            SetValue += (value, ref _) =>
             {
                 onSetValue(value);
             };
@@ -140,7 +140,7 @@ public class RpcProperty
         else if (!settable)
         {
             Settable = false;
-            SetValue += (string? _, ref bool success) =>
+            SetValue += (_, ref success) =>
             {
                 success = false;
             };
@@ -160,6 +160,7 @@ public delegate RpcResponse RpcFunction(string? argument, string? content, bool 
 /// RPC 服务项
 /// </summary>
 [LifecycleService(LifecycleState.Loaded)]
+[LifecycleScope("rpc", "远程执行服务", false)]
 public sealed class RpcService : GeneralService
 {
     
@@ -168,12 +169,15 @@ public sealed class RpcService : GeneralService
     private RpcService() : base("rpc", "远程执行服务") { _context = Lifecycle.GetContext(this); }
 
     private NamedPipeServerStream? _pipe;
-    
+
+    [LifecycleStart]
     public override void Start()
     {
         _pipe = PipeComm.StartPipeServer("Echo", _EchoPipeName, _EchoPipeCallback);
     }
 
+    [LifecycleStop]
+    [LifecycleArgumentHandler<string>("", "")]
     public override void Stop()
     {
         _pipe?.Dispose();

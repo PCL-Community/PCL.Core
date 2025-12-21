@@ -27,7 +27,7 @@ public sealed class Lifecycle : ILifecycleService
 
     private static LifecycleContext? _context;
     private Lifecycle() { _context = GetContext(this); }
-    private static LifecycleContext Context => _context ?? System;
+    private static LifecycleContext Context => _context ?? SystemContext;
 
     public Task StartAsync() => Task.CompletedTask;
 
@@ -121,7 +121,7 @@ public sealed class Lifecycle : ILifecycleService
             _RunningServiceInfoMap[service.Identifier] = _SystemServiceInfo;
         }
         // 运行服务项并添加到正在运行列表
-        return AsyncCall();
+        return service.SupportAsyncStart ? Task.Run(AsyncCall) : AsyncCall();
         async Task AsyncCall()
         {
             try
@@ -165,15 +165,15 @@ public sealed class Lifecycle : ILifecycleService
         var fullname = type.FullName;
         try
         {
-            System.Trace($"正在实例化 {fullname}");
+            SystemContext.Trace($"正在实例化 {fullname}");
             var instance = (ILifecycleService)Activator.CreateInstance(type, true)!;
             var supportAsyncText = instance.SupportAsyncStart ? "异步" : "同步";
-            System.Trace($"实例化完成: {instance.Name} ({instance.Identifier}), 启动方式: {supportAsyncText}");
+            SystemContext.Trace($"实例化完成: {instance.Name} ({instance.Identifier}), 启动方式: {supportAsyncText}");
             return instance;
         }
         catch (Exception ex)
         {
-            System.Fatal($"注册服务项实例化失败: {fullname}", ex);
+            SystemContext.Fatal($"注册服务项实例化失败: {fullname}", ex);
             throw;
         }
     }
@@ -656,7 +656,7 @@ public sealed class Lifecycle : ILifecycleService
         Context.Info(force ? "开始强制关闭程序" : "正在关闭程序");
         IsForceShutdown = force;
         if (force) _Exit(statusCode);
-        else new Thread(() => _Exit(statusCode)) { Name = "Shutdown" }.Start();
+        else new Thread(() => _Exit(statusCode)) { Name = "Lifecycle/Shutdown" }.Start();
     }
 
     /// <summary>
@@ -730,7 +730,7 @@ public sealed class Lifecycle : ILifecycleService
     /// <summary>
     /// 系统默认上下文，无特殊需求请勿使用。
     /// </summary>
-    public static readonly LifecycleContext System = GetContext(_SystemService);
+    public static readonly LifecycleContext SystemContext = GetContext(_SystemService);
 
     #endregion
 }

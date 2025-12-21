@@ -63,7 +63,7 @@ public record LifecycleLogItem(
     /// <summary>
     /// 创建该日志项的线程名
     /// </summary>
-    public string ThreadName { get; } = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
+    public string ThreadName { get; } = Thread.CurrentThread.Name ?? $"#{Environment.CurrentManagedThreadId}";
 
     public override string ToString()
     {
@@ -116,7 +116,6 @@ public sealed class LifecycleServiceAttribute(LifecycleState startState) : Attri
 /// <summary>
 /// 生命周期服务项的信息记录
 /// </summary>
-[Serializable]
 public record LifecycleServiceInfo
 {
     private readonly ILifecycleService _service;
@@ -157,3 +156,39 @@ public record LifecycleServiceInfo
         StartTime = DateTime.Now;
     }
 }
+
+#region Lifecycle Scope Attributes
+#pragma warning disable CS9113 // Parameter is unread.
+
+/// <summary>
+/// 标记一个 partial 类，自动实现 <see cref="ILifecycleService"/> 接口，并基于其他有标记的方法生成
+/// <see cref="ILifecycleService.StartAsync"/> 和 <see cref="ILifecycleService.StopAsync"/> 方法
+/// </summary>
+/// <param name="identifier">See <see cref="ILifecycleService.Identifier"/></param>
+/// <param name="name">See <see cref="ILifecycleService.Name"/></param>
+/// <param name="asyncStart">See <see cref="ILifecycleService.SupportAsyncStart"/></param>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class LifecycleScopeAttribute(string identifier, string name, bool asyncStart = true) : Attribute;
+
+/// <summary>
+/// 标记一个 Start 方法，可以标记多个
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class LifecycleStartAttribute : Attribute;
+
+/// <summary>
+/// 标记一个 Stop 方法，可以标记多个
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class LifecycleStopAttribute : Attribute;
+
+/// <summary>
+/// 标记一个参数处理器，可以标记多个
+/// </summary>
+/// <param name="name">参数名</param>
+/// <param name="defaultValue">默认值</param>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class LifecycleArgumentHandlerAttribute<TArgument>(string name, TArgument? defaultValue = default) : Attribute;
+
+#pragma warning restore CS9113 // Parameter is unread.
+#endregion

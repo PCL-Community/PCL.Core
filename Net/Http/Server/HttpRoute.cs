@@ -1,6 +1,10 @@
-﻿namespace PCL.Core.Net.Http.Server;
+﻿using System;
+using System.Net.Http;
 
-public class HttpRoute
+namespace PCL.Core.Net.Http.Server;
+
+public class HttpRoute(HttpMethod method, string path) : Attribute
 {
-    
+    public HttpMethod Method { get; } = method;
+    public string Path { get; } = path;
 }

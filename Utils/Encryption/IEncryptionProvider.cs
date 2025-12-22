@@ -1,9 +1,11 @@
-﻿using System.Security;
+﻿using System;
+using System.Security;
+using System.Windows.Documents;
 
 namespace PCL.Core.Utils.Encryption;
 
 public interface IEncryptionProvider
 {
-    public byte[] Encrypt(byte[] data, SecureString key);
-    public byte[] Decrypt(byte[] data, SecureString key);
+    public byte[] Encrypt(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
+    public byte[] Decrypt(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
 }

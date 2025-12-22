@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -21,6 +22,56 @@ public static class EncryptHelper
         var decryptedData = ChaCha20.Instance.Decrypt(rawData, Identify.EncryptionKey.Value);
         return Encoding.UTF8.GetString(decryptedData);
     }
+
+    #region "加密存储信息数据"
+
+
+    public struct EncryptionData
+    {
+        public uint Verison;
+        public byte[] Data;
+
+        private const uint MagicNumber = 0x454E4321;
+
+        public static EncryptionData FromBase64(string base64)
+        {
+            return FromBytes(Convert.FromBase64String(base64));
+        }
+
+        public static EncryptionData FromBytes(ReadOnlySpan<byte> bytes)
+        {
+            // 4 bytes MagicNumber + 4 bytes version + 4 bytes rData length + n bytes rData
+            if (bytes.Length < 12)
+                throw new ArgumentException("No enough data for EncryptionData", nameof(bytes));
+
+            if (BinaryPrimitives.ReadUInt32BigEndian(bytes[..4]) != MagicNumber)
+                throw new ArgumentException("Unknown data for EncryptionData", nameof(bytes));
+
+            var dataLength = BinaryPrimitives.ReadInt32BigEndian(bytes[8..12]);
+            var rData = bytes[12..(12 + dataLength)];
+
+            return new EncryptionData
+            {
+                Verison = BinaryPrimitives.ReadUInt32BigEndian(bytes[4..8]),
+                Data = rData.ToArray()
+            };
+        }
+
+        public static byte[] ToBytes(EncryptionData encryptionData)
+        {
+            var length = 12 + encryptionData.Data.Length;
+            var bytes = new byte[length];
+            var bytesSpan = bytes.AsSpan();
+            BinaryPrimitives.WriteUInt32BigEndian(bytesSpan[..4], MagicNumber);
+            BinaryPrimitives.WriteUInt32BigEndian(bytesSpan[4..8], encryptionData.Verison);
+            BinaryPrimitives.WriteInt32BigEndian(bytesSpan[8..12], encryptionData.Data.Length);
+            encryptionData.Data.CopyTo(bytesSpan[12..]);
+
+            return bytes;
+        }
+    }
+
+    #endregion
 
     #region "旧版本兼容"
 

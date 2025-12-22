@@ -15,7 +15,7 @@ public class ChaCha20 : IEncryptionProvider
     private const int KeySize = 32;      // 256-bit key
     private const int SaltSize = 16;     // 128-bit salt for HKDF
 
-    public byte[] Encrypt(byte[] data, SecureString key)
+    public byte[] Encrypt(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
     {
         // Generate random salt, nonce and the tag
         var salt = new byte[SaltSize];
@@ -26,7 +26,9 @@ public class ChaCha20 : IEncryptionProvider
         RandomNumberGenerator.Fill(tag);
 
         // Derive key using the salt
-        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToBytes(), salt));
+        Span<byte> outputKey = stackalloc byte[KeySize];
+        _DeriveKey(key, salt, outputKey);
+        using var chacha = new ChaCha20Poly1305(outputKey);
 
         // Prepare output arrays
         var ciphertext = new byte[data.Length];
@@ -46,21 +48,22 @@ public class ChaCha20 : IEncryptionProvider
         return result;
     }
 
-    public byte[] Decrypt(byte[] data, SecureString key)
+    public byte[] Decrypt(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
     {
         // Verify minimum data length
         if (data.Length < SaltSize + NonceSize + TagSize)
             throw new ArgumentException("Invalid encrypted data length");
 
-        var dataSpan = data.AsSpan();
         // Encryption data: salt + nonce + tag + ciphertext
-        var salt = dataSpan[..SaltSize];
-        var nonce = dataSpan.Slice(SaltSize, NonceSize);
-        var tag = dataSpan.Slice(SaltSize + NonceSize, TagSize);
-        var ciphertext = dataSpan[(SaltSize + NonceSize + TagSize)..];
+        var salt = data[..SaltSize];
+        var nonce = data.Slice(SaltSize, NonceSize);
+        var tag = data.Slice(SaltSize + NonceSize, TagSize);
+        var ciphertext = data[(SaltSize + NonceSize + TagSize)..];
 
         // Derive key using the extracted salt
-        using var chacha = new ChaCha20Poly1305(_DeriveKey(key.ToBytes(), salt.ToArray()));
+        Span<byte> outputKey = stackalloc byte[KeySize];
+        _DeriveKey(key, salt, outputKey);
+        using var chacha = new ChaCha20Poly1305(outputKey);
 
         // Perform decryption
         var plaintext = new byte[ciphertext.Length];
@@ -70,13 +73,13 @@ public class ChaCha20 : IEncryptionProvider
     }
 
     private static readonly byte[] _Info = "PCL.Core.Utils.Encryption.ChaCha20"u8.ToArray();
-    private static byte[] _DeriveKey(byte[] ikm, byte[] salt)
+    private static void _DeriveKey(ReadOnlySpan<byte> ikm, ReadOnlySpan<byte> salt, Span<byte> outputKey)
     {
-        return HKDF.DeriveKey(
+        HKDF.DeriveKey(
             HashAlgorithmName.SHA256,
             ikm,
-            KeySize,
+            outputKey,
             salt,
-            _Info);
+            _Info.AsSpan());
     }
 }

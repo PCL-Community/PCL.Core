@@ -54,7 +54,7 @@ public class TelemetryService : GeneralService
         var telemetry = new TelemetryDeviceEnvironment
         {
             Tag = "Telemetry",
-            Id = Utils.Secret.Identify.LauncherId.Value,
+            Id = Utils.Secret.Identify.LauncherId,
             Os = Environment.OSVersion.Version.Build,
             Is64Bit = Environment.Is64BitOperatingSystem,
             IsArm64 = RuntimeInformation.OSArchitecture.Equals(Architecture.Arm64),

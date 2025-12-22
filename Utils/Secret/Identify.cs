@@ -10,11 +10,14 @@ namespace PCL.Core.Utils.Secret;
 
 public class Identify
 {
-    public static readonly Lazy<SecureString> RawId = new(_getRawId);
-    public static readonly Lazy<SecureString> EncryptionKey = new(_getEncryptionKey);
-    public static readonly Lazy<string> LauncherId = new(_getLauncherId);
+    private static readonly Lazy<byte[]> _RawId = new(_getRawId);
+    public static byte[] RawId { get => _RawId.Value; }
+    private static readonly Lazy<byte[]> _EncryptionKey = new(_getEncryptionKey);
+    public static byte[] EncryptionKey { get => _EncryptionKey.Value; }
+    private static readonly Lazy<string> _LauncherId = new(_getLauncherId);
+    public static string LauncherId { get => _LauncherId.Value; }
 
-    private static SecureString _getRawId()
+    private static byte[] _getRawId()
     {
         var code = new StringBuilder();
         try
@@ -28,7 +31,7 @@ public class Identify
             LogWrapper.Error(ex, "Identify", "获取设备基础信息失败");
         }
 
-        return SHA512Provider.Instance.ComputeHash(code.ToString()).ToSecureString();
+        return Encoding.UTF8.GetBytes(SHA512Provider.Instance.ComputeHash(code.ToString()));
     }
 
     private static string _GetWmiProperty(string className, string propertyName)
@@ -48,10 +51,10 @@ public class Identify
         return string.Empty;
     }
 
-    private static SecureString _getEncryptionKey()
+    private static byte[] _getEncryptionKey()
     {
         var prefix = "PCL-CE|"u8.ToArray();
-        var ctx = RawId.Value.ToBytes();
+        var ctx = RawId;
         var suffix = "|EncryptionKey"u8.ToArray();
 
         var buffer = new byte[prefix.Length + ctx.Length + suffix.Length];
@@ -61,10 +64,10 @@ public class Identify
         suffix.CopyTo(bufferSpan.Slice(prefix.Length + ctx.Length, suffix.Length));
 
         Array.Clear(ctx);
-        var result = SHA256Provider.Instance.ComputeHash(bufferSpan).ToSecureString();
+        var result = SHA256Provider.Instance.ComputeHash(bufferSpan);
         bufferSpan.Clear();
 
-        return result;
+        return Encoding.UTF8.GetBytes(result);
     }
 
     private static string _getLauncherId()
@@ -72,7 +75,7 @@ public class Identify
         try
         {
             var prefix = "PCL-CE|"u8.ToArray();
-            var ctx = RawId.Value.ToBytes();
+            var ctx = RawId;
             var suffix = "|LauncherId"u8.ToArray();
 
             var buffer = new byte[prefix.Length + ctx.Length + suffix.Length];

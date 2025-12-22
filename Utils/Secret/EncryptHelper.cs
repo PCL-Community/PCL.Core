@@ -12,14 +12,14 @@ public static class EncryptHelper
     public static string SecretEncrypt(string data)
     {
         var rawData = Encoding.UTF8.GetBytes(data);
-        var encryptedData = ChaCha20.Instance.Encrypt(rawData, Identify.EncryptionKey.Value);
+        var encryptedData = ChaCha20.Instance.Encrypt(rawData, Identify.EncryptionKey);
         return Convert.ToBase64String(encryptedData);
     }
 
     public static string SecretDecrypt(string data)
     {
         var rawData = Convert.FromBase64String(data);
-        var decryptedData = ChaCha20.Instance.Decrypt(rawData, Identify.EncryptionKey.Value);
+        var decryptedData = ChaCha20.Instance.Decrypt(rawData, Identify.EncryptionKey);
         return Encoding.UTF8.GetString(decryptedData);
     }
 
@@ -48,6 +48,9 @@ public static class EncryptHelper
                 throw new ArgumentException("Unknown data for EncryptionData", nameof(bytes));
 
             var dataLength = BinaryPrimitives.ReadInt32BigEndian(bytes[8..12]);
+            if (dataLength > bytes.Length - 12)
+                throw new ArgumentException("No enough data for EncryptionData", nameof(bytes));
+
             var rData = bytes[12..(12 + dataLength)];
 
             return new EncryptionData

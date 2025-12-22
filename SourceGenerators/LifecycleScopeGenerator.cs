@@ -47,7 +47,7 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
         public string QualifiedTypeName => $"{Namespace}.{TypeName}";
         public string Identifier { get; set; } = null!;
         public string Name { get; set; } = null!;
-        public bool AsyncStart { get; set; }
+        public bool SupportAsync { get; set; }
         public List<ScopeMethodModel> Methods { get; } = [];
     }
 
@@ -84,7 +84,7 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
                     TypeName = typeName,
                     Identifier = scopeIdentifier,
                     Name = scopeName,
-                    AsyncStart = scopeAsyncStart
+                    SupportAsync = scopeAsyncStart
                 });
             }
         ).Where(static i => i != null).Select(static (i, _) => i.GetValueOrDefault());
@@ -164,9 +164,9 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
         sb.AppendLine("    private static LifecycleContext? _context;");
         sb.AppendLine($"    private {model.TypeName}() {{ _context = Lifecycle.GetContext(this); }}");
         sb.AppendLine();
-        sb.AppendLine($"    public string Identifier => \"{model.Identifier}\";");
-        sb.AppendLine($"    public string Name => \"{model.Name}\";");
-        sb.AppendLine($"    public bool SupportAsync => {(model.AsyncStart ? "true" : "false")};");
+        sb.AppendLine($"    public string Identifier => {model.Identifier.ToLiteral()};");
+        sb.AppendLine($"    public string Name => {model.Name.ToLiteral()};");
+        sb.AppendLine($"    public bool SupportAsync => {(model.SupportAsync ? "true" : "false")};");
         sb.AppendLine("    private static LifecycleContext Context => _context!;");
         sb.AppendLine();
 

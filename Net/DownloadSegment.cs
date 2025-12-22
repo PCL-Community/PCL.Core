@@ -132,9 +132,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
     /// 剩余未传输长度。
     /// </summary>
     public long RemainingLength => EndPosition - NextPosition + 1;
-    
-    private DownloadSegmentStatus _status = DownloadSegmentStatus.WaitingStart;
-    
+
     /// <summary>
     /// 任务当前状态改变时触发的事件。
     /// </summary>
@@ -145,13 +143,13 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
     /// </summary>
     public DownloadSegmentStatus Status
     {
-        get => _status;
+        get;
         private set
         {
-            _status = value;
-            StatusChanged?.Invoke(_status);
+            field = value;
+            StatusChanged?.Invoke(field);
         }
-    }
+    } = DownloadSegmentStatus.WaitingStart;
 
     /// <summary>
     /// 快速订阅改变至某个状态的事件。

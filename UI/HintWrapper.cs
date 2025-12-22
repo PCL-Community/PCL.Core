@@ -2,7 +2,7 @@
 
 public enum HintTheme
 {
-    Normal,
+    Info,
     Success,
     Error
 }
@@ -15,8 +15,8 @@ public delegate void HintHandler(
 public static class HintWrapper
 {
     public static event HintHandler? OnShow;
-
-    public static void Show(string message, HintTheme theme = HintTheme.Normal)
+    
+    public static void Show(string message, HintTheme theme = HintTheme.Info)
     {
         OnShow?.Invoke(message, theme);
     }

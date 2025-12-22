@@ -13,8 +13,6 @@ namespace PCL.Core.Minecraft.Instance.Impl;
 /// </summary>
 public class MergeInstance : IMcInstance, IJsonBasedInstance {
     // 使用缓存以避免复杂属性的重复计算
-    private PatchInstanceInfo? _instanceInfo;
-    private McInstanceCardType _cachedCardType;
 
     /// <summary>
     /// 初始化以 Merge JSON 为基础的 Minecraft 实例
@@ -51,16 +49,16 @@ public class MergeInstance : IMcInstance, IJsonBasedInstance {
     
     public McInstanceCardType CardType {
         get {
-            if (!InstanceBasicHandler.HasCorrectCardType(_cachedCardType)) {
-                _cachedCardType = InstanceBasicHandler.RefreshInstanceCardType(this);
+            if (!InstanceBasicHandler.HasCorrectCardType(field)) {
+                field = InstanceBasicHandler.RefreshInstanceCardType(this);
             }
-            return _cachedCardType;
+            return field;
         }
         set {
-            if (InstanceBasicHandler.HasCorrectCardType(_cachedCardType)) {
+            if (InstanceBasicHandler.HasCorrectCardType(field)) {
                 return;
             }
-            _cachedCardType = value;
+            field = value;
             Config.Instance.CardType[Path] = (int)value;
         }
     }
@@ -92,15 +90,20 @@ public class MergeInstance : IMcInstance, IJsonBasedInstance {
     }
     
     public JsonObject? VersionJsonInJar { get; private set; }
-    
-    public PatchInstanceInfo InstanceInfo {
-        get {
-            if (_instanceInfo == null) {
-                InstanceFactory.UpdateFromClonedInstance(this, InfoMergeHandler.RefreshMergeInstanceInfo(this, VersionJson!));
+
+    public PatchInstanceInfo InstanceInfo
+    {
+        get
+        {
+            if (field == null)
+            {
+                InstanceFactory.UpdateFromClonedInstance(this,
+                    InfoMergeHandler.RefreshMergeInstanceInfo(this, VersionJson!));
             }
-            return _instanceInfo!;
+
+            return field!;
         }
-        set => _instanceInfo = value;
+        set;
     }
 
     /// <summary>

@@ -42,8 +42,6 @@ public class TrafficEventArgs<TInput, TOutput> : TrafficEventArgs
     /// </summary>
     public object? Context { get; init; }
 
-    private readonly TInput? _input;
-
     /// <summary>
     /// 指示是否具有输入值，该值为 <c>false</c> 代表应忽略 <see cref="Input"/>，无论其为何值。
     /// </summary>
@@ -54,8 +52,12 @@ public class TrafficEventArgs<TInput, TOutput> : TrafficEventArgs
     /// </summary>
     public TInput? Input
     {
-        get => _input;
-        init { _input = value; HasInput = true; }
+        get;
+        init
+        {
+            field = value;
+            HasInput = true;
+        }
     }
 
     /// <summary>

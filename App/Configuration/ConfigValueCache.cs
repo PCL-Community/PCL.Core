@@ -70,6 +70,7 @@ public struct ConfigValueCache<TValue>()
     /// <param name="argument">上下文参数</param>
     public bool Invalidate(object? argument)
     {
+        if (argument != null) return _cacheWithContext.Remove(argument);
         if (!_hasCachedValue) return false;
         _cachedValue = default;
         _hasCachedValue = false;

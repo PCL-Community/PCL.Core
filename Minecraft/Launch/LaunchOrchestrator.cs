@@ -26,7 +26,7 @@ public class LaunchOrchestrator(IMcInstance instance) {
         // 2. 认证
         // var authResult = await AuthenticationManager.AuthenticateAsync();
         
-        // 3. Java检查
+        // 3. Java 检查
         _javaSelectService ??= new JavaSelectService(instance);
         var selectedJava = await _javaSelectService.SelectBestJavaAsync();
         

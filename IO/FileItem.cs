@@ -45,19 +45,14 @@ public record FileItem(
     IEnumerable<string>? Sources = null,
     bool ForceTransfer = false)
 {
-    
-    private string? _targetDirectory;
-
     /// <summary>
     /// The parent directory path of the file. Special types should keep <c>null</c> value.
     /// </summary>
     public string? TargetDirectory
     {
-        get => _targetDirectory;
-        set => _targetDirectory = (value == null) ? null : Path.Combine(FileService.DefaultDirectory, value);
+        get;
+        set => field = (value == null) ? null : Path.Combine(FileService.DefaultDirectory, value);
     }
-    
-    private string? _targetPath;
 
     /// <summary>
     /// The path to storage the file.<br/>
@@ -70,7 +65,7 @@ public record FileItem(
         get
         {
             if (TargetDirectory != null) return Path.Combine(TargetDirectory, Name);
-            if (_targetPath != null) return _targetPath;
+            if (field != null) return field;
             var directory = Type switch
             {
                 // special types
@@ -82,10 +77,10 @@ public record FileItem(
                 _ => FileService.DefaultDirectory
             };
             var value = Path.Combine(directory, Name);
-            _targetPath = value;
+            field = value;
             return value;
         }
-        set => _targetPath = Path.Combine(FileService.DefaultDirectory, value);
+        set => field = Path.Combine(FileService.DefaultDirectory, value);
     }
 
     public FileInfo GetFileInfo() => new(TargetPath);

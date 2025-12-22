@@ -12,14 +12,12 @@ public class CheckUpdateService : GeneralService
     
     private static LifecycleContext Context => _context!;
     
-    private static UpdateMinioSource? _source; // 暂时是这个
+    private static readonly UpdateMinioSource? _Source = new("https://s3.pysio.online/pcl2-ce/", "Pysio");
 
     public CheckUpdateService() : base("check_update", "检查更新") { _context = ServiceContext; }
     
     public override void Start()
     {
-        _source = new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/",
-            "Pysio");
         CheckUpdate(true).Wait();
         Context.DeclareStopped();
     }
@@ -31,12 +29,12 @@ public class CheckUpdateService : GeneralService
     /// <exception cref="IndexOutOfRangeException">检查更新返回值超出范围时抛出</exception>
     public static async Task CheckUpdate(bool silent = false)
     {
-        if (_source == null)
+        if (_Source == null)
         {
             Context.Error("更新源未初始化，无法检查更新");
             return;
         }
-        var result = await _source.CheckUpdateAsync().ConfigureAwait(false);
+        var result = await _Source.CheckUpdateAsync().ConfigureAwait(false);
         
         switch (result.Type)
         {
@@ -46,14 +44,14 @@ public class CheckUpdateService : GeneralService
                 Context.Info("当前已是最新版本");
                 if (!silent)
                 {
-                    HintWrapper.Show($"当前已是最新版本 {Basics.VersionName}，无需更新啦", HintType.Finish); // 无新版本时根据参数决定是否提示用户
+                    HintWrapper.Show($"当前已是最新版本 {Basics.VersionName}，无需更新啦", HintTheme.Success); // 无新版本时根据参数决定是否提示用户
                 }
                 return;
             }
             case CheckUpdateResultType.CheckFailed:
             {
                 Context.Warn("检查更新失败");
-                HintWrapper.Show("检查更新失败，可能是网络问题导致", HintType.Critical); // 失败时无论如何都提示用户
+                HintWrapper.Show("检查更新失败，可能是网络问题导致", HintTheme.Error); // 失败时无论如何都提示用户
                 return;
             }
             default:
@@ -65,7 +63,7 @@ public class CheckUpdateService : GeneralService
         // TODO: 提示用户有新版本可用 (等待 MsgBoxWrapper 实现提示功能)
                 
         Context.Info("正在下载更新包...");
-        if (!await _source.DownloadAsync("").ConfigureAwait(false))
+        if (!await _Source.DownloadAsync("").ConfigureAwait(false))
         {
             Context.Warn("更新包下载失败");
             return;

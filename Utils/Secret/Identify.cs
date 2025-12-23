@@ -10,12 +10,9 @@ namespace PCL.Core.Utils.Secret;
 
 public class Identify
 {
-    private static readonly Lazy<byte[]> _RawId = new(_getRawId);
-    public static byte[] RawId { get => _RawId.Value; }
-    private static readonly Lazy<byte[]> _EncryptionKey = new(_getEncryptionKey);
-    public static byte[] EncryptionKey { get => _EncryptionKey.Value; }
-    private static readonly Lazy<string> _LauncherId = new(_getLauncherId);
-    public static string LauncherId { get => _LauncherId.Value; }
+    public static byte[] RawId { get; } = _getRawId();
+    public static byte[] EncryptionKey { get; } = _getEncryptionKey();
+    public static string LauncherId { get; } = _getLauncherId();
 
     private static byte[] _getRawId()
     {

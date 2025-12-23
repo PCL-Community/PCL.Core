@@ -1,21 +1,165 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace PCL.Core.Utils.Encryption
 {
-    public class AesCbc : IEncryptionProvider
+    [Obsolete("Do not use this AES mode for Encryption")]
+    public sealed class AesCbc : IEncryptionProvider
     {
+        public static AesCbc Instance { get; } = new();
+
+        private const int SaltSize = 32;
+        private const int IvSize = 16;
+
         public byte[] Decrypt(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
         {
-            throw new NotImplementedException();
+            using var aes = Aes.Create();
+            aes.KeySize = 256;
+            aes.BlockSize = 128;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+
+            var salt = data[..SaltSize];
+
+            var iv = data[SaltSize..(SaltSize + IvSize)];
+            aes.IV = iv.ToArray();
+
+            if (data.Length < salt.Length + iv.Length)
+            {
+                throw new ArgumentException("AES-CBC: Can not decrypt data, the encrypted data is broken");
+            }
+
+#pragma warning disable SYSLIB0041
+            using (var deriveBytes = new Rfc2898DeriveBytes(key.ToArray(), salt.ToArray(), 1000))
+            {
+                aes.Key = deriveBytes.GetBytes(aes.KeySize / 8);
+            }
+#pragma warning restore SYSLIB0041
+
+            var cipherTextLength = data.Length - salt.Length - iv.Length;
+            using var ret = new MemoryStream();
+            using var ms = new MemoryStream(data[(SaltSize + IvSize)..].ToArray());
+            using var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Read);
+            cs.CopyTo(ret);
+            return ret.ToArray();
         }
 
         public byte[] Encrypt(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("You should no longer use AES-CBC as your encryption method");
         }
+
+        /// <summary>
+        /// 使用特定的 AES 算法加密数据
+        /// </summary>
+        /// <param name = "input" > 需要加密的数据 </ param >
+        /// < param name="key">密钥</param>
+        /// <returns>Base64 编码的加密数据</returns>
+        /// <exception cref = "ArgumentNullException" > 如果 key 为 null 或者空</exception>
+        //private static string AesEncrypt(string input, string key)
+        //{
+        //    if (string.IsNullOrEmpty(input))
+        //        return string.Empty;
+        //    if (string.IsNullOrEmpty(key))
+        //        throw new ArgumentNullException(nameof(key));
+
+        //            using var aes = Aes.Create();
+        //            aes.KeySize = 256;
+        //            aes.BlockSize = 128;
+        //            aes.Mode = CipherMode.CBC;
+        //            aes.Padding = PaddingMode.PKCS7;
+        //            var salt = new byte[32];
+        //#if NET6_0_OR_GREATER
+        //            using (var rng = RandomNumberGenerator.Create())
+        //#else
+        //        using (var rng = new RNGCryptoServiceProvider())
+        //#endif
+        //            {
+        //                rng.GetBytes(salt);
+        //            }
+
+        //#pragma warning disable SYSLIB0041
+        //            using (var deriveBytes = new Rfc2898DeriveBytes(key, salt, 1000))
+        //            {
+        //                aes.Key = deriveBytes.GetBytes(aes.KeySize / 8);
+        //                aes.GenerateIV();
+        //            }
+        //#pragma warning restore SYSLIB0041
+
+        //            using (var ms = new MemoryStream())
+        //            {
+        //                ms.Write(salt, 0, salt.Length);
+        //                ms.Write(aes.IV, 0, aes.IV.Length);
+
+        //                using (var cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
+        //                {
+        //                    var data = Encoding.UTF8.GetBytes(input);
+        //                    cs.Write(data, 0, data.Length);
+        //                }
+
+        //                return Convert.ToBase64String(ms.ToArray());
+        //            }
+        //        }
+
+        /// <summary>
+        /// 使用特定的 AES 算法解密数据
+        /// </summary>
+        /// <param name="input">Base64 编码的加密数据</param>
+        /// <param name="key">密钥</param>
+        /// <returns>返回解密文本</returns>
+        /// <exception cref="ArgumentNullException">如果 Key 为 null 或空</exception>
+        /// <exception cref="ArgumentException">如果 input 数据错误</exception>
+//        private static string AesDecrypt(string input, string key)
+//        {
+//            if (string.IsNullOrEmpty(input))
+//                return string.Empty;
+//            if (string.IsNullOrEmpty(key))
+//                throw new ArgumentNullException(nameof(key));
+
+
+//            using var aes = Aes.Create();
+//            aes.KeySize = 256;
+//            aes.BlockSize = 128;
+//            aes.Mode = CipherMode.CBC;
+//            aes.Padding = PaddingMode.PKCS7;
+
+//            var encryptedData = Convert.FromBase64String(input);
+
+//            var salt = new byte[32];
+//            Array.Copy(encryptedData, 0, salt, 0, salt.Length);
+
+//            var iv = new byte[aes.BlockSize / 8];
+//            Array.Copy(encryptedData, salt.Length, iv, 0, iv.Length);
+//            aes.IV = iv;
+
+//            if (encryptedData.Length < salt.Length + iv.Length)
+//            {
+//                throw new ArgumentException("加密数据格式无效或已损坏");
+//            }
+
+//#pragma warning disable SYSLIB0041
+//            using (var deriveBytes = new Rfc2898DeriveBytes(key, salt, 1000))
+//            {
+//                aes.Key = deriveBytes.GetBytes(aes.KeySize / 8);
+//            }
+//#pragma warning restore SYSLIB0041
+
+//            var cipherTextLength = encryptedData.Length - salt.Length - iv.Length;
+//            using (var ms = new MemoryStream(encryptedData, salt.Length + iv.Length, cipherTextLength))
+//            {
+//                using (var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Read))
+//                {
+//                    using (var sr = new StreamReader(cs, Encoding.UTF8))
+//                    {
+//                        return sr.ReadToEnd();
+//                    }
+//                }
+//            }
+//        }
     }
 }

@@ -6,7 +6,7 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Utils.Encryption;
 
-public class ChaCha20 : IEncryptionProvider
+public sealed class ChaCha20 : IEncryptionProvider
 {
     public static ChaCha20 Instance { get; } = new();
 

@@ -37,7 +37,6 @@ namespace PCL.Core.Utils.Encryption
             }
 #pragma warning restore SYSLIB0041
 
-            var cipherTextLength = data.Length - salt.Length - iv.Length;
             using var ret = new MemoryStream();
             using var ms = new MemoryStream(data[(SaltSize + IvSize)..].ToArray());
             using var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Read);

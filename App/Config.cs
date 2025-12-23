@@ -116,7 +116,7 @@ public static partial class Config
         /// <summary>
         /// 已显示的公告。
         /// </summary>
-        [ConfigItem<string>("SystemSystemAnnouncement", "", ConfigSource.Local)] public partial string ShowedAnnouncements { get; set; }
+        [ConfigItem<string>("SystemSystemAnnouncement", "")] public partial string ShowedAnnouncements { get; set; }
     }
 
     /// <summary>

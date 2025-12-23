@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Management;
-using System.Security;
 using System.Text;
 using PCL.Core.Logging;
 using PCL.Core.Utils.Exts;

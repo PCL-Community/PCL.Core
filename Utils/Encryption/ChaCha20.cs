@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Security;
-using System.Text;
 using System.Security.Cryptography;
 using PCL.Core.Utils.Exts;
 

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Security;
-using System.Windows.Documents;
 
 namespace PCL.Core.Utils.Encryption;
 

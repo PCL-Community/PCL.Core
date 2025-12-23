@@ -6,9 +6,6 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Security;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PCL.Core.Utils.Exts;

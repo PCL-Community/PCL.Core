@@ -24,6 +24,7 @@ public static class EncryptHelper
     {
         var rawData = Convert.FromBase64String(data);
         if (rawData.Length == 0) return string.Empty;
+        var errors = new List<Exception>();
         try
         {
             var encryptionData = EncryptionData.FromBytes(rawData);
@@ -34,16 +35,16 @@ public static class EncryptHelper
             };
             return Encoding.UTF8.GetString(decryptedData);
         }
-        catch { /* Ignore to try old method */ }
+        catch(Exception ex) { errors.Add(ex); }
 
         try
         {
             var decryptedData = AesCbc.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
             return Encoding.UTF8.GetString(decryptedData);
         }
-        catch { /* Ignore to try old method */ }
+        catch(Exception ex) { errors.Add(ex); }
 
-        throw new Exception($"Unknown Encryption data, the data may broken");
+        throw new AggregateException($"Unknown Encryption data, the data may broken", errors);
     }
 
     #region "加密存储信息数据"

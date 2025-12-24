@@ -416,13 +416,13 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         for (var i = 0; i < items.Count; i++)
         {
             var it = items[i];
-            var key = it.Key;
-            if (!keysAdded.Add(key)) continue;
+            if (!keysAdded.Add(it.Key)) continue;
+            var keyLiteral = it.Key.ToLiteral();
             var typeName = _CorrectTypeName(_BuildQualifiedTypeName(it.Type), out _);
-            sb.Append("            (\"")
-                .Append(_EscapeString(key))
-                .Append("\", new ConfigItem<").Append(typeName).Append(">(\"")
-                .Append(_EscapeString(key)).Append("\", ")
+            sb.Append("            (")
+                .Append(keyLiteral)
+                .Append(", new ConfigItem<").Append(typeName).Append(">(")
+                .Append(keyLiteral).Append(", ")
                 .Append(it.DefaultValueCode).Append(", ").Append(it.SourceCode)
               .Append("))");
             if (i != items.Count - 1) sb.Append(',');
@@ -519,9 +519,9 @@ public sealed class ConfigGenerator : IIncrementalGenerator
           .Append("ConfigItem<").Append(typeName).Append("> ")
           .Append(configItemName).Append(" => ConfigService.GetConfigItem<")
             .Append(typeName)
-          .Append(">(\"")
-            .Append(_EscapeString(item.Key))
-          .AppendLine("\");");
+          .Append(">(")
+            .Append(item.Key.ToLiteral())
+          .AppendLine(");");
         
         return accessorInitializer;
     }
@@ -643,8 +643,6 @@ public sealed class ConfigGenerator : IIncrementalGenerator
 
         sb.Append(indentStr).AppendLine("}");
     }
-
-    private static string _EscapeString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     // ===== Models/Trees =====
 

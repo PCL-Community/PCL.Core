@@ -14,7 +14,7 @@ public abstract class GeneralService : ILifecycleService
     public string Name { get; }
     
     /// <inheritdoc/>
-    public bool SupportAsyncStart { get; }
+    public bool SupportAsync { get; }
 
     /// <summary>
     /// The context of the service instance,
@@ -28,12 +28,12 @@ public abstract class GeneralService : ILifecycleService
     /// </summary>
     /// <param name="identifier">see <see cref="Identifier"/></param>
     /// <param name="name">see <see cref="Name"/></param>
-    /// <param name="asyncStart">see <see cref="SupportAsyncStart"/></param>
+    /// <param name="asyncStart">see <see cref="SupportAsync"/></param>
     protected GeneralService(string identifier, string name, bool asyncStart = true)
     {
         Identifier = identifier;
         Name = name;
-        SupportAsyncStart = asyncStart;
+        SupportAsync = asyncStart;
         ServiceContext = Lifecycle.GetContext(this);
     }
 

@@ -57,19 +57,19 @@ public static class IdentifyOld
         }
         catch (ManagementException ex)
         {
-            LogWrapper.Error("Identify", $"WMI查询失败: {ex.Message}");
+            LogWrapper.Error(ex, "Identify", $"WMI查询失败");
         }
         catch (System.Runtime.InteropServices.COMException ex)
         {
-            LogWrapper.Error("Identify", $"COM异常: {ex.Message}. 请确保WMI服务正在运行");
+            LogWrapper.Error(ex, "Identify", $"COM异常，请确保WMI服务正在运行");
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
-            LogWrapper.Error("Identify", "访问被拒绝，请以管理员权限运行");
+            LogWrapper.Error(ex, "Identify", "访问被拒绝，请以管理员权限运行");
         }
         catch (Exception ex)
         {
-            LogWrapper.Error("Identify", $"意外的系统异常: {ex.Message}");
+            LogWrapper.Error(ex, "Identify", $"意外的系统异常");
         }
 
         return null;

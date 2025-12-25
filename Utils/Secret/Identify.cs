@@ -9,18 +9,19 @@ namespace PCL.Core.Utils.Secret;
 
 public class Identify
 {
-    public static byte[] RawId { get; } = _getRawId();
+    public static byte[] RawId { get; } = _GetRawId();
     public static byte[] EncryptionKey { get; } = _getEncryptionKey();
     public static string LauncherId { get; } = _getLauncherId();
 
-    private static byte[] _getRawId()
+    private static byte[] _GetRawId()
     {
         var code = new StringBuilder();
         try
         {
-            code.Append(_GetWmiProperty("Win32_ComputerSystemProduct", "UUID"))
-                .Append(_GetWmiProperty("Win32_BaseBoard", "Product"))
-                .Append(_GetWmiProperty("Win32_BaseBoard", "SerialNumber"));
+            code.Append("UUID:").Append(_GetWmiProperty("Win32_ComputerSystemProduct", "UUID"))
+                .Append("|MB_Prod:").Append(_GetWmiProperty("Win32_BaseBoard", "Product"))
+                .Append("|MB_SN:").Append(_GetWmiProperty("Win32_BaseBoard", "SerialNumber"))
+                .Append("|CPU:").Append(_GetWmiProperty("Win32_Processor", "ProcessorId"));
         }
         catch (Exception ex)
         {

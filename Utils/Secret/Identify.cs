@@ -10,7 +10,6 @@ namespace PCL.Core.Utils.Secret;
 public class Identify
 {
     public static byte[] RawId { get; } = _GetRawId();
-    public static byte[] EncryptionKey { get; } = _getEncryptionKey();
     public static string LauncherId { get; } = _getLauncherId();
 
     private static byte[] _GetRawId()
@@ -46,25 +45,6 @@ public class Identify
         }
         catch { /* Ignore */ }
         return string.Empty;
-    }
-
-    private static byte[] _getEncryptionKey()
-    {
-        var prefix = "PCL-CE|"u8.ToArray();
-        var ctx = RawId;
-        var suffix = "|EncryptionKey"u8.ToArray();
-
-        var buffer = new byte[prefix.Length + ctx.Length + suffix.Length];
-        var bufferSpan = buffer.AsSpan();
-        prefix.CopyTo(bufferSpan[..prefix.Length]);
-        ctx.CopyTo(bufferSpan.Slice(prefix.Length, ctx.Length));
-        suffix.CopyTo(bufferSpan.Slice(prefix.Length + ctx.Length, suffix.Length));
-
-        Array.Clear(ctx);
-        var result = SHA256Provider.Instance.ComputeHash(bufferSpan);
-        bufferSpan.Clear();
-
-        return Encoding.UTF8.GetBytes(result);
     }
 
     private static string _getLauncherId()

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
 using System.Text;
+using PCL.Core.IO;
 using PCL.Core.Utils.Encryption;
 
 namespace PCL.Core.Utils.Secret;
@@ -11,7 +14,7 @@ public static class EncryptHelper
     public static string SecretEncrypt(string data)
     {
         var rawData = Encoding.UTF8.GetBytes(data);
-        var encryptedData = ChaCha20.Instance.Encrypt(rawData, Identify.EncryptionKey);
+        var encryptedData = ChaCha20.Instance.Encrypt(rawData, EncryptionKey);
         var storeData = new EncryptionData()
         {
             Version = 1,
@@ -30,7 +33,7 @@ public static class EncryptHelper
             var encryptionData = EncryptionData.FromBytes(rawData);
             var decryptedData = encryptionData.Version switch
             {
-                1 => ChaCha20.Instance.Decrypt(encryptionData.Data, Identify.EncryptionKey),
+                1 => ChaCha20.Instance.Decrypt(encryptionData.Data, EncryptionKey),
                 _ => throw new NotSupportedException("Unsupported encryption version")
             };
             return Encoding.UTF8.GetString(decryptedData);
@@ -97,6 +100,50 @@ public static class EncryptHelper
             encryptionData.Data.CopyTo(bytesSpan[12..]);
 
             return bytes;
+        }
+    }
+
+    #endregion
+
+    #region "密钥存储和获取"
+
+    private static readonly byte[] _IdentifyEntropy = Encoding.UTF8.GetBytes("PCL CE Encryption Key");
+    internal static byte[] EncryptionKey { get => _EncryptionKey.Value; }
+    private static readonly Lazy<byte[]> _EncryptionKey = new(_GetKey);
+
+    private static byte[] _GetKey()
+    {
+        var keyFile = Path.Combine(FileService.SharedDataPath, "UserKey.bin");
+        if (File.Exists(keyFile))
+        {
+            var buf = File.ReadAllBytes(keyFile);
+            var data = EncryptionData.FromBytes(buf);
+            return data.Version switch
+            {
+                1 => ProtectedData.Unprotect(data.Data, _IdentifyEntropy, DataProtectionScope.CurrentUser),
+                _ => throw new NotSupportedException("Unsupported encryption version")
+            };
+        }
+        else
+        {
+            var randomKey = new byte[32];
+            RandomNumberGenerator.Fill(randomKey);
+            var storeData = EncryptionData.ToBytes(new EncryptionData
+            {
+                Version = 1,
+                Data = ProtectedData.Protect(randomKey, _IdentifyEntropy, DataProtectionScope.CurrentUser)
+            });
+
+            var tmpFile = $"{keyFile}.tmp";
+            using (var fs = new FileStream(tmpFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            {
+                fs.Write(storeData);
+                fs.Flush(true);
+            }
+
+            File.Move(tmpFile, keyFile, true);
+
+            return randomKey;
         }
     }
 

@@ -5,6 +5,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using PCL.Core.IO;
+using PCL.Core.Logging;
 using PCL.Core.Utils.Encryption;
 
 namespace PCL.Core.Utils.Secret;
@@ -14,13 +15,26 @@ public static class EncryptHelper
     public static string SecretEncrypt(string data)
     {
         var rawData = Encoding.UTF8.GetBytes(data);
-        var encryptedData = ChaCha20.Instance.Encrypt(rawData, EncryptionKey);
-        var storeData = new EncryptionData()
+        byte[] encryptedData;
+        uint version;
+        if (ChaCha20.Instance.IsSupported)
         {
-            Version = 1,
-            Data = encryptedData
-        };
-        return Convert.ToBase64String(EncryptionData.ToBytes(storeData));
+            encryptedData = ChaCha20.Instance.Encrypt(rawData, EncryptionKey);
+            version = 1;
+        }
+        else if (AesGcmProvider.Instance.IsSupported)
+        {
+            encryptedData = AesGcmProvider.Instance.Encrypt(rawData, EncryptionKey);
+            version = 2;
+        }
+        else
+        {
+            LogWrapper.Warn("Encryption", "No available encryption method");
+            encryptedData = rawData;
+            version = 0;
+        }
+
+        return Convert.ToBase64String(EncryptionData.ToBytes(new EncryptionData { Version = version, Data = encryptedData })); ;
     }
 
     public static string SecretDecrypt(string data)
@@ -33,7 +47,9 @@ public static class EncryptHelper
             var encryptionData = EncryptionData.FromBytes(rawData);
             var decryptedData = encryptionData.Version switch
             {
+                0 => rawData,
                 1 => ChaCha20.Instance.Decrypt(encryptionData.Data, EncryptionKey),
+                2 => AesGcmProvider.Instance.Decrypt(encryptionData.Data, EncryptionKey),
                 _ => throw new NotSupportedException("Unsupported encryption version")
             };
             return Encoding.UTF8.GetString(decryptedData);

@@ -107,13 +107,13 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         if (patches != null && patches.Contains(patchFileName))
         {
             patchUpdate = true;
-            var tempPath = Path.Combine(tempPathBase, patchFileName);
+            var tempPath = Path.Combine(tempPathBase, Path.GetFileName(patchFileName));
             downloadItem = new DownloadItem(new Uri($"{baseUrl}static/patch/{patchFileName}"), tempPath);
         }
         else 
         {
             patchUpdate = false;
-            var tempPath = Path.Combine(tempPathBase, $"{updateSha256}.bin");
+            var tempPath = Path.Combine(tempPathBase, Path.GetFileName($"{updateSha256}.bin"));
             var downloads = versionJsonData["downloads"]?.AsArray();
             if (downloads == null || downloads.Count == 0) throw new InvalidOperationException("远程版本信息缺少下载地址");
             var downloadUrl = RandomUtils.PickRandom(

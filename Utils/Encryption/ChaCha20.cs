@@ -80,4 +80,6 @@ public sealed class ChaCha20 : IEncryptionProvider
             salt,
             _Info.AsSpan());
     }
+
+    public bool IsSupported { get => ChaCha20Poly1305.IsSupported; }
 }

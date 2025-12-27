@@ -23,7 +23,7 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
 
     public async Task DownloadAsync(HttpClient client, CancellationToken token, IProgress<long>? progress = null)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, _currentUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, _currentUri);
         if (End is not null)
         {
             request.Headers.Range = new RangeHeaderValue(Start + Downloaded, End);
@@ -34,9 +34,9 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
         }
 
         var rangeInfo = request.Headers.Range is not null && request.Headers.Range.Ranges.Count > 0
-            ? $"Range: {request.Headers.Range.Ranges.First().From}-{request.Headers.Range.Ranges.First().To}" 
+            ? $"Range: {request.Headers.Range.Ranges.First().From}-{request.Headers.Range.Ranges.First().To}"
             : "No Range";
-        
+
         LogWrapper.Trace("Downloader", $"开始下载分段: {Start}-{End}, {rangeInfo}, URI: {_currentUri}");
         Status = DownloadSegmentStatus.Running;
 
@@ -47,7 +47,7 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
                 .ConfigureAwait(false);
 
             LogWrapper.Debug("Downloader", $"收到响应: {response.StatusCode}, URI: {_currentUri}");
-            
+
             if (request.Headers.Range is not null && response.StatusCode == HttpStatusCode.OK)
             {
                 LogWrapper.Warn("Downloader", $"服务器不支持范围请求，返回200 OK: {_currentUri}");
@@ -58,7 +58,8 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
 
             await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             LogWrapper.Trace("Downloader", $"打开文件流: {path}, 偏移量: {Start + Downloaded}");
-            await using var fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, bufferSize: 4096, FileOptions.Asynchronous);
+            await using var fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write,
+                FileShare.ReadWrite, bufferSize: 4096, FileOptions.Asynchronous);
             fileStream.Seek(Start + Downloaded, SeekOrigin.Begin);
 
             var buffer = new byte[16384];
@@ -72,11 +73,12 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
                 Downloaded += read;
                 totalRead += read;
                 progress?.Report(read);
-                
+
                 // 每下载1MB记录一次进度
                 if (totalRead % (1024 * 1024) < read)
                 {
-                    LogWrapper.Trace("Downloader", $"分段下载进度: {Start}-{End}, 已下载: {Downloaded} 字节, 剩余: {RemainingBytes} 字节");
+                    LogWrapper.Trace("Downloader",
+                        $"分段下载进度: {Start}-{End}, 已下载: {Downloaded} 字节, 剩余: {RemainingBytes} 字节");
                 }
             }
 

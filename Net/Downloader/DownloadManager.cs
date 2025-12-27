@@ -15,19 +15,15 @@ public class DownloadManager
 {
     private readonly HttpClient _client;
     private readonly ResiliencePipeline _resiliencePipeline;
-    private readonly IMirrorSelector _mirrorSeletor;
+    private readonly IMirrorSelector _mirrorSelector;
     public int MaxParallelSegmentsPerTask { get; set; } = 4;
 
     private static readonly ResiliencePropertyKey<DownloadTask> _TaskKey = new("DownloadTask");
 
-    public DownloadManager(IMirrorSelector seletor)
+    public DownloadManager(IMirrorSelector selector)
     {
-        _client = new HttpClient(new SocketsHttpHandler
-        {
-            MaxConnectionsPerServer = 32,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        });
-        _mirrorSeletor = seletor;
+        _client = NetworkService.GetClient();
+        _mirrorSelector = selector;
 
         _resiliencePipeline = new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
@@ -57,8 +53,8 @@ public class DownloadManager
     public async Task DownloadAsync(DownloadTask task, CancellationToken token)
     {
         LogWrapper.Debug("Downloader", $"开始下载任务: {task.ActiveUri} -> {task.TargetPath}");
-        
-        await task.PrepareAsync(_client, _mirrorSeletor, token).ConfigureAwait(false);
+
+        await task.PrepareAsync(_client, _mirrorSelector, token).ConfigureAwait(false);
 
         using var taskSemaphore = new SemaphoreSlim(MaxParallelSegmentsPerTask);
         var activeTasks = new List<Task>();
@@ -82,19 +78,22 @@ public class DownloadManager
 
             while (activeTasks.Count < MaxParallelSegmentsPerTask)
             {
-                var newSeg = task.TrySpilitSegment();
-                if (newSeg is not null)
+                lock (task)
                 {
-                    LogWrapper.Trace("Downloader", $"添加新分段: {newSeg.Start}-{newSeg.End}");
-                    activeTasks.Add(_ExecuteSegmentWithResilienceAsync(newSeg, task, taskSemaphore, token));
-                }
-                else
-                {
-                    break;
+                    var newSeg = task.TrySplitSegment();
+                    if (newSeg is not null)
+                    {
+                        LogWrapper.Trace("Downloader", $"添加新分段: {newSeg.Start}-{newSeg.End}");
+                        activeTasks.Add(_ExecuteSegmentWithResilienceAsync(newSeg, task, taskSemaphore, token));
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }
-        
+
         LogWrapper.Debug("Downloader", $"下载任务完成: {task.ActiveUri} -> {task.TargetPath}");
     }
 
@@ -102,14 +101,14 @@ public class DownloadManager
         DownloadSegment segment,
         DownloadTask parent,
         SemaphoreSlim semaphore,
-        CancellationToken tokne)
+        CancellationToken token)
     {
         LogWrapper.Trace("Downloader", $"开始执行分段: {segment.Start}-{segment.End}");
-        await semaphore.WaitAsync(tokne).ConfigureAwait(false);
+        await semaphore.WaitAsync(token).ConfigureAwait(false);
 
         try
         {
-            var context = ResilienceContextPool.Shared.Get(tokne);
+            var context = ResilienceContextPool.Shared.Get(token);
             context.Properties.Set(_TaskKey, parent);
 
             try
@@ -119,7 +118,8 @@ public class DownloadManager
                     try
                     {
                         segment.UpdateUri(parent.ActiveUri);
-                        LogWrapper.Trace("Downloader", $"正在下载分段: {segment.Start}-{segment.End}, URI: {parent.ActiveUri}");
+                        LogWrapper.Trace("Downloader",
+                            $"正在下载分段: {segment.Start}-{segment.End}, URI: {parent.ActiveUri}");
                         await segment.DownloadAsync(_client, ctx.CancellationToken).ConfigureAwait(false);
                         LogWrapper.Trace("Downloader", $"分段下载成功: {segment.Start}-{segment.End}");
                     }
@@ -151,6 +151,7 @@ public class DownloadManager
             catch (Exception ex)
             {
                 LogWrapper.Error(ex, "Downloader", $"分段下载失败: {segment.Start}-{segment.End}");
+                throw;
             }
             finally
             {

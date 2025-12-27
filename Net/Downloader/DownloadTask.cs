@@ -43,14 +43,14 @@ public class DownloadTask
         }
     }
 
-    public async Task PrepareAsync(HttpClient client, IMirrorSelector seletor, CancellationToken token)
+    public async Task PrepareAsync(HttpClient client, IMirrorSelector selector, CancellationToken token)
     {
         LogWrapper.Debug("Downloader", "开始准备下载任务");
-        
+
         if (UseBestMirror && Mirrors.Count > 1)
         {
             LogWrapper.Debug("Downloader", $"正在选择最佳镜像，共有 {Mirrors.Count} 个镜像");
-            var bestMirror = await seletor.GetBestMirrorAsync(Mirrors, token).ConfigureAwait(false);
+            var bestMirror = await selector.GetBestMirrorAsync(Mirrors, token).ConfigureAwait(false);
             LogWrapper.Debug("Downloader", $"选择的最佳镜像: {bestMirror}");
             ActiveUri = bestMirror;
         }
@@ -74,11 +74,11 @@ public class DownloadTask
             Segments.Add(segment);
             LogWrapper.Debug("Downloader", $"创建初始分段: {segment.Start}-{segment.End}");
         }
-        
+
         LogWrapper.Debug("Downloader", "下载任务准备完成");
     }
 
-    public DownloadSegment? TrySpilitSegment(long minSpilitSize = 1024 * 1024 * 2)
+    public DownloadSegment? TrySplitSegment(long minSpilitSize = 1024 * 1024 * 2)
     {
         if (!SupportsRange)
         {

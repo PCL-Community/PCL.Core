@@ -1,13 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace PCL.Core.App.Updates.Models;
 
-public class VersionAnnouncementDataModel
-{
-    public required List<VersionAnnouncementContentModel> Contents { get; init; }
-}
+public record VersionAnnouncementDataModel(List<VersionAnnouncementContentModel> Contents);
 
-public class VersionAnnouncementContentModel
+public record VersionAnnouncementContentModel
 {
     public required string Title { get; init; }
     public required string Detail { get; init; }
@@ -17,7 +14,7 @@ public class VersionAnnouncementContentModel
     public required AnnouncementBtnInfoModel? Btn2 { get; init; }
 }
 
-public class AnnouncementBtnInfoModel
+public record AnnouncementBtnInfoModel
 {
     public required string Text { get; init; }
     public required string Command { get; init; }

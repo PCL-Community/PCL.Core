@@ -61,7 +61,7 @@ public static partial class RegexPatterns
     private static partial Regex _LastPendingLogPath();
 
     /// <summary>
-    /// Mod loader 不兼容的错误提示。
+    /// Mod Loader 不兼容的错误提示。
     /// </summary>
     public static readonly Regex IncompatibleModLoaderErrorHint = _IncompatibleModLoaderErrorHint();
     [GeneratedRegex(@"(incompatible[\s\S]+'Fabric Loader' \(fabricloader\)|Mod ID: '(?:neo)?forge', Requested by '([^']+)')")]

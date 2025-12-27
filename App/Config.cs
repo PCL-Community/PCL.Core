@@ -891,10 +891,8 @@ public static partial class Config
         [ConfigItem<string>("VersionForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ForgeVersion { get; }
         [ConfigItem<string>("VersionNeoForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> NeoForgeVersion { get; }
         [ConfigItem<string>("VersionCleanroom", "", ConfigSource.GameInstance)] public partial ArgConfig<string> CleanroomVersion { get; }
-        [ConfigItem<string>("VersionOriginal", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> McVersion { get; }
-        [ConfigItem<int>("VersionOriginalMain", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMajor { get; }
-        [ConfigItem<int>("VersionOriginalSub", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMinor { get; }
-        [ConfigItem<int>("VersionApiCode", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> SortCode { get; }
+        [ConfigItem<string>("VersionVanillaName", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> VanillaVersionName { get; }
+        [ConfigItem<string>("VersionVanilla", "0.0.0", ConfigSource.GameInstance)] public partial ArgConfig<string> VanillaVersion { get; }
         [ConfigItem<string>("VersionModpackVersion", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackVersion { get; }
         [ConfigItem<string>("VersionModpackSource", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackSource { get; }
         [ConfigItem<string>("VersionModpackId", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackId { get; }

@@ -6,71 +6,89 @@ using PCL.Core.UI;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.Running)]
-public class CheckUpdateService : GeneralService
+public class CheckUpdateService : ILifecycleService
 {
+    public string Identifier => "check_update";
+
+    public string Name => "检查更新";
+
+    public bool SupportAsyncStart => true;
+
     private static LifecycleContext? _context;
     
     private static LifecycleContext Context => _context!;
     
-    private static readonly UpdateMinioSource? _Source = new("https://s3.pysio.online/pcl2-ce/", "Pysio");
+    private static readonly SourceController _SourceController = new([
+        new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")
+    ]);
 
-    public CheckUpdateService() : base("check_update", "检查更新") { _context = ServiceContext; }
+    public CheckUpdateService() { _context = Lifecycle.GetContext(this); }
     
-    public override void Start()
+    public async Task StartAsync()
     {
-        CheckUpdate(true).Wait();
-        Context.DeclareStopped();
-    }
-
-    /// <summary>
-    /// 检查更新
-    /// </summary>
-    /// <param name="silent">是否静默更新 (即是否显示 Hint)</param>
-    /// <exception cref="IndexOutOfRangeException">检查更新返回值超出范围时抛出</exception>
-    public static async Task CheckUpdate(bool silent = false)
-    {
-        if (_Source == null)
+        CheckResult result;
+        try
         {
-            Context.Error("更新源未初始化，无法检查更新");
+            result = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("检查更新时发生异常", ex);
+            HintWrapper.Show("检查更新时发生异常，可能是网络问题导致", HintTheme.Error);
             return;
         }
-        var result = await _Source.CheckUpdateAsync().ConfigureAwait(false);
         
         switch (result.Type)
         {
-            case CheckUpdateResultType.HasNewVersion: break;
-            case CheckUpdateResultType.NoNewVersion:
+            case CheckResultType.Available: break;
+            case CheckResultType.Latest:
             {
                 Context.Info("当前已是最新版本");
-                if (!silent)
-                {
-                    HintWrapper.Show($"当前已是最新版本 {Basics.VersionName}，无需更新啦", HintTheme.Success); // 无新版本时根据参数决定是否提示用户
-                }
-                return;
-            }
-            case CheckUpdateResultType.CheckFailed:
-            {
-                Context.Warn("检查更新失败");
-                HintWrapper.Show("检查更新失败，可能是网络问题导致", HintTheme.Error); // 失败时无论如何都提示用户
                 return;
             }
             default:
                 throw new IndexOutOfRangeException("检查更新返回值超出范围");
         }
+
+        if (result.VersionData == null)
+        {
+            Context.Warn("检查更新失败，版本信息为 null");
+            HintWrapper.Show("检查更新失败，可能是网络问题导致", HintTheme.Error);
+            return;
+        }
         
         Context.Info("发现新版本, 准备下载更新包...");
-                
-        // TODO: 提示用户有新版本可用 (等待 MsgBoxWrapper 实现提示功能)
+
+        var answer = MsgBoxWrapper.Show(result.VersionData.ChangeLog, 
+            "发现新版本",
+            MsgBoxTheme.Info,
+            true,
+            "更新", 
+            "取消");
+        
+        if (answer != 1) 
+        {
+            Context.Info("用户取消更新");
+            return;
+        }
                 
         Context.Info("正在下载更新包...");
-        if (!await _Source.DownloadAsync("").ConfigureAwait(false))
+        try
         {
-            Context.Warn("更新包下载失败");
+            await _SourceController.DownloadAsync("").ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("下载更新包时发生异常", ex);
+            HintWrapper.Show("下载更新包时发生异常，可能是网络问题导致", HintTheme.Error);
             return;
         }
         Context.Info("更新包下载完成，准备启动更新程序...");
                 
         // UpdateHelper.Restart(true);
         // 因为 UpdateMinioSource.DownloadAsync 还没实现，所以先不启动更新程序
+        Context.DeclareStopped();
     }
+
+    public Task StopAsync() => Task.CompletedTask;
 }

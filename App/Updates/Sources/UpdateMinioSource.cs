@@ -17,7 +17,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 {
     public bool IsAvailable => !string.IsNullOrEmpty(baseUrl);
     
-    public string SourceName { get; set; } = name;
+    public string SourceName => name;
 
     private Dictionary<string, string>? _remoteCache;
 
@@ -55,14 +55,14 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     }
 
     /// <inheritdoc/>
-    public async Task<CheckUpdateResult> CheckUpdateAsync()
+    public async Task<VersionDataModel> CheckUpdateAsync()
     {
         try
         {
             // 获取版本信息
             LogWrapper.Info("Update", "开始获取版本信息");
             var versionJsonData = await _GetVersionJsonData().ConfigureAwait(false);
-            var lastestVersion = new VersionDataModel
+            return new VersionDataModel
             {
                 VersionCode = versionJsonData["version"]!["code"]!.GetValue<int>(),
                 VersionName = versionJsonData["version"]!["name"]!.GetValue<string>(),
@@ -70,106 +70,75 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
                 ChangeLog = versionJsonData["changelog"]!.GetValue<string>(),
                 Source = SourceName
             };
-            LogWrapper.Info("Update", 
-                $"获取到最新版本信息：{lastestVersion.VersionName} " + 
-                $"({lastestVersion.VersionCode})");
-            LogWrapper.Info("Update",
-                $"当前版本：{Basics.VersionName} " + 
-                $"({Basics.VersionNumber})");
-
-            return Basics.VersionNumber != lastestVersion.VersionCode   // 比较版本号
-                ? new CheckUpdateResult(CheckUpdateResultType.HasNewVersion, lastestVersion)
-                : new CheckUpdateResult(CheckUpdateResultType.NoNewVersion);
         }
         catch (NullReferenceException nre)
         {
-            LogWrapper.Warn(nre, "Update", $"检查更新失败，可能是远程数据格式有误");
-            return new CheckUpdateResult(CheckUpdateResultType.CheckFailed);
+            throw new InvalidOperationException("检查更新失败，可能是远程数据格式有误", nre);
         }
         catch (Exception ex)
         {
-            LogWrapper.Warn(ex, "Update", $"检查更新失败");
-            return new CheckUpdateResult(CheckUpdateResultType.CheckFailed);
+            throw new InvalidOperationException("检查更新失败", ex);
         }
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DownloadAsync(string outputPath)
+    public async Task DownloadAsync(string outputPath)
     {
-        try
+        bool patchUpdate;
+        var tempPathBase = Path.Combine(Basics.TempPath, "Cache", "Update", "Download"); 
+        Directory.CreateDirectory(tempPathBase);
+        
+        LogWrapper.Info("Update", "开始获取版本信息");
+        var versionJsonData = await _GetVersionJsonData().ConfigureAwait(false);
+        if (versionJsonData is null) throw new InvalidOperationException("版本信息为空");
+
+        var selfSha256 = await Files.GetFileSHA256Async(Basics.ExecutableName).ConfigureAwait(false);
+        var updateSha256 = versionJsonData["sha256"]?.GetValue<string>();
+        if (string.IsNullOrEmpty(updateSha256)) throw new InvalidOperationException("远程版本信息缺少 sha256");
+
+        var patchFileName = $"{selfSha256}-{updateSha256}.patch";
+        var patches = versionJsonData["patches"]?.AsArray();
+        LogWrapper.Info("Update", "版本信息获取完成");
+
+        LogWrapper.Info("Update", "开始下载更新文件");
+        var downloader = new Downloader();
+        DownloadItem downloadItem;
+
+        if (patches != null && patches.Contains(patchFileName))
         {
-            bool patchUpdate;
-            var tempPathBase = Path.Combine(Basics.TempPath, "Cache", "Update", "Download");
-            Directory.CreateDirectory(tempPathBase);
-
-            LogWrapper.Info("Update", "开始获取版本信息");
-            var versionJsonData = await _GetVersionJsonData().ConfigureAwait(false);
-            if (versionJsonData is null) throw new InvalidOperationException("版本信息为空");
-
-            var selfSha256 = await Files.GetFileSHA256Async(Basics.ExecutableName).ConfigureAwait(false);
-            var updateSha256 = versionJsonData["sha256"]?.GetValue<string>();
-            if (string.IsNullOrEmpty(updateSha256)) throw new InvalidOperationException("远程版本信息缺少 sha256");
-
-            var patchFileName = $"{selfSha256}-{updateSha256}.patch";
-            var patches = versionJsonData["patches"]?.AsArray();
-            LogWrapper.Info("Update", "版本信息获取完成");
-
-            LogWrapper.Info("Update", "开始下载更新文件");
-            var downloader = new Downloader();
-            DownloadItem downloadItem;
-
-            if (patches != null && patches.Contains(patchFileName))
-            {
-                patchUpdate = true;
-                var tempPath = Path.Combine(tempPathBase, patchFileName);
-                downloadItem = new DownloadItem(new Uri($"{baseUrl}static/patch/{patchFileName}"), tempPath);
-            }
-            else
-            {
-                patchUpdate = false;
-                var tempPath = Path.Combine(tempPathBase, $"{updateSha256}.bin");
-                var downloads = versionJsonData["downloads"]?.AsArray();
-                if (downloads == null || downloads.Count == 0) throw new InvalidOperationException("远程版本信息缺少下载地址");
-                var downloadUrl = RandomUtils.PickRandom(
-                    downloads.Select(item => item!.GetValue<string>()).ToList()
-                );
-                downloadItem = new DownloadItem(new Uri(downloadUrl), tempPath);
-            }
-
-            downloader.AddItem(downloadItem);
-            downloader.Start();
-            LogWrapper.Info("Update", "下载器已启动");
-
-            // 用异步轮询替代忙等，降低 CPU 占用
-            while (true)
-            {
-                var status = downloadItem.Status;
-                if (status is DownloadItemStatus.Success) break;
-                if (status is DownloadItemStatus.Failed or DownloadItemStatus.Cancelled)
-                {
-                    LogWrapper.Warn("Update", "更新文件下载失败或被取消");
-                    return false;
-                }
-                await Task.Delay(500).ConfigureAwait(false);
-            }
-
-            LogWrapper.Info("Update", "更新文件下载完成");
-            return true;
+            patchUpdate = true;
+            var tempPath = Path.Combine(tempPathBase, patchFileName);
+            downloadItem = new DownloadItem(new Uri($"{baseUrl}static/patch/{patchFileName}"), tempPath);
         }
-        catch (InvalidOperationException ioe)
+        else 
         {
-            LogWrapper.Warn(ioe, "Update", "下载更新失败（数据不完整或格式问题）");
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Warn(ex, "Update", "下载更新失败");
+            patchUpdate = false;
+            var tempPath = Path.Combine(tempPathBase, $"{updateSha256}.bin");
+            var downloads = versionJsonData["downloads"]?.AsArray();
+            if (downloads == null || downloads.Count == 0) throw new InvalidOperationException("远程版本信息缺少下载地址");
+            var downloadUrl = RandomUtils.PickRandom(
+                downloads.Select(item => item!.GetValue<string>()).ToList());
+            downloadItem = new DownloadItem(new Uri(downloadUrl), tempPath);
         }
 
-        return false;
+        downloader.AddItem(downloadItem);
+        downloader.Start();
+        LogWrapper.Info("Update", "下载器已启动");
+            
+        while (true) 
+        {
+            var status = downloadItem.Status;
+            if (status is DownloadItemStatus.Success) break;
+            if (status is DownloadItemStatus.Failed or DownloadItemStatus.Cancelled) 
+                throw new InvalidOperationException("更新文件下载失败或被取消"); 
+            await Task.Delay(500).ConfigureAwait(false);
+        }
+        
+        LogWrapper.Info("Update", "更新文件下载完成");
     }
 
     /// <inheritdoc/>
-    public async Task<VersionAnnouncementDataModel?> GetAnnouncementListAsync()
+    public async Task<VersionAnnouncementDataModel> GetAnnouncementAsync()
     {
         try
         {
@@ -177,7 +146,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             var jsonData = (await _GetRemoteInfoByName("announcement").ConfigureAwait(false))!
                 ["content"]!.AsArray();
             LogWrapper.Info("Update", "公告列表获取完成");
-            
+
             return new VersionAnnouncementDataModel
             {
                 Contents = jsonData.Select(item =>
@@ -199,7 +168,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
                                 CommandParameter = btn1Json["command_paramter"]!.GetValue<string>()
                             }
                             : null,
-                        Btn2 = btn2Json != null 
+                        Btn2 = btn2Json != null
                             ? new AnnouncementBtnInfoModel
                             {
                                 Text = btn2Json["text"]!.GetValue<string>(),
@@ -213,13 +182,11 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         }
         catch (NullReferenceException nre)
         {
-            LogWrapper.Warn(nre, "Update", "获取公告列表失败，可能是远程数据格式有误");
-            return null;
+            throw new InvalidOperationException("获取公告列表失败，可能是远程数据格式有误", nre);
         }
         catch (Exception ex)
         {
-            LogWrapper.Warn(ex, "Update", "获取公告列表失败");
-            return null;
+            throw new InvalidOperationException("获取公告列表失败", ex);
         }
     }
     

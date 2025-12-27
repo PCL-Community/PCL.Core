@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using PCL.Core.App.Updates;
+using PCL.Core.App.Updates.Models;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 

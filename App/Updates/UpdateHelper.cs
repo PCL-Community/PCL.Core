@@ -91,7 +91,7 @@ public static class UpdateHelper
             };
 
             Process.Start(startInfo);
-            LogWrapper.Info("Update", "已尝试启动更新程序,参数: " + startInfo.ArgumentList);
+            LogWrapper.Info("Update", "已尝试启动更新程序,参数: " + string.Join(" ", startInfo.ArgumentList));
 
             if (!triggerRestartAndByEnd) return;
 

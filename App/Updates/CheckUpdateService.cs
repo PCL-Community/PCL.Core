@@ -12,7 +12,7 @@ public class CheckUpdateService : ILifecycleService
 
     public string Name => "检查更新";
 
-    public bool SupportAsyncStart => true;
+    public bool SupportAsync => true;
 
     private static LifecycleContext? _context;
     

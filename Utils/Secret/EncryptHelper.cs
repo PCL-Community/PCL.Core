@@ -14,6 +14,7 @@ public static class EncryptHelper
 {
     public static string SecretEncrypt(string data)
     {
+        if (data == null || data.Length == 0) return string.Empty;
         var rawData = Encoding.UTF8.GetBytes(data);
         byte[] encryptedData;
         uint version;
@@ -39,8 +40,8 @@ public static class EncryptHelper
 
     public static string SecretDecrypt(string data)
     {
+        if (data == null || data.Length == 0) return string.Empty;
         var rawData = Convert.FromBase64String(data);
-        if (rawData.Length == 0) return string.Empty;
         var errors = new List<Exception>();
         try
         {

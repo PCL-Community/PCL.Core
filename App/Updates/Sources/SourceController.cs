@@ -86,7 +86,7 @@ public sealed class SourceController
     /// </summary>
     /// <param name="action">指定操作</param>
     /// <exception cref="InvalidOperationException">所有更新源均不可用时抛出</exception>
-    private Task _TryFindSourceAsync(Func<IUpdateSource, Task> action) =>
+    private Task<object?> _TryFindSourceAsync(Func<IUpdateSource, Task> action) =>
         _TryFindSourceAsync<object?>(async s =>
         {
             await action(s).ConfigureAwait(false);

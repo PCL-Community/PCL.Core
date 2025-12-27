@@ -177,7 +177,7 @@ public class EasyTierEntity
             .Add("network-name", _lobby.NetworkName)
             .Add("network-secret", _lobby.NetworkSecret)
             //.Add("relay-network-whitelist", _lobby.NetworkName)
-            .Add("machine-id", Utils.Secret.Identify.LaunchId)
+            .Add("machine-id", Utils.Secret.Identify.LauncherId)
             .Add("rpc-portal", _rpcPort.ToString())
             .Add("private-mode", "true");
 

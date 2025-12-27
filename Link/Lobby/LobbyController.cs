@@ -209,7 +209,7 @@ public sealed class LobbyController
         JsonObject data = new()
         {
             ["Tag"] = "Link",
-            ["Id"] = Identify.LaunchId,
+            ["Id"] = Identify.LauncherId,
             ["NaidId"] = NaidProfile.Id,
             ["NaidEmail"] = NaidProfile.Email,
             ["NaidLastIp"] = NaidProfile.LastIp,

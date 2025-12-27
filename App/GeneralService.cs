@@ -1,4 +1,6 @@
-﻿namespace PCL.Core.App;
+﻿using System.Threading.Tasks;
+
+namespace PCL.Core.App;
 
 /// <summary>
 /// General service class for constructing <see cref="ILifecycleService"/> in a more convenient way.
@@ -12,7 +14,7 @@ public abstract class GeneralService : ILifecycleService
     public string Name { get; }
     
     /// <inheritdoc/>
-    public bool SupportAsyncStart { get; }
+    public bool SupportAsync { get; }
 
     /// <summary>
     /// The context of the service instance,
@@ -26,15 +28,15 @@ public abstract class GeneralService : ILifecycleService
     /// </summary>
     /// <param name="identifier">see <see cref="Identifier"/></param>
     /// <param name="name">see <see cref="Name"/></param>
-    /// <param name="asyncStart">see <see cref="SupportAsyncStart"/></param>
+    /// <param name="asyncStart">see <see cref="SupportAsync"/></param>
     protected GeneralService(string identifier, string name, bool asyncStart = true)
     {
         Identifier = identifier;
         Name = name;
-        SupportAsyncStart = asyncStart;
+        SupportAsync = asyncStart;
         ServiceContext = Lifecycle.GetContext(this);
     }
-    
+
     /// <summary>
     /// Start the service, will be invoked on the specified state
     /// from <see cref="LifecycleServiceAttribute.StartState"/> of <see cref="LifecycleServiceAttribute"/>.
@@ -46,4 +48,16 @@ public abstract class GeneralService : ILifecycleService
     /// or if <see cref="Start"/> throws an exception.
     /// </summary>
     public virtual void Stop() { }
+
+    public Task StartAsync()
+    {
+        Start();
+        return Task.CompletedTask;
+    }
+
+    public virtual Task StopAsync()
+    {
+        Stop();
+        return Task.CompletedTask;
+    }
 }

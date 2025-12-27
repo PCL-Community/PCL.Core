@@ -5,25 +5,25 @@ namespace PCL.Core.Utils.Exts;
 
 public static class ConcurrentDictionaryExtension
 {
-    public static bool CompareAndRemove<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dict, TKey key,
-        TValue comparison) where TKey: notnull
-        => ((ICollection<KeyValuePair<TKey, TValue>>)dict).Remove(new KeyValuePair<TKey, TValue>(key, comparison));
-
-    public static TValue? UpdateAndGetPrevious<TKey, TValue>(
-        this ConcurrentDictionary<TKey, TValue> dict,
-        TKey key,
-        TValue value) where TKey: notnull
+    extension<TKey, TValue>(ConcurrentDictionary<TKey, TValue> dict) where TKey: notnull
     {
-        TValue? prevValue = default;
-        dict.AddOrUpdate(key, _ =>
+        public bool CompareAndRemove(TKey key,
+            TValue comparison) => ((ICollection<KeyValuePair<TKey, TValue>>)dict).Remove(new KeyValuePair<TKey, TValue>(key, comparison));
+
+        public TValue? UpdateAndGetPrevious(TKey key,
+            TValue value)
         {
-            prevValue = default;
-            return value;
-        }, (_, existingValue) =>
-        {
-            prevValue = existingValue;
-            return value;
-        });
-        return prevValue;
+            TValue? prevValue = default;
+            dict.AddOrUpdate(key, _ =>
+            {
+                prevValue = default;
+                return value;
+            }, (_, existingValue) =>
+            {
+                prevValue = existingValue;
+                return value;
+            });
+            return prevValue;
+        }
     }
 }

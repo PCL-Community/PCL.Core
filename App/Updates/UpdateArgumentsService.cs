@@ -1,90 +1,138 @@
-﻿using System;
+using PCL.Core.Utils.Exts;
+using System;
 using System.Diagnostics;
 using System.IO;
-using PCL.Core.Utils.Exts;
+using System.Threading.Tasks;
 
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
-public sealed class UpdateArgumentsService : GeneralService
+public sealed class UpdateArgumentsService : ILifecycleService
 {
+    public UpdateArgumentsService()
+    {
+        _context = Lifecycle.GetContext(this);
+    }
+
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
 
-    private UpdateArgumentsService() : base("update", "更新参数检查", false) { _context = ServiceContext; }
+    /// <inheritdoc />
+    public string Identifier { get; } = "update";
 
-    public override void Start()
+    /// <inheritdoc />
+    public string Name { get; } = "更新参数检查";
+
+    /// <inheritdoc />
+    public bool SupportAsync { get; } = true;
+
+    public async Task StartAsync()
     {
         var args = Basics.CommandLineArguments;
-        
+
         if (args is not ["update", _, _, _, _])
         {
-            switch (args)
-            {
-                case ["update_finished", _]:
+            await _CheckUpdateResultAsync(args).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            await _UpdateWorkfolwAsync(args).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Context.Error("更新过程出错", ex);
+        }
+
+        Context.RequestExit();
+    }
+
+    /// <inheritdoc />
+    public Task StopAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    #region Private Helper
+
+    private static Task _CheckUpdateResultAsync(string[] args)
+    {
+        switch (args)
+        {
+            case ["update_finished", _]:
                 {
                     var toDelete = args[1];
                     File.Delete(toDelete);
                     Context.Debug("更新来源文件已删除");
                     break;
                 }
-                case ["update_failed", _]:
+            case ["update_failed", _]:
                 {
                     var reason = args[1];
                     Context.Error(
-                        $"更新失败: {reason}\n你可以手动将 exe 文件替换为 PCL 目录中的新版本" +
-                        $"或再次尝试更新，若再次尝试仍然失败，请尽快反馈这个问题");
+                        $"更新失败: {reason}\n" +
+                        $"你可以手动将 exe 文件替换为 PCL 目录中的新版本或再次尝试更新。\n" +
+                        $"若再次尝试仍然失败，请尽快反馈这个问题");
                     break;
                 }
-                default: Context.Debug("无更新任务"); break;
-            }
-            Context.DeclareStopped();
-            return;
+            default: Context.Debug("无更新任务"); break;
         }
+
+        Context.DeclareStopped();
+        return Task.CompletedTask;
+    }
+
+    private static async Task _UpdateWorkfolwAsync(string[] args)
+    {
+        Context.Info("开始更新");
+
+        //Lifecycle.PendingLogDirectory = Path.Combine(Basics.ExecutableDirectory, "Log"); already set
+        Lifecycle.PendingLogFileName = "LastPending_Update.log";
+
+        var oldProcessId = args[1].Convert<int>();
+        Context.Debug($"旧版本进程 ID: {oldProcessId}");
 
         try
         {
-            Context.Info("开始更新");
-            Lifecycle.PendingLogDirectory = Path.Combine(Basics.ExecutableDirectory, "Log");
-            Lifecycle.PendingLogFileName = "LastPending_Update.log";
-
-            var oldProcessId = args[1].Convert<int>();
-            Context.Debug($"旧版本进程 ID: {oldProcessId}");
-            try
-            {
-                var oldProcess = Process.GetProcessById(oldProcessId);
-                Context.Debug("正在等待旧版本进程退出");
-                oldProcess.WaitForExit();
-                Context.Trace("旧版本进程已退出");
-            }
-            catch
-            {
-                /* ignored */
-            }
-
-            Context.Debug("正在替换文件");
-            var target = args[2];
-            Context.Trace($"目标: {target}");
-            var source = args[3];
-            Context.Trace($"来源: {source}");
-            var ex = UpdateHelper.Replace(source, target);
-            if (ex == null) Context.Trace("替换完成");
-            else Context.Error("替换文件出错", ex);
-
-            var restart = args[4].Convert<bool>();
-            if (restart)
-            {
-                var restartArgs = (ex == null) ? $"finished \"{source}\"" : $"failed \"{ex.Message}\"";
-                restartArgs = $"update_{restartArgs}";
-                Context.Debug($"重启中，使用参数: {restartArgs}");
-                Process.Start(target, restartArgs);
-            }
+            var oldProcess = Process.GetProcessById(oldProcessId);
+            Context.Debug("正在等待旧版本进程退出");
+            await oldProcess.WaitForExitAsync().ConfigureAwait(false);
+            Context.Trace("旧版本进程已退出");
         }
-        catch (Exception ex)
+        catch
         {
-            Context.Error("更新过程出错", ex);
+            // ArgumentException: throws if process not found
+            /* ignored */
         }
-        
-        Context.RequestExit();
+
+        Context.Debug("正在替换文件");
+
+        var target = args[2];
+        var source = args[3];
+
+        Context.Trace($"目标: {target}");
+        Context.Trace($"来源: {source}");
+
+        var ex = await UpdateHelper.ReplaceAsync(source, target).ConfigureAwait(false);
+        if (ex is null)
+        {
+            Context.Trace("替换完成");
+        }
+        else
+        {
+            Context.Error("替换文件出错", ex);
+        }
+
+        var restart = args[4].Convert<bool>();
+        if (restart)
+        {
+            var restartArgs = (ex == null) ? $"finished \"{source}\"" : $"failed \"{ex.Message}\"";
+            restartArgs = $"update_{restartArgs}";
+            Context.Debug($"重启中，使用参数: {restartArgs}");
+            Process.Start(target, restartArgs);
+        }
     }
+
+    #endregion
 }

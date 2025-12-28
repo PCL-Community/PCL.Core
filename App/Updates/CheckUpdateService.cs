@@ -24,7 +24,7 @@ public partial class CheckUpdateService
         {
             result = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is HttpRequestException || ex is IOException || ex is TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
             Context.Warn("检查更新时发生异常", ex);
             HintWrapper.Show("检查更新时发生异常，可能是网络问题导致", HintTheme.Error);
@@ -40,10 +40,10 @@ public partial class CheckUpdateService
         {
             case CheckResultType.Available: break;
             case CheckResultType.Latest:
-                {
-                    Context.Info("当前已是最新版本");
-                    return;
-                }
+            { 
+                Context.Info("当前已是最新版本"); 
+                return;
+            }
             default:
                 throw new ArgumentOutOfRangeException(nameof(result.Type), "Update checkout result out of range");
         }
@@ -75,16 +75,16 @@ public partial class CheckUpdateService
         {
             await _SourceController.DownloadAsync("").ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is HttpRequestException || ex is IOException || ex is TaskCanceledException)
-        catch (Exception ex)
-        {
-            Context.Warn("下载更新包时发生未知异常", ex);
-            throw;
-        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
             Context.Warn("下载更新包时发生异常", ex);
             HintWrapper.Show("下载更新包时发生异常，可能是网络问题导致", HintTheme.Error);
             return;
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("下载更新包时发生未知异常", ex);
+            throw;
         }
         Context.Info("更新包下载完成，准备启动更新程序...");
 

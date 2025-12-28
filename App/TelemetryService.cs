@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Win32;
 using PCL.Core.Net;
+using PCL.Core.Net.Http.Client;
 using PCL.Core.Utils.OS;
 using STUN.Client;
 

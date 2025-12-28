@@ -48,9 +48,13 @@ public sealed class SourceController
                     _LogInfo("使用默认源处理成功");
                     return res;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    _LogWarning("默认源失效，遍历其他更新源");
+                    if (ex is OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    _LogWarning($"默认源失效，遍历其他更新源。异常: {ex}");
                 }
             }
             else
@@ -67,9 +71,13 @@ public sealed class SourceController
                     _LogInfo($"使用 {source.SourceName} 处理成功");
                     return res;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    _LogWarning($"{source.SourceName}失效，使用下一个更新源");
+                    if (ex is OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    _LogWarning($"{source.SourceName}失效，使用下一个更新源。异常: {ex}");
                 }
             }
 

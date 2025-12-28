@@ -7,25 +7,15 @@ using System.Threading.Tasks;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.Running)]
-public class CheckUpdateService : ILifecycleService
+[LifecycleScope("check_update", "检查更新")]
+public partial class CheckUpdateService
 {
-    public string Identifier => "check_update";
-
-    public string Name => "检查更新";
-
-    public bool SupportAsync => true;
-
-    private static LifecycleContext? _context;
-
-    private static LifecycleContext Context => _context!;
-
     private static readonly SourceController _SourceController = new([
         new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")
     ]);
 
-    public CheckUpdateService() { _context = Lifecycle.GetContext(this); }
-
-    public async Task StartAsync()
+    [LifecycleStart]
+    private async Task _Start()
     {
         CheckResult result;
         try
@@ -88,8 +78,5 @@ public class CheckUpdateService : ILifecycleService
 
         // UpdateHelper.Restart(true);
         // 因为 UpdateMinioSource.DownloadAsync 还没实现，所以先不启动更新程序
-        Context.DeclareStopped();
     }
-
-    public Task StopAsync() => Task.CompletedTask;
 }

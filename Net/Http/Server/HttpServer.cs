@@ -133,7 +133,7 @@ public abstract class HttpServer : IDisposable
         }
     }
 
-    private async Task _ExecuteHandler(Func<HttpListenerRequest, Task<HttpRouteResponse>> handler, HttpListenerRequest request, HttpListenerResponse response)
+    private static async Task _ExecuteHandler(Func<HttpListenerRequest, Task<HttpRouteResponse>> handler, HttpListenerRequest request, HttpListenerResponse response)
     {
         try
         {

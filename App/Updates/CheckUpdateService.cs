@@ -2,6 +2,8 @@ using PCL.Core.App.Updates.Models;
 using PCL.Core.App.Updates.Sources;
 using PCL.Core.UI;
 using System;
+using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace PCL.Core.App.Updates;
@@ -22,11 +24,16 @@ public partial class CheckUpdateService
         {
             result = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException || ex is IOException || ex is TaskCanceledException)
         {
             Context.Warn("检查更新时发生异常", ex);
             HintWrapper.Show("检查更新时发生异常，可能是网络问题导致", HintTheme.Error);
             return;
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("检查更新时发生未知异常", ex);
+            throw;
         }
 
         switch (result.Type)
@@ -68,7 +75,12 @@ public partial class CheckUpdateService
         {
             await _SourceController.DownloadAsync("").ConfigureAwait(false);
         }
+        catch (Exception ex) when (ex is HttpRequestException || ex is IOException || ex is TaskCanceledException)
         catch (Exception ex)
+        {
+            Context.Warn("下载更新包时发生未知异常", ex);
+            throw;
+        }
         {
             Context.Warn("下载更新包时发生异常", ex);
             HintWrapper.Show("下载更新包时发生异常，可能是网络问题导致", HintTheme.Error);

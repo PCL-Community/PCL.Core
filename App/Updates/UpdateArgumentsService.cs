@@ -40,12 +40,19 @@ public sealed class UpdateArgumentsService : ILifecycleService
         {
             await _UpdateWorkfolwAsync(args).ConfigureAwait(false);
         }
+        catch (OperationCanceledException ocex)
+        {
+            // 更新过程被取消
+            Context.Error("更新过程被取消", ocex);
+        }
         catch (Exception ex)
         {
             Context.Error("更新过程出错", ex);
         }
-
-        Context.RequestExit();
+        finally
+        {
+            Context.RequestExit();
+        }
     }
 
     /// <inheritdoc />

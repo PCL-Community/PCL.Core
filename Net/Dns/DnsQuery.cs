@@ -14,12 +14,13 @@ using PCL.Core.Net.Http.Client;
 
 namespace PCL.Core.Net.Dns;
 
-public class DnsQuery
+public class DnsQuery : IDisposable
 {
     private const string ModuleName = "DoH query";
     public static DnsQuery Instance { get; } = new();
 
-    private readonly DnsCachingClient? _resolver;
+    private readonly DnsCachingClient _resolver;
+    private readonly HttpClient[] _httpClients;
 
     private DnsQuery()
     {
@@ -28,31 +29,28 @@ public class DnsQuery
             Proxy = HttpProxyManager.Instance
         };
         // 使用Ae.Dns创建DoH客户端，支持多个DoH服务器
-        IDnsClient[] clients =
+        _httpClients =
         [
-            new DnsHttpClient(new HttpClient(proxyHandler)
+            new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://doh.pub/")
-            }),
-            new DnsHttpClient(new HttpClient(proxyHandler)
+            },
+            new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://doh.pysio.online/")
-            }),
-            new DnsHttpClient(new HttpClient(proxyHandler)
+            },
+            new HttpClient(proxyHandler)
             {
                 BaseAddress = new Uri("https://cloudflare-dns.com/")
-            })
+            }
         ];
-        _resolver = new DnsCachingClient(new DnsRacerClient(clients), new MemoryCache("DoH Query Cache"));
+        _resolver = new DnsCachingClient(
+            new DnsRacerClient(_httpClients.Select(x => new DnsHttpClient(x)).ToArray<IDnsClient>()),
+            new MemoryCache("DoH Query Cache"));
     }
 
     public async Task<DnsMessage?> QueryAsync(string host, DnsQueryType qType, CancellationToken cts = default)
     {
-        if (_resolver == null)
-        {
-            LogWrapper.Error(ModuleName, $"Failed to query {host} for {qType}, because DoH resolver is null.");
-            return null;
-        }
         try
         {
             return await _resolver.Query(DnsQueryFactory.CreateQuery(host, qType), cts);
@@ -65,7 +63,7 @@ public class DnsQuery
         return null;
     }
 
-    public async Task<IPAddress[]?> QueryForIPAsync(string host, CancellationToken cts = default)
+    public async Task<IPAddress[]?> QueryForIpAsync(string host, CancellationToken cts = default)
     {
         var queryResponse = await Task.WhenAll(
             [
@@ -87,5 +85,15 @@ public class DnsQuery
             .Where(x => x != null)
             .Select(x => x!.IPAddress)
             .ToArray();
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        foreach (var client in _httpClients)
+        {
+            client.Dispose();
+        }
+        _resolver.Dispose(); // 好像这个包的 Dispose 并没有做什么 lol
     }
 }

@@ -64,7 +64,7 @@ public class HostConnectionHandler
             return await _ConnectToAddressAsync(remoteAddr.Address, port, cts);
         }
 
-        var addresses = await _dnsQuery.QueryForIPAsync(host, cts);
+        var addresses = await _dnsQuery.QueryForIpAsync(host, cts);
 
         if (addresses == null || addresses.Length == 0)
             throw new HttpRequestException($"No IP address for {host}");

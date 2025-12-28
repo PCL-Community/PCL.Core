@@ -80,6 +80,11 @@ public class HttpRouteResponse
     public static readonly HttpRouteResponse BadRequest = Empty(HttpStatusCode.BadRequest);
 
     /// <summary>
+    /// 默认的 403 (Forbidden) 响应。
+    /// </summary>
+    public static readonly HttpRouteResponse Forbidden = Empty(HttpStatusCode.Forbidden);
+
+    /// <summary>
     /// 默认的 404 (Not Found) 响应。
     /// </summary>
     public static readonly HttpRouteResponse NotFound = Empty(HttpStatusCode.NotFound);

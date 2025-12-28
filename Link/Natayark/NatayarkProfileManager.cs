@@ -38,7 +38,7 @@ public static class NatayarkProfileManager
     public static void GetNaidData(string token, bool isRefresh = false, bool isRetry = false)
         => Task.Run(() => GetNaidDataAsync(token, isRefresh, isRetry));
 
-    public static async Task GetNaidDataAsync(string token, bool isRefresh = false, bool isRetry = false)
+    public static async Task GetNaidDataAsync(string token, bool isRefresh = false, bool isRetry = false, ushort port = 0)
     {
         if (_isGettingData) throw new InvalidOperationException("请勿重复操作");
         _isGettingData = true;
@@ -50,7 +50,7 @@ public static class NatayarkProfileManager
                 $"&client_id={EnvironmentInterop.GetSecret("NAID_CLIENT_ID")}" +
                 $"&client_secret={EnvironmentInterop.GetSecret("NAID_CLIENT_SECRET")}" +
                 $"&{(isRefresh ? "refresh_token" : "code")}={token}" +
-                $"&redirect_uri=http://localhost:29992/callback";
+                (isRefresh ? "" : $"&redirect_uri=http://localhost:{port}/callback");
 
             var httpContent = new StringContent(requestData, Encoding.UTF8, "application/x-www-form-urlencoded");
 

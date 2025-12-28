@@ -55,6 +55,10 @@ public class DnsQuery : IDisposable
         {
             return await _resolver.Query(DnsQueryFactory.CreateQuery(host, qType), cts);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             LogWrapper.Warn(ModuleName, $"Failed to resolve DNS for {host}: {ex.Message}, use system default DNS");

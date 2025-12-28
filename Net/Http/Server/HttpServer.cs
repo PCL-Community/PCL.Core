@@ -88,16 +88,9 @@ public abstract class HttpServer : IDisposable
                 var context = await _server.GetContextAsync();
                 _ = Task.Run(async () => await _processRequest(context), cancellationToken);
             }
-            catch (ObjectDisposedException)
-            {
-                // Server was stopped
-                break;
-            }
-            catch (HttpListenerException)
-            {
-                // Listener was closed
-                break;
-            }
+            catch (OperationCanceledException) { break; } // Cancellation
+            catch (ObjectDisposedException) { break; } // Disposed
+            catch (HttpListenerException) { break; } // Closed
         }
     }
 
@@ -152,7 +145,8 @@ public abstract class HttpServer : IDisposable
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
             response.ContentEncoding = System.Text.Encoding.UTF8;
             response.ContentType = "text/plain";
-            var errorResponse = HttpRouteResponse.Text($"Internal Server Error:\n{ex}", "text/plain", System.Text.Encoding.UTF8);
+            var errorResponse =
+                HttpRouteResponse.Text($"Internal Server Error:\n{ex}", "text/plain", System.Text.Encoding.UTF8);
             errorResponse.Pour(response);
         }
     }

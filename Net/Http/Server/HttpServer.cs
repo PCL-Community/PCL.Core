@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Reflection;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,9 +13,10 @@ public abstract class HttpServer : IDisposable
     public readonly ushort Port;
     public readonly string[] Host;
 
-    private Task? HandleLoop;
+    private Task? _handleLoop;
     private CancellationTokenSource? _cancellationTokenSource;
-    private readonly Dictionary<string, Func<HttpListenerRequest, Task<HttpListenerResponse>>> _handlers = new();
+    private readonly Dictionary<(HttpMethod method, string path), Func<HttpListenerRequest, Task<HttpRouteResponse>>> _handlers = new();
+    private bool _initialized = false;
 
     protected HttpServer(IPAddress[] listenAddr, ushort port = 0)
     {
@@ -39,54 +40,137 @@ public abstract class HttpServer : IDisposable
         Host = hosts.ToArray();
     }
 
+    /// <summary>
+    /// 初始化路由。子类应在此方法中调用 Register 方法注册路由。
+    /// </summary>
+    protected abstract void Init();
 
+    /// <summary>
+    /// 注册一个路由处理器。
+    /// </summary>
+    /// <param name="method">HTTP 方法</param>
+    /// <param name="path">路由路径</param>
+    /// <param name="handler">请求处理函数</param>
+    protected void Register(HttpMethod method, string path, Func<HttpListenerRequest, Task<HttpRouteResponse>> handler)
+    {
+        ArgumentNullException.ThrowIfNull(method);
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(handler);
+
+        _handlers[(method, path)] = handler;
+    }
+
+    /// <summary>
+    /// 启动 HTTP 服务器。
+    /// </summary>
     public void Start()
     {
-        _server.Start();
-        HandleLoop = _handleRequest();
+        // 如果没有注册路由，调用 Init 初始化
+        if (!_initialized && _handlers.Count == 0)
+        {
+            Init();
+            _initialized = true;
+        }
 
+        _cancellationTokenSource = new CancellationTokenSource();
+        _server.Start();
+        _handleLoop = _handleRequest();
     }
 
     private async Task _handleRequest()
     {
-        while (!(_cancellationTokenSource?.IsCancellationRequested ?? true))
-        {
-            var incomeContext = await _server.GetContextAsync();
-            var path = incomeContext.Request.Url?.AbsolutePath ?? string.Empty;
+        var cancellationToken = _cancellationTokenSource?.Token ?? CancellationToken.None;
 
-            if (_handlers.TryGetValue(path, out var handler))
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
             {
-                var response = await handler(incomeContext.Request);
-                incomeContext.Response.StatusCode = response.StatusCode;
-                incomeContext.Response.ContentType = response.ContentType;
-                incomeContext.Response.ContentEncoding = response.ContentEncoding;
-                incomeContext.Response.ContentLength64 = response.ContentLength64;
-                await incomeContext.Response.OutputStream.CopyToAsync(response.OutputStream);
+                var context = await _server.GetContextAsync();
+                _ = Task.Run(async () => await _processRequest(context), cancellationToken);
             }
-            else
+            catch (ObjectDisposedException)
             {
-                incomeContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                // Server was stopped
+                break;
+            }
+            catch (HttpListenerException)
+            {
+                // Listener was closed
+                break;
             }
         }
     }
 
-
-
-    protected void Route(Func<HttpListenerRequest, Task<HttpListenerResponse>> handle)
+    private async Task _processRequest(HttpListenerContext context)
     {
-        ArgumentNullException.ThrowIfNull(handle);
-        var routeMeta = handle.GetMethodInfo().GetCustomAttribute<HttpRoute>();
-        if (routeMeta == null)
-            throw new NullReferenceException("Route attribute is missing");
+        try
+        {
+            var request = context.Request;
+            var response = context.Response;
+            var path = request.Url?.AbsolutePath ?? string.Empty;
+            var method = new HttpMethod(request.HttpMethod);
 
-        _handlers[routeMeta.Path] = handle;
+            // 首先尝试精确匹配
+            if (_handlers.TryGetValue((method, path), out var handler))
+            {
+                await _ExecuteHandler(handler, request, response);
+                return;
+            }
+
+            // 如果没有精确匹配，尝试通配符匹配
+            if (_handlers.TryGetValue((method, "*"), out var wildcardHandler))
+            {
+                await _ExecuteHandler(wildcardHandler, request, response);
+                return;
+            }
+
+            // 没有找到匹配的路由
+            response.StatusCode = (int)HttpStatusCode.NotFound;
+        }
+        finally
+        {
+            try
+            {
+                context.Response.Close();
+            }
+            catch
+            {
+                // Ignore errors when closing response
+            }
+        }
+    }
+
+    private async Task _ExecuteHandler(Func<HttpListenerRequest, Task<HttpRouteResponse>> handler, HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            var routeResponse = await handler(request);
+            routeResponse.Pour(response);
+        }
+        catch (Exception ex)
+        {
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            response.ContentEncoding = System.Text.Encoding.UTF8;
+            response.ContentType = "text/plain";
+            var errorResponse = HttpRouteResponse.Text($"Internal Server Error:\n{ex}", "text/plain", System.Text.Encoding.UTF8);
+            errorResponse.Pour(response);
+        }
+    }
+
+    /// <summary>
+    /// 停止 HTTP 服务器。
+    /// </summary>
+    public void Stop()
+    {
+        _cancellationTokenSource?.Cancel();
+        _server.Stop();
     }
 
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        // Stop http listener
-        _server.Stop();
+        Stop();
         _server.Close();
+        _cancellationTokenSource?.Dispose();
     }
 }

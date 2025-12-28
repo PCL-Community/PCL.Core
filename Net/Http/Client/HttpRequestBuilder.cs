@@ -23,9 +23,9 @@ public class HttpRequestBuilder
     private Version _requestVersion = HttpVersion.Version20;
     private TimeSpan _timeOutMillisec = TimeSpan.FromMilliseconds(10 * 1000);
 
-    private HttpRequestBuilder(Uri uri, HttpMethod method)
+    private HttpRequestBuilder(Uri uri, HttpMethod? method = null)
     {
-        _request = new HttpRequestMessage(method, uri);
+        _request = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public class HttpRequestBuilder
     /// <param name="url">url</param>
     /// <param name="method">HTTP 方法</param>
     /// <returns>HttpRequestBuilder</returns>
-    public static HttpRequestBuilder Create(string url, HttpMethod method)
+    public static HttpRequestBuilder Create(string url, HttpMethod? method = null)
     {
         var reqUri = new Uri(url);
         return new HttpRequestBuilder(reqUri, method);
@@ -46,7 +46,7 @@ public class HttpRequestBuilder
     /// <param name="uri">uri</param>
     /// <param name="method">HTTP 方法</param>
     /// <returns>HttpRequestBuilder</returns>
-    public static HttpRequestBuilder Create(Uri uri, HttpMethod method)
+    public static HttpRequestBuilder Create(Uri uri, HttpMethod? method = null)
     {
         return new HttpRequestBuilder(uri, method);
     }

@@ -173,6 +173,11 @@ public static partial class Config
         /// 第三方认证服务器。
         /// </summary>
         [ConfigItem<string>("CacheAuthServerServer", "", ConfigSource.SharedEncrypt)] public partial string AuthServerAddress { get; set; }
+        
+        /// <summary>
+        /// MC 版本 Drops。
+        /// </summary>
+        [ConfigItem<string>("CacheDrops", "")] public partial string Drops { get; set; }
     }
 
     /// <summary>

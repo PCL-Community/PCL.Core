@@ -45,7 +45,7 @@ public class DnsQuery : IDisposable
             }
         ];
         _resolver = new DnsCachingClient(
-            new DnsRacerClient(_httpClients.Select(x => new DnsHttpClient(x)).ToArray<IDnsClient>()),
+            new WeightedDnsRacerClient(2, _httpClients.Select(x => new DnsHttpClient(x)).ToArray<IDnsClient>()),
             new MemoryCache("DoH Query Cache"));
     }
 

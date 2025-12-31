@@ -43,9 +43,28 @@ public static class UpdateHelper
                 throw new FileNotFoundException("复制到目标文件失败", target);
             }
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
-            // 出错：恢复原文件并返回异常
+            // 出错：恢复原文件并返回异常（文件 I/O 相关）
+            if (File.Exists(backup) && !File.Exists(target))
+            {
+                File.Move(backup, target);
+            }
+
+            lastEx = ex;
+        catch (UnauthorizedAccessException ex)
+        {
+            // 出错：恢复原文件并返回异常（权限相关）
+            if (File.Exists(backup) && !File.Exists(target))
+            {
+                File.Move(backup, target);
+            }
+        }
+            lastEx = ex;
+        }
+        catch (SystemException ex)
+        {
+            // 其他非致命系统异常：尝试恢复并返回异常
             if (File.Exists(backup) && !File.Exists(target))
             {
                 File.Move(backup, target);
@@ -53,6 +72,7 @@ public static class UpdateHelper
 
             lastEx = ex;
         }
+
 
         if (File.Exists(backup))
         {

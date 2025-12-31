@@ -9,10 +9,8 @@ using Ae.Dns.Client;
 using Ae.Dns.Protocol;
 using Ae.Dns.Protocol.Enums;
 using Ae.Dns.Protocol.Records;
-using Microsoft.Extensions.DependencyInjection;
 using PCL.Core.Logging;
 using PCL.Core.Net.Http.Client;
-using Polly;
 
 namespace PCL.Core.Net.Dns;
 

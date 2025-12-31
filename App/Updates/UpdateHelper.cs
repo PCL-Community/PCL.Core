@@ -52,6 +52,7 @@ public static class UpdateHelper
             }
 
             lastEx = ex;
+        }
         catch (UnauthorizedAccessException ex)
         {
             // 出错：恢复原文件并返回异常（权限相关）
@@ -59,7 +60,6 @@ public static class UpdateHelper
             {
                 File.Move(backup, target);
             }
-        }
             lastEx = ex;
         }
         catch (SystemException ex)

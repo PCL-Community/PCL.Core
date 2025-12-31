@@ -9,8 +9,10 @@ using Ae.Dns.Client;
 using Ae.Dns.Protocol;
 using Ae.Dns.Protocol.Enums;
 using Ae.Dns.Protocol.Records;
+using Microsoft.Extensions.DependencyInjection;
 using PCL.Core.Logging;
 using PCL.Core.Net.Http.Client;
+using Polly;
 
 namespace PCL.Core.Net.Dns;
 
@@ -45,7 +47,7 @@ public class DnsQuery : IDisposable
             }
         ];
         _resolver = new DnsCachingClient(
-            new DnsRacerClient(_httpClients.Select(x => new DnsHttpClient(x)).ToArray<IDnsClient>()),
+            new WeightedDnsRacerClient(2, _httpClients.Select(x => new DnsHttpClient(x)).ToArray<IDnsClient>()),
             new MemoryCache("DoH Query Cache"));
     }
 

@@ -307,7 +307,7 @@ public class McPing : IDisposable
             }
         }
 
-        LogWrapper.Warn("McPing", $"处理 Motd 内容完成，结果：{result}");
+        LogWrapper.Debug("McPing", $"处理 Motd 内容完成，结果：{result}");
         return result.ToString();
     }
 

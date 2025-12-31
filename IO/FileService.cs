@@ -34,7 +34,10 @@ public static class PredefinedFileTasks
 public class ResultFailedException(Exception innerException) : Exception(innerException.Message, innerException);
 
 /// <summary>
-/// Global file management service.
+/// Global file management service.<br/>
+/// <b>NOTE</b>: The behaviors of all path strings in this service depends on <see cref="Path"/> API
+/// provided by .NET standard library. You should use <see cref="Path"/> and other APIs relative to it to
+/// process any path string from this service, rather than concat paths manually.
 /// </summary>
 [LifecycleService(LifecycleState.Loading, Priority = 1919820)]
 public sealed class FileService : GeneralService

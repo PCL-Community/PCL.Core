@@ -10,6 +10,13 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Net.Downloader;
 
+/// <summary>
+/// 下载分段
+/// </summary>
+/// <param name="uri">下载链接</param>
+/// <param name="path">保存路径</param>
+/// <param name="start">分段起始位置</param>
+/// <param name="end">分段结束位置（可选）</param>
 public class DownloadSegment(Uri uri, string path, long start, long? end)
 {
     public long Start { get; } = start;
@@ -19,8 +26,18 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
     public long RemainingBytes => (End ?? 0) - (Start + Downloaded);
     private Uri _currentUri = uri;
 
+    /// <summary>
+    /// 更新下载链接
+    /// </summary>
+    /// <param name="newUri">新的下载链接</param>
     public void UpdateUri(Uri newUri) => _currentUri = newUri;
 
+    /// <summary>
+    /// 异步下载分段
+    /// </summary>
+    /// <param name="client">HTTP 客户端</param>
+    /// <param name="token">取消令牌</param>
+    /// <param name="progress">下载进度回调</param>
     public async Task DownloadAsync(HttpClient client, CancellationToken token, IProgress<long>? progress = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _currentUri);

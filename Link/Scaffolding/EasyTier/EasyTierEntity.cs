@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.Net.Http.Client;
 
 namespace PCL.Core.Link.Scaffolding.EasyTier;
 
@@ -177,7 +178,7 @@ public class EasyTierEntity
             .Add("network-name", _lobby.NetworkName)
             .Add("network-secret", _lobby.NetworkSecret)
             //.Add("relay-network-whitelist", _lobby.NetworkName)
-            .Add("machine-id", Utils.Secret.Identify.LaunchId)
+            .Add("machine-id", Utils.Secret.Identify.LauncherId)
             .Add("rpc-portal", _rpcPort.ToString())
             .Add("private-mode", "true");
 

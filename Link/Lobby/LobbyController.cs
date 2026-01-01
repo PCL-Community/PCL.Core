@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using PCL.Core.Net.Http.Client;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
 using LobbyType = PCL.Core.Link.Scaffolding.Client.Models.LobbyType;
@@ -208,7 +209,7 @@ public sealed class LobbyController
         JsonObject data = new()
         {
             ["Tag"] = "Link",
-            ["Id"] = Identify.LaunchId,
+            ["Id"] = Identify.LauncherId,
             ["NaidId"] = NaidProfile.Id,
             ["NaidEmail"] = NaidProfile.Email,
             ["NaidLastIp"] = NaidProfile.LastIp,

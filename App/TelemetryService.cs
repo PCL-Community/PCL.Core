@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Win32;
 using PCL.Core.Net;
+using PCL.Core.Net.Http.Client;
 using PCL.Core.Utils.OS;
 using STUN.Client;
 
@@ -22,7 +23,7 @@ public class TelemetryService : GeneralService
 
     // ReSharper disable UnusedAutoPropertyAccessor.Local
 
-    private class TelemetryData
+    private class TelemetryDeviceEnvironment
     {
         public required string Tag { get; set; }
         public required string Id { get; set; }
@@ -51,10 +52,10 @@ public class TelemetryService : GeneralService
         var natTest = new StunClient5389UDP(new IPEndPoint(Dns.GetHostAddresses("stun.miwifi.com").First(), 3478),
             new IPEndPoint(IPAddress.Any, 0));
         natTest.QueryAsync().GetAwaiter().GetResult();
-        var telemetry = new TelemetryData
+        var telemetry = new TelemetryDeviceEnvironment
         {
             Tag = "Telemetry",
-            Id = Utils.Secret.Identify.LaunchId,
+            Id = Utils.Secret.Identify.LauncherId,
             Os = Environment.OSVersion.Version.Build,
             Is64Bit = Environment.Is64BitOperatingSystem,
             IsArm64 = RuntimeInformation.OSArchitecture.Equals(Architecture.Arm64),
@@ -82,9 +83,9 @@ public class TelemetryService : GeneralService
             .WithAuthentication(telemetryKey).WithContent(sendData, "application/json")
             .SendAsync().Result;
         if (response.IsSuccess)
-            Context.Info("已发送调查数据");
+            Context.Info("已发送设备环境调查数据");
         else
-            Context.Error("调查数据发送失败，请检查网络连接以及使用的版本");
+            Context.Error("设备环境调查数据发送失败，请检查网络连接以及使用的版本");
         Context.DeclareStopped();
     }
 }

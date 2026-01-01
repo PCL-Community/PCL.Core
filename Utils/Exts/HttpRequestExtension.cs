@@ -41,7 +41,7 @@ public static class HttpRequestExtension
 
         // 复制内容头
         foreach (var header in content.Headers)
-            clone.Headers.Add(header.Key, header.Value);
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
 
         return clone;
     }

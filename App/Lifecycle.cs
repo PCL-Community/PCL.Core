@@ -23,11 +23,11 @@ public sealed class Lifecycle : ILifecycleService
 
     public string Identifier => "lifecycle";
     public string Name => "生命周期";
-    public bool SupportAsyncStart => false;
+    public bool SupportAsync => false;
 
     private static LifecycleContext? _context;
     private Lifecycle() { _context = GetContext(this); }
-    private static LifecycleContext Context => _context ?? System;
+    private static LifecycleContext Context => _context ?? SystemContext;
 
     public Task StartAsync() => Task.CompletedTask;
 
@@ -121,19 +121,19 @@ public sealed class Lifecycle : ILifecycleService
             _RunningServiceInfoMap[service.Identifier] = _SystemServiceInfo;
         }
         // 运行服务项并添加到正在运行列表
-        return AsyncCall();
+        return service.SupportAsync ? Task.Run(AsyncCall) : AsyncCall();
         async Task AsyncCall()
         {
             try
             {
                 Context.Trace($"正在启动 {name}");
-                await service.StartAsync();
+                await service.StartAsync().ConfigureAwait(!service.SupportAsync);
                 var serviceInfo = new LifecycleServiceInfo(service, state);
                 Context.Debug($"{name} 启动成功");
                 if (_DeclaredStoppedServices.Contains(service))
                 {
                     _DeclaredStoppedServices.Remove(service);
-                    Context.Trace($"{name} 主动停止");
+                    Context.Trace($"{name} 已中止");
                 }
                 else
                 {
@@ -165,15 +165,15 @@ public sealed class Lifecycle : ILifecycleService
         var fullname = type.FullName;
         try
         {
-            System.Trace($"正在实例化 {fullname}");
+            SystemContext.Trace($"正在实例化 {fullname}");
             var instance = (ILifecycleService)Activator.CreateInstance(type, true)!;
-            var supportAsyncText = instance.SupportAsyncStart ? "异步" : "同步";
-            System.Trace($"实例化完成: {instance.Name} ({instance.Identifier}), 启动方式: {supportAsyncText}");
+            var supportAsyncText = instance.SupportAsync ? "异步" : "同步";
+            SystemContext.Trace($"实例化完成: {instance.Name} ({instance.Identifier}), 启动方式: {supportAsyncText}");
             return instance;
         }
         catch (Exception ex)
         {
-            System.Fatal($"注册服务项实例化失败: {fullname}", ex);
+            SystemContext.Fatal($"注册服务项实例化失败: {fullname}", ex);
             throw;
         }
     }
@@ -192,7 +192,7 @@ public sealed class Lifecycle : ILifecycleService
         foreach (var service in types)
         {
             var instance = _CreateService(service);
-            if (instance.SupportAsyncStart) asyncInstances.Add(instance);
+            if (instance.SupportAsync) asyncInstances.Add(instance);
             else _StartServiceTask(instance).Wait();
             if (_requestedStopLoading) return; // 若请求停止加载则提前结束
         }
@@ -247,7 +247,7 @@ public sealed class Lifecycle : ILifecycleService
             try
             {
                 Context.Trace($"正在停止 {name}");
-                await service.StopAsync();
+                await service.StopAsync().ConfigureAwait(!async);
                 Context.Debug($"{name} 已停止");
             }
             catch (Exception ex)
@@ -302,7 +302,7 @@ public sealed class Lifecycle : ILifecycleService
                 continue;
             }
             // 执行停止流程
-            _StopService(service, service.SupportAsyncStart);
+            _StopService(service, service.SupportAsync);
         }
         if (logService != null)
         {
@@ -610,7 +610,7 @@ public sealed class Lifecycle : ILifecycleService
     {
         _ManualServiceMap.TryGetValue(identifier, out var service);
         if (service == null || IsServiceRunning(identifier)) return false;
-        async ??= service.SupportAsyncStart;
+        async ??= service.SupportAsync;
         if (async == true) Task.Run(() => _StartServiceTask(service, true));
         else _StartServiceTask(service, true);
         return true;
@@ -656,7 +656,7 @@ public sealed class Lifecycle : ILifecycleService
         Context.Info(force ? "开始强制关闭程序" : "正在关闭程序");
         IsForceShutdown = force;
         if (force) _Exit(statusCode);
-        else new Thread(() => _Exit(statusCode)) { Name = "Shutdown" }.Start();
+        else new Thread(() => _Exit(statusCode)) { Name = "Lifecycle/Shutdown" }.Start();
     }
 
     /// <summary>
@@ -719,7 +719,7 @@ public sealed class Lifecycle : ILifecycleService
     {
         public string Name => "系统";
         public string Identifier => "system";
-        public bool SupportAsyncStart => false;
+        public bool SupportAsync => false;
         public Task StartAsync() => Task.CompletedTask;
         public Task StopAsync() => Task.CompletedTask;
     }
@@ -730,7 +730,7 @@ public sealed class Lifecycle : ILifecycleService
     /// <summary>
     /// 系统默认上下文，无特殊需求请勿使用。
     /// </summary>
-    public static readonly LifecycleContext System = GetContext(_SystemService);
+    public static readonly LifecycleContext SystemContext = GetContext(_SystemService);
 
     #endregion
 }

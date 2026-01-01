@@ -7,13 +7,9 @@ using PCL.Core.IO;
 namespace PCL.Core.App;
 
 [LifecycleService(LifecycleState.BeforeLoading, Priority = -2134567890)]
-public class SingleInstanceService : GeneralService
+[LifecycleScope("single-instance", "单例", false)]
+public sealed partial class SingleInstanceService
 {
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-
-    private SingleInstanceService() : base("single-instance", "单例", false) { _context = ServiceContext; }
-    
     private static FileStream? _lockStream;
     private static readonly string _LockFilePath = Path.Combine(FileService.LocalDataPath, "instance.lock");
 
@@ -28,7 +24,8 @@ public class SingleInstanceService : GeneralService
         sw.Flush();
     }
 
-    public override void Start()
+    [LifecycleStart]
+    private static void _Start()
     {
         try
         {
@@ -54,7 +51,8 @@ public class SingleInstanceService : GeneralService
         }
     }
 
-    public override void Stop()
+    [LifecycleStop]
+    private static void _Stop()
     {
         if (_lockStream == null) return;
         Context.Debug("正在删除单例锁");

@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using PCL.Core.Net.Http.Client;
 
 namespace PCL.Core.App.Updates.Sources;
 
@@ -392,14 +393,14 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     private static string _GetChannelName()
     {
         var channelName = string.Empty;
-        channelName += Basics.CurrentUpdateChannel switch
+        channelName += UpdateHelper.CurrentUpdateChannel switch
         {
             UpdateChannel.Stable => "sr",
             UpdateChannel.Beta => "fr",
             _ => "sr"
         };
 
-        channelName += Basics.IsArm64 ? "arm64" : "x64";
+        channelName += UpdateHelper.IsArm64 ? "arm64" : "x64";
 
         return channelName;
     }

@@ -192,7 +192,7 @@ public sealed class FileService : GeneralService
         {
             if (!_PendingTasks.TryDequeue(out var task))
             {
-                _ContinueEvent.WaitOne();
+                _ContinueEvent.WaitOne(TimeSpan.FromSeconds(1));
                 continue;
             }
 

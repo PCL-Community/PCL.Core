@@ -48,10 +48,10 @@
         <PackageReference Include="Ae.Dns.Client" Version="3.1.0" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <!-- 语言和系统特性 -->
-        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" PrivateAssets="all" />
-        <PackageReference Include="System.Management" Version="9.0.9" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="System.Management" Version="9.0.9" />
         <!-- 归档文件 -->
-        <PackageReference Include="SharpZipLib" Version="1.4.2" PrivateAssets="all" />
+        <PackageReference Include="SharpZipLib" Version="1.4.2" />
         <!-- 配置文件和数据库 -->
         <PackageReference Include="System.Text.Json" Version="9.0.9" />
         <PackageReference Include="YamlDotNet" Version="16.3.0" />
@@ -60,7 +60,7 @@
         <!-- 网络 -->
         <PackageReference Include="Stun.Net" Version="9.0.1" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
-        <PackageReference Include="Polly" Version="8.6.3" />
+        <PackageReference Include="Polly" Version="8.6.5" />
     </ItemGroup>
     <!-- 信不过巨硬的智障代码，手动包含需要的文件 -->
     <PropertyGroup>

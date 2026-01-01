@@ -17,9 +17,9 @@ public partial class CheckUpdateService
     ]);
 
     [LifecycleStart]
-    private async Task _Start()
+    private static async Task _Start()
     {
-        CheckResult result;
+        VersionDataModel result;
         try
         {
             result = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
@@ -30,34 +30,28 @@ public partial class CheckUpdateService
             HintWrapper.Show("检查更新时发生异常，可能是网络问题导致", HintTheme.Error);
             return;
         }
+        catch (InvalidOperationException ex)
+        {
+            Context.Warn("检查更新时发生异常", ex);
+            HintWrapper.Show("检查更新时发生异常，所有更新源均不可用", HintTheme.Error);
+            return;
+        }
         catch (Exception ex)
         {
             Context.Warn("检查更新时发生未知异常", ex);
-            throw;
+            HintWrapper.Show("检查更新时发生未知异常", HintTheme.Error);
+            return;
         }
 
-        switch (result.Type)
+        if (!result.IsAvailable)
         {
-            case CheckResultType.Available: break;
-            case CheckResultType.Latest:
-            { 
-                Context.Info("当前已是最新版本"); 
-                return;
-            }
-            default:
-                throw new ArgumentOutOfRangeException(nameof(result.Type), "Update checkout result out of range");
-        }
-
-        if (result.VersionData == null)
-        {
-            Context.Warn("检查更新失败，版本信息为 null");
-            HintWrapper.Show("检查更新失败，可能是网络问题导致", HintTheme.Error);
+            Context.Info("当前已是最新版本");
             return;
         }
 
         Context.Info("发现新版本, 准备下载更新包...");
 
-        var answer = MsgBoxWrapper.Show(result.VersionData.ChangeLog,
+        var answer = MsgBoxWrapper.Show(result.ChangeLog,
             "发现新版本",
             MsgBoxTheme.Info,
             true,

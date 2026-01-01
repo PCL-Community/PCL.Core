@@ -25,16 +25,6 @@ public static class Basics
     /// 当前版本号。
     /// </summary>
     public static int VersionNumber { get; set; } = 0;
-    
-    /// <summary>
-    /// 当前更新通道。
-    /// </summary>
-    public static UpdateChannel CurrentUpdateChannel => (UpdateChannel)Config.System.UpdateBranch;
-
-    /// <summary>
-    /// 当前系统架构是否为 Arm64。
-    /// </summary>
-    public static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
 
     #endregion
 

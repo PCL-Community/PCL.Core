@@ -14,8 +14,7 @@ namespace PCL.Core.App.Updates.Sources;
 /// </summary>
 public sealed class SourceController
 {
-    private readonly IReadOnlyList<IUpdateSource> _availableSources;
-    private IUpdateSource? _currentSource;
+    private readonly List<IUpdateSource> _availableSources;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     /// <summary>
@@ -40,48 +39,23 @@ public sealed class SourceController
         await _semaphore.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (_currentSource != null)
-            {
-                try
-                {
-                    var res = await action(_currentSource).ConfigureAwait(false);
-                    _LogInfo("使用默认源处理成功");
-                    return res;
-                }
-                catch (Exception ex)
-                {
-                    if (ex is OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    _LogWarning($"默认源失效，遍历其他更新源。异常: {ex}");
-                }
-            }
-            else
-            {
-                _LogInfo("无默认源，遍历其他更新源");
-            }
-
             foreach (var source in _availableSources)
             {
                 try
                 {
                     var res = await action(source).ConfigureAwait(false);
-                    _currentSource = source;
                     _LogInfo($"使用 {source.SourceName} 处理成功");
+                    _availableSources.Insert(0, source);
+                    _availableSources.Remove(source);
                     return res;
                 }
                 catch (Exception ex)
                 {
-                    if (ex is OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    _LogWarning($"{source.SourceName}失效，使用下一个更新源。异常: {ex}");
+                    _LogWarning($"{source.SourceName} 失效，使用下一个更新源。异常: {ex}");
                 }
             }
-
-            throw new InvalidOperationException("警告，所有更新源均无法使用！");
+                
+            throw new InvalidOperationException("所有更新源均不可用");
         }
         finally
         {
@@ -94,25 +68,20 @@ public sealed class SourceController
     /// </summary>
     /// <param name="action">指定操作</param>
     /// <exception cref="InvalidOperationException">所有更新源均不可用时抛出</exception>
-    private Task<object?> _TryFindSourceAsync(Func<IUpdateSource, Task> action) =>
-        _TryFindSourceAsync<object?>(async s =>
+    private async Task _TryFindSourceAsync(Func<IUpdateSource, Task> action)
+    {
+        await _TryFindSourceAsync<object?>(async s =>
         {
             await action(s).ConfigureAwait(false);
             return null;
-        });
+        }).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// 检查是否有新版本并返回结果。
     /// </summary>
-    public async Task<CheckResult> CheckUpdateAsync()
-    {
-        var data = await _TryFindSourceAsync(s => s.CheckUpdateAsync()).ConfigureAwait(false);
-        var isAvailable = data.VersionCode > Basics.VersionNumber
-                          || SemVer.Parse(data.VersionName) > SemVer.Parse(Basics.VersionName);
-        return isAvailable
-            ? new CheckResult(CheckResultType.Available, data)
-            : new CheckResult(CheckResultType.Latest);
-    }
+    public Task<VersionDataModel> CheckUpdateAsync() => 
+        _TryFindSourceAsync(s => s.CheckUpdateAsync());
 
     /// <summary>
     /// 获取公告列表。

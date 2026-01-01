@@ -4,7 +4,9 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using PCL.Core.App.Updates.Models;
 
 namespace PCL.Core.App.Updates;
 
@@ -73,7 +75,6 @@ public static class UpdateHelper
             lastEx = ex;
         }
 
-
         if (File.Exists(backup))
         {
             File.Delete(backup);
@@ -127,4 +128,28 @@ public static class UpdateHelper
             // 忽略其他启动异常以保持方法简洁（可按需记录）
         }
     }
+    
+    /// <summary>
+    /// 比较两个版本。
+    /// </summary>
+    /// <param name="v1">第一个版本</param>
+    /// <param name="v1Code">第一个版本号</param>
+    /// <param name="v2">第二个版本</param>
+    /// <param name="v2Code">第二个版本号</param>
+    /// <returns>比较结果：小于 0 表示 v1 小于 v2，大于 0 表示 v1 大于 v2，等于 0 表示两者相等。</returns>
+    public static int CompareVersion(SemVer v1, int v1Code, SemVer v2, int v2Code)
+    {
+        var codeComparison = v1Code.CompareTo(v2Code);
+        return codeComparison != 0 ? codeComparison : v1.CompareTo(v2);
+    }
+    
+    /// <summary>
+    /// 当前更新通道。
+    /// </summary>
+    public static UpdateChannel CurrentUpdateChannel => (UpdateChannel)Config.System.UpdateBranch;
+
+    /// <summary>
+    /// 当前系统架构是否为 Arm64。
+    /// </summary>
+    public static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
 }

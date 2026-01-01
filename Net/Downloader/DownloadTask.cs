@@ -26,10 +26,7 @@ public class DownloadTask
     /// </summary>
     /// <param name="mirror">镜像地址</param>
     /// <param name="targetPath">目标路径</param>
-    public DownloadTask(Uri mirror, string targetPath)
-        : this([mirror], targetPath)
-    {
-    }
+    public DownloadTask(Uri mirror, string targetPath) : this([mirror], targetPath) { }
 
     /// <summary>
     /// 创建下载任务

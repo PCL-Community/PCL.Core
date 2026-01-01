@@ -15,15 +15,11 @@ public class ConfigItem<TValue>(
     ConfigSource source
 ) : IConfigScope, ConfigItem
 {
-    /// <summary>
-    /// 配置键。
-    /// </summary>
     public string Key { get; } = key;
 
-    /// <summary>
-    /// 配置来源。
-    /// </summary>
     public ConfigSource Source { get; set; } = source;
+
+    Type ConfigItem.Type => typeof(TValue);
 
     private Func<TValue>? _defaultValueGetter = defaultValue;
     private TValue? _defaultValue;
@@ -231,6 +227,21 @@ public class ConfigItem<TValue>(
 // ReSharper disable once InconsistentNaming
 public interface ConfigItem
 {
+    /// <summary>
+    /// 配置键。
+    /// </summary>
+    public string Key { get; }
+
+    /// <summary>
+    /// 配置来源。
+    /// </summary>
+    public ConfigSource Source { get; set; }
+
+    /// <summary>
+    /// 配置的 CLR 类型。
+    /// </summary>
+    public Type Type { get; }
+
     /// <summary>
     /// 传入事件观察器以观察事件。
     /// </summary>

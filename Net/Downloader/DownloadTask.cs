@@ -20,6 +20,16 @@ public class DownloadTask
     public long TotalSize { get; private set; }
     public bool UseBestMirror { get; set; } = true;
     public bool SupportsRange { get; internal set; } = true;
+    
+    /// <summary>
+    /// 创建下载任务
+    /// </summary>
+    /// <param name="mirror">镜像地址</param>
+    /// <param name="targetPath">目标路径</param>
+    public DownloadTask(Uri mirror, string targetPath)
+        : this([mirror], targetPath)
+    {
+    }
 
     /// <summary>
     /// 创建下载任务

@@ -97,7 +97,7 @@ public class HostConnectionHandler
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, ModuleName, $"No address reachable for {host}");
+            LogWrapper.Warn(ex, ModuleName, $"No address reachable for {host}");
             throw new HttpRequestException($"No address reachable: {host} -> {string.Join(", ", addresses.Select(x => x.ToString()))}", ex);
         }
     }

@@ -24,14 +24,14 @@ public class DownloadTask
     /// <summary>
     /// 创建下载任务
     /// </summary>
-    /// <param name="mirror">镜像地址</param>
+    /// <param name="mirror">下载链接</param>
     /// <param name="targetPath">目标路径</param>
     public DownloadTask(Uri mirror, string targetPath) : this([mirror], targetPath) { }
 
     /// <summary>
     /// 创建下载任务
     /// </summary>
-    /// <param name="mirrors">镜像列表</param>
+    /// <param name="mirrors">下载链接列表</param>
     /// <param name="targetPath">目标路径</param>
     public DownloadTask(IEnumerable<Uri> mirrors, string targetPath)
     {

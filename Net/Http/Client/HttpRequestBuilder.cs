@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.App;
@@ -13,7 +14,7 @@ using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Net.Http.Client;
 
-public class HttpRequestBuilder : IDisposable
+public class HttpRequestBuilder
 {
     private readonly HttpRequestMessage _request;
     private readonly Dictionary<string, string> _cookies = [];
@@ -22,7 +23,7 @@ public class HttpRequestBuilder : IDisposable
     private bool _doLog = true;
     private Version _requestVersion = HttpVersion.Version20;
     private TimeSpan _timeOutMillisec = TimeSpan.FromMilliseconds(30 * 1000);
-    private bool _isDisposed;
+    private bool _isEndOfLife = false;
 
     private HttpRequestBuilder(Uri uri, HttpMethod? method = null)
     {
@@ -60,6 +61,12 @@ public class HttpRequestBuilder : IDisposable
         _request.Content = contentType is null
             ? new StringContent(content, Encoding.UTF8)
             : new StringContent(content, Encoding.UTF8, contentType);
+        return this;
+    }
+
+    public HttpRequestBuilder WithJsonContent(dynamic content)
+    {
+        _request.Content = new StringContent(JsonSerializer.Serialize(content), Encoding.UTF8, "application/json");
         return this;
     }
 
@@ -170,7 +177,7 @@ public class HttpRequestBuilder : IDisposable
         CancellationToken ct = default,
         Func<int, TimeSpan>? retryPolicy = null)
     {
-        if (_isDisposed) throw new ObjectDisposedException(nameof(HttpRequestBuilder));
+        if (_isEndOfLife) throw new ObjectDisposedException(nameof(HttpRequestBuilder));
 
         _PrepareRequestParameters();
 
@@ -207,6 +214,11 @@ public class HttpRequestBuilder : IDisposable
         {
             throw new TimeoutException($"网络请求超时 (>{_timeOutMillisec.TotalMilliseconds}ms): {_request.RequestUri}");
         }
+        finally
+        {
+            _request.Dispose();
+            _isEndOfLife = true;
+        }
     }
 
     private void _PrepareRequestParameters()
@@ -240,13 +252,6 @@ public class HttpRequestBuilder : IDisposable
         if (string.IsNullOrEmpty(value)) return value;
         var needsEncoding = value.Any(c => _ForbiddenCookieValueChar.Contains(c) || char.IsControl(c));
         return needsEncoding ? Uri.EscapeDataString(value) : value;
-    }
-
-    public void Dispose()
-    {
-        if (_isDisposed) return;
-        _request?.Dispose();
-        _isDisposed = true;
     }
 
     private static readonly char[] _ForbiddenCookieValueChar = [';', ',', ' ', '\r', '\n', '\t', '\0', '=', '"', '\'', '\\', '<', '>'];

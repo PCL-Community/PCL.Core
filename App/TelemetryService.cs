@@ -77,10 +77,9 @@ public class TelemetryService : GeneralService
             NatFilterBehaviour = natTest.State.FilteringBehavior.ToString(),
             Ipv6Status = NetworkInterfaceUtils.GetIPv6Status().ToString()
         };
-        var sendData = JsonSerializer.Serialize(telemetry);
         using var response = HttpRequestBuilder
             .Create("https://pcl2ce.pysio.online/post", HttpMethod.Post)
-            .WithAuthentication(telemetryKey).WithContent(sendData, "application/json")
+            .WithAuthentication(telemetryKey).WithJsonContent(telemetry)
             .SendAsync().Result;
         if (response.IsSuccess)
             Context.Info("已发送设备环境调查数据");

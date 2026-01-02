@@ -101,12 +101,7 @@ public static partial class Config
         /// <summary>
         /// 启动时的社区版提示。
         /// </summary>
-        [ConfigItem<bool>("UiLauncherCEHint", false)] public partial bool CEMessage { get; set; }
-
-        /// <summary>
-        /// 社区版提示计数。
-        /// </summary>
-        [ConfigItem<int>("UiLauncherCEHintCount", 0)] public partial int CEMessageCount { get; set; }
+        [ConfigItem<bool>("UiLauncherCEHint", true)] public partial bool CEMessage { get; set; }
 
         /// <summary>
         /// 投影管理首次使用提示。
@@ -116,7 +111,7 @@ public static partial class Config
         /// <summary>
         /// 已显示的公告。
         /// </summary>
-        [ConfigItem<string>("SystemSystemAnnouncement", "", ConfigSource.Local)] public partial string ShowedAnnouncements { get; set; }
+        [ConfigItem<string>("SystemSystemAnnouncement", "")] public partial string ShowedAnnouncements { get; set; }
     }
 
     /// <summary>
@@ -178,6 +173,11 @@ public static partial class Config
         /// 第三方认证服务器。
         /// </summary>
         [ConfigItem<string>("CacheAuthServerServer", "", ConfigSource.SharedEncrypt)] public partial string AuthServerAddress { get; set; }
+        
+        /// <summary>
+        /// MC 版本 Drops。
+        /// </summary>
+        [ConfigItem<string>("CacheDrops", "")] public partial string Drops { get; set; }
     }
 
     /// <summary>
@@ -292,6 +292,7 @@ public static partial class Config
             [ConfigItem<int>("SystemDebugAnim", 9)] public partial int AnimationSpeed { get; set; }
             [ConfigItem<bool>("SystemDebugDelay", false)] public partial bool AddRandomDelay { get; set; }
             [ConfigItem<bool>("SystemDebugSkipCopy", false)] public partial bool DontCopy { get; set; }
+            [ConfigItem<bool>("SystemDebugAllowRestrictedFeature", false)] public partial bool AllowRestrictedFeature { get; set; }
         }
     }
 
@@ -682,6 +683,7 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenSetupSystem", false, ConfigSource.Local)] public partial bool SetupSystem { get; set; }
             [ConfigItem<bool>("UiHiddenOtherHelp", false, ConfigSource.Local)] public partial bool OtherHelp { get; set; }
             [ConfigItem<bool>("UiHiddenOtherFeedback", false, ConfigSource.Local)] public partial bool OtherFeedback { get; set; }
+            [ConfigItem<bool>("UiHiddenOtherLog", false, ConfigSource.Local)] public partial bool OtherLog { get; set; }
             [ConfigItem<bool>("UiHiddenOtherAbout", false, ConfigSource.Local)] public partial bool OtherAbout { get; set; }
             [ConfigItem<bool>("UiHiddenOtherTest", false, ConfigSource.Local)] public partial bool OtherTest { get; set; }
             [ConfigItem<bool>("UiHiddenVersionEdit", false, ConfigSource.Local)] public partial bool InstanceEdit { get; set; }
@@ -894,10 +896,8 @@ public static partial class Config
         [ConfigItem<string>("VersionForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ForgeVersion { get; }
         [ConfigItem<string>("VersionNeoForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> NeoForgeVersion { get; }
         [ConfigItem<string>("VersionCleanroom", "", ConfigSource.GameInstance)] public partial ArgConfig<string> CleanroomVersion { get; }
-        [ConfigItem<string>("VersionOriginal", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> McVersion { get; }
-        [ConfigItem<int>("VersionOriginalMain", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMajor { get; }
-        [ConfigItem<int>("VersionOriginalSub", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMinor { get; }
-        [ConfigItem<int>("VersionApiCode", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> SortCode { get; }
+        [ConfigItem<string>("VersionVanillaName", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> VanillaVersionName { get; }
+        [ConfigItem<string>("VersionVanilla", "0.0.0", ConfigSource.GameInstance)] public partial ArgConfig<string> VanillaVersion { get; }
         [ConfigItem<string>("VersionModpackVersion", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackVersion { get; }
         [ConfigItem<string>("VersionModpackSource", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackSource { get; }
         [ConfigItem<string>("VersionModpackId", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackId { get; }

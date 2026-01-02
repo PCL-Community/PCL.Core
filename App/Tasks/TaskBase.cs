@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -49,33 +49,31 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
         remove => StateChanged -= value;
     }
 
-    private double _progress = 0;
     /// <summary>
     /// 任务处理进度
     /// </summary>
     public double Progress
     {
-        get => _progress;
+        get;
         set
         {
-            ProgressChanged?.Invoke(this, _progress, value);
-            _progress = value;
+            ProgressChanged?.Invoke(this, field, value);
+            field = value;
         }
-    }
+    } = 0;
 
-    private TaskState _state = TaskState.Waiting;
     /// <summary>
     /// 任务状态
     /// </summary>
     public TaskState State
     {
-        get => _state;
+        get;
         set
         {
-            StateChanged?.Invoke(this, _state, value);
-            _state = value;
+            StateChanged?.Invoke(this, field, value);
+            field = value;
         }
-    }
+    } = TaskState.Waiting;
     
     public object? Result { get; protected set; }
 

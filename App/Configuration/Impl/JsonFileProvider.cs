@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using PCL.Core.IO;
+using PCL.Core.Utils;
 
 namespace PCL.Core.App.Configuration.Impl;
 
@@ -105,7 +106,7 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
     public override void Sync()
     {
         if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
-        var tmpFile = $"{FilePath}.tmp";
+        var tmpFile = $"{FilePath}.tmp{RandomUtils.NextInt(10000, 99999)}";
         var bakFile = $"{FilePath}.bak";
         using (var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read))
         using (var writer = new Utf8JsonWriter(stream, _WriterOptions))

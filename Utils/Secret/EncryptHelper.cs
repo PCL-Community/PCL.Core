@@ -151,7 +151,7 @@ public static class EncryptHelper
                 Data = ProtectedData.Protect(randomKey, _IdentifyEntropy, DataProtectionScope.CurrentUser)
             });
 
-            var tmpFile = $"{keyFile}.tmp";
+            var tmpFile = $"{keyFile}.tmp{RandomUtils.NextInt(10000, 99999)}";
             using (var fs = new FileStream(tmpFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
             {
                 fs.Write(storeData);

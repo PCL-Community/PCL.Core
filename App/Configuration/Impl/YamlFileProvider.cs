@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Utils;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 
@@ -110,7 +111,7 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
     public override void Sync()
     {
         if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
-        var tmpFile = $"{FilePath}.tmp";
+        var tmpFile = $"{FilePath}.tmp{RandomUtils.NextInt(10000, 99999)}";
         var bakFile = $"{FilePath}.bak";
         using (var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read))
         using (var writer = new StreamWriter(stream, Encoding.UTF8))

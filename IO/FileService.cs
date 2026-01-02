@@ -40,7 +40,8 @@ public class ResultFailedException(Exception innerException) : Exception(innerEx
 /// process any path string from this service, rather than concat paths manually.
 /// </summary>
 [LifecycleService(LifecycleState.Loading, Priority = 1919820)]
-public sealed class FileService : GeneralService
+[LifecycleScope("file", "文件管理")]
+public partial class FileService
 {
 
     #region Paths
@@ -126,14 +127,12 @@ public sealed class FileService : GeneralService
 
     #region Lifecycle
 
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-
-    private FileService() : base("file", "文件管理") { _context = ServiceContext; }
+    private static readonly CancellationTokenSource _CancellationToken = new();
 
     private static Thread? _fileLoadingThread;
-    
-    public override void Start()
+
+    [LifecycleStart]
+    public void Start()
     {
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
@@ -142,9 +141,11 @@ public sealed class FileService : GeneralService
         _Initialize();
     }
 
-    public override void Stop()
+    [LifecycleStop]
+    public void Stop()
     {
         Context.Debug("正在停止文件处理工作");
+        _CancellationToken.Cancel();
         _running = false;
         _fileLoadingThread?.Join();
     }
@@ -192,7 +193,7 @@ public sealed class FileService : GeneralService
         {
             if (!_PendingTasks.TryDequeue(out var task))
             {
-                _ContinueEvent.WaitOne();
+                var waited = WaitHandle.WaitAny([_ContinueEvent, _CancellationToken.Token.WaitHandle]);
                 continue;
             }
 

@@ -40,7 +40,7 @@ public class ResultFailedException(Exception innerException) : Exception(innerEx
 /// process any path string from this service, rather than concat paths manually.
 /// </summary>
 [LifecycleService(LifecycleState.Loading, Priority = 1919820)]
-[LifecycleScope("file", "文件管理", false)]
+[LifecycleScope("file", "文件管理")]
 public partial class FileService
 {
 

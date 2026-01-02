@@ -102,6 +102,7 @@ public class EasyTierEntity
 
         try
         {
+            // LogWrapper.Info("Test", _etProcess.StartInfo.Arguments);
             _etProcess.Start();
             State = EtState.Active;
 
@@ -180,7 +181,8 @@ public class EasyTierEntity
             //.Add("relay-network-whitelist", _lobby.NetworkName)
             .Add("machine-id", Utils.Secret.Identify.LauncherId)
             .Add("rpc-portal", _rpcPort.ToString())
-            .Add("private-mode", "true");
+            .Add("private-mode", "true")
+            .AddFlag("p2p-only");
 
 
         if (asHost)
@@ -204,15 +206,20 @@ public class EasyTierEntity
                 .Add("l", "udp://0.0.0.0:0");
         }
 
-        foreach (var address in await _GetEtRelayListAsync().ConfigureAwait(false))
+        foreach (var address in _fallbackNodeLinks)
         {
             args.Add("p", address);
         }
+        
+        // foreach (var address in await _GetEtRelayListAsync().ConfigureAwait(false))
+        // {
+        //     args.Add("p", address);
+        // }
 
-        if (Config.Link.RelayType == 1)
-        {
-            args.AddFlag("disable-p2p");
-        }
+        // if (Config.Link.RelayType == 1)
+        // {
+        //     args.AddFlag("disable-p2p");
+        // }
 
         process.StartInfo.Arguments = args.GetResult();
 
@@ -266,6 +273,8 @@ public class EasyTierEntity
     [
         "tcp://public.easytier.top:11010",
         "tcp://public2.easytier.cn:54321",
+        "https://etnode.zkitefly.eu.org/node1",
+        "https://etnode.zkitefly.eu.org/node2"
     ];
 
 

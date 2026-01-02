@@ -267,7 +267,7 @@ public static partial class Config
             /// <summary>
             /// 检查更新。
             /// </summary>
-            [ConfigItem<int>("SystemSystemUpdate", 0, ConfigSource.Local)] public partial int UpdateMode { get; set; }
+            [ConfigItem<int>("SystemSystemUpdate", 1, ConfigSource.Local)] public partial int UpdateMode { get; set; }
 
             /// <summary>
             /// 更新分支。

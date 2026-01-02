@@ -34,12 +34,16 @@ public static class NatayarkProfileManager
 
     public static NaidUser NaidProfile { get; private set; } = new();
 
-    private static Task? _GetNaidData;
+    private static Task? _getNaidData;
 
     public static async Task GetNaidDataAsync(string token, bool isRefresh = false, bool isRetry = false, ushort port = 0)
     {
-        if (_GetNaidData != null && !_GetNaidData.IsCompleted) await _GetNaidData;
-        _GetNaidData = Task.Run(async () =>
+        if (_getNaidData != null && !_getNaidData.IsCompleted)
+        {
+            await _getNaidData;
+            return;
+        }
+        _getNaidData = Task.Run(async () =>
         {
             try
             {
@@ -140,6 +144,6 @@ public static class NatayarkProfileManager
             }
         });
 
-        await _GetNaidData;
+        await _getNaidData;
     }
 }

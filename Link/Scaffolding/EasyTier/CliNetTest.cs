@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -29,7 +30,7 @@ public class CliNetTest
         public required bool SupportIPv6;
     }
 
-    public static Task<NetStatus?> GetNetStatusAsync()
+    public async static Task<NetStatus?> GetNetStatusAsync()
     {
         using var cliProcess = new Process();
         cliProcess.StartInfo = new ProcessStartInfo
@@ -50,13 +51,12 @@ public class CliNetTest
         };
         cliProcess.EnableRaisingEvents = true;
         cliProcess.Start();
-        var output = cliProcess.StandardOutput.ReadToEnd();
-        cliProcess.WaitForExit();
+        var reader = PipeReader.Create(cliProcess.StandardOutput.BaseStream);
 
         StunInfo? stunInfo = null;
         try
         {
-            stunInfo = JsonSerializer.Deserialize<StunInfo>(output);
+            stunInfo = await JsonSerializer.DeserializeAsync<StunInfo>(reader);
         }
         catch (Exception ex)
         {
@@ -73,8 +73,8 @@ public class CliNetTest
                 break;
             }
         }
-        
-        return new Task<NetStatus?>(() => new NetStatus { UdpNatType = GetNatTypeViaCode(stunInfo.UdpNatType), TcpNatType = GetNatTypeViaCode(stunInfo.TcpNatType), SupportIPv6 = supportIPv6 });
+
+        return new NetStatus { UdpNatType = GetNatTypeViaCode(stunInfo.UdpNatType), TcpNatType = GetNatTypeViaCode(stunInfo.TcpNatType), SupportIPv6 = supportIPv6 };
     }
 
     public static NatType GetNatTypeViaCode(int type) => type switch

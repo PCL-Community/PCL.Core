@@ -21,7 +21,7 @@ public class HttpRequestBuilder : IDisposable
     private bool _addLauncherHeader = true;
     private bool _doLog = true;
     private Version _requestVersion = HttpVersion.Version20;
-    private TimeSpan _timeOutMillisec = TimeSpan.FromMilliseconds(10 * 1000);
+    private TimeSpan _timeOutMillisec = TimeSpan.FromMilliseconds(30 * 1000);
     private bool _isDisposed;
 
     private HttpRequestBuilder(Uri uri, HttpMethod? method = null)

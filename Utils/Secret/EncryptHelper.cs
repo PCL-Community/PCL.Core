@@ -5,8 +5,8 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using PCL.Core.IO;
-using PCL.Core.Logging;
 using PCL.Core.Utils.Encryption;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Utils.Secret;
 
@@ -19,23 +19,23 @@ public static class EncryptHelper
     {
         var aesHardwareSupport = System.Runtime.Intrinsics.X86.Aes.IsSupported ||
                                  System.Runtime.Intrinsics.Arm.Aes.IsSupported;
-        if (aesHardwareSupport) return (AesGcmProvider.Instance, 2);
+        if (aesHardwareSupport && AesGcmProvider.Instance.IsSupported) return (AesGcmProvider.Instance, 2);
         if (ChaCha20Poly1305Provider.Instance.IsSupported) return (ChaCha20Poly1305Provider.Instance, 1);
         return (ChaCha20SoftwareProvider.Instance, 0);
     }
 
-    public static string SecretEncrypt(string data)
+    public static string SecretEncrypt(string? data)
     {
-        if (data == null || data.Length == 0) return string.Empty;
+        if (data.IsNullOrEmpty()) return string.Empty;
         var rawData = Encoding.UTF8.GetBytes(data);
 
         return Convert.ToBase64String(EncryptionData.ToBytes(new EncryptionData
             { Version = DefaultProvider.Version, Data = DefaultProvider.Provider.Encrypt(rawData, EncryptionKey) }));
     }
 
-    public static string SecretDecrypt(string data)
+    public static string SecretDecrypt(string? data)
     {
-        if (data == null || data.Length == 0) return string.Empty;
+        if (data.IsNullOrEmpty()) return string.Empty;
         var rawData = Convert.FromBase64String(data);
         var errors = new List<Exception>();
         try

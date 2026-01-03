@@ -12,30 +12,25 @@ namespace PCL.Core.Utils.Secret;
 
 public static class EncryptHelper
 {
+    public static (IEncryptionProvider Provider, uint Version) DefaultProvider => _DefaultProvider.Value;
+    private static readonly Lazy<(IEncryptionProvider Provider, uint Version)> _DefaultProvider = new(_SelectBestEncryption);
+
+    private static (IEncryptionProvider Provider, uint Version) _SelectBestEncryption()
+    {
+        var aesHardwareSupport = System.Runtime.Intrinsics.X86.Aes.IsSupported ||
+                                 System.Runtime.Intrinsics.Arm.Aes.IsSupported;
+        if (aesHardwareSupport) return (AesGcmProvider.Instance, 2);
+        if (ChaCha20Poly1305Provider.Instance.IsSupported) return (ChaCha20Poly1305Provider.Instance, 1);
+        return (ChaCha20SoftwareProvider.Instance, 0);
+    }
+
     public static string SecretEncrypt(string data)
     {
         if (data == null || data.Length == 0) return string.Empty;
         var rawData = Encoding.UTF8.GetBytes(data);
-        byte[] encryptedData;
-        uint version;
-        if (ChaCha20.Instance.IsSupported)
-        {
-            encryptedData = ChaCha20.Instance.Encrypt(rawData, EncryptionKey);
-            version = 1;
-        }
-        else if (AesGcmProvider.Instance.IsSupported)
-        {
-            encryptedData = AesGcmProvider.Instance.Encrypt(rawData, EncryptionKey);
-            version = 2;
-        }
-        else
-        {
-            LogWrapper.Warn("Encryption", "No available encryption method");
-            encryptedData = rawData;
-            version = 0;
-        }
 
-        return Convert.ToBase64String(EncryptionData.ToBytes(new EncryptionData { Version = version, Data = encryptedData })); ;
+        return Convert.ToBase64String(EncryptionData.ToBytes(new EncryptionData
+            { Version = DefaultProvider.Version, Data = DefaultProvider.Provider.Encrypt(rawData, EncryptionKey) }));
     }
 
     public static string SecretDecrypt(string data)
@@ -46,20 +41,21 @@ public static class EncryptHelper
         try
         {
             var encryptionData = EncryptionData.FromBytes(rawData);
-            var decryptedData = encryptionData.Version switch
+            IEncryptionProvider provider = encryptionData.Version switch
             {
-                0 => rawData,
-                1 => ChaCha20.Instance.Decrypt(encryptionData.Data, EncryptionKey),
-                2 => AesGcmProvider.Instance.Decrypt(encryptionData.Data, EncryptionKey),
+                0 => ChaCha20SoftwareProvider.Instance,
+                1 => ChaCha20Poly1305Provider.Instance,
+                2 => AesGcmProvider.Instance,
                 _ => throw new NotSupportedException("Unsupported encryption version")
             };
+            var decryptedData = provider.Decrypt(encryptionData.Data, EncryptionKey);
             return Encoding.UTF8.GetString(decryptedData);
         }
         catch(Exception ex) { errors.Add(ex); }
 
         try
         {
-            var decryptedData = AesCbc.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
+            var decryptedData = AesCbcProvider.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
             return Encoding.UTF8.GetString(decryptedData);
         }
         catch(Exception ex) { errors.Add(ex); }

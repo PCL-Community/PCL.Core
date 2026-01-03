@@ -7,26 +7,11 @@ using System.Threading.Tasks;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
-public sealed class UpdateArgumentsService : ILifecycleService
+[LifecycleScope("update_arg", "更新参数检查")]
+public sealed partial class UpdateArgumentsService
 {
-    public UpdateArgumentsService()
-    {
-        _context = Lifecycle.GetContext(this);
-    }
-
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-
-    /// <inheritdoc />
-    public string Identifier { get; } = "update";
-
-    /// <inheritdoc />
-    public string Name { get; } = "更新参数检查";
-
-    /// <inheritdoc />
-    public bool SupportAsync { get; } = true;
-
-    public async Task StartAsync()
+    [LifecycleStart]
+    public static async Task Start()
     {
         var args = Basics.CommandLineArguments;
 
@@ -38,7 +23,7 @@ public sealed class UpdateArgumentsService : ILifecycleService
 
         try
         {
-            await _UpdateWorkfolwAsync(args).ConfigureAwait(false);
+            await _UpdateWorkflowAsync(args).ConfigureAwait(false);
         }
         catch (OperationCanceledException ocex)
         {
@@ -53,12 +38,6 @@ public sealed class UpdateArgumentsService : ILifecycleService
         {
             Context.RequestExit();
         }
-    }
-
-    /// <inheritdoc />
-    public Task StopAsync()
-    {
-        return Task.CompletedTask;
     }
 
     #region Private Helper
@@ -90,7 +69,7 @@ public sealed class UpdateArgumentsService : ILifecycleService
         return Task.CompletedTask;
     }
 
-    private static async Task _UpdateWorkfolwAsync(string[] args)
+    private static async Task _UpdateWorkflowAsync(string[] args)
     {
         Context.Info("开始更新");
 

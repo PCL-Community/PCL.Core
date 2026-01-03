@@ -10,6 +10,10 @@ namespace PCL.Core.Net.Downloader;
 
 public record MirrorInfo(Uri Uri, long Latency = -1, bool IsAvailable = true);
 
+/// <summary>
+/// 最快镜像选择器
+/// </summary>
+/// <param name="client">用于测试镜像的 HttpClient 实例</param>
 public class FastMirrorSelector(HttpClient client) : IMirrorSelector
 {
     /// <inheritdoc />

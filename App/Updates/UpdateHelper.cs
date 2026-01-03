@@ -84,7 +84,7 @@ public static class UpdateHelper
     }
 
     // ReSharper disable once FlagArgument
-    public static void Restart(bool triggerRestartAndByEnd)
+    public static void Restart(bool triggerRestartAndByEnd, bool isUpdateRestart = false)
     {
         try
         {
@@ -105,7 +105,7 @@ public static class UpdateHelper
                     Environment.ProcessId.ToString(),
                     $"{Basics.ExecutablePath}",
                     $"{fileName}",
-                    "true"
+                    isUpdateRestart ? "true" : "false"
                 },
                 WindowStyle = ProcessWindowStyle.Hidden,
                 CreateNoWindow = true
@@ -119,13 +119,9 @@ public static class UpdateHelper
             LogWrapper.Info("Update", "已由于更新强制结束程序");
             Environment.Exit(0);
         }
-        catch (Win32Exception)
+        catch (Exception ex)
         {
-            // 被拦截或权限问题：保持与原实现一致，静默处理或在外部记录
-        }
-        catch
-        {
-            // 忽略其他启动异常以保持方法简洁（可按需记录）
+            LogWrapper.Warn(ex, "Update", "启动更新程序失败");
         }
     }
     
@@ -146,7 +142,7 @@ public static class UpdateHelper
     /// <summary>
     /// 当前更新通道。
     /// </summary>
-    public static UpdateChannel CurrentUpdateChannel => (UpdateChannel)Config.System.UpdateBranch;
+    public static UpdateChannel CurrentUpdateChannel => (UpdateChannel)Config.System.Update.UpdateChannel;
 
     /// <summary>
     /// 当前系统架构是否为 Arm64。

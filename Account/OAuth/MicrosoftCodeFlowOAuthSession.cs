@@ -34,15 +34,15 @@ public class MicrosoftCodeFlowOAuthSession(string clientId, string scope) : Logi
             if (request.QueryString.Get("error") == null)
             {
                 var code = request.QueryString.Get("code");
-                var input_state = request.QueryString.Get("state");
-                if (State != null && input_state != State) return HttpRouteResponse.BadRequest;
+                var inputState = request.QueryString.Get("state");
+                if (State != null && inputState != State) return HttpRouteResponse.BadRequest;
                 return HttpRouteResponse.Redirect("/oauth/success");
             }
             else
             {
-                var error = request.QueryString.Get("error");
-                var errorDescription = request.QueryString.Get("error_description");
-                return HttpRouteResponse.Text(error + ": " + errorDescription);
+                var errorMsg = $"{request.QueryString.Get("error")}: {request.QueryString.Get("error_description")}";
+                _tcs.TrySetException(new Exception(errorMsg));
+                return HttpRouteResponse.Text(errorMsg);
             }
         }
 

@@ -82,21 +82,18 @@ public class MicrosoftCodeFlowOAuthSession(string clientId, string scope) : Logi
     }
 
     private readonly OAuthServer _server = new();
-    private const string CodeVerifyMap = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
     public override async Task BeginAsync()
     {
         try
         {
             await Task.Run(() => OnStateChanged(AuthStep.Initializing));
-            var codeVerify = RandomNumberGenerator.GetString(CodeVerifyMap, 43);
-            var codeChallenge = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(codeVerify)))
-                .Replace("+", "-").Replace("/", "-").Replace("=", "");
+            var challenge = PKCE.GenerateChallenge();
             var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
             _server.State = state;
             var encodedScope = Uri.EscapeDataString(scope);
             this.AuthUrl =
-                $"https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id={clientId}&response_type=code&redirect_uri=http://127.0.0.1:{_server.Port}/oauth/callback&response_mode=query&scope={encodedScope}&state={state}&code_challenge={codeChallenge}&code_challenge_method=S256";
+                $"https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id={clientId}&response_type=code&redirect_uri=http://127.0.0.1:{_server.Port}/oauth/callback&response_mode=query&scope={encodedScope}&state={state}&code_challenge={challenge.code}&code_challenge_method=S256";
             await Task.Run(() => OnStateChanged(AuthStep.PendingUser));
             await _server.WaitForCallbackAsync();
             await Task.Run(() => OnStateChanged(AuthStep.GettingCode));
@@ -105,7 +102,7 @@ public class MicrosoftCodeFlowOAuthSession(string clientId, string scope) : Logi
                 $"&code={_server.Code}" +
                 $"&redirect_uri=http://127.0.0.1:{_server.Port}/oauth/callback" +
                 $"&grant_type=authorization_code" +
-                $"&code_verifier={codeVerify}";
+                $"&code_verifier={challenge.verifty}";
             using var resp = await HttpRequestBuilder.Create($"https://login.microsoftonline.com/consumers/oauth2/v2.0/token", HttpMethod.Post)
                 .WithContent(queryCtx, "application/x-www-form-urlencoded")
                 .SendAsync(true);

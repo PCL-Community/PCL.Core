@@ -1,7 +1,6 @@
 using PCL.Core.App.Updates.Models;
 using PCL.Core.IO;
 using PCL.Core.Logging;
-using PCL.Core.Net;
 using PCL.Core.Utils;
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
+using PCL.Core.Net.Downloader;
 using PCL.Core.Net.Http.Client;
 
 namespace PCL.Core.App.Updates.Sources;
@@ -61,7 +62,10 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
         var downloadItem = await _CreateDownloadItemAsync(versionInfo, tempDownloadDir).ConfigureAwait(false);
 
-        await _DownloadFileAsync(downloadItem).ConfigureAwait(false);
+        _LogInfo("Start to download");
+        
+        var manager = new DownloadManager(new FastMirrorSelector(new HttpClient()));
+        await manager.DownloadAsync(downloadItem, CancellationToken.None).ConfigureAwait(false);
 
         _LogInfo("Successfully download update file");
     }
@@ -86,7 +90,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         return versionJson;
     }
 
-    private async Task<DownloadItem> _CreateDownloadItemAsync(JsonObject versionJson, string tempDir)
+    private async Task<DownloadTask> _CreateDownloadItemAsync(JsonObject versionJson, string tempDir)
     {
         var updateSha256 = versionJson["sha256"]!.GetValue<string>();
         var selfSha256 = await Files.GetFileSHA256Async(Basics.ExecutablePath).ConfigureAwait(false);
@@ -99,7 +103,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             _LogInfo("Get accessible patch update");
             var tempPath = Path.Combine(tempDir, patchFileName);
 
-            return new DownloadItem(
+            return new DownloadTask(
                 new Uri($"{baseUrl}static/patch/{patchFileName}"),
                 tempPath
             );
@@ -118,30 +122,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         );
 
         var fullPackagePath = Path.Combine(tempDir, $"{updateSha256}.bin");
-        return new DownloadItem(new Uri(downloadUrl), fullPackagePath);
-    }
-
-    private async Task _DownloadFileAsync(DownloadItem item)
-    {
-        var downloader = new Downloader();
-        downloader.AddItem(item);
-        downloader.Start();
-
-        _LogInfo("Start to download");
-
-        while (true)
-        {
-            switch (item.Status)
-            {
-                case DownloadItemStatus.Success:
-                    return;
-                case DownloadItemStatus.Cancelled:
-                case DownloadItemStatus.Failed:
-                    throw new HttpRequestException("Failed to download update file");
-            }
-
-            await Task.Delay(500).ConfigureAwait(false);
-        }
+        return new DownloadTask(new Uri(downloadUrl), fullPackagePath);
     }
 
     #endregion

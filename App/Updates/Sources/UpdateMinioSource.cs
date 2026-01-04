@@ -23,7 +23,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
     private Dictionary<string, string>? _remoteCache;
 
-    private static readonly string _TempPath = Path.Combine(Basics.TempPath, "Cache", "Update");
+    private static readonly string _TempPath = Path.Combine(FileService.TempPath, "Cache", "Update");
 
     /// <exception cref="ArgumentException">Throws if version info is null.</exception>
     /// <inheritdoc/>
@@ -320,7 +320,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         try
         {
             _LogTrace("正在缓存远程信息到本地...");
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? Basics.TempPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? FileService.TempPath);
             await File.WriteAllTextAsync(filePath, content).ConfigureAwait(false);
             _LogTrace("远程信息缓存完成");
         }

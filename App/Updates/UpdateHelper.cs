@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using PCL.Core.App.Updates.Models;
+using PCL.Core.IO;
 
 namespace PCL.Core.App.Updates;
 
@@ -36,7 +37,7 @@ public static class UpdateHelper
             }
 
             // delete origin file
-            await FileDeleteHelper.DeleteFileAndWaitAsync(target).ConfigureAwait(false);
+            await Files.DeleteFileAndWaitAsync(target).ConfigureAwait(false);
 
             // 复制到目标文件
             File.Copy(source, target);

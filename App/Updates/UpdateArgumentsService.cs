@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
-[LifecycleScope("update_arg", "更新参数检查")]
+[LifecycleScope("update-arg", "处理更新参数")]
 public sealed partial class UpdateArgumentsService
 {
     [LifecycleStart]

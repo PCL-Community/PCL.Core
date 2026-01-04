@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.Running)]
-[LifecycleScope("check_update", "检查更新")]
+[LifecycleScope("check-update", "检查更新")]
 public partial class CheckUpdateService
 {
     private static readonly SourceController _SourceController = new([

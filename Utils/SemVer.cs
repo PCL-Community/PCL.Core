@@ -15,9 +15,11 @@ public class SemVer(int major, int minor, int patch, string? prerelease = null, 
 
     public static SemVer Parse(string version)
     {
-        return !TryParse(version, out var result) 
-            ? throw new ArgumentException("Invalid semantic version format") 
-            : result!;
+        if (!TryParse(version, out var result))
+        {
+            throw new ArgumentException("Invalid semantic version format");
+        }
+        return result!;
     }
 
     public static bool TryParse(string version, out SemVer? result)

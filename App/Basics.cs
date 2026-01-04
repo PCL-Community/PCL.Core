@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using PCL.Core.App.Updates;
+using PCL.Core.App.Updates.Models;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
 
@@ -66,6 +69,11 @@ public static class Basics
     /// 实时获取的当前目录。若要在可执行文件目录中存放文件等内容，请使用更准确的 <see cref="ExecutableDirectory"/> 而不是这个目录。
     /// </summary>
     public static string CurrentDirectory => Environment.CurrentDirectory;
+
+    /// <summary>
+    /// 程序缓存目录
+    /// </summary>
+    public static string TempPath => Path.Combine(Path.GetTempPath(), "PCL");
 
     #endregion
 

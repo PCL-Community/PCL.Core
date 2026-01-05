@@ -112,14 +112,34 @@ public class JavaManager
     {
         if (InternalJavas.Count == 0)
             await ScanJavaAsync();
-        var minMajorVersion = minVersion.Major == 1 ? minVersion.Minor : minVersion.Major;
-        var maxMajorVersion = maxVersion.Major == 1 ? maxVersion.Minor : maxVersion.Major;
+        
         return (from j in InternalJavas
             where j.IsStillAvailable && j.IsEnabled
-                                     && j.JavaMajorVersion >= minMajorVersion && j.JavaMajorVersion <= maxMajorVersion
-                                     && j.Version >= minVersion && j.Version <= maxVersion
+                                     && IsJavaVersionSuitable(j.Version, minVersion, maxVersion)
             orderby j.Version, j.IsJre, j.Brand // 选择最小版本的 JDK 中的合适品牌的 Java
             select j).ToList();
+    }
+    
+    /// <summary>
+    /// 将 Java 版本转换为统一格式进行比较
+    /// 例如：1.8.0.140 → 8.0.140，8.0.472 → 8.0.472，9.0.1 → 9.0.1
+    /// </summary>
+    private Version NormalizeJavaVersion(Version version)
+    {
+        return version.Major == 1 ? new Version(version.Minor, version.Build, version.Revision) : version;
+    }
+    
+    /// <summary>
+    /// 检查 Java 版本是否在指定范围内
+    /// </summary>
+    private bool IsJavaVersionSuitable(Version javaVersion, Version minVersion, Version maxVersion)
+    {
+        // 将所有版本转换为统一格式进行比较
+        var normalizedJava = NormalizeJavaVersion(javaVersion);
+        var normalizedMin = NormalizeJavaVersion(minVersion);
+        var normalizedMax = NormalizeJavaVersion(maxVersion);
+        
+        return normalizedJava >= normalizedMin && normalizedJava <= normalizedMax;
     }
 
     /// <summary>

@@ -41,9 +41,8 @@ public class CatIniFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     public override void Remove(string key) => _dict.Remove(key);
 
-    public override void Sync()
+    protected override void WriteToStream(Stream stream)
     {
-        using var stream = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
         using var writer = new StreamWriter(stream, Encoding.UTF8);
         foreach (var (key, value) in _dict)
         {
@@ -51,5 +50,6 @@ public class CatIniFileProvider : CommonFileProvider, IEnumerableKeyProvider
             var valueStr = value.ReplaceLineBreak();
             writer.WriteLine($"{keyStr}:{valueStr}");
         }
+        writer.Flush();
     }
 }

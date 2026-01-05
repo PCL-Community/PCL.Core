@@ -129,7 +129,7 @@ public class McPing : IDisposable
 
         LogWrapper.Debug("McPing", resJsonDebug.ToJsonString());
 #endif
-        var versionNode = retJson["version"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失: version");
+        var versionNode = retJson["version"] ?? throw new NullReferenceException("服务器返回了错误的字段，缺失：version");
         var playersNode = retJson["players"] ?? new JsonObject();
         var descNode = _ConvertJNodeToMcString(retJson["description"] ?? new JsonObject());
         var modInfoNode = retJson["modinfo"];
@@ -301,7 +301,7 @@ public class McPing : IDisposable
                     }
                 default:
                     {
-                        LogWrapper.Warn("McPing", $"解析到无法处理的 Motd 内容({current.GetValueKind()})：{current}");
+                        LogWrapper.Warn("McPing", $"解析到无法处理的 Motd 内容 ({current.GetValueKind()})：{current}");
                         break;
                     }
             }

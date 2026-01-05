@@ -58,7 +58,7 @@ public sealed class TcpForward(
         catch (Exception ex)
         {
             _isRunning = false;
-            LogWrapper.Error(ex, "TcpForward",  $"启动 MC 端口转发时发生错误: {ex.Message}");
+            LogWrapper.Error(ex, "TcpForward",  $"启动 MC 端口转发时发生错误：{ex.Message}");
             throw;
         }
     }
@@ -100,7 +100,7 @@ public sealed class TcpForward(
                 if (_activeConnections.Count >= maxConnections)
                 {
                     clientSocket.SafeClose();
-                    LogWrapper.Warn("TcpForward", $"已达到最大连接数限制({maxConnections})，拒绝新连接");
+                    LogWrapper.Warn("TcpForward", $"已达到最大连接数限制 ({maxConnections})，拒绝新连接");
                     continue;
                 }
 
@@ -162,7 +162,7 @@ public sealed class TcpForward(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理连接 {connectionId} 时发生错误: {ex.Message}");
+            Console.WriteLine($"处理连接 {connectionId} 时发生错误：{ex.Message}");
         }
         finally
         {

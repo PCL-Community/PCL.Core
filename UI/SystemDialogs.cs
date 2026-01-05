@@ -74,7 +74,7 @@ public static class SystemDialogs {
         };
 
         var num = allowMultiSelect ? "多" : "单";
-        LogWrapper.Info("Dialog", $"打开选择{num}个文件对话框: {title}");
+        LogWrapper.Info("Dialog", $"打开选择{num}个文件对话框：{title}");
         var result = fileDialog.ShowDialog();
         if (result != true) {
             LogWrapper.Info("Dialog", "选择文件被取消");
@@ -82,7 +82,7 @@ public static class SystemDialogs {
         }
 
         string[] selectedFiles = fileDialog.FileNames;
-        LogWrapper.Info("Dialog", $"选择{num}个文件返回: {string.Join(",", selectedFiles)}");
+        LogWrapper.Info("Dialog", $"选择{num}个文件返回：{string.Join(",", selectedFiles)}");
         return selectedFiles.Length == 0 ? [] : Array.ConvertAll(selectedFiles, Path.GetFullPath);
     }
 
@@ -99,7 +99,7 @@ public static class SystemDialogs {
             Multiselect = false
         };
 
-        LogWrapper.Info("Dialog", $"打开选择文件夹对话框: {title}");
+        LogWrapper.Info("Dialog", $"打开选择文件夹对话框：{title}");
         var result = folderDialog.ShowDialog();
         if (result != true) {
             LogWrapper.Info("Dialog", "选择文件夹被取消");
@@ -108,12 +108,12 @@ public static class SystemDialogs {
 
         var selectedPath = folderDialog.FolderName;
         if (string.IsNullOrEmpty(selectedPath)) {
-            LogWrapper.Info("Dialog", "选择文件夹返回: 空");
+            LogWrapper.Info("Dialog", "选择文件夹返回：空");
             return "";
         }
 
         var normalizedPath = Path.GetFullPath(selectedPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        LogWrapper.Info("Dialog", $"选择文件夹返回: {normalizedPath}");
+        LogWrapper.Info("Dialog", $"选择文件夹返回：{normalizedPath}");
         return normalizedPath;
     }
 }

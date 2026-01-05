@@ -7,8 +7,8 @@ namespace PCL.Core.UI.Effects;
 
 /// <summary>
 /// 高性能模糊效果，基于智能采样算法实现显著性能提升
-/// 完全兼容原生BlurEffect API，额外支持采样率控制
-/// 在保持视觉质量的同时，可实现30%-90%的性能提升
+/// 完全兼容原生 BlurEffect API，额外支持采样率控制
+/// 在保持视觉质量的同时，可实现 30%-90% 的性能提升
 /// </summary>
 public sealed class EnhancedBlurEffect : Freezable
 {
@@ -22,13 +22,13 @@ public sealed class EnhancedBlurEffect : Freezable
         
         // 设置合理的默认值
         Radius = 16.0;
-        SamplingRate = 0.7; // 30%性能提升的平衡点
+        SamplingRate = 0.7; // 30% 性能提升的平衡点
         RenderingBias = RenderingBias.Performance;
         KernelType = KernelType.Gaussian;
     }
 
     /// <summary>
-    /// 模糊半径，与原BlurEffect完全兼容 (0-300)
+    /// 模糊半径，与原 BlurEffect 完全兼容 (0-300)
     /// </summary>
     public double Radius
     {
@@ -39,10 +39,10 @@ public sealed class EnhancedBlurEffect : Freezable
     /// <summary>
     /// 采样率控制 (0.1-1.0)，性能优化核心参数
     /// - 1.0: 全采样，最佳质量
-    /// - 0.7: 70%采样，性能提升30%，推荐默认值
-    /// - 0.5: 50%采样，性能提升50%
-    /// - 0.3: 30%采样，性能提升70%
-    /// - 0.1: 10%采样，性能提升90%，适合实时预览
+    /// - 0.7: 70% 采样，性能提升 30%，推荐默认值
+    /// - 0.5: 50% 采样，性能提升 50%
+    /// - 0.3: 30% 采样，性能提升 70%
+    /// - 0.1: 10% 采样，性能提升 90%，适合实时预览
     /// </summary>
     public double SamplingRate
     {
@@ -51,7 +51,7 @@ public sealed class EnhancedBlurEffect : Freezable
     }
 
     /// <summary>
-    /// 渲染偏向，与原BlurEffect兼容
+    /// 渲染偏向，与原 BlurEffect 兼容
     /// </summary>
     public RenderingBias RenderingBias
     {
@@ -60,7 +60,7 @@ public sealed class EnhancedBlurEffect : Freezable
     }
 
     /// <summary>
-    /// 内核类型，与原BlurEffect兼容
+    /// 内核类型，与原 BlurEffect 兼容
     /// </summary>
     public KernelType KernelType
     {
@@ -125,7 +125,7 @@ public sealed class EnhancedBlurEffect : Freezable
         }
         else if (sourceFreezable is BlurEffect originalBlur)
         {
-            // 兼容原生BlurEffect
+            // 兼容原生 BlurEffect
             Radius = originalBlur.Radius;
             RenderingBias = originalBlur.RenderingBias;
             KernelType = originalBlur.KernelType;
@@ -158,7 +158,7 @@ public sealed class EnhancedBlurEffect : Freezable
     /// </summary>
     internal Effect GetOptimizedEffect()
     {
-        // 如果采样率接近1.0，直接使用原生BlurEffect以获得最佳质量
+        // 如果采样率接近 1.0，直接使用原生 BlurEffect 以获得最佳质量
         if (SamplingRate >= 0.95)
         {
             _UpdateNativeBlur();
@@ -188,7 +188,7 @@ public static class BlurPerformancePresets
     };
 
     /// <summary>
-    /// 平衡模式：70%采样，质量和性能的最佳平衡
+    /// 平衡模式：70% 采样，质量和性能的最佳平衡
     /// </summary>
     public static EnhancedBlurEffect Balanced(double radius = 16.0) => new()
     {
@@ -199,7 +199,7 @@ public static class BlurPerformancePresets
     };
 
     /// <summary>
-    /// 高性能：30%采样，性能提升70%，适合实时交互
+    /// 高性能：30% 采样，性能提升 70%，适合实时交互
     /// </summary>
     public static EnhancedBlurEffect HighPerformance(double radius = 16.0) => new()
     {
@@ -210,7 +210,7 @@ public static class BlurPerformancePresets
     };
 
     /// <summary>
-    /// 极速模式：10%采样，性能提升90%，适用于实时预览
+    /// 极速模式：10% 采样，性能提升 90%，适用于实时预览
     /// </summary>
     public static EnhancedBlurEffect UltraFast(double radius = 16.0) => new()
     {

@@ -168,12 +168,12 @@ public sealed class Lifecycle : ILifecycleService
             SystemContext.Trace($"正在实例化 {fullname}");
             var instance = (ILifecycleService)Activator.CreateInstance(type, true)!;
             var supportAsyncText = instance.SupportAsync ? "异步" : "同步";
-            SystemContext.Trace($"实例化完成: {instance.Name} ({instance.Identifier}), 启动方式: {supportAsyncText}");
+            SystemContext.Trace($"实例化完成：{instance.Name} ({instance.Identifier}), 启动方式：{supportAsyncText}");
             return instance;
         }
         catch (Exception ex)
         {
-            SystemContext.Fatal($"注册服务项实例化失败: {fullname}", ex);
+            SystemContext.Fatal($"注册服务项实例化失败：{fullname}", ex);
             throw;
         }
     }
@@ -297,7 +297,7 @@ public sealed class Lifecycle : ILifecycleService
             // 跳过日志服务
             if (service is ILifecycleLogService ls)
             {
-                Context.Trace($"已跳过日志服务: {_ServiceName(ls)}");
+                Context.Trace($"已跳过日志服务：{_ServiceName(ls)}");
                 logService = ls;
                 continue;
             }
@@ -357,7 +357,7 @@ public sealed class Lifecycle : ILifecycleService
         get;
         private set
         {
-            Context.Debug($"状态改变: {value}");
+            Context.Debug($"状态改变：{value}");
             field = value;
             try
             {

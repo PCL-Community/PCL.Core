@@ -8,7 +8,7 @@ using System.Windows.Media.Imaging;
 namespace PCL.Core.UI.Effects;
 
 /// <summary>
-/// CPU优化的高性能模糊效果，支持精确的采样深度控制
+/// CPU 优化的高性能模糊效果，支持精确的采样深度控制
 /// 专门优化了采样算法，实现真正的性能提升
 /// </summary>
 public sealed class OptimizedBlurEffect : Freezable
@@ -32,7 +32,7 @@ public sealed class OptimizedBlurEffect : Freezable
     }
 
     /// <summary>
-    /// 模糊半径，与原BlurEffect完全兼容
+    /// 模糊半径，与原 BlurEffect 完全兼容
     /// </summary>
     public double Radius
     {
@@ -42,7 +42,7 @@ public sealed class OptimizedBlurEffect : Freezable
 
     /// <summary>
     /// 采样率 (0.1-1.0)，核心性能优化参数
-    /// 0.3 = 只采样30%像素，性能提升约70%
+    /// 0.3 = 只采样 30% 像素，性能提升约 70%
     /// </summary>
     public double SamplingRate
     {
@@ -124,7 +124,7 @@ public sealed class OptimizedBlurEffect : Freezable
         }
         else if (sourceFreezable is BlurEffect originalBlur)
         {
-            // 兼容原生BlurEffect
+            // 兼容原生 BlurEffect
             Radius = originalBlur.Radius;
             RenderingBias = originalBlur.RenderingBias;
             KernelType = originalBlur.KernelType;
@@ -199,7 +199,7 @@ public sealed class OptimizedBlurEffect : Freezable
             var renderTarget = new RenderTargetBitmap(
                 (int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
 
-            // 渲染visual到位图
+            // 渲染 visual 到位图
             renderTarget.Render(visual);
 
             // 应用模糊效果
@@ -212,7 +212,7 @@ public sealed class OptimizedBlurEffect : Freezable
     }
 
     /// <summary>
-    /// 使用原生BlurEffect作为回退方案
+    /// 使用原生 BlurEffect 作为回退方案
     /// </summary>
     private BlurEffect _GetFallbackEffect()
     {
@@ -229,7 +229,7 @@ public sealed class OptimizedBlurEffect : Freezable
     /// </summary>
     public Effect GetEffectInstance()
     {
-        // 对于高采样率场景，直接使用原生BlurEffect获得最佳质量
+        // 对于高采样率场景，直接使用原生 BlurEffect 获得最佳质量
         if (SamplingRate >= 0.98)
         {
             return _GetFallbackEffect();
@@ -257,7 +257,7 @@ public sealed class OptimizedBlurEffect : Freezable
 public static class OptimizedBlurFactory
 {
     /// <summary>
-    /// 创建高性能模糊效果，30%采样率，70%性能提升
+    /// 创建高性能模糊效果，30% 采样率，70% 性能提升
     /// </summary>
     public static OptimizedBlurEffect CreateHighPerformance(double radius = 16.0) => new()
     {
@@ -268,7 +268,7 @@ public static class OptimizedBlurFactory
     };
 
     /// <summary>
-    /// 创建平衡模糊效果，70%采样率，30%性能提升
+    /// 创建平衡模糊效果，70% 采样率，30% 性能提升
     /// </summary>
     public static OptimizedBlurEffect CreateBalanced(double radius = 16.0) => new()
     {
@@ -279,7 +279,7 @@ public static class OptimizedBlurFactory
     };
 
     /// <summary>
-    /// 创建质量优先模糊效果，100%采样率，最佳视觉效果
+    /// 创建质量优先模糊效果，100% 采样率，最佳视觉效果
     /// </summary>
     public static OptimizedBlurEffect CreateBestQuality(double radius = 16.0) => new()
     {
@@ -307,7 +307,7 @@ public static class OptimizedBlurFactory
     }
 
     /// <summary>
-    /// 创建实时预览模糊效果，极低采样率，90%性能提升
+    /// 创建实时预览模糊效果，极低采样率，90% 性能提升
     /// </summary>
     public static OptimizedBlurEffect CreateRealTimePreview(double radius = 16.0) => new()
     {

@@ -21,7 +21,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     private static readonly object _ShaderLock = new();
     private static PixelShader? _cachedShader;
     
-    // 预计算的采样点模式，优化GPU访问
+    // 预计算的采样点模式，优化 GPU 访问
     private static readonly Vector2[] _GaussianSampleOffsets = _GenerateOptimalSamplePattern();
     private static readonly float[] _GaussianWeights = _GenerateGaussianWeights();
 
@@ -34,7 +34,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     {
         PixelShader = _cachedShader;
         
-        // 注册shader参数映射
+        // 注册 shader 参数映射
         UpdateShaderValue(InputProperty);
         UpdateShaderValue(RadiusProperty);
         UpdateShaderValue(SamplingRateProperty);
@@ -43,7 +43,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     }
 
     /// <summary>
-    /// 模糊半径，与原BlurEffect兼容
+    /// 模糊半径，与原 BlurEffect 兼容
     /// </summary>
     public double Radius
     {
@@ -52,7 +52,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     }
 
     /// <summary>
-    /// 采样率控制 (0.1-1.0)，0.3表示仅采样30%像素，性能提升70%
+    /// 采样率控制 (0.1-1.0)，0.3 表示仅采样 30% 像素，性能提升 70%
     /// </summary>
     public double SamplingRate
     {
@@ -239,7 +239,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     }
 
     /// <summary>
-    /// 生成高斯权重，使用SIMD优化的数学计算
+    /// 生成高斯权重，使用 SIMD 优化的数学计算
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static float[] _GenerateGaussianWeights()
@@ -260,7 +260,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
             totalWeight += weight;
         }
         
-        // 归一化权重，确保总和为1
+        // 归一化权重，确保总和为 1
         if (totalWeight > 0)
         {
             var invTotal = 1.0f / totalWeight;
@@ -275,7 +275,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
 }
 
 /// <summary>
-/// 高性能内存管理和SIMD优化工具
+/// 高性能内存管理和 SIMD 优化工具
 /// </summary>
 internal static class PerformanceOptimizations
 {
@@ -295,7 +295,7 @@ internal static class PerformanceOptimizations
     public static void ReturnFloatArray(float[] array) => _FloatPool.Return(array);
 
     /// <summary>
-    /// 使用SIMD指令优化的向量数学运算
+    /// 使用 SIMD 指令优化的向量数学运算
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static void FastGaussianBlur(ReadOnlySpan<float> input, Span<float> output, 

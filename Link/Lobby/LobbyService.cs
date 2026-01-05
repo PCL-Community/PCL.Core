@@ -277,7 +277,7 @@ public class LobbyService() : GeneralService("lobby", "LobbyService")
             serverEntity.Server.ServerException += _ServerOnServerException;
             //serverEntity.EasyTier.EasyTierProcessExisted += () =>
             //{
-            //    OnHint?.Invoke("EasyTierCore异常退出", CoreHintType.Critical);
+            //    OnHint?.Invoke("EasyTierCore 异常退出", CoreHintType.Critical);
             //    OnServerShutDown?.Invoke();
             //}; this code will be invoked when EasyTier process successfully exited, not in failed state.
 

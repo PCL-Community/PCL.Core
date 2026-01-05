@@ -25,7 +25,7 @@ public static class TimeUtils {
         // 原始代码处理了 Environment.TickCount 的符号溢出问题（在 24.8 天后），
         // 但在现代 .NET 中，我们有更可靠、更精确的 Stopwatch 类。
         // 为了保持原函数意图，这里直接返回 Environment.TickCount。
-        // 注意：Environment.TickCount 在64位系统中可能为负，不推荐在重要场景使用。
+        // 注意：Environment.TickCount 在 64 位系统中可能为负，不推荐在重要场景使用。
         return Environment.TickCount64;
     }
 

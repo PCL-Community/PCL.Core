@@ -12,12 +12,12 @@ namespace PCL.Core.App;
 public interface ILifecycleService
 {
     /// <summary>
-    /// 全局唯一标识符，统一使用纯小写字母与 “-” 的命名格式，如 <c>logger</c> <c>yggdrasil-server</c> 等。
+    /// 全局唯一标识符，统一使用纯小写字母与“-”的命名格式，如 <c>logger</c> <c>yggdrasil-server</c> 等。
     /// </summary>
     public string Identifier { get; }
     
     /// <summary>
-    /// 友好名称，如 “日志” “验证服务端” 等，将会用于记录日志等场合。
+    /// 友好名称，如“日志” “验证服务端”等，将会用于记录日志等场合。
     /// </summary>
     public string Name { get; }
     

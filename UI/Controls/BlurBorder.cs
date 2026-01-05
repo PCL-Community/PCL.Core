@@ -7,9 +7,9 @@ using System.Windows.Media.Effects;
 using PCL.Core.UI.Effects;
 
 // 该部分源码来自或修改于 https://github.com/OrgEleCho/EleCho.WpfSuite
-// 项目: EleCho.WpfSuite
-// 作者: EleCho
-// 协议: MIT License
+// 项目：EleCho.WpfSuite
+// 作者：EleCho
+// 协议：MIT License
 
 namespace PCL.Core.UI.Controls;
 

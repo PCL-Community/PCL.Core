@@ -204,7 +204,7 @@ public class HttpRequestBuilder
             if (responseUri != null && _request.RequestUri != responseUri)
                 _MakeLog($"已重定向至 {responseUri}");
 
-            _MakeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
+            _MakeLog($"已获取请求结果，返回 HTTP 状态码：{responseMessage.StatusCode}");
 
             if (throwIfNotSuccess) responseMessage.EnsureSuccessStatusCode();
 

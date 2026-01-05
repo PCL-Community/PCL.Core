@@ -64,19 +64,19 @@ public class DownloadManager
     /// <param name="token">取消令牌</param>
     public async Task DownloadAsync(DownloadTask task, CancellationToken token)
     {
-        LogWrapper.Debug("Downloader", $"开始下载任务: {task.ActiveUri} -> {task.TargetPath}");
+        LogWrapper.Debug("Downloader", $"开始下载任务：{task.ActiveUri} -> {task.TargetPath}");
 
         await task.PrepareAsync(_client, _mirrorSelector, token).ConfigureAwait(false);
 
         using var taskSemaphore = new SemaphoreSlim(MaxParallelSegmentsPerTask);
         var activeTasks = new List<Task>();
 
-        LogWrapper.Debug("Downloader", $"初始化分段: {task.Segments.Count} 个分段");
+        LogWrapper.Debug("Downloader", $"初始化分段：{task.Segments.Count} 个分段");
         lock (task.Segments)
         {
             foreach (var segment in task.Segments)
             {
-                LogWrapper.Trace("Downloader", $"执行分段: {segment.Start}-{segment.End}");
+                LogWrapper.Trace("Downloader", $"执行分段：{segment.Start}-{segment.End}");
                 activeTasks.Add(_ExecuteSegmentWithResilienceAsync(segment, task, taskSemaphore, token));
             }
         }
@@ -95,7 +95,7 @@ public class DownloadManager
                     var newSeg = task.TrySplitSegment();
                     if (newSeg is not null)
                     {
-                        LogWrapper.Trace("Downloader", $"添加新分段: {newSeg.Start}-{newSeg.End}");
+                        LogWrapper.Trace("Downloader", $"添加新分段：{newSeg.Start}-{newSeg.End}");
                         activeTasks.Add(_ExecuteSegmentWithResilienceAsync(newSeg, task, taskSemaphore, token));
                     }
                     else
@@ -106,7 +106,7 @@ public class DownloadManager
             }
         }
 
-        LogWrapper.Debug("Downloader", $"下载任务完成: {task.ActiveUri} -> {task.TargetPath}");
+        LogWrapper.Debug("Downloader", $"下载任务完成：{task.ActiveUri} -> {task.TargetPath}");
     }
     
     /// <summary>
@@ -122,7 +122,7 @@ public class DownloadManager
         SemaphoreSlim semaphore,
         CancellationToken token)
     {
-        LogWrapper.Trace("Downloader", $"开始执行分段: {segment.Start}-{segment.End}");
+        LogWrapper.Trace("Downloader", $"开始执行分段：{segment.Start}-{segment.End}");
         await semaphore.WaitAsync(token).ConfigureAwait(false);
 
         try
@@ -138,19 +138,19 @@ public class DownloadManager
                     {
                         segment.UpdateUri(parent.ActiveUri);
                         LogWrapper.Trace("Downloader",
-                            $"正在下载分段: {segment.Start}-{segment.End}, URI: {parent.ActiveUri}");
+                            $"正在下载分段：{segment.Start}-{segment.End}, URI: {parent.ActiveUri}");
                         await segment.DownloadAsync(_client, ctx.CancellationToken).ConfigureAwait(false);
-                        LogWrapper.Trace("Downloader", $"分段下载成功: {segment.Start}-{segment.End}");
+                        LogWrapper.Trace("Downloader", $"分段下载成功：{segment.Start}-{segment.End}");
                     }
                     catch (DownloadRangeNotSupportedException)
                     {
                         parent.SupportsRange = false;
-                        LogWrapper.Warn("Downloader", $"服务器不支持范围请求: {parent.ActiveUri}");
+                        LogWrapper.Warn("Downloader", $"服务器不支持范围请求：{parent.ActiveUri}");
                         throw;
                     }
                     catch (Exception ex) when (ex is HttpRequestException or IOException)
                     {
-                        LogWrapper.Warn(ex, "Downloader", $"镜像下载失败: {parent.ActiveUri}, 将切换镜像");
+                        LogWrapper.Warn(ex, "Downloader", $"镜像下载失败：{parent.ActiveUri}, 将切换镜像");
                         throw new MirrorFailedException(parent.ActiveUri, ex);
                     }
                 }, context).ConfigureAwait(false);
@@ -161,7 +161,7 @@ public class DownloadManager
 
                 if (segment.Start == 0)
                 {
-                    LogWrapper.Trace("Downloader", "分段0下载成功，跳过其他分段");
+                    LogWrapper.Trace("Downloader", "分段 0 下载成功，跳过其他分段");
                     return;
                 }
 
@@ -169,7 +169,7 @@ public class DownloadManager
             }
             catch (Exception ex)
             {
-                LogWrapper.Error(ex, "Downloader", $"分段下载失败: {segment.Start}-{segment.End}");
+                LogWrapper.Error(ex, "Downloader", $"分段下载失败：{segment.Start}-{segment.End}");
                 throw;
             }
             finally
@@ -180,7 +180,7 @@ public class DownloadManager
         finally
         {
             semaphore.Release();
-            LogWrapper.Trace("Downloader", $"分段执行完成: {segment.Start}-{segment.End}");
+            LogWrapper.Trace("Downloader", $"分段执行完成：{segment.Start}-{segment.End}");
         }
     }
 }

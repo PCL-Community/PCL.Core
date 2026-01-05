@@ -8,19 +8,19 @@ namespace PCL.Core.Utils;
 public static class VarIntHelper
 {
     /// <summary>
-    /// 将无符号长整数编码为VarInt字节序列
+    /// 将无符号长整数编码为 VarInt 字节序列
     /// </summary>
-    /// <param name="value">要编码的64位无符号整数</param>
-    /// <returns>VarInt字节数组</returns>
+    /// <param name="value">要编码的 64 位无符号整数</param>
+    /// <returns>VarInt 字节数组</returns>
     public static byte[] Encode(ulong value)
     {
         using var stream = new MemoryStream();
         do
         {
-            var temp = (byte)(value & 0x7F); // 取低7位
-            value >>= 7;                      // 右移7位
+            var temp = (byte)(value & 0x7F); // 取低 7 位
+            value >>= 7;                      // 右移 7 位
             if (value != 0)                   // 如果还有后续数据
-                temp |= 0x80;                 // 设置最高位为1
+                temp |= 0x80;                 // 设置最高位为 1
             stream.WriteByte(temp);
         } while (value != 0);
         
@@ -28,20 +28,20 @@ public static class VarIntHelper
     }
 
     /// <summary>
-    /// 将无符号整数编码为VarInt字节序列
+    /// 将无符号整数编码为 VarInt 字节序列
     /// </summary>
-    /// <param name="value">要编码的32位无符号整数</param>
-    /// <returns>VarInt字节数组</returns>
+    /// <param name="value">要编码的 32 位无符号整数</param>
+    /// <returns>VarInt 字节数组</returns>
     public static byte[] Encode(uint value) => Encode((ulong)value);
 
     /// <summary>
     /// 从字节数组中解码无符号长整数
     /// </summary>
-    /// <param name="bytes">包含VarInt编码的字节数组</param>
+    /// <param name="bytes">包含 VarInt 编码的字节数组</param>
     /// <param name="readLength">读取的字节长度</param>
-    /// <returns>解码后的64位无符号整数</returns>
+    /// <returns>解码后的 64 位无符号整数</returns>
     /// <exception cref="ArgumentNullException">输入字节数组为空</exception>
-    /// <exception cref="FormatException">VarInt格式无效或超过最大长度</exception>
+    /// <exception cref="FormatException">VarInt 格式无效或超过最大长度</exception>
     public static ulong Decode(byte[] bytes, out int readLength)
     {
         ArgumentNullException.ThrowIfNull(bytes);
@@ -49,14 +49,14 @@ public static class VarIntHelper
         ulong result = 0;
         var shift = 0;
         var bytesRead = 0;
-        const int maxBytes = 10; // ulong最大需要10字节
+        const int maxBytes = 10; // ulong 最大需要 10 字节
         
         foreach (var b in bytes)
         {
             if (bytesRead >= maxBytes)
                 throw new FormatException("VarInt exceeds maximum length");
             
-            // 取低7位并移位合并
+            // 取低 7 位并移位合并
             result |= (ulong)(b & 0x7F) << shift;
             bytesRead++;
             
@@ -76,9 +76,9 @@ public static class VarIntHelper
     /// <summary>
     /// 从字节数组中解码无符号整数
     /// </summary>
-    /// <param name="bytes">包含VarInt编码的字节数组</param>
+    /// <param name="bytes">包含 VarInt 编码的字节数组</param>
     /// <param name="readLength">读取的字节长度</param>
-    /// <returns>解码后的32位无符号整数</returns>
+    /// <returns>解码后的 32 位无符号整数</returns>
     public static uint DecodeUInt(byte[] bytes, out int readLength)
     {
         var result = Decode(bytes, out readLength);
@@ -92,9 +92,9 @@ public static class VarIntHelper
     /// </summary>
     /// <param name="stream">输入流</param>
     /// <param name="cancellationToken">要监视取消请求的标记</param>
-    /// <returns>解码后的64位无符号整数</returns>
+    /// <returns>解码后的 64 位无符号整数</returns>
     /// <exception cref="EndOfStreamException">流提前结束</exception>
-    /// <exception cref="FormatException">VarInt格式无效</exception>
+    /// <exception cref="FormatException">VarInt 格式无效</exception>
     public static async Task<ulong> ReadFromStreamAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         ulong result = 0;
@@ -128,7 +128,7 @@ public static class VarIntHelper
     /// </summary>
     /// <param name="stream">输入流</param>
     /// <param name="cancellationToken"></param>
-    /// <returns>解码后的32位无符号整数</returns>
+    /// <returns>解码后的 32 位无符号整数</returns>
     public static async Task<uint> ReadUIntFromStreamAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         var result = await ReadFromStreamAsync(stream, cancellationToken);

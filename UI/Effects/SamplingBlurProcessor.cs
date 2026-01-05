@@ -15,7 +15,7 @@ namespace PCL.Core.UI.Effects;
 
 /// <summary>
 /// 高性能采样模糊处理器，支持智能采样算法和多线程优化
-/// 实现30%-90%的性能提升，同时保持视觉质量
+/// 实现 30%-90% 的性能提升，同时保持视觉质量
 /// </summary>
 internal sealed class SamplingBlurProcessor : IDisposable
 {
@@ -325,7 +325,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
             totalWeight += weight;
         }
         
-        // 归一化确保权重和为1
+        // 归一化确保权重和为 1
         if (totalWeight > 0)
         {
             var invTotal = 1.0 / totalWeight;

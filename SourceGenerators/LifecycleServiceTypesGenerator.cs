@@ -126,7 +126,7 @@ public class LifecycleServiceTypesGenerator : IIncrementalGenerator
             var priorityArg = lifecycleAttribute.ArgumentList.Arguments
                 .FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.ValueText == "Priority");
 
-            // 如果没有找到命名的Priority参数，检查第二个位置参数
+            // 如果没有找到命名的 Priority 参数，检查第二个位置参数
             if (priorityArg == null && lifecycleAttribute.ArgumentList.Arguments.Count > 1)
             {
                 priorityArg = lifecycleAttribute.ArgumentList.Arguments[1];

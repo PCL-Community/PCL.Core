@@ -234,7 +234,7 @@ public class JavaManager
                     subDirs = Directory.EnumerateDirectories(dri);
                 }catch(UnauthorizedAccessException){/* 忽略无权限访问的根目录 */}
                 catch (DirectoryNotFoundException) { /* 忽略找不到的目录 */ }
-                catch (IOException) { /* 忽略IO异常 */ }
+                catch (IOException) { /* 忽略 IO 异常 */ }
 
                 if (subDirs is null) continue;
                 foreach (var folder in from dir in subDirs
@@ -371,7 +371,7 @@ public class JavaManager
                 // 搜索第三级目录：具体运行时版本目录
                 foreach (var versionDir in Directory.EnumerateDirectories(archDir))
                 {
-                    // 检查bin/java.exe是否存在
+                    // 检查 bin/java.exe 是否存在
                     var javaExePath = Path.Combine(versionDir, "bin", "java.exe");
                     if (File.Exists(javaExePath))
                     {

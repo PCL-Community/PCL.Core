@@ -84,14 +84,14 @@ public static class NetworkInterfaceUtils
     private static bool _IsPublicIPv6(IPAddress ip)
     {
         byte[] addressBytes = ip.GetAddressBytes();
-        // 公网IPv6地址范围：2000::/3（即首字节在0x20到0x3F之间）
+        // 公网 IPv6 地址范围：2000::/3（即首字节在 0x20 到 0x3F 之间）
         return addressBytes[0] >= 0x20 && addressBytes[0] <= 0x3F;
     }
 
     private static bool _IsUniqueLocalIPv6(IPAddress ip)
     {
         byte[] addressBytes = ip.GetAddressBytes();
-        // 唯一本地地址范围：FC00::/7（即首字节为0xFC或0xFD）
+        // 唯一本地地址范围：FC00::/7（即首字节为 0xFC 或 0xFD）
         return addressBytes[0] == 0xFC || addressBytes[0] == 0xFD;
     }
 }

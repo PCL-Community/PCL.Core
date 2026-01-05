@@ -326,7 +326,7 @@ public sealed partial class ConfigService : GeneralService
     {
         var targetVersion = versionConfig.DefaultValue;
         var isUnset = versionConfig.IsDefault();
-        LogWrapper.Info($"{name}配置: 文件版本 {(isUnset ? "UNSET" : fileVersion)}, 目标版本 {targetVersion}");
+        LogWrapper.Info($"{name}配置：文件版本 {(isUnset ? "UNSET" : fileVersion)}, 目标版本 {targetVersion}");
         if (isUnset || targetVersion != fileVersion) versionConfig.SetValue(targetVersion);
     }
 

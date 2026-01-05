@@ -77,7 +77,7 @@ public class LogService : ILifecycleLogService
         {
             var message = plain;
             if (ex != null) message += $"\n\n相关异常信息:\n{ex}";
-            message += "\n\n如果你认为这是启动器的问题，请提交反馈，否则它可能永远都不会被解决！\n导出日志: 更多 → 日志浏览 → 导出全部日志";
+            message += "\n\n如果你认为这是启动器的问题，请提交反馈，否则它可能永远都不会被解决！\n导出日志：更多 → 日志浏览 → 导出全部日志";
             MessageBox.Show(message, "锟斤拷烫烫烫", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

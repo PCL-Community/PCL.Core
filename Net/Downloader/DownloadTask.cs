@@ -57,7 +57,7 @@ public class DownloadTask
             var nextIndex = (currentIndex + 1) % Mirrors.Count;
             var oldUri = ActiveUri;
             ActiveUri = Mirrors[nextIndex];
-            LogWrapper.Debug("Downloader", $"切换镜像: {oldUri} -> {ActiveUri}");
+            LogWrapper.Debug("Downloader", $"切换镜像：{oldUri} -> {ActiveUri}");
         }
     }
 
@@ -75,28 +75,28 @@ public class DownloadTask
         {
             LogWrapper.Debug("Downloader", $"正在选择最佳镜像，共有 {Mirrors.Count} 个镜像");
             var bestMirror = await selector.GetBestMirrorAsync(Mirrors, token).ConfigureAwait(false);
-            LogWrapper.Debug("Downloader", $"选择的最佳镜像: {bestMirror}");
+            LogWrapper.Debug("Downloader", $"选择的最佳镜像：{bestMirror}");
             ActiveUri = bestMirror;
         }
         else
         {
-            LogWrapper.Debug("Downloader", $"使用默认镜像: {ActiveUri}");
+            LogWrapper.Debug("Downloader", $"使用默认镜像：{ActiveUri}");
         }
 
-        LogWrapper.Debug("Downloader", $"正在获取文件大小: {ActiveUri}");
+        LogWrapper.Debug("Downloader", $"正在获取文件大小：{ActiveUri}");
         using var response = await client
             .SendAsync(new HttpRequestMessage(HttpMethod.Head, ActiveUri), token)
             .ConfigureAwait(false);
 
         TotalSize = response.Content.Headers.ContentLength ?? 0;
-        LogWrapper.Debug("Downloader", $"获取到文件大小: {TotalSize} 字节");
+        LogWrapper.Debug("Downloader", $"获取到文件大小：{TotalSize} 字节");
 
         lock (Segments)
         {
             Segments.Clear();
             var segment = new DownloadSegment(ActiveUri, TargetPath, 0, TotalSize > 0 ? TotalSize - 1 : null);
             Segments.Add(segment);
-            LogWrapper.Debug("Downloader", $"创建初始分段: {segment.Start}-{segment.End}");
+            LogWrapper.Debug("Downloader", $"创建初始分段：{segment.Start}-{segment.End}");
         }
 
         LogWrapper.Debug("Downloader", "下载任务准备完成");
@@ -134,7 +134,7 @@ public class DownloadTask
             var newSeg = new DownloadSegment(ActiveUri, TargetPath, mid + 1, target.End);
             target.End = mid;
             Segments.Add(newSeg);
-            LogWrapper.Debug("Downloader", $"分割分段: 原分段 {target.Start}-{target.End}, 新分段 {newSeg.Start}-{newSeg.End}");
+            LogWrapper.Debug("Downloader", $"分割分段：原分段 {target.Start}-{target.End}, 新分段 {newSeg.Start}-{newSeg.End}");
 
             return newSeg;
         }

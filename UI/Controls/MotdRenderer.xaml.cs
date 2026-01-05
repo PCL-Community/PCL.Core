@@ -203,7 +203,7 @@ public partial class MotdRenderer {
         var isStrikethrough = false;
         var isObfuscated = false;
 
-        // 限制显示的行数不超过maxLines
+        // 限制显示的行数不超过 maxLines
         var lineCount = Math.Min(lines.Length, maxLines);
         for (var lineIndex = 0; lineIndex < lineCount; lineIndex++) {
             var line = lines[lineIndex].Trim();

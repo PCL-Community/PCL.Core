@@ -103,7 +103,7 @@ public sealed class PromoteService : GeneralService
         return str[..maxLength] + "...";
     }
     
-    // 提权进程: 连接管道开始通信
+    // 提权进程：连接管道开始通信
     private static void _PerformAsPromoteProcess(string pid)
     {
         Context.Info("正在连接提权通信管道");
@@ -130,9 +130,9 @@ public sealed class PromoteService : GeneralService
                 Context.Info("管道已关闭，正在退出");
                 break;
             }
-            Context.Debug($"正在执行: {_ShortenString(command)}");
+            Context.Debug($"正在执行：{_ShortenString(command)}");
             var result = Operate(command) ?? OperationErrEmpty;
-            Context.Trace($"返回结果: {_ShortenString(result)}");
+            Context.Trace($"返回结果：{_ShortenString(result)}");
             writer.WriteLine(result.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' '));
             writer.Flush();
             Context.Trace("返回成功");
@@ -141,7 +141,7 @@ public sealed class PromoteService : GeneralService
     
     private static readonly AutoResetEvent _ActivateEvent = new(false);
 
-    // 主进程: 管道连接回调
+    // 主进程：管道连接回调
     private static bool _PromotePipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
         while (IsPromoteProcessRunning)
@@ -153,7 +153,7 @@ public sealed class PromoteService : GeneralService
             }
             var command = operation.Command.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
             var commandLog = operation.DetailLog ? command : _ShortenString(command);
-            Context.Debug($"正在执行: {commandLog}");
+            Context.Debug($"正在执行：{commandLog}");
             writer.WriteLine(command);
             writer.Flush();
             var result = reader.ReadLine();
@@ -163,13 +163,13 @@ public sealed class PromoteService : GeneralService
                 break;
             }
             var resultLog = operation.DetailLog ? result : _ShortenString(result);
-            Context.Trace($"执行结果: {resultLog}");
+            Context.Trace($"执行结果：{resultLog}");
             operation.Callback?.Invoke(result);
         }
         return false;
     }
 
-    // 主进程: 初始化提权后台服务
+    // 主进程：初始化提权后台服务
     private static bool _StartPromoteProcess()
     {
         // 启动提权进程

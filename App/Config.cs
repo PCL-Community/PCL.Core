@@ -540,12 +540,12 @@ public static partial class Config
             [ConfigItem<string>("UiLauncherThemeGold", "")] public partial string ThemeGoldCode { get; set; }
 
             /// <summary>
-            /// 传说中的隐藏主题1，但是没卵用
+            /// 传说中的隐藏主题 1，但是没卵用
             /// </summary>
             [ConfigItem<string>("UiLauncherThemeHide", "0|1|2|3|4")] public partial string ThemeHiddenV1 { get; set; }
 
             /// <summary>
-            /// 传说中的隐藏主题2，但是没卵用。
+            /// 传说中的隐藏主题 2，但是没卵用。
             /// </summary>
             [ConfigItem<string>("UiLauncherThemeHide2", "0|1|2|3|4")] public partial string ThemeHiddenV2 { get; set; }
         }

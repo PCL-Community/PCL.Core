@@ -32,11 +32,11 @@ public static class ETController
         var existedET = Process.GetProcessesByName("easytier-core");
         foreach (var p in existedET)
         {
-            LogWrapper.Warn("Link", $"发现已有的 EasyTier 实例，可能影响与启动器所用的实例通信: {p.Id}");
+            LogWrapper.Warn("Link", $"发现已有的 EasyTier 实例，可能影响与启动器所用的实例通信：{p.Id}");
         }
 
         // 检查文件
-        LogWrapper.Info("Link", "EasyTier 路径: " + ETPath);
+        LogWrapper.Info("Link", "EasyTier 路径：" + ETPath);
         if (!(File.Exists(ETPath + "\\easytier-core.exe") && File.Exists(ETPath + "\\easytier-cli.exe") &&
               File.Exists(ETPath + "\\Packet.dll")))
         {
@@ -82,7 +82,7 @@ public static class ETController
                     name = "terracotta-mc-" + name;
                     break;
                 default:
-                    throw new NotSupportedException("不支持的大厅类型: " + TargetLobby.Type);
+                    throw new NotSupportedException("不支持的大厅类型：" + TargetLobby.Type);
             }
 
             arguments.AddFlag("no-tun");
@@ -93,20 +93,20 @@ public static class ETController
             // 网络参数
             if (isHost)
             {
-                LogWrapper.Info("Link", $"本机作为创建者创建大厅，EasyTier 网络名称: {name}");
+                LogWrapper.Info("Link", $"本机作为创建者创建大厅，EasyTier 网络名称：{name}");
                 arguments.Add("i", "10.114.51.41");
                 arguments.Add("tcp-whitelist", TargetLobby.Port.ToString());
                 arguments.Add("udp-whitelist", TargetLobby.Port.ToString());
             }
             else
             {
-                LogWrapper.Info("Link", $"本机作为加入者加入大厅，EasyTier 网络名称: {name}");
+                LogWrapper.Info("Link", $"本机作为加入者加入大厅，EasyTier 网络名称：{name}");
                 arguments.AddFlag("d");
                 arguments.Add("tcp-whitelist", "0");
                 arguments.Add("udp-whitelist", "0");
 
                 JoinerLocalPort = NetworkHelper.NewTcpPort();
-                LogWrapper.Info("Link", $"ET 端口转发: 远程 {TargetLobby.Port} -> 本地 {JoinerLocalPort}");
+                LogWrapper.Info("Link", $"ET 端口转发：远程 {TargetLobby.Port} -> 本地 {JoinerLocalPort}");
                 arguments.Add("port-forward", $"tcp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
                 arguments.Add("port-forward", $"udp://127.0.0.1:{JoinerLocalPort}/{TargetLobby.Ip}:{TargetLobby.Port}");
             }

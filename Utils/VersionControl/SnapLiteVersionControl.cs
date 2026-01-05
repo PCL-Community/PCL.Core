@@ -275,7 +275,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             }
             catch (Exception e)
             {
-                LogWrapper.Error(e, $"[SnapLite] 删除 {deleteFile.Path} 对象时出现错误，对象类型: {deleteFile.ObjectType}，对象 SHA512: {deleteFile.Hash}，对象大小: {deleteFile.Length}");
+                LogWrapper.Error(e, $"[SnapLite] 删除 {deleteFile.Path} 对象时出现错误，对象类型：{deleteFile.ObjectType}，对象 SHA512: {deleteFile.Hash}，对象大小：{deleteFile.Length}");
                 throw;
             }
         }), 25);
@@ -327,7 +327,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 catch (Exception e)
                 {
                     LogWrapper.Error(e,
-                        $"[SnapLite] 修改/增添 {addFile.Path} 对象时出现错误，对象类型: {addFile.ObjectType}，对象 SHA512: {addFile.Hash}，对象大小: {addFile.Length}");
+                        $"[SnapLite] 修改/增添 {addFile.Path} 对象时出现错误，对象类型：{addFile.ObjectType}，对象 SHA512: {addFile.Hash}，对象大小：{addFile.Length}");
                     throw;
                 }
 

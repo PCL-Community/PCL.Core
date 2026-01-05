@@ -44,7 +44,7 @@ public static class IdentifyOld
                 }
                 catch (ManagementException ex)
                 {
-                    LogWrapper.Warn("Identify", $"WMI属性读取失败: {ex.Message}");
+                    LogWrapper.Warn("Identify", $"WMI 属性读取失败：{ex.Message}");
                 }
                 finally
                 {
@@ -52,16 +52,16 @@ public static class IdentifyOld
                 }
             }
 
-            LogWrapper.Warn("Identify", "未找到有效的CPU ID");
+            LogWrapper.Warn("Identify", "未找到有效的 CPU ID");
             return null;
         }
         catch (ManagementException ex)
         {
-            LogWrapper.Error(ex, "Identify", $"WMI查询失败");
+            LogWrapper.Error(ex, "Identify", $"WMI 查询失败");
         }
         catch (System.Runtime.InteropServices.COMException ex)
         {
-            LogWrapper.Error(ex, "Identify", $"COM异常，请确保WMI服务正在运行");
+            LogWrapper.Error(ex, "Identify", $"COM 异常，请确保 WMI 服务正在运行");
         }
         catch (UnauthorizedAccessException ex)
         {

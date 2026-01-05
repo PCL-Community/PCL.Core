@@ -59,7 +59,7 @@ public static class LobbyInfoProvider
         code = code.Trim().ToUpper();
         if (string.IsNullOrWhiteSpace(code) || code.Length < 9 || !code.IsASCII())
         {
-            LogWrapper.Error("Link", "无效的大厅编号: " + code);
+            LogWrapper.Error("Link", "无效的大厅编号：" + code);
             return null;
         }
 
@@ -80,7 +80,7 @@ public static class LobbyInfoProvider
             }
             catch (Exception ex)
             {
-                LogWrapper.Error(ex, "Link", "大厅编号解析失败，可能是无效的 PCL CE 大厅编号: " + code);
+                LogWrapper.Error(ex, "Link", "大厅编号解析失败，可能是无效的 PCL CE 大厅编号：" + code);
             }
         }
         else // 陶瓦
@@ -88,7 +88,7 @@ public static class LobbyInfoProvider
             var matches = code.RegexSearch(RegexPatterns.TerracottaId);
             if (matches.Count == 0)
             {
-                LogWrapper.Error("Link", "大厅编号解析失败，可能是无效的陶瓦大厅编号: " + code);
+                LogWrapper.Error("Link", "大厅编号解析失败，可能是无效的陶瓦大厅编号：" + code);
                 return null;
             }
 

@@ -16,7 +16,7 @@ public sealed class JavaService : GeneralService
     public static LifecycleContext Context => _context!;
 
     /// <inheritdoc />
-    public JavaService() : base("java", "Java管理")
+    public JavaService() : base("java", "Java 管理")
     {
         _context = Lifecycle.GetContext(this);
     }

@@ -50,7 +50,7 @@ public class EasingConverter : TypeConverter
                 "SineEaseIn" => new SineEaseIn(),
                 "SineEaseOut" => new SineEaseOut(),
                 "SineEaseInOut" => new SineEaseInOut(),
-                _ => throw new NotSupportedException($"不支持的缓动: {s}")
+                _ => throw new NotSupportedException($"不支持的缓动：{s}")
             };
         }
         return base.ConvertFrom(context, culture, value);
@@ -94,7 +94,7 @@ public class EasingConverter : TypeConverter
                 SineEaseIn => "SineEaseIn",
                 SineEaseOut => "SineEaseOut",
                 SineEaseInOut => "SineEaseInOut",
-                _ => throw new NotSupportedException($"不支持的缓动: {easing.GetType().Name}")
+                _ => throw new NotSupportedException($"不支持的缓动：{easing.GetType().Name}")
             };
         }
     

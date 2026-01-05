@@ -32,7 +32,7 @@ public class HostConnectionHandler
         {
             Proxy = HttpProxyManager.Instance
         };
-        // 使用Ae.Dns创建DoH客户端，支持多个DoH服务器
+        // 使用 Ae.Dns 创建 DoH 客户端，支持多个 DoH 服务器
         IDnsClient[] clients =
         [
             new DnsHttpClient(new HttpClient(proxyHandler)

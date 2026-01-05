@@ -34,7 +34,7 @@ public static class PEHeaderReader
             // 验证 DOS 头
             if (!_IsValidDosHeader(fs))
             {
-                result.ErrorMessage = "无效的DOS头(MZ签名)";
+                result.ErrorMessage = "无效的 DOS 头 (MZ 签名)";
                 return result;
             }
 
@@ -42,7 +42,7 @@ public static class PEHeaderReader
             var peHeaderOffset = _GetPEOffset(fs);
             if (peHeaderOffset <= 0 || peHeaderOffset >= fs.Length - 24)
             {
-                result.ErrorMessage = "无效的PE头偏移量";
+                result.ErrorMessage = "无效的 PE 头偏移量";
                 return result;
             }
 
@@ -50,7 +50,7 @@ public static class PEHeaderReader
             fs.Seek(peHeaderOffset, SeekOrigin.Begin);
             if (!_IsValidPESignature(fs))
             {
-                result.ErrorMessage = "无效的PE签名";
+                result.ErrorMessage = "无效的 PE 签名";
                 return result;
             }
 
@@ -61,7 +61,7 @@ public static class PEHeaderReader
         catch (Exception ex)
         {
             result.IsValid = false;
-            result.ErrorMessage = $"读取失败: {ex.Message}";
+            result.ErrorMessage = $"读取失败：{ex.Message}";
         }
         return result;
     }
@@ -91,7 +91,7 @@ public static class PEHeaderReader
         using var reader = new BinaryReader(fs, Encoding.Default, true);
         return new PEStruct
         {
-            // 将读取的ushort值转换为MachineType枚举
+            // 将读取的 ushort 值转换为 MachineType 枚举
             Machine = (MachineType)reader.ReadUInt16(),
             NumberOfSections = reader.ReadUInt16(),
             TimeDateStamp = reader.ReadUInt32(),

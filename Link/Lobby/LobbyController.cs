@@ -78,7 +78,7 @@ public sealed class LobbyController
                 if (profile.Kind == PlayerKind.HOST)
                 {
                     hostname = profile.Name;
-                    LogWrapper.Debug($"大厅创建者的用户名: {hostname}");
+                    LogWrapper.Debug($"大厅创建者的用户名：{hostname}");
                 }
             }
 
@@ -260,10 +260,10 @@ public sealed class LobbyController
                     {
                         if (RequiresLogin)
                         {
-                            LogWrapper.Error("Link", "联机数据发送失败，响应内容: " + result);
+                            LogWrapper.Error("Link", "联机数据发送失败，响应内容：" + result);
                             return false;
                         }
-                        LogWrapper.Warn("Link", "联机数据发送失败，跳过发送，响应内容: " + result);
+                        LogWrapper.Warn("Link", "联机数据发送失败，跳过发送，响应内容：" + result);
                     }
                 }
             }

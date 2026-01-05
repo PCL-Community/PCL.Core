@@ -292,7 +292,7 @@ public sealed class ScaffoldingServer : IAsyncDisposable
 
         var reader = new SequenceReader<byte>(buffer);
 
-        // 检查头部是否完整 (1字节类型长度 + 4字节内容长度)
+        // 检查头部是否完整 (1 字节类型长度 + 4 字节内容长度)
         if (buffer.Length < 1) return false;
         if (!reader.TryRead(out var typeLength)) return false;
 

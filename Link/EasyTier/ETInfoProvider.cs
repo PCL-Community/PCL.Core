@@ -124,7 +124,7 @@ public static class ETInfoProvider
     /// <summary>
     /// 获取 EasyTier 网络的成员列表和本地信息，若获取失败则均返回 null。
     /// </summary>
-    /// <returns>Tuple(玩家列表, 本地信息)</returns>
+    /// <returns>Tuple(玩家列表，本地信息)</returns>
     public static Tuple<List<ETPlayerInfo>?, ETPlayerInfo?> GetPlayerList()
     {
         try
@@ -136,8 +136,8 @@ public static class ETInfoProvider
             var output = _CliProcess.StandardOutput.ReadToEnd() + _CliProcess.StandardError.ReadToEnd();
             if (!_CliProcess.HasExited)
             {
-                LogWrapper.Warn("Link", "Cli 获取结果超时(180 ms)，程序状态可能异常！");
-                LogWrapper.Warn("Link", "获取到 EasyTier Cli 信息: \r\n" + output);
+                LogWrapper.Warn("Link", "Cli 获取结果超时 (180 ms)，程序状态可能异常！");
+                LogWrapper.Warn("Link", "获取到 EasyTier Cli 信息：\r\n" + output);
             }
 
             var playerList = new List<ETPlayerInfo>();

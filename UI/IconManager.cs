@@ -49,7 +49,7 @@ public class IconManager : INotifyPropertyChanged {
         icon = null;
         if (string.IsNullOrWhiteSpace(xamlString)) return false;
         
-        // 确保在UI线程执行
+        // 确保在 UI 线程执行
         if (!Application.Current.Dispatcher.CheckAccess()) {
             return false;
         }
@@ -70,7 +70,7 @@ public class IconManager : INotifyPropertyChanged {
             throw new ArgumentNullException(nameof(xamlString), "XAML 字符串不能为空或空白。");
         }
         
-        // 确保在UI线程执行
+        // 确保在 UI 线程执行
         if (!Application.Current.Dispatcher.CheckAccess()) {
             throw new InvalidOperationException("XAML 解析需要在 UI 线程执行。");
         }

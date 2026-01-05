@@ -54,27 +54,27 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
             ? $"Range: {request.Headers.Range.Ranges.First().From}-{request.Headers.Range.Ranges.First().To}"
             : "No Range";
 
-        LogWrapper.Trace("Downloader", $"开始下载分段: {Start}-{End}, {rangeInfo}, URI: {_currentUri}");
+        LogWrapper.Trace("Downloader", $"开始下载分段：{Start}-{End}, {rangeInfo}, URI: {_currentUri}");
         Status = DownloadSegmentStatus.Running;
 
         try
         {
-            LogWrapper.Debug("Downloader", $"发送请求: {_currentUri}, {rangeInfo}");
+            LogWrapper.Debug("Downloader", $"发送请求：{_currentUri}, {rangeInfo}");
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token)
                 .ConfigureAwait(false);
 
-            LogWrapper.Debug("Downloader", $"收到响应: {response.StatusCode}, URI: {_currentUri}");
+            LogWrapper.Debug("Downloader", $"收到响应：{response.StatusCode}, URI: {_currentUri}");
 
             if (request.Headers.Range is not null && response.StatusCode == HttpStatusCode.OK)
             {
-                LogWrapper.Warn("Downloader", $"服务器不支持范围请求，返回200 OK: {_currentUri}");
+                LogWrapper.Warn("Downloader", $"服务器不支持范围请求，返回 200 OK: {_currentUri}");
                 throw new DownloadRangeNotSupportedException(_currentUri);
             }
 
             response.EnsureSuccessStatusCode();
 
             await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-            LogWrapper.Trace("Downloader", $"打开文件流: {path}, 偏移量: {Start + Downloaded}");
+            LogWrapper.Trace("Downloader", $"打开文件流：{path}, 偏移量：{Start + Downloaded}");
             await using var fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write,
                 FileShare.ReadWrite, bufferSize: 4096, FileOptions.Asynchronous);
             fileStream.Seek(Start + Downloaded, SeekOrigin.Begin);
@@ -83,7 +83,7 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
             int read;
             long totalRead = 0;
 
-            LogWrapper.Trace("Downloader", $"开始读取数据: {Start}-{End}, URI: {_currentUri}");
+            LogWrapper.Trace("Downloader", $"开始读取数据：{Start}-{End}, URI: {_currentUri}");
             while ((read = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
             {
                 await fileStream.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
@@ -91,44 +91,44 @@ public class DownloadSegment(Uri uri, string path, long start, long? end)
                 totalRead += read;
                 progress?.Report(read);
 
-                // 每下载1MB记录一次进度
+                // 每下载 1MB 记录一次进度
                 if (totalRead % (1024 * 1024) < read)
                 {
                     LogWrapper.Trace("Downloader",
-                        $"分段下载进度: {Start}-{End}, 已下载: {Downloaded} 字节, 剩余: {RemainingBytes} 字节");
+                        $"分段下载进度：{Start}-{End}, 已下载：{Downloaded} 字节，剩余：{RemainingBytes} 字节");
                 }
             }
 
-            LogWrapper.Debug("Downloader", $"分段下载完成: {Start}-{End}, 共下载: {totalRead} 字节, URI: {_currentUri}");
+            LogWrapper.Debug("Downloader", $"分段下载完成：{Start}-{End}, 共下载：{totalRead} 字节，URI: {_currentUri}");
             Status = DownloadSegmentStatus.Success;
         }
         catch (OperationCanceledException)
         {
-            LogWrapper.Warn("Downloader", $"分段下载被取消: {Start}-{End}, URI: {_currentUri}");
+            LogWrapper.Warn("Downloader", $"分段下载被取消：{Start}-{End}, URI: {_currentUri}");
             Status = DownloadSegmentStatus.Cancelled;
             throw;
         }
         catch (DownloadRangeNotSupportedException)
         {
-            LogWrapper.Error("Downloader", $"分段下载失败，服务器不支持范围请求: {Start}-{End}, URI: {_currentUri}");
+            LogWrapper.Error("Downloader", $"分段下载失败，服务器不支持范围请求：{Start}-{End}, URI: {_currentUri}");
             Status = DownloadSegmentStatus.Failed;
             throw;
         }
         catch (HttpRequestException ex)
         {
-            LogWrapper.Error(ex, "Downloader", $"分段下载失败，HTTP请求错误: {Start}-{End}, URI: {_currentUri}");
+            LogWrapper.Error(ex, "Downloader", $"分段下载失败，HTTP 请求错误：{Start}-{End}, URI: {_currentUri}");
             Status = DownloadSegmentStatus.Failed;
             throw;
         }
         catch (IOException ex)
         {
-            LogWrapper.Error(ex, "Downloader", $"分段下载失败，IO错误: {Start}-{End}, 文件: {path}");
+            LogWrapper.Error(ex, "Downloader", $"分段下载失败，IO 错误：{Start}-{End}, 文件：{path}");
             Status = DownloadSegmentStatus.Failed;
             throw;
         }
         catch (Exception ex)
         {
-            LogWrapper.Error(ex, "Downloader", $"分段下载失败，未知错误: {Start}-{End}, URI: {_currentUri}");
+            LogWrapper.Error(ex, "Downloader", $"分段下载失败，未知错误：{Start}-{End}, URI: {_currentUri}");
             Status = DownloadSegmentStatus.Failed;
             throw;
         }

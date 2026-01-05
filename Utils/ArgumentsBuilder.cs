@@ -69,7 +69,7 @@ public class ArgumentsBuilder
     }
 
     /// <summary>
-    /// 条件添加参数（仅当condition为true时添加）
+    /// 条件添加参数（仅当 condition 为 true 时添加）
     /// </summary>
     public ArgumentsBuilder AddIf(bool condition, string key, string value)
     {
@@ -78,7 +78,7 @@ public class ArgumentsBuilder
     }
 
     /// <summary>
-    /// 条件添加由空格连接的参数（仅当condition为true时添加）
+    /// 条件添加由空格连接的参数（仅当 condition 为 true 时添加）
     /// </summary>
     public ArgumentsBuilder AddWithSpaceIf(bool condition, string key, string value)
     {
@@ -87,7 +87,7 @@ public class ArgumentsBuilder
     }
 
     /// <summary>
-    /// 条件添加标志（仅当condition为true时添加）
+    /// 条件添加标志（仅当 condition 为 true 时添加）
     /// </summary>
     public ArgumentsBuilder AddFlagIf(bool condition, string flag)
     {

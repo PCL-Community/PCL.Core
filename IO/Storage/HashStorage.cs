@@ -38,7 +38,7 @@ public class HashStorage(string folder, IHashProvider hashProvider, bool compres
 
         var fileHash = hash ?? hashProvider.ComputeHash(input);
         var destPath = _getDestPath(fileHash);
-        //纠正: 由于之前错误设计导致的文件访问效率低下的文件结构
+        //纠正：由于之前错误设计导致的文件访问效率低下的文件结构
         if (correctMisplacedFile && _correctMisplacedFile(fileHash)) LogWrapper.Info("HashStorage", "Move misplaced file into correct folder");
         //检查是否已存在保存的文件
         if (File.Exists(destPath)) return fileHash;

@@ -131,7 +131,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
     
             if (isAny)
             {
-                // AnyConfigItem：没有“默认值”参数: 替换为无参构造函数
+                // AnyConfigItem：没有“默认值”参数：替换为无参构造函数
                 var tQualified = _BuildQualifiedTypeName(symbol.Type);
                 defaultCode = "() => new " + tQualified + "()";
     
@@ -143,7 +143,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             }
             else
             {
-                // ConfigItem：参数2为默认值，参数3为来源（可省略）
+                // ConfigItem：参数 2 为默认值，参数 3 为来源（可省略）
                 if (args is { Count: >= 2 })
                 {
                     defaultCode = _RenderDefaultValueCode(ctx.SemanticModel, args.Value[1].Expression);
@@ -755,7 +755,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         return expr.ToString();
     }
 
-    // 构建“命名空间.类型链.成员”形式完整名称
+    // 构建“命名空间。类型链.成员”形式完整名称
     private static string _BuildQualifiedSymbolName(ISymbol symbol)
     {
         // 枚举成员/const 字段

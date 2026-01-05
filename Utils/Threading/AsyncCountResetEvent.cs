@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 namespace PCL.Core.Utils.Threading;
 
 // 使用 AI 生成的代码
-// 时间: 2025/9/2
-// 模型: GPT-5
+// 时间：2025/9/2
+// 模型：GPT-5
 
 /// <summary>
 /// 一个带配额（Permit）的 <see cref="System.Threading.AutoResetEvent"/> 变体。

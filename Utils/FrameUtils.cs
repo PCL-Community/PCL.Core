@@ -48,7 +48,7 @@ public static class FrameUtils
     /// <returns>帧索引。</returns>
     public static long TimeSpanToFrameIndex(TimeSpan startTime, TimeSpan currentTime, int fps)
     {
-        // 如果当前时间早于开始时间，则返回0
+        // 如果当前时间早于开始时间，则返回 0
         if (currentTime < startTime) return 0;
         
         // 计算经过的时间

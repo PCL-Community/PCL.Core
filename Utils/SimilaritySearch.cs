@@ -42,7 +42,7 @@ public static class SimilaritySearch {
     private const double SourceLengthSmoothing = 15.0;
 
     /// <summary>
-    /// 对长度为1的查询的得分奖励。
+    /// 对长度为 1 的查询的得分奖励。
     /// </summary>
     private const double ShortQueryBonusFactor = 2.0;
     //endregion

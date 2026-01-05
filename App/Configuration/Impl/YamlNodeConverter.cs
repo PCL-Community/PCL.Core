@@ -6,9 +6,9 @@ using YamlDotNet.RepresentationModel;
 
 namespace PCL.Core.App.Configuration.Impl;
 
-// 修改自: https://dotnetfiddle.net/jaG1i1
-// 来源: https://stackoverflow.com/a/40727087
-// 原作者: Antoine Aubry (是 YamlDotNet 的作者, 真不懂都造出来了为什么不直接把它写到库里)
+// 修改自：https://dotnetfiddle.net/jaG1i1
+// 来源：https://stackoverflow.com/a/40727087
+// 原作者：Antoine Aubry (是 YamlDotNet 的作者，真不懂都造出来了为什么不直接把它写到库里)
 public static class YamlNodeConverter
 {
 	public class EventStreamParserAdapter(IEnumerable<ParsingEvent> events) : IParser

@@ -97,10 +97,10 @@ public class ProcessInterop {
         try {
             var fullPath = Path.GetFullPath(executable);
             if (!File.Exists(fullPath)) {
-                LogWrapper.Warn("System", $"指定的可执行文件不存在: {executable}");
+                LogWrapper.Warn("System", $"指定的可执行文件不存在：{executable}");
             }
         } catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
-            throw new ArgumentException($"无效的可执行文件路径: {executable}", nameof(executable), ex);
+            throw new ArgumentException($"无效的可执行文件路径：{executable}", nameof(executable), ex);
         }
 
         const string gpuPreferenceRegKey = @"Software\Microsoft\DirectX\UserGpuPreferences";
@@ -110,7 +110,7 @@ public class ProcessInterop {
         try {
             var isCurrentHighPerformance = GetCurrentGpuPreference(executable, gpuPreferenceRegKey, gpuPreferenceRegValueHigh);
 
-            LogWrapper.Info("System", $"当前程序 ({executable}) 的显卡设置为高性能: {isCurrentHighPerformance}");
+            LogWrapper.Info("System", $"当前程序 ({executable}) 的显卡设置为高性能：{isCurrentHighPerformance}");
 
             // 如果当前设置已经是期望的设置，则无需修改
             if (isCurrentHighPerformance == wantHighPerformance) {
@@ -130,14 +130,14 @@ public class ProcessInterop {
             LogWrapper.Error(ex, "System", errorMsg);
             throw new SecurityException(errorMsg, ex);
         } catch (Exception ex) {
-            var errorMsg = $"设置 GPU 偏好时发生未预期的错误: {ex.Message}";
+            var errorMsg = $"设置 GPU 偏好时发生未预期的错误：{ex.Message}";
             LogWrapper.Error(ex, "System", errorMsg);
             throw new InvalidOperationException(errorMsg, ex);
         }
     }
 
     /// <summary>
-    /// 获取当前程序的GPU偏好设置
+    /// 获取当前程序的 GPU 偏好设置
     /// </summary>
     private static bool GetCurrentGpuPreference(string executable, string regKey, string highPerfValue) {
         try {
@@ -150,13 +150,13 @@ public class ProcessInterop {
             var currentValue = readOnlyKey.GetValue(executable)?.ToString();
             return string.Equals(currentValue, highPerfValue, StringComparison.OrdinalIgnoreCase);
         } catch (Exception ex) {
-            LogWrapper.Warn(ex, "System", $"读取当前 GPU 偏好设置时出现错误: {ex.Message}");
+            LogWrapper.Warn(ex, "System", $"读取当前 GPU 偏好设置时出现错误：{ex.Message}");
             return false; // 假设当前不是高性能模式
         }
     }
 
     /// <summary>
-    /// 设置GPU偏好值到注册表
+    /// 设置 GPU 偏好值到注册表
     /// </summary>
     private static bool SetGpuPreferenceValue(string executable, bool wantHighPerformance,
         string regKey, string highPerfValue, string defaultValue) {
@@ -171,14 +171,14 @@ public class ProcessInterop {
                 writeKey = Registry.CurrentUser.CreateSubKey(regKey);
 
                 if (writeKey == null) {
-                    throw new InvalidOperationException($"无法创建注册表键: {regKey}");
+                    throw new InvalidOperationException($"无法创建注册表键：{regKey}");
                 }
             }
 
             var valueToSet = wantHighPerformance ? highPerfValue : defaultValue;
             writeKey.SetValue(executable, valueToSet, RegistryValueKind.String);
 
-            LogWrapper.Info("System", $"成功设置程序 ({executable}) 的GPU偏好: {(wantHighPerformance ? "高性能" : "默认")}");
+            LogWrapper.Info("System", $"成功设置程序 ({executable}) 的 GPU 偏好：{(wantHighPerformance ? "高性能" : "默认")}");
             return true;
         } catch (UnauthorizedAccessException) {
             // 重新抛出，让上层处理
@@ -187,7 +187,7 @@ public class ProcessInterop {
             // 重新抛出，让上层处理
             throw;
         } catch (Exception ex) {
-            var errorMsg = $"写入注册表时发生错误: {ex.Message}";
+            var errorMsg = $"写入注册表时发生错误：{ex.Message}";
             LogWrapper.Error(ex, "System", errorMsg);
             throw new InvalidOperationException(errorMsg, ex);
         } finally {

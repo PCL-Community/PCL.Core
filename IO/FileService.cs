@@ -201,7 +201,7 @@ public partial class FileService
             var count = items.Count;
             foreach (var item in items)
             {
-                Context.Trace($"正在加载文件: {item}");
+                Context.Trace($"正在加载文件：{item}");
                 var finishedCount = 0;
                 var process = task.GetProcess(item) ?? _DefaultProcesses.MatchFirst(item);
                 var targetPath = item.TargetPath;
@@ -226,13 +226,13 @@ public partial class FileService
                                 }
                                 catch (Exception ex)
                                 {
-                                    Context.Warn($"文件传输出错: {item}", ex);
+                                    Context.Warn($"文件传输出错：{item}", ex);
                                     OnProcessFinished(item, new AnyType(ex, true));
                                     return true;
                                 }
                             })
                         ) return;
-                        Context.Warn($"无支持的传输实现或全部失败: {item}");
+                        Context.Warn($"无支持的传输实现或全部失败：{item}");
                         OnProcessFinished(item, null);
                     });
                 }
@@ -250,7 +250,7 @@ public partial class FileService
                             try { result = process(item, path); }
                             catch (Exception ex)
                             {
-                                Context.Warn($"文件处理出错: {item}", ex);
+                                Context.Warn($"文件处理出错：{item}", ex);
                                 result = ex;
                                 isException = true;
                             }
@@ -274,7 +274,7 @@ public partial class FileService
                         }
                         catch (Exception ex)
                         {
-                            Context.Error($"文件处理完成出错: {finishedItem}", ex);
+                            Context.Error($"文件处理完成出错：{finishedItem}", ex);
                         }
                         if (++finishedCount != count) return;
                         try

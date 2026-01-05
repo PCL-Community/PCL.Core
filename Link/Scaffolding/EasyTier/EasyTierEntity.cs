@@ -451,7 +451,7 @@ public class EasyTierEntity
                 
                 var output = stdOut + stdErr;
                 
-                LogWrapper.Info("EasyTier Cli Debug", "EasyTier Cli 抽样输出: \n" + output);
+                LogWrapper.Info("EasyTier Cli Debug", "EasyTier Cli 抽样输出：\n" + output);
             }
             catch (Exception e)
             {

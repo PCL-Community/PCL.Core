@@ -6,9 +6,9 @@ using System.Windows;
 using System.Windows.Media;
 
 // 该部分源码来自或修改于 https://github.com/OrgEleCho/EleCho.WpfSuite
-// 项目: EleCho.WpfSuite
-// 作者: EleCho
-// 协议: MIT License
+// 项目：EleCho.WpfSuite
+// 作者：EleCho
+// 协议：MIT License
 
 namespace PCL.Core.UI
 {
@@ -117,7 +117,7 @@ namespace PCL.Core.UI
                 if (selfInDesignMode &&
                     parent.GetType().ToString().Contains("VisualStudio"))
                 {
-                    // 遍历到 VS 自身的设计器元素, 中断!
+                    // 遍历到 VS 自身的设计器元素，中断！
                     break;
                 }
 

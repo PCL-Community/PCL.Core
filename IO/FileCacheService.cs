@@ -20,7 +20,7 @@ public class FileCacheService : GeneralService
     private static void _InitializeCache()
     {
         CachePath = Path.Combine(FileService.TempPath, "cache");
-        Context.Debug($"当前缓存目录: {CachePath}");
+        Context.Debug($"当前缓存目录：{CachePath}");
         Directory.CreateDirectory(CachePath);
         var cacheInfo = FileService.WaitForResult(PredefinedFileItems.CacheInformation)?.Try<string>();
         Context.Trace(cacheInfo ?? "NUL");

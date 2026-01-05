@@ -28,7 +28,7 @@ public class GetPlayerProfileListHandler : IRequestHandler
         var hostProfile = new PlayerProfile
         {
             Name = context.PlayerName,
-            MachineId = Utils.Secret.Identify.LaunchId,
+            MachineId = Utils.Secret.Identify.LauncherId,
             Vendor = $"PCL CE {Basics.VersionName}, EasyTier {EasyTierMetadata.CurrentEasyTierVer}",
             Kind = PlayerKind.HOST
         };

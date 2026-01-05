@@ -3,6 +3,53 @@ using System.Collections.Generic;
 
 namespace PCL.Core.Utils.Exts;
 
+public static class ListUtils
+{
+    /// <summary>
+    /// 选择最大值对应的对象。
+    /// 若没有元素则返回 default(T)。
+    /// </summary>
+    public static T MaxOf<T, C>(this IEnumerable<T> source, Func<T, C> selector) where C : IComparable<C>
+    {
+        using (var enumerator = source.GetEnumerator())
+        {
+            if (!enumerator.MoveNext()) return default(T);
+            T maxItem = enumerator.Current;
+            C maxValue = selector(maxItem);
+            while (enumerator.MoveNext())
+            {
+                C Value = selector(enumerator.Current);
+                if (Value.CompareTo(maxValue) <= 0) continue;
+                maxItem = enumerator.Current;
+                maxValue = Value;
+            }
+            return maxItem;
+        }
+    }
+
+    /// <summary>
+    /// 选择最小值对应的对象。
+    /// 若没有元素则返回 default(T)。
+    /// </summary>
+    public static T MinOf<T, C>(this IEnumerable<T> list, Func<T, C> selector) where C : IComparable<C>
+    {
+        using (var enumerator = list.GetEnumerator())
+        {
+            if (!enumerator.MoveNext()) return default(T);
+            T minItem = enumerator.Current;
+            C minValue = selector(minItem);
+            while (enumerator.MoveNext())
+            {
+                C value = selector(enumerator.Current);
+                if (value.CompareTo(minValue) >= 0) continue;
+                minItem = enumerator.Current;
+                minValue = value;
+            }
+            return minItem;
+        }
+    }
+}
+
 public static class SortUtils {
     /// <summary>
     /// 对列表进行稳定排序，返回新列表。

@@ -6,6 +6,7 @@ using PCL.Core.Logging;
 
 namespace PCL.Core.Utils.Hash;
 
+// ReSharper disable once InconsistentNaming
 public class MD5Provider : IHashProvider {
     public static MD5Provider Instance { get; } = new();
     
@@ -14,15 +15,7 @@ public class MD5Provider : IHashProvider {
         var originalPos = input.Position;
         try
         {
-            using var hash = MD5.Create();
-            var res = hash.ComputeHash(input);
-            var sb = new StringBuilder(Length);
-            foreach (var b in res)
-            {
-                sb.Append(b.ToString("x2"));
-            }
-
-            return sb.ToString();
+            return HashResultHandler.ConvertResultToString(MD5.HashData(input), Length);
         }
         catch (Exception e)
         {
@@ -34,7 +27,8 @@ public class MD5Provider : IHashProvider {
             input.Position = originalPos;
         }
     }
-    public string ComputeHash(byte[] input) => ComputeHash(new MemoryStream(input));
+    public string ComputeHash(byte[] input) => HashResultHandler.ConvertResultToString(MD5.HashData(input), Length);
+    public string ComputeHash(ReadOnlySpan<byte> input) => HashResultHandler.ConvertResultToString(MD5.HashData(input), Length);
     public string ComputeHash(string input, Encoding? en = null) => ComputeHash(
         en == null
             ? Encoding.UTF8.GetBytes(input)

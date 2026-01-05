@@ -7,8 +7,11 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Ae.Dns.Protocol.Enums;
+using Ae.Dns.Protocol.Records;
 using PCL.Core.Logging;
 using PCL.Core.Net;
+using PCL.Core.Net.Dns;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft;
@@ -209,12 +212,16 @@ public static class ServerAddressResolver
             LogWrapper.Info($"尝试 SRV 查询：{name}");
 
             // NDnsQuery.GetSrvRecords 返回 string 列表，为兼容不同实现，这里进行鲁棒解析
-            var raw = await Task.Run(() => _ResolveSrvRecords(name), ct).ConfigureAwait(false);
-            var parsed = new List<SrvRecord>(raw.Count);
-            foreach (var r in raw)
+            var raw = await DnsQuery.Instance.QueryAsync(name, DnsQueryType.SRV, ct);
+            if (raw == null || raw.Answers.Count == 0) return [];
+            List<SrvRecord> parsed = [];
+            foreach (var answer in raw.Answers)
             {
-                if (_TryParseSrvLine(r, out var rec))
-                    parsed.Add(rec);
+                if (answer.Resource is not DnsUnknownResource dnsRaw) return [];
+                var srcRecord = new DnsSrvResource();
+                var offset = 0;
+                srcRecord.ReadBytes(dnsRaw.Raw, ref offset, dnsRaw.Raw.Length);
+                parsed.Add(new SrvRecord(srcRecord.Priority, srcRecord.Weight, srcRecord.Port, srcRecord.Target));
             }
 
             // 过滤 target 为 "."（表示服务不可用）
@@ -246,44 +253,6 @@ public static class ServerAddressResolver
             LogWrapper.Warn(ex, "SRV 查询异常");
             return [];
         }
-    }
-
-    private static bool _TryParseSrvLine(string line, out SrvRecord record)
-    {
-        // 期望格式（优先）：priority weight port target
-        // 兼容格式（回退）：target:port 或 仅 target
-        record = new SrvRecord(0, 0, DefaultPort, ".");
-        if (string.IsNullOrWhiteSpace(line))
-            return false;
-
-        var s = line.Trim();
-
-        // 先尝试空格分割
-        var parts = s.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 4 &&
-            int.TryParse(parts[^4], NumberStyles.Integer, CultureInfo.InvariantCulture, out var prio) &&
-            int.TryParse(parts[^3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var weight) &&
-            int.TryParse(parts[^2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var port))
-        {
-            var target = parts[^1];
-            if (port is < 1 or > 65535) return false;
-            record = new SrvRecord(prio, Math.Max(0, weight), port, target);
-            return true;
-        }
-
-        // 回退：target:port
-        var idx = s.LastIndexOf(':');
-        if (idx > 0 &&
-            int.TryParse(s.AsSpan(idx + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var p2) &&
-            p2 is >= 1 and <= 65535)
-        {
-            record = new SrvRecord(0, 0, p2, s[..idx]);
-            return true;
-        }
-
-        // 仅 target（端口未知，按 25565 处理）
-        record = new SrvRecord(0, 0, DefaultPort, s);
-        return true;
     }
 
     private static SrvRecord _PopByWeight(List<SrvRecord> pool)
@@ -421,21 +390,6 @@ public static class ServerAddressResolver
         catch
         {
             return (false, ip.ToString());
-        }
-    }
-
-    // ===== 与现有 NDnsQuery 适配 =====
-
-    private static List<string> _ResolveSrvRecords(string fqdn)
-    {
-        try
-        {
-            // 兼容已有实现：传入完整的 _minecraft._tcp.domain
-            return NDnsQuery.GetSrvRecords(fqdn);
-        }
-        catch
-        {
-            return [];
         }
     }
 }

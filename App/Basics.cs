@@ -148,4 +148,9 @@ public static class Basics
 
     private const string AssemblyImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
     public static string GetAppImagePath(string imageName) => AssemblyImagePath + imageName;
+
+    static Basics()
+    {
+        // 填充基本信息
+    }
 }

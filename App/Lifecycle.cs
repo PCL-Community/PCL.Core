@@ -536,16 +536,6 @@ public sealed class Lifecycle : ILifecycleService
         _StartWorker(LifecycleState.Running, LifecycleState.Exiting, false);
     }
 
-    /// <summary>
-    /// [请勿调用] 尝试结束程序流程 (未实现)
-    /// </summary>
-    /// <exception cref="NotImplementedException"></exception>
-    public static void OnWindowClosing()
-    {
-        // TODO 尝试退出程序 (Closing)
-        throw new NotImplementedException();
-    }
-
     #endregion
 
     #region 公共 API

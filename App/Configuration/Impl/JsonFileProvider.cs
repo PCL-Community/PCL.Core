@@ -104,7 +104,7 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     protected override void WriteToStream(Stream stream)
     {
-        using var writer = new Utf8JsonWriter(stream, _WriterOptions);
+        var writer = new Utf8JsonWriter(stream, _WriterOptions);
         _rootElement.WriteTo(writer, _SerializerOptions);
         writer.Flush();
     }

@@ -109,7 +109,7 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     protected override void WriteToStream(Stream stream)
     {
-        using var writer = new StreamWriter(stream, Encoding.UTF8);
+        var writer = new StreamWriter(stream, Encoding.UTF8);
         _Serializer.Serialize(writer, _rootNode);
         writer.Flush();
     }

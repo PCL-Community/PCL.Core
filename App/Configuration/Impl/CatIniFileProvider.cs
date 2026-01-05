@@ -43,7 +43,7 @@ public class CatIniFileProvider : CommonFileProvider, IEnumerableKeyProvider
 
     protected override void WriteToStream(Stream stream)
     {
-        using var writer = new StreamWriter(stream, Encoding.UTF8);
+        var writer = new StreamWriter(stream, Encoding.UTF8);
         foreach (var (key, value) in _dict)
         {
             var keyStr = key.ReplaceLineBreak();

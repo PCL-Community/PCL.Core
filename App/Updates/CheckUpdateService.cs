@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 
 namespace PCL.Core.App.Updates;
 
@@ -24,22 +25,16 @@ public partial class CheckUpdateService
         {
             result = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
-        {
-            Context.Warn("检查更新时发生异常", ex);
-            HintWrapper.Show("检查更新时发生异常，可能是网络问题导致", HintTheme.Error);
-            return;
-        }
         catch (InvalidOperationException ex)
         {
-            Context.Warn("检查更新时发生异常", ex);
-            HintWrapper.Show("检查更新时发生异常，所有更新源均不可用", HintTheme.Error);
+            Context.Warn("所有更新源均不可用", ex);
+            HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
             return;
         }
         catch (Exception ex)
         {
             Context.Warn("检查更新时发生未知异常", ex);
-            HintWrapper.Show("检查更新时发生未知异常", HintTheme.Error);
+            HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
             return;
         }
 
@@ -51,17 +46,43 @@ public partial class CheckUpdateService
 
         Context.Info("发现新版本, 准备下载更新包...");
 
-        var answer = MsgBoxWrapper.Show(result.ChangeLog,
-            "发现新版本",
-            MsgBoxTheme.Info,
-            true,
-            "更新",
-            "取消");
-
-        if (answer != 1)
+        switch (Config.System.Update.UpdateMode)
         {
-            Context.Info("用户取消更新");
-            return;
+            case 0: // 自动下载并安装更新
+            {
+                break;
+            }
+            case 1: // 自动下载并提示更新
+            case 2: // 提示更新 (目前无法区分开，统一处理)
+            {
+                var answer = MsgBoxWrapper.Show(
+                    $"启动器有新版本可用 ({Basics.VersionName} -> {result.VersionName}){Constants.vbCrLf}" +
+                    $"是否立即更新？{Constants.vbCrLf}" +
+                    "你也可以稍后在 设置 -> 检查更新 界面中更新。",
+                    "发现新版本",
+                    MsgBoxTheme.Info,
+                    true,
+                    "更新",
+                    "取消");
+
+                if (answer != 1)
+                {
+                    Context.Info("用户取消更新");
+                    return;
+                }
+                
+                break;
+            }
+            case 3: // 不自动检查更新
+            {
+                Context.Info("不自动检查更新，取消更新");
+                return;
+            }
+            default:
+            {
+                Context.Warn("未知的更新模式，取消更新");
+                return;
+            }
         }
 
         Context.Info("正在下载更新包...");
@@ -69,16 +90,17 @@ public partial class CheckUpdateService
         {
             await _SourceController.DownloadAsync("").ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
+        catch (InvalidOperationException ex)
         {
-            Context.Warn("下载更新包时发生异常", ex);
-            HintWrapper.Show("下载更新包时发生异常，可能是网络问题导致", HintTheme.Error);
+            Context.Warn("所有更新源均不可用", ex);
+            HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
             return;
         }
         catch (Exception ex)
         {
             Context.Warn("下载更新包时发生未知异常", ex);
-            throw;
+            HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
+            return;
         }
         Context.Info("更新包下载完成，准备启动更新程序...");
 
@@ -86,3 +108,13 @@ public partial class CheckUpdateService
         // 因为 UpdateMinioSource.DownloadAsync 还没实现，所以先不启动更新程序
     }
 }
+
+public delegate void MsgBoxHandler(
+    string message,
+    string caption,
+    string btn1,
+    string btn2,
+    MsgBoxTheme theme,
+    bool block,
+    ref int result
+);

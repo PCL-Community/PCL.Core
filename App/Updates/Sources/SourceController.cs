@@ -44,14 +44,14 @@ public sealed class SourceController
                 try
                 {
                     var res = await action(source).ConfigureAwait(false);
-                    _LogInfo($"使用 {source.SourceName} 处理成功");
+                    _LogInfo($"使用源 {source.SourceName} 处理成功");
                     _availableSources.Insert(0, source);
                     _availableSources.Remove(source);
                     return res;
                 }
                 catch (Exception ex)
                 {
-                    _LogWarning($"{source.SourceName} 失效，使用下一个更新源。异常: {ex}");
+                    _LogWarning($"源 {source.SourceName} 失效，使用下一个更新源。异常: {ex}");
                 }
             }
                 

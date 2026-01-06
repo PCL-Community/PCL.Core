@@ -2,8 +2,6 @@ using PCL.Core.App.Updates.Models;
 using PCL.Core.App.Updates.Sources;
 using PCL.Core.UI;
 using System;
-using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualBasic;
 
@@ -16,105 +14,112 @@ public partial class CheckUpdateService
     private static readonly SourceController _SourceController = new([
         new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")
     ]);
+    
+    public static VersionDataModel? AvailableVersion { get; set; }
+    
+    public static bool IsUpdateDownloaded { get; set; }
 
     [LifecycleStart]
     private static async Task _Start()
     {
-        VersionDataModel result;
-        try
+        if (Config.System.Update.UpdateMode == 3)
         {
-            result = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
-        }
-        catch (InvalidOperationException ex)
-        {
-            Context.Warn("所有更新源均不可用", ex);
-            HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+            Context.Info("已设置为不自动检查更新，跳过检查更新步骤");
             return;
         }
-        catch (Exception ex)
-        {
-            Context.Warn("检查更新时发生未知异常", ex);
-            HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
-            return;
-        }
+
+        var result = await _TryCheckUpdate();
+        if (result == null) return;
 
         if (!result.IsAvailable)
         {
             Context.Info("当前已是最新版本");
             return;
         }
+        
+        AvailableVersion = result;
+        Context.Info($"发现新版本：{AvailableVersion.VersionName}，准备更新");
 
-        Context.Info("发现新版本, 准备下载更新包...");
+        if (Config.System.Update.UpdateMode == 2 && !_PromptUpdate()) return;
 
-        switch (Config.System.Update.UpdateMode)
-        {
-            case 0: // 自动下载并安装更新
-            {
-                break;
-            }
-            case 1: // 自动下载并提示更新
-            case 2: // 提示更新 (目前无法区分开，统一处理)
-            {
-                var answer = MsgBoxWrapper.Show(
-                    $"启动器有新版本可用 ({Basics.VersionName} -> {result.VersionName}){Constants.vbCrLf}" +
-                    $"是否立即更新？{Constants.vbCrLf}" +
-                    "你也可以稍后在 设置 -> 检查更新 界面中更新。",
-                    "发现新版本",
-                    MsgBoxTheme.Info,
-                    true,
-                    "更新",
-                    "取消");
+        if (!await _TryDownloadUpdate()) return;
 
-                if (answer != 1)
-                {
-                    Context.Info("用户取消更新");
-                    return;
-                }
-                
-                break;
-            }
-            case 3: // 不自动检查更新
-            {
-                Context.Info("不自动检查更新，取消更新");
-                return;
-            }
-            default:
-            {
-                Context.Warn("未知的更新模式，取消更新");
-                return;
-            }
-        }
+        if (Config.System.Update.UpdateMode == 1 && !_PromptInstall()) return;
 
-        Context.Info("正在下载更新包...");
+        Context.Info("准备重启并安装更新包...");
+        UpdateHelper.InstallAndRestart(true, true);
+    }
+
+    private static async Task<VersionDataModel?> _TryCheckUpdate()
+    {
         try
         {
-            await _SourceController.DownloadAsync("").ConfigureAwait(false);
+            return await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
             Context.Warn("所有更新源均不可用", ex);
             HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
-            return;
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("检查更新时发生未知异常", ex);
+            HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
+            return null;
+        }
+    }
+
+    private static async Task<bool> _TryDownloadUpdate()
+    {
+        Context.Info("正在下载更新包...");
+        try
+        {
+            await _SourceController.DownloadAsync("").ConfigureAwait(false);
+            Context.Info("更新包下载完成");
+            IsUpdateDownloaded = true;
+            return true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Context.Warn("所有更新源均不可用", ex);
+            HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+            return false;
         }
         catch (Exception ex)
         {
             Context.Warn("下载更新包时发生未知异常", ex);
             HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
-            return;
+            return false;
         }
-        Context.Info("更新包下载完成，准备启动更新程序...");
+    }
 
-        // UpdateHelper.Restart(true);
-        // 因为 UpdateMinioSource.DownloadAsync 还没实现，所以先不启动更新程序
+    private static bool _PromptUpdate()
+    {
+        if (AvailableVersion == null) return false;
+
+        if (MsgBoxWrapper.Show(
+                $"启动器有新版本可用 ({Basics.VersionName} -> {AvailableVersion.VersionName}){Constants.vbCrLf}" +
+                $"是否立即下载并安装？{Constants.vbCrLf}" +
+                "你也可以稍后在 设置 -> 检查更新 界面中更新。",
+                "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
+        
+        Context.Info("用户取消了更新");
+        return false;
+    }
+
+    private static bool _PromptInstall()
+    {
+        if (AvailableVersion == null) return false;
+        if (!IsUpdateDownloaded) return false;
+
+        if (MsgBoxWrapper.Show(
+                $"启动器有新版本可用 ({Basics.VersionName} -> {AvailableVersion.VersionName}){Constants.vbCrLf}" +
+                $"已自动下载，是否立即安装？{Constants.vbCrLf}" +
+                "你也可以稍后在 设置 -> 检查更新 界面中安装。",
+                "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
+        
+        Context.Info("用户取消了更新");
+        return false;
     }
 }
-
-public delegate void MsgBoxHandler(
-    string message,
-    string caption,
-    string btn1,
-    string btn2,
-    MsgBoxTheme theme,
-    bool block,
-    ref int result
-);

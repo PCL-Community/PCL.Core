@@ -83,8 +83,18 @@ public static class UpdateHelper
 
         return lastEx;
     }
+    
+    public static void InstallAndRestart(bool triggerRestartAndByEnd, bool isUpdateRestart = false)
+    {
+        // TODO: 在此处添加安装更新包的逻辑（替换文件）
+        Restart(triggerRestartAndByEnd, isUpdateRestart);
+    }
 
-    // ReSharper disable once FlagArgument
+    /// <summary>
+    /// 启动更新程序并重启当前程序。
+    /// </summary>
+    /// <param name="triggerRestartAndByEnd">是否在启动更新程序后结束当前程序。</param>
+    /// <param name="isUpdateRestart">是否为更新重启。</param>
     public static void Restart(bool triggerRestartAndByEnd, bool isUpdateRestart = false)
     {
         try
@@ -139,14 +149,4 @@ public static class UpdateHelper
         var codeComparison = v1Code.CompareTo(v2Code);
         return codeComparison != 0 ? codeComparison : v1.CompareTo(v2);
     }
-    
-    /// <summary>
-    /// 当前更新通道。
-    /// </summary>
-    public static UpdateChannel CurrentUpdateChannel => (UpdateChannel)Config.System.Update.UpdateChannel;
-
-    /// <summary>
-    /// 当前系统架构是否为 Arm64。
-    /// </summary>
-    public static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
 }

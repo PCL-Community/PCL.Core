@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -374,14 +375,14 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     private static string _GetChannelName()
     {
         var channelName = string.Empty;
-        channelName += UpdateHelper.CurrentUpdateChannel switch
+        channelName += Config.System.Update.UpdateChannel switch
         {
-            UpdateChannel.Stable => "sr",
-            UpdateChannel.Beta => "fr",
+            0 => "sr",
+            1 => "fr",
             _ => "sr"
         };
 
-        channelName += UpdateHelper.IsArm64 ? "arm64" : "x64";
+        channelName += RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64";
 
         return channelName;
     }

@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using PCL.Core.Logging;
@@ -9,19 +11,33 @@ using PCL.Core.Utils;
 
 namespace PCL.Core.App;
 
+/// <summary>
+/// 基础工具集。
+/// </summary>
 public static class Basics
 {
     #region 基本信息
 
     /// <summary>
-    /// 当前版本名称。
+    /// 启动器元数据。
     /// </summary>
-    public static string VersionName { get; set; } = "";
+    public static MetadataModel Metadata { get; } = JsonSerializer.Deserialize<MetadataModel>(
+        Assembly.GetEntryAssembly()!.GetManifestResourceStream("PCL.metadata.json")!)!;
 
     /// <summary>
-    /// 当前版本号。
+    /// 版本名称。
     /// </summary>
-    public static int VersionNumber { get; set; } = 0;
+    public static string VersionName => Metadata.Version.BaseName;
+
+    /// <summary>
+    /// 版本内部代号。
+    /// </summary>
+    public static int VersionCode => Metadata.Version.Code;
+
+    /// <summary>
+    /// 版本分支名。
+    /// </summary>
+    public static string VersionBranch => Metadata.Version.BranchName;
 
     #endregion
 
@@ -135,6 +151,8 @@ public static class Basics
     }
     #endregion
 
+    #region 应用程序操作
+
     /// <summary>
     /// 获取程序打包资源的输入流。该资源必须声明为 <c>Resource</c> 类型，否则将会报错，<c>Images</c>
     /// 和 <c>Resources</c> 目录已默认声明该类型。
@@ -149,8 +167,5 @@ public static class Basics
     private const string AssemblyImagePath = "pack://application:,,,/Plain Craft Launcher 2;component/Images/";
     public static string GetAppImagePath(string imageName) => AssemblyImagePath + imageName;
 
-    static Basics()
-    {
-        // 填充基本信息
-    }
+    #endregion
 }

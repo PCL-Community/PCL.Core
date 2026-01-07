@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using PCL.Core.Logging;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
 

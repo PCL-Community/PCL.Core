@@ -238,7 +238,7 @@ public class HttpRequestBuilder
         if (_addLauncherHeader)
         {
             _request.Headers.TryAddWithoutValidation("User-Agent", $"PCL-Community/PCL2-CE/{Basics.VersionName} (pclc.cc)");
-            _request.Headers.TryAddWithoutValidation("Referer", $"https://{Basics.VersionNumber}.ce.open.pcl2.server/");
+            _request.Headers.TryAddWithoutValidation("Referer", $"https://{Basics.VersionCode}.ce.open.pcl2.server/");
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace PCL.Core.App.Configuration;
@@ -8,7 +8,7 @@ public struct ConfigValueCache<TValue>()
     private TValue? _cachedValue;
     private bool _hasCachedValue = false;
 
-    private readonly Dictionary<object, TValue> _cacheWithContext = [];
+    private readonly ConcurrentDictionary<object, TValue> _cacheWithContext = [];
 
     /// <summary>
     /// 检查指定上下文参数的缓存是否存在。
@@ -70,7 +70,7 @@ public struct ConfigValueCache<TValue>()
     /// <param name="argument">上下文参数</param>
     public bool Invalidate(object? argument)
     {
-        if (argument != null) return _cacheWithContext.Remove(argument);
+        if (argument != null) return _cacheWithContext.TryRemove(argument, out _);
         if (!_hasCachedValue) return false;
         _cachedValue = default;
         _hasCachedValue = false;

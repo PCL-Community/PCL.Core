@@ -102,23 +102,11 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
         _rootElement.Remove(key);
     }
 
-    public override void Sync()
+    protected override void WriteToStream(Stream stream)
     {
-        if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
-        var tmpFile = $"{FilePath}.tmp";
-        var bakFile = $"{FilePath}.bak";
-        using (var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read))
-        using (var writer = new Utf8JsonWriter(stream, _WriterOptions))
-        {
-            _rootElement.WriteTo(writer, _SerializerOptions);
-            writer.Flush();
-            stream.Flush(true);
-        }
-
-        if (File.Exists(FilePath))
-            File.Replace(tmpFile, FilePath, bakFile);
-        else
-            File.Move(tmpFile, FilePath);
+        var writer = new Utf8JsonWriter(stream, _WriterOptions);
+        _rootElement.WriteTo(writer, _SerializerOptions);
+        writer.Flush();
     }
 
     public IEnumerable<string> Keys => _rootElement.Select(pair => pair.Key);

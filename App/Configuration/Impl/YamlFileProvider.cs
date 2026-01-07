@@ -107,23 +107,11 @@ public class YamlFileProvider : CommonFileProvider, IEnumerableKeyProvider
         _rootNode.Children.Remove(key);
     }
 
-    public override void Sync()
+    protected override void WriteToStream(Stream stream)
     {
-        if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
-        var tmpFile = $"{FilePath}.tmp";
-        var bakFile = $"{FilePath}.bak";
-        using (var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read))
-        using (var writer = new StreamWriter(stream, Encoding.UTF8))
-        {
-            _Serializer.Serialize(writer, _rootNode);
-            writer.Flush();
-            stream.Flush(true);
-        }
-
-        if (File.Exists(FilePath))
-            File.Replace(tmpFile, FilePath, bakFile);
-        else
-            File.Move(tmpFile, FilePath);
+        var writer = new StreamWriter(stream, Encoding.UTF8);
+        _Serializer.Serialize(writer, _rootNode);
+        writer.Flush();
     }
 
     public IEnumerable<string> Keys => _rootNode.Select(pair => pair.Key.ToString());

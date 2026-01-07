@@ -7,6 +7,7 @@ using System.Net.Security;
 using System.Security.Authentication;
 using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Net.Http.Client;
 using Polly;
 
 namespace PCL.Core.Net;

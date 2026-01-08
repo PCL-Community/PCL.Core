@@ -46,6 +46,7 @@
     <ItemGroup>
         <!-- WPF Behaviors -->
         <PackageReference Include="Ae.Dns.Client" Version="3.1.0" />
+        <PackageReference Include="Humanizer.Core.zh-CN" Version="3.0.1" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <!-- 语言和系统特性 -->
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />

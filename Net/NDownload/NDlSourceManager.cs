@@ -1,5 +1,5 @@
 namespace PCL.Core.Net.NDownload;
 
-public class NDlSourceManager
+public class NDlSourceManager<TSourceArgument>
 {
 }

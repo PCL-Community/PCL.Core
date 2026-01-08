@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Utils;
+namespace PCL.Core.Utils;
 
 using System;
 
@@ -53,11 +53,11 @@ public static class TimeUtils {
             } else if (span.TotalDays >= 2) {
                 result = $"{span.Days} 天";
             } else if (span.TotalHours >= 1) {
-                result = $"{span.Hours} 小时";
+                result = $"{Math.Floor(span.TotalHours)} 小时";
             } else if (span.TotalMinutes >= 1) {
-                result = $"{span.Minutes} 分钟";
+                result = $"{Math.Floor(span.TotalMinutes)} 分钟";
             } else if (span.TotalSeconds >= 1) {
-                result = $"{span.Seconds} 秒";
+                result = $"{Math.Floor(span.TotalSeconds)} 秒";
             } else {
                 result = "1 秒";
             }
@@ -79,15 +79,15 @@ public static class TimeUtils {
             } else if (span.TotalDays >= 1) {
                 result = $"{span.Days} 天{(span.Hours > 0 ? $" {span.Hours} 小时" : "")}";
             } else if (span.TotalHours >= 10) {
-                result = $"{span.Hours} 小时";
+                result = $"{Math.Floor(span.TotalHours)} 小时";
             } else if (span.TotalHours >= 1) {
-                result = $"{span.Hours} 小时{(span.Minutes > 0 ? $" {span.Minutes} 分钟" : "")}";
+                result = $"{Math.Floor(span.TotalHours)} 小时{(span.Minutes > 0 ? $" {span.Minutes} 分钟" : "")}";
             } else if (span.TotalMinutes >= 10) {
-                result = $"{span.Minutes} 分钟";
+                result = $"{Math.Floor(span.TotalMinutes)} 分钟";
             } else if (span.TotalMinutes >= 1) {
-                result = $"{span.Minutes} 分{(span.Seconds > 0 ? $" {span.Seconds} 秒" : "")}";
+                result = $"{Math.Floor(span.TotalMinutes)} 分{(span.Seconds > 0 ? $" {span.Seconds} 秒" : "")}";
             } else if (span.TotalSeconds >= 1) {
-                result = $"{span.Seconds} 秒";
+                result = $"{Math.Floor(span.TotalSeconds)} 秒";
             } else {
                 result = "1 秒";
             }

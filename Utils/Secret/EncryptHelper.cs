@@ -37,30 +37,35 @@ public static class EncryptHelper
     {
         if (data.IsNullOrEmpty()) return string.Empty;
         var rawData = Convert.FromBase64String(data);
-        var errors = new List<Exception>();
-        try
+        Exception? decryptError;
+        if (EncryptionData.IsValid(rawData))
         {
-            var encryptionData = EncryptionData.FromBytes(rawData);
-            IEncryptionProvider provider = encryptionData.Version switch
+            try
             {
-                0 => ChaCha20SoftwareProvider.Instance,
-                1 => ChaCha20Poly1305Provider.Instance,
-                2 => AesGcmProvider.Instance,
-                _ => throw new NotSupportedException("Unsupported encryption version")
-            };
-            var decryptedData = provider.Decrypt(encryptionData.Data, EncryptionKey);
-            return Encoding.UTF8.GetString(decryptedData);
+                var encryptionData = EncryptionData.FromBytes(rawData);
+                IEncryptionProvider provider = encryptionData.Version switch
+                {
+                    0 => ChaCha20SoftwareProvider.Instance,
+                    1 => ChaCha20Poly1305Provider.Instance,
+                    2 => AesGcmProvider.Instance,
+                    _ => throw new NotSupportedException("Unsupported encryption version")
+                };
+                var decryptedData = provider.Decrypt(encryptionData.Data, EncryptionKey);
+                return Encoding.UTF8.GetString(decryptedData);
+            }
+            catch (Exception ex) { decryptError = ex; }
         }
-        catch(Exception ex) { errors.Add(ex); }
-
-        try
+        else
         {
-            var decryptedData = AesCbcProvider.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
-            return Encoding.UTF8.GetString(decryptedData);
+            try
+            {
+                var decryptedData = AesCbcProvider.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
+                return Encoding.UTF8.GetString(decryptedData);
+            }
+            catch (Exception ex) { decryptError = ex; }
         }
-        catch(Exception ex) { errors.Add(ex); }
 
-        throw new AggregateException($"Unknown Encryption data, the data may broken", errors);
+        throw new Exception($"Unknown Encryption data, the data may broken", decryptError);
     }
 
     #region "加密存储信息数据"
@@ -113,6 +118,18 @@ public static class EncryptHelper
             encryptionData.Data.CopyTo(bytesSpan[12..]);
 
             return bytes;
+        }
+
+        public static bool IsValid(ReadOnlySpan<byte> data)
+        {
+            try
+            {
+                return data.Length >= 12 && BinaryPrimitives.ReadUInt32BigEndian(data[..4]) == MagicNumber;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

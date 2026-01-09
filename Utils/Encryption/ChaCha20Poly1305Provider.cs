@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Security.Cryptography;
-using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Utils.Encryption;
 
-public sealed class ChaCha20 : IEncryptionProvider
+public sealed class ChaCha20Poly1305Provider : IEncryptionProvider
 {
-    public static ChaCha20 Instance { get; } = new();
+    public static ChaCha20Poly1305Provider Instance { get; } = new();
 
     private const int NonceSize = 12;    // 96-bit nonce for ChaCha20Poly1305
     private const int TagSize = 16;      // 128-bit authentication tag

@@ -1,4 +1,6 @@
-﻿namespace PCL.Core.Utils;
+using Humanizer;
+
+namespace PCL.Core.Utils;
 
 using System;
 
@@ -42,58 +44,7 @@ public static class TimeUtils {
             span = span.Negate();
         }
 
-        var totalMonths = Math.Floor(span.Days / 30.0);
-        string result;
-
-        if (isShortForm) {
-            if (totalMonths >= 12) {
-                result = $"{Math.Floor(totalMonths / 12)} 年";
-            } else if (totalMonths >= 2) {
-                result = $"{totalMonths} 个月";
-            } else if (span.TotalDays >= 2) {
-                result = $"{span.Days} 天";
-            } else if (span.TotalHours >= 1) {
-                result = $"{span.Hours} 小时";
-            } else if (span.TotalMinutes >= 1) {
-                result = $"{span.Minutes} 分钟";
-            } else if (span.TotalSeconds >= 1) {
-                result = $"{span.Seconds} 秒";
-            } else {
-                result = "1 秒";
-            }
-        } else // Long form
-        {
-            if (totalMonths >= 61) {
-                result = $"{Math.Floor(totalMonths / 12)} 年";
-            } else if (totalMonths >= 12) {
-                var years = Math.Floor(totalMonths / 12);
-                var months = totalMonths % 12;
-                result = $"{years} 年{(months > 0 ? $" {months} 个月" : "")}";
-            } else if (totalMonths >= 4) {
-                result = $"{totalMonths} 个月";
-            } else if (totalMonths >= 1) {
-                var days = span.Days % 30;
-                result = $"{totalMonths} 月{(days > 0 ? $" {days} 天" : "")}";
-            } else if (span.TotalDays >= 4) {
-                result = $"{span.Days} 天";
-            } else if (span.TotalDays >= 1) {
-                result = $"{span.Days} 天{(span.Hours > 0 ? $" {span.Hours} 小时" : "")}";
-            } else if (span.TotalHours >= 10) {
-                result = $"{span.Hours} 小时";
-            } else if (span.TotalHours >= 1) {
-                result = $"{span.Hours} 小时{(span.Minutes > 0 ? $" {span.Minutes} 分钟" : "")}";
-            } else if (span.TotalMinutes >= 10) {
-                result = $"{span.Minutes} 分钟";
-            } else if (span.TotalMinutes >= 1) {
-                result = $"{span.Minutes} 分{(span.Seconds > 0 ? $" {span.Seconds} 秒" : "")}";
-            } else if (span.TotalSeconds >= 1) {
-                result = $"{span.Seconds} 秒";
-            } else {
-                result = "1 秒";
-            }
-        }
-
-        return result + endFix;
+        return span.Humanize(precision: isShortForm ? 1 : 2, maxUnit: TimeUnit.Year, minUnit:TimeUnit.Hour) + endFix;
     }
 
     /// <summary>

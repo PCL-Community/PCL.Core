@@ -5,9 +5,9 @@ using System.Security.Cryptography;
 namespace PCL.Core.Utils.Encryption
 {
     [Obsolete("Do not use this AES mode for Encryption")]
-    public sealed class AesCbc : IEncryptionProvider
+    public sealed class AesCbcProvider : IEncryptionProvider
     {
-        public static AesCbc Instance { get; } = new();
+        public static AesCbcProvider Instance { get; } = new();
 
         private const int SaltSize = 32;
         private const int IvSize = 16;

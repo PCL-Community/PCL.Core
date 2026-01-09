@@ -55,7 +55,7 @@ public abstract class GeneralService : ILifecycleService
         return Task.CompletedTask;
     }
 
-    public virtual Task StopAsync()
+    public Task StopAsync()
     {
         Stop();
         return Task.CompletedTask;

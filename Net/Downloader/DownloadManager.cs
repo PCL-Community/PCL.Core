@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Net.Downloader;
 
+/// <summary>
+/// 下载管理器
+/// </summary>
 public class DownloadManager
 {
     private readonly HttpClient _client;
@@ -20,6 +23,10 @@ public class DownloadManager
 
     private static readonly ResiliencePropertyKey<DownloadTask> _TaskKey = new("DownloadTask");
 
+    /// <summary>
+    /// 构造下载管理器
+    /// </summary>
+    /// <param name="selector">镜像源选择器</param>
     public DownloadManager(IMirrorSelector selector)
     {
         _client = NetworkService.GetClient();
@@ -50,6 +57,11 @@ public class DownloadManager
             .Build();
     }
 
+    /// <summary>
+    /// 下载任务
+    /// </summary>
+    /// <param name="task">下载任务</param>
+    /// <param name="token">取消令牌</param>
     public async Task DownloadAsync(DownloadTask task, CancellationToken token)
     {
         LogWrapper.Debug("Downloader", $"开始下载任务: {task.ActiveUri} -> {task.TargetPath}");
@@ -96,7 +108,14 @@ public class DownloadManager
 
         LogWrapper.Debug("Downloader", $"下载任务完成: {task.ActiveUri} -> {task.TargetPath}");
     }
-
+    
+    /// <summary>
+    /// 使用弹性策略执行分段下载
+    /// </summary>
+    /// <param name="segment">下载分段</param>
+    /// <param name="parent">所属下载任务</param>
+    /// <param name="semaphore">并发信号量</param>
+    /// <param name="token">取消令牌</param>
     private async Task _ExecuteSegmentWithResilienceAsync(
         DownloadSegment segment,
         DownloadTask parent,

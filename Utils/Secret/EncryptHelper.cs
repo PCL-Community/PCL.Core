@@ -5,66 +5,67 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using PCL.Core.IO;
-using PCL.Core.Logging;
 using PCL.Core.Utils.Encryption;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.Utils.Secret;
 
 public static class EncryptHelper
 {
-    public static string SecretEncrypt(string data)
+    public static (IEncryptionProvider Provider, uint Version) DefaultProvider => _DefaultProvider.Value;
+    private static readonly Lazy<(IEncryptionProvider Provider, uint Version)> _DefaultProvider = new(_SelectBestEncryption);
+
+    private static (IEncryptionProvider Provider, uint Version) _SelectBestEncryption()
     {
-        if (data == null || data.Length == 0) return string.Empty;
+        var aesHardwareSupport = System.Runtime.Intrinsics.X86.Aes.IsSupported ||
+                                 System.Runtime.Intrinsics.Arm.Aes.IsSupported;
+        if (aesHardwareSupport && AesGcmProvider.Instance.IsSupported) return (AesGcmProvider.Instance, 2);
+        if (ChaCha20Poly1305Provider.Instance.IsSupported) return (ChaCha20Poly1305Provider.Instance, 1);
+        return (ChaCha20SoftwareProvider.Instance, 0);
+    }
+
+    public static string SecretEncrypt(string? data)
+    {
+        if (data.IsNullOrEmpty()) return string.Empty;
         var rawData = Encoding.UTF8.GetBytes(data);
-        byte[] encryptedData;
-        uint version;
-        if (ChaCha20.Instance.IsSupported)
+
+        return Convert.ToBase64String(EncryptionData.ToBytes(new EncryptionData
+            { Version = DefaultProvider.Version, Data = DefaultProvider.Provider.Encrypt(rawData, EncryptionKey) }));
+    }
+
+    public static string SecretDecrypt(string? data)
+    {
+        if (data.IsNullOrEmpty()) return string.Empty;
+        var rawData = Convert.FromBase64String(data);
+        Exception? decryptError;
+        if (EncryptionData.IsValid(rawData))
         {
-            encryptedData = ChaCha20.Instance.Encrypt(rawData, EncryptionKey);
-            version = 1;
-        }
-        else if (AesGcmProvider.Instance.IsSupported)
-        {
-            encryptedData = AesGcmProvider.Instance.Encrypt(rawData, EncryptionKey);
-            version = 2;
+            try
+            {
+                var encryptionData = EncryptionData.FromBytes(rawData);
+                IEncryptionProvider provider = encryptionData.Version switch
+                {
+                    0 => ChaCha20SoftwareProvider.Instance,
+                    1 => ChaCha20Poly1305Provider.Instance,
+                    2 => AesGcmProvider.Instance,
+                    _ => throw new NotSupportedException("Unsupported encryption version")
+                };
+                var decryptedData = provider.Decrypt(encryptionData.Data, EncryptionKey);
+                return Encoding.UTF8.GetString(decryptedData);
+            }
+            catch (Exception ex) { decryptError = ex; }
         }
         else
         {
-            LogWrapper.Warn("Encryption", "No available encryption method");
-            encryptedData = rawData;
-            version = 0;
-        }
-
-        return Convert.ToBase64String(EncryptionData.ToBytes(new EncryptionData { Version = version, Data = encryptedData })); ;
-    }
-
-    public static string SecretDecrypt(string data)
-    {
-        if (data == null || data.Length == 0) return string.Empty;
-        var rawData = Convert.FromBase64String(data);
-        var errors = new List<Exception>();
-        try
-        {
-            var encryptionData = EncryptionData.FromBytes(rawData);
-            var decryptedData = encryptionData.Version switch
+            try
             {
-                0 => rawData,
-                1 => ChaCha20.Instance.Decrypt(encryptionData.Data, EncryptionKey),
-                2 => AesGcmProvider.Instance.Decrypt(encryptionData.Data, EncryptionKey),
-                _ => throw new NotSupportedException("Unsupported encryption version")
-            };
-            return Encoding.UTF8.GetString(decryptedData);
+                var decryptedData = AesCbcProvider.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
+                return Encoding.UTF8.GetString(decryptedData);
+            }
+            catch (Exception ex) { decryptError = ex; }
         }
-        catch(Exception ex) { errors.Add(ex); }
 
-        try
-        {
-            var decryptedData = AesCbc.Instance.Decrypt(rawData, Encoding.UTF8.GetBytes(IdentifyOld.EncryptKey));
-            return Encoding.UTF8.GetString(decryptedData);
-        }
-        catch(Exception ex) { errors.Add(ex); }
-
-        throw new AggregateException($"Unknown Encryption data, the data may broken", errors);
+        throw new Exception($"Unknown Encryption data, the data may broken", decryptError);
     }
 
     #region "加密存储信息数据"
@@ -117,6 +118,18 @@ public static class EncryptHelper
             encryptionData.Data.CopyTo(bytesSpan[12..]);
 
             return bytes;
+        }
+
+        public static bool IsValid(ReadOnlySpan<byte> data)
+        {
+            try
+            {
+                return data.Length >= 12 && BinaryPrimitives.ReadUInt32BigEndian(data[..4]) == MagicNumber;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

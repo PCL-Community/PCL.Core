@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using PCL.Core.Logging;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
 
@@ -312,17 +311,6 @@ public sealed class Lifecycle : ILifecycleService
             Console.WriteLine("[Lifecycle] Log service stopped");
         }
         _SavePendingLogs();
-#if TRACE
-        // 输出仍在运行的线程
-        Console.WriteLine("[Lifecycle] Thread(s) still in working:");
-        var currentThreadId = KernelInterop.CurrentNativeThreadId;
-        foreach (ProcessThread processThread in Process.GetCurrentProcess().Threads)
-        {
-            var threadId = processThread.Id;
-            if (threadId == currentThreadId) continue;
-            Console.WriteLine($" - {threadId}({processThread.ThreadState}) (Start from {processThread.StartTime})");
-        }
-#endif
         if (_hasRequestedRestart && _requestRestartService is { } s)
         {
             Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program...");
@@ -545,16 +533,6 @@ public sealed class Lifecycle : ILifecycleService
         _StartStateFlow(LifecycleState.WindowCreated);
         _countRunningStart = DateTime.Now;
         _StartWorker(LifecycleState.Running, LifecycleState.Exiting, false);
-    }
-
-    /// <summary>
-    /// [请勿调用] 尝试结束程序流程 (未实现)
-    /// </summary>
-    /// <exception cref="NotImplementedException"></exception>
-    public static void OnWindowClosing()
-    {
-        // TODO 尝试退出程序 (Closing)
-        throw new NotImplementedException();
     }
 
     #endregion

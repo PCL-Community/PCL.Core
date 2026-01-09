@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Net.Downloader;
 
+/// <summary>
+/// 下载任务
+/// </summary>
 public class DownloadTask
 {
     public List<Uri> Mirrors { get; }
@@ -17,7 +20,19 @@ public class DownloadTask
     public long TotalSize { get; private set; }
     public bool UseBestMirror { get; set; } = true;
     public bool SupportsRange { get; internal set; } = true;
+    
+    /// <summary>
+    /// 创建下载任务
+    /// </summary>
+    /// <param name="mirror">下载链接</param>
+    /// <param name="targetPath">目标路径</param>
+    public DownloadTask(Uri mirror, string targetPath) : this([mirror], targetPath) { }
 
+    /// <summary>
+    /// 创建下载任务
+    /// </summary>
+    /// <param name="mirrors">下载链接列表</param>
+    /// <param name="targetPath">目标路径</param>
     public DownloadTask(IEnumerable<Uri> mirrors, string targetPath)
     {
         Mirrors = mirrors.ToList();
@@ -25,6 +40,9 @@ public class DownloadTask
         ActiveUri = Mirrors[0];
     }
 
+    /// <summary>
+    /// 切换到下一个镜像
+    /// </summary>
     public void RotateMirror()
     {
         if (Mirrors.Count < 1)
@@ -43,6 +61,12 @@ public class DownloadTask
         }
     }
 
+    /// <summary>
+    /// 准备下载任务
+    /// </summary>
+    /// <param name="client">HTTP 客户端</param>
+    /// <param name="selector">镜像选择器</param>
+    /// <param name="token">取消令牌</param>
     public async Task PrepareAsync(HttpClient client, IMirrorSelector selector, CancellationToken token)
     {
         LogWrapper.Debug("Downloader", "开始准备下载任务");
@@ -78,6 +102,11 @@ public class DownloadTask
         LogWrapper.Debug("Downloader", "下载任务准备完成");
     }
 
+    /// <summary>
+    /// 尝试分割一个下载分段
+    /// </summary>
+    /// <param name="minSpilitSize">最小分割大小</param>
+    /// <returns>新分割的下载分段，若无法分割则返回 null</returns>
     public DownloadSegment? TrySplitSegment(long minSpilitSize = 1024 * 1024 * 2)
     {
         if (!SupportsRange)

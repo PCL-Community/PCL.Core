@@ -672,24 +672,30 @@ public static partial class Config
         /// <summary>
         /// 功能隐藏。
         /// </summary>
-        [ConfigGroup("Hide")] partial class HideConfigGroup
+        [ConfigGroup("Hide")]
+        partial class HideConfigGroup
         {
+            // 主页面
             [ConfigItem<bool>("UiHiddenPageDownload", false, ConfigSource.Local)] public partial bool PageDownload { get; set; }
-            [ConfigItem<bool>("UiHiddenPageLink", false, ConfigSource.Local)] public partial bool PageLink { get; set; }
             [ConfigItem<bool>("UiHiddenPageSetup", false, ConfigSource.Local)] public partial bool PageSetup { get; set; }
-            [ConfigItem<bool>("UiHiddenPageOther", false, ConfigSource.Local)] public partial bool PageOther { get; set; }
-            [ConfigItem<bool>("UiHiddenFunctionSelect", false, ConfigSource.Local)] public partial bool FunctionSelect { get; set; }
-            [ConfigItem<bool>("UiHiddenFunctionModUpdate", false, ConfigSource.Local)] public partial bool FunctionModUpdate { get; set; }
-            [ConfigItem<bool>("UiHiddenFunctionHidden", false, ConfigSource.Local)] public partial bool FunctionHidden { get; set; }
+            [ConfigItem<bool>("UiHiddenPageTools", false, ConfigSource.Local)] public partial bool PageTools { get; set; }
+
+            // 子页面 设置
             [ConfigItem<bool>("UiHiddenSetupLaunch", false, ConfigSource.Local)] public partial bool SetupLaunch { get; set; }
             [ConfigItem<bool>("UiHiddenSetupUi", false, ConfigSource.Local)] public partial bool SetupUi { get; set; }
             [ConfigItem<bool>("UiHiddenSetupSystem", false, ConfigSource.Local)] public partial bool SetupSystem { get; set; }
             [ConfigItem<bool>("UiHiddenSetupUpdate", false, ConfigSource.Local)] public partial bool SetupUpdate { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherHelp", false, ConfigSource.Local)] public partial bool OtherHelp { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherFeedback", false, ConfigSource.Local)] public partial bool OtherFeedback { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherLog", false, ConfigSource.Local)] public partial bool OtherLog { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherAbout", false, ConfigSource.Local)] public partial bool OtherAbout { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherTest", false, ConfigSource.Local)] public partial bool OtherTest { get; set; }
+            [ConfigItem<bool>("UiHiddenSetupGameLink", false, ConfigSource.Local)] public partial bool SetupGameLink { get; set; } // 新增
+            [ConfigItem<bool>("UiHiddenSetupAbout", false, ConfigSource.Local)] public partial bool SetupAbout { get; set; } // 修正名称
+            [ConfigItem<bool>("UiHiddenSetupFeedback", false, ConfigSource.Local)] public partial bool SetupFeedback { get; set; } // 修正名称
+            [ConfigItem<bool>("UiHiddenSetupLog", false, ConfigSource.Local)] public partial bool SetupLog { get; set; } // 修正名称
+
+            // 子页面 工具
+            [ConfigItem<bool>("UiHiddenToolsGameLink", false, ConfigSource.Local)] public partial bool ToolsGameLink { get; set; } // 新增
+            [ConfigItem<bool>("UiHiddenToolsHelp", false, ConfigSource.Local)] public partial bool ToolsHelp { get; set; } // 新增
+            [ConfigItem<bool>("UiHiddenToolsTest", false, ConfigSource.Local)] public partial bool ToolsTest { get; set; } // 新增
+
+            // 子页面 实例设置
             [ConfigItem<bool>("UiHiddenVersionEdit", false, ConfigSource.Local)] public partial bool InstanceEdit { get; set; }
             [ConfigItem<bool>("UiHiddenVersionExport", false, ConfigSource.Local)] public partial bool InstanceExport { get; set; }
             [ConfigItem<bool>("UiHiddenVersionSave", false, ConfigSource.Local)] public partial bool InstanceSave { get; set; }
@@ -699,6 +705,11 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenVersionShader", false, ConfigSource.Local)] public partial bool InstanceShader { get; set; }
             [ConfigItem<bool>("UiHiddenVersionSchematic", false, ConfigSource.Local)] public partial bool InstanceSchematic { get; set; }
             [ConfigItem<bool>("UiHiddenVersionServer", false, ConfigSource.Local)] public partial bool InstanceServer { get; set; }
+
+            // 特定功能
+            [ConfigItem<bool>("UiHiddenFunctionSelect", false, ConfigSource.Local)] public partial bool FunctionSelect { get; set; }
+            [ConfigItem<bool>("UiHiddenFunctionModUpdate", false, ConfigSource.Local)] public partial bool FunctionModUpdate { get; set; }
+            [ConfigItem<bool>("UiHiddenFunctionHidden", false, ConfigSource.Local)] public partial bool FunctionHidden { get; set; }
         }
     }
 

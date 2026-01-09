@@ -10,7 +10,7 @@ public interface IUpdateSource
     /// 检查更新
     /// </summary>
     /// <returns>检查更新结果</returns>
-    public Task<VersionDataModel> CheckUpdateAsync();
+    public Task<VersionData> CheckUpdateAsync();
 
     /// <summary>
     /// 获取版本公告列表

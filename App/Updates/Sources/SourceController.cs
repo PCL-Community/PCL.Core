@@ -80,7 +80,7 @@ public sealed class SourceController
     /// <summary>
     /// 检查是否有新版本并返回结果。
     /// </summary>
-    public Task<VersionDataModel> CheckUpdateAsync() => 
+    public Task<VersionData> CheckUpdateAsync() => 
         _TryFindSourceAsync(s => s.CheckUpdateAsync());
 
     /// <summary>

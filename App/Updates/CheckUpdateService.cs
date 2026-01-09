@@ -15,7 +15,7 @@ public partial class CheckUpdateService
         new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")
     ]);
     
-    public static VersionDataModel? AvailableVersion { get; set; }
+    public static VersionData? AvailableVersion { get; set; }
     
     public static bool IsUpdateDownloaded { get; set; }
 
@@ -50,7 +50,7 @@ public partial class CheckUpdateService
         UpdateHelper.InstallAndRestart(true, true);
     }
 
-    private static async Task<VersionDataModel?> _TryCheckUpdate()
+    private static async Task<VersionData?> _TryCheckUpdate()
     {
         try
         {

@@ -29,7 +29,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
     /// <exception cref="ArgumentException">Throws if version info is null.</exception>
     /// <inheritdoc/>
-    public async Task<VersionDataModel> CheckUpdateAsync()
+    public async Task<VersionData> CheckUpdateAsync()
     {
         // 获取版本信息
         LogWrapper.Info("Update", "开始获取版本信息");
@@ -40,7 +40,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             throw new ArgumentException("Version info cannot be null", nameof(versionJsonData));
         }
 
-        return new VersionDataModel
+        return new VersionData
         {
             VersionCode = versionJsonData["version"]!["code"]!.GetValue<int>(),
             VersionName = versionJsonData["version"]!["name"]!.GetValue<string>(),

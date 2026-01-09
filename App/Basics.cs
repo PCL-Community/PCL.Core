@@ -83,11 +83,6 @@ public static class Basics
     /// </summary>
     public static string CurrentDirectory => Environment.CurrentDirectory;
 
-    /// <summary>
-    /// 程序缓存目录
-    /// </summary>
-    public static string TempPath => Path.Combine(Path.GetTempPath(), "PCL");
-
     #endregion
 
     #region 线程操作

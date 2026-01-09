@@ -9,7 +9,7 @@ public class VersionDataModel
         SemVer.Parse(VersionName),
         VersionCode,
         SemVer.Parse(Basics.VersionName),
-        Basics.VersionNumber) >= 0;
+        Basics.VersionCode) >= 0;
     
     public required string VersionName { get; init; }
     

@@ -450,7 +450,7 @@ public static partial class Config
         [ConfigItem<bool>("UiLockWindowSize", false)] public partial bool LockWindowSize { get; set; }
 
         /// <summary>
-        /// 在启动时显示“你知道吗”提示。
+        /// 在启动游戏时显示你知道吗。
         /// </summary>
         [ConfigItem<bool>("UiShowLaunchingHint", true, ConfigSource.Local)] public partial bool ShowLaunchingHint { get; set; }
 

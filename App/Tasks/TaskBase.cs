@@ -12,7 +12,7 @@ public struct VoidResult;
 /// 任务原型。<br/>
 /// 若需要获取或修改任务信息，传入的委托第一个参数必须为 <see cref="TaskBase"/>。
 /// </summary>
-public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
+public class TaskBase : IObservableTaskStateSource, IObservableProgressSource, IDisposable
 {
     public TaskBase()
     {
@@ -82,7 +82,7 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
 
     protected CancellationToken? CancellationToken;
 
-    protected readonly Delegate Delegate;
+    protected Delegate Delegate;
 
     public virtual object? Run(params object[] objects)
     {
@@ -157,6 +157,17 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
         => CancellationToken = cancellationToken;
 
     public Type ResultType { get => Delegate.Method.ReturnType; }
+    public void Dispose()
+    {
+        var invocationList = Delegate.GetInvocationList();
+        foreach (var handler in invocationList)
+        {
+            var processedDelegate = Delegate.Remove(Delegate, handler);
+            if (processedDelegate is not null)
+                Delegate = processedDelegate;
+        }
+        GC.SuppressFinalize(this);
+    }
 }
 
 /// <summary>

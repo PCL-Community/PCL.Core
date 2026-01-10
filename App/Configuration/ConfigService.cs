@@ -47,6 +47,11 @@ public sealed partial class ConfigService : GeneralService
     /// 本地配置文件路径。
     /// </summary>
     public static string LocalConfigPath { get; } = Path.Combine(FileService.DataPath, "config.v1.yml");
+    
+    /// <summary>
+    /// 自定义主页文件路径。
+    /// </summary>
+    public static string CustomPagePath { get; } = Path.Combine(FileService.DataPath, "Custom_CE.xaml");
 
     #region Getters & Setters
 
@@ -192,6 +197,21 @@ public sealed partial class ConfigService : GeneralService
                         return trafficCenter;
                     }
                 };
+            },
+            () => // custom page file
+            {
+                // try migrate
+                if (!File.Exists(CustomPagePath))
+                {
+                    _TryMigrate(CustomPagePath, [
+                        new ConfigMigration
+                        {
+                            From = Path.Combine(FileService.DataPath, "Custom.xaml"),
+                            To = CustomPagePath,
+                            OnMigration = XamlMigration
+                        }
+                    ]);
+                }
             }
         ];
         try { Task.WaitAll(inits.Select(Task.Run).ToArray()); }
@@ -199,6 +219,10 @@ public sealed partial class ConfigService : GeneralService
 
         return;
         void SharedJsonMigration(string from, string to)
+        {
+            File.Copy(from, to);
+        }
+        void XamlMigration(string from, string to)
         {
             File.Copy(from, to);
         }

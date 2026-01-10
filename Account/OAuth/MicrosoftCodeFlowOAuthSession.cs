@@ -93,7 +93,7 @@ public class MicrosoftCodeFlowOAuthSession(string clientId, string scope) : Logi
             _server.State = state;
             var encodedScope = Uri.EscapeDataString(scope);
             this.AuthUrl =
-                $"https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id={clientId}&response_type=code&redirect_uri=http://127.0.0.1:{_server.Port}/oauth/callback&response_mode=query&scope={encodedScope}&state={state}&code_challenge={challenge.code}&code_challenge_method=S256";
+                $"https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id={clientId}&response_type=code&redirect_uri=http://127.0.0.1:{_server.Port}/oauth/callback&response_mode=query&scope={encodedScope}&state={state}&code_challenge={challenge.Challenge}&code_challenge_method={challenge.Method}";
             await Task.Run(() => OnStateChanged(AuthStep.PendingUser));
             await _server.WaitForCallbackAsync();
             await Task.Run(() => OnStateChanged(AuthStep.GettingCode));
@@ -102,7 +102,7 @@ public class MicrosoftCodeFlowOAuthSession(string clientId, string scope) : Logi
                 $"&code={_server.Code}" +
                 $"&redirect_uri=http://127.0.0.1:{_server.Port}/oauth/callback" +
                 $"&grant_type=authorization_code" +
-                $"&code_verifier={challenge.verifty}";
+                $"&code_verifier={challenge.Verifier}";
             using var resp = await HttpRequestBuilder.Create($"https://login.microsoftonline.com/consumers/oauth2/v2.0/token", HttpMethod.Post)
                 .WithContent(queryCtx, "application/x-www-form-urlencoded")
                 .SendAsync(true);

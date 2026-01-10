@@ -19,19 +19,19 @@ public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
 {
     public PipelineTask(string name, IList<TaskBase> taskBases, CancellationToken? cancellationToken = null, string? description = null) : base(name, taskBases, cancellationToken, description)
     {
-        if (taskBases.Last().ResultType != typeof(TLastResult))
-            throw new Exception($"[PipelineTask - {name}] 构造失败：不匹配的返回类型。");
+        if (!taskBases.Last().ResultType.IsAssignableTo(typeof(TLastResult)))
+            throw new InvalidCastException($"[PipelineTask - {name}] 构造失败：不匹配的返回类型。");
     }
     public PipelineTask(string name, IList<Delegate> delegates, CancellationToken? cancellationToken = null, string? description = null) : base(name, delegates, cancellationToken, description)
     {
-        if (delegates.Last().Method.ReturnType != typeof(TLastResult))
-            throw new Exception($"[PipelineTask - {name}] 构造失败：不匹配的返回类型。");
+        if (!delegates.Last().Method.ReturnType.IsAssignableTo(typeof(TLastResult)))
+            throw new InvalidCastException($"[PipelineTask - {name}] 构造失败：不匹配的返回类型。");
     }
 
     public override TLastResult Run(params object[] objects)
     {
         if (State != TaskState.Waiting)
-            throw new Exception($"[PipelineTask - {Name}] 运行失败：任务已执行");
+            throw new InvalidOperationException($"[PipelineTask - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {
@@ -55,7 +55,7 @@ public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
             if (lastResult != null)
                 return Result = (TLastResult)lastResult;
             if (typeof(TLastResult) != typeof(VoidResult))
-                throw new Exception($"[PipelineTask - {Name}] 最后的结果是空的。");
+                throw new NullReferenceException($"[PipelineTask - {Name}] 最后的结果是空的。");
             return (TLastResult)(object)new VoidResult();
         }
         catch (Exception)
@@ -69,7 +69,7 @@ public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
     public override async Task<TLastResult> RunAsync(params object[] objects)
     {
         if (State != TaskState.Waiting)
-            throw new Exception($"[PipelineTask - {Name}] 运行失败：任务已执行");
+            throw new InvalidOperationException($"[PipelineTask - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {
@@ -93,7 +93,7 @@ public class PipelineTask<TLastResult> : TaskGroup<TLastResult>
             if (lastResult != null)
                 return Result = (TLastResult)lastResult;
             if (typeof(TLastResult) != typeof(VoidResult))
-                throw new Exception($"[PipelineTask - {Name}] 最后的结果是空的。");
+                throw new NullReferenceException($"[PipelineTask - {Name}] 最后的结果是空的。");
             return (TLastResult)(object)new VoidResult();
         }
         catch (Exception)

@@ -87,7 +87,7 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
     public virtual object? Run(params object[] objects)
     {
         if (State != TaskState.Waiting)
-            throw new Exception($"[TaskBase - {Name}] 运行失败：任务已执行");
+            throw new InvalidOperationException($"[TaskBase - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {
@@ -141,7 +141,7 @@ public class TaskBase<TResult> : TaskBase
     public new virtual TResult Run(params object[] objects)
     {
         if (State != TaskState.Waiting)
-            throw new Exception($"[TaskBase - {Name}] 运行失败：任务已执行");
+            throw new InvalidOperationException($"[TaskBase - {Name}] 运行失败：任务已执行");
         State = TaskState.Running;
         try
         {

@@ -80,7 +80,7 @@ public sealed class SourceController
     /// <summary>
     /// 检查是否有新版本并返回结果。
     /// </summary>
-    public Task<VersionData> CheckUpdateAsync() => 
+    public Task<VersionDataModel> CheckUpdateAsync() => 
         _TryFindSourceAsync(s => s.CheckUpdateAsync());
 
     /// <summary>
@@ -92,8 +92,8 @@ public sealed class SourceController
     /// <summary>
     /// 使用可用源下载到指定路径。
     /// </summary>
-    public Task DownloadAsync(string outputPath) =>
-        _TryFindSourceAsync(s => s.DownloadAsync(outputPath));
+    public Task DownloadAsync(string outputPath, VersionDataModel versionInfo) =>
+        _TryFindSourceAsync(s => s.DownloadAsync(outputPath, versionInfo));
 
     #region Logger Wrapper
 

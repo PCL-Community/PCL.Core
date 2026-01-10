@@ -10,7 +10,7 @@ public interface IUpdateSource
     /// 检查更新
     /// </summary>
     /// <returns>检查更新结果</returns>
-    public Task<VersionData> CheckUpdateAsync();
+    public Task<VersionDataModel> CheckUpdateAsync();
 
     /// <summary>
     /// 获取版本公告列表
@@ -22,7 +22,8 @@ public interface IUpdateSource
     /// 下载更新文件
     /// </summary>
     /// <param name="outputPath">输出路径</param>
-    public Task DownloadAsync(string outputPath);
+    /// <param name="versionInfo">版本信息</param>
+    public Task DownloadAsync(string outputPath, VersionDataModel versionInfo);
     
     /// <summary>
     /// 更新源名称

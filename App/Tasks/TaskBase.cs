@@ -92,10 +92,42 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
         try
         {
             var paramTypes = Delegate.GetMethodInfo().GetParameters();
-            if (paramTypes.Length == 0 || !paramTypes.First().ParameterType.IsAssignableTo(typeof(TaskBase))) 
-                Result = Delegate.DynamicInvoke(objects);
+            if (paramTypes.Length == 0 || !paramTypes.First().ParameterType.IsAssignableTo(typeof(TaskBase)))
+            {
+                if (Delegate.Method.ReturnType.IsAssignableTo(typeof(Task<>)))
+                {
+                    var task = Convert.ChangeType(Delegate.DynamicInvoke(objects), typeof(Task<>));
+                    typeof(Task<>).InvokeMember("RunSynchronously", BindingFlags.InvokeMethod, null, task, []);
+                    if (task is not null) 
+                        Result = typeof(Task<>).InvokeMember("Result", BindingFlags.GetProperty, null, task, null);
+                }
+                else if (Delegate.Method.ReturnType.IsAssignableTo(typeof(Task)))
+                {
+                    var task = (Task?) Delegate.DynamicInvoke(objects);
+                    task?.RunSynchronously();
+                    Result = null;
+                }
+                else
+                    Result = Delegate.DynamicInvoke(objects);
+            }
             else
-                Result = Delegate.DynamicInvoke([this, ..objects]);
+            {
+                if (Delegate.Method.ReturnType.IsAssignableTo(typeof(Task<>)))
+                {
+                    var task = Convert.ChangeType(Delegate.DynamicInvoke([this, ..objects]), typeof(Task<>));
+                    typeof(Task<>).InvokeMember("RunSynchronously", BindingFlags.InvokeMethod, null, task, []);
+                    if (task is not null) 
+                        Result = typeof(Task<>).InvokeMember("Result", BindingFlags.GetProperty, null, task, null);
+                }
+                else if (Delegate.Method.ReturnType.IsAssignableTo(typeof(Task)))
+                {
+                    var task = (Task?) Delegate.DynamicInvoke([this, ..objects]);
+                    task?.RunSynchronously();
+                    Result = null;
+                }
+                else
+                    Result = Delegate.DynamicInvoke([this, ..objects]);
+            }
             CancellationToken?.ThrowIfCancellationRequested();
             Progress = 1;
             State = TaskState.Completed;
@@ -146,13 +178,40 @@ public class TaskBase<TResult> : TaskBase
         try
         {
             var paramTypes = Delegate.GetMethodInfo().GetParameters();
-            if (paramTypes.Length == 0 || (!paramTypes.First().ParameterType.IsAssignableTo(typeof(TaskBase<TResult>)) && paramTypes.First().ParameterType != typeof(TaskBase)))
-                Result = (TResult)(Delegate.DynamicInvoke(objects) ?? new object());
+            if (paramTypes.Length == 0 ||
+                (!paramTypes.First().ParameterType.IsAssignableTo(typeof(TaskBase<TResult>)) &&
+                 paramTypes.First().ParameterType != typeof(TaskBase)))
+            {
+                if (Delegate.Method.ReturnType.IsAssignableTo(typeof(Task<TResult>)))
+                {
+                    var task = (Task<TResult>?) Delegate.DynamicInvoke(objects);
+                    task?.RunSynchronously();
+                    if (task is not null)
+                        Result = task.Result;
+                } 
+                else
+                    Result = (TResult)(Delegate.DynamicInvoke(objects) ?? new object());
+            }
             else
-                Result = (TResult)(Delegate.DynamicInvoke([this, ..objects]) ?? new object());
+            {
+                if (Delegate.Method.ReturnType.IsAssignableTo(typeof(Task<TResult>)))
+                {
+                    var task = (Task<TResult>?) Delegate.DynamicInvoke([this, ..objects]);
+                    task?.RunSynchronously();
+                    if (task is not null)
+                        Result = task.Result;
+                } 
+                else
+                    Result = (TResult)(Delegate.DynamicInvoke([this, ..objects]) ?? new object());
+            }
+            
             CancellationToken?.ThrowIfCancellationRequested();
             Progress = 1;
             State = TaskState.Completed;
+            
+            if (Result is null)
+                throw new NullReferenceException();
+            
             return Result;
         }
         catch (Exception)

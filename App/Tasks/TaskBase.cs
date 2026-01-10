@@ -128,9 +128,11 @@ public class TaskBase : IObservableTaskStateSource, IObservableProgressSource
                 else
                     Result = Delegate.DynamicInvoke([this, ..objects]);
             }
+            
             CancellationToken?.ThrowIfCancellationRequested();
             Progress = 1;
             State = TaskState.Completed;
+            
             return Result;
         }
         catch (Exception)
@@ -190,7 +192,7 @@ public class TaskBase<TResult> : TaskBase
                         Result = task.Result;
                 } 
                 else
-                    Result = (TResult)(Delegate.DynamicInvoke(objects) ?? new object());
+                    Result = (TResult?) Delegate.DynamicInvoke(objects);
             }
             else
             {
@@ -202,16 +204,14 @@ public class TaskBase<TResult> : TaskBase
                         Result = task.Result;
                 } 
                 else
-                    Result = (TResult)(Delegate.DynamicInvoke([this, ..objects]) ?? new object());
+                    Result = (TResult?) Delegate.DynamicInvoke([this, ..objects]);
             }
             
             CancellationToken?.ThrowIfCancellationRequested();
             Progress = 1;
             State = TaskState.Completed;
             
-            if (Result is null)
-                throw new NullReferenceException();
-            
+            // Expected warning
             return Result;
         }
         catch (Exception)

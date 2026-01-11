@@ -45,31 +45,24 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             throw new HttpRequestException("Failed to get version info from remote server", ex);
         }
 
-        return ret ?? throw new InvalidDataException("Not found remote version info" );
+        return ret ?? throw new InvalidDataException("Not found remote version info");
     }
-
 
     #region Download Workflow
 
-    /// <inheritdoc/>
     public async Task DownloadAsync(string outputPath, VersionDataModel versionInfo)
     {
         _LogInfo("Start try to download update");
 
         var tempDownloadDir = _PrepareTempDirectory();
-
-        var (downloadTask, isPatch) = 
-            await _CreateDownloadTaskAsync(versionInfo, tempDownloadDir).ConfigureAwait(false);
+        var (task, isPatch) = await _CreateDownloadTaskAsync(versionInfo, tempDownloadDir).ConfigureAwait(false);
 
         _LogInfo("Start to download");
-        
         var manager = new DownloadManager(new FastMirrorSelector(new HttpClient()));
-        await manager.DownloadAsync(downloadTask, CancellationToken.None).ConfigureAwait(false);
+        await manager.DownloadAsync(task, CancellationToken.None).ConfigureAwait(false);
 
         _LogInfo("Successfully download update file and start to use update file");
-        
-        await _UseUpdateFileAsync(downloadTask.TargetPath, outputPath, isPatch).ConfigureAwait(false);
-        
+        await _UseUpdateFileAsync(task.TargetPath, outputPath, isPatch).ConfigureAwait(false);
         _LogInfo("Successfully use update file");
     }
 
@@ -102,13 +95,12 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             throw new InvalidDataException("Not found remote version info download Uri");
         }
 
-        return (
-            new DownloadTask(
+        return (new DownloadTask(
                 new Uri(RandomUtils.PickRandom(downloads)),
                 Path.Combine(tempDir, $"{updateSha256}.bin")),
             false);
     }
-    
+
     private static async Task _UseUpdateFileAsync(string updateFilePath, string outputPath, bool isPatch)
     {
         if (isPatch)
@@ -126,19 +118,20 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
         var entry = _FindExecutableEntry(zip);
         if (entry is null)
-            throw new InvalidDataException("找不到更新文件");
+            throw new InvalidDataException("Executable entry not found in update package");
 
-        entry.ExtractToFile(outputPath, overwrite: true);
+        entry.ExtractToFile(outputPath, overwrite: true); 
     }
 
+
     private static ZipArchiveEntry? _FindExecutableEntry(ZipArchive zip) =>
-        zip.Entries.FirstOrDefault(e => 
+        zip.Entries.FirstOrDefault(e =>
             e.Name.Contains("Plain Craft Launcher Community Edition.exe", StringComparison.OrdinalIgnoreCase)) ??
-        zip.Entries.FirstOrDefault(e => 
+        zip.Entries.FirstOrDefault(e =>
             e.Name.Contains("Plain Craft Launcher", StringComparison.OrdinalIgnoreCase)) ??
         zip.Entries.FirstOrDefault(e =>
             e.Name.Contains("Launcher", StringComparison.OrdinalIgnoreCase)) ??
-        zip.Entries.FirstOrDefault(e => 
+        zip.Entries.FirstOrDefault(e =>
             e.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
 
     private static string _PrepareTempDirectory()
@@ -174,7 +167,6 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
     #endregion
 
-
     /// <summary>
     /// 通过名称获取远程信息
     /// </summary>
@@ -183,13 +175,13 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     /// <returns>远程信息</returns>
     private async Task<T?> _GetRemoteInfoByNameAsync<T>(string versionName, string path = "")
     {
-        _LogTrace("正在从远程获取信息...");
-        
+        _LogTrace("Fetching remote info...");
+
         var builder = HttpRequestBuilder.Create($"{baseUrl}apiv2/{path}{versionName}.json", HttpMethod.Get);
         var result = await builder.SendAsync().ConfigureAwait(false);
         var remoteJson = await result.AsJsonAsync<T>().ConfigureAwait(false);
-        
-        _LogTrace("远程信息获取完成");
+
+        _LogTrace("Remote info fetched");
 
         return remoteJson;
     }

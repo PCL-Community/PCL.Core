@@ -18,7 +18,7 @@ namespace PCL.Core.App.Updates.Sources;
 
 public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateSource
 {
-    public bool IsAvailable => string.IsNullOrEmpty(baseUrl);
+    public bool IsAvailable => !string.IsNullOrWhiteSpace(baseUrl);
 
     public string SourceName => name;
 

@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using PCL.Core.IO;
 
 namespace PCL.Core.App.Updates;
 
@@ -12,7 +11,7 @@ namespace PCL.Core.App.Updates;
 public sealed partial class UpdateArgumentsService
 {
     [LifecycleStart]
-    public static async Task Start()
+    private static async Task _Start()
     {
         var args = Basics.CommandLineArguments;
 
@@ -100,21 +99,23 @@ public sealed partial class UpdateArgumentsService
 
         Context.Trace($"目标: {target}");
         Context.Trace($"来源: {source}");
+        
+        Exception? ex = null;
+        try
+        {
+            File.Replace(source, target, null);
+        }
+        catch (Exception e)
+        {
+            ex = e;
+        }
 
-        var ex = await UpdateHelper.ReplaceAsync(source, target).ConfigureAwait(false);
-        if (ex is null)
-        {
-            Context.Trace("替换完成");
-        }
-        else
-        {
-            Context.Error("替换文件出错", ex);
-        }
+        Context.Trace("替换完成");
 
         var restart = args[4].Convert<bool>();
         if (restart)
         {
-            var restartArgs = (ex == null) ? $"finished \"{source}\"" : $"failed \"{ex.Message}\"";
+            var restartArgs = ex == null ? $"finished \"{source}\"" : $"failed \"{ex.Message}\"";
             restartArgs = $"update_{restartArgs}";
             Context.Debug($"重启中，使用参数: {restartArgs}");
             Process.Start(target, restartArgs);

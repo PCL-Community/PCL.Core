@@ -1,4 +1,3 @@
-using PCL.Core.App.Updates.Models;
 using PCL.Core.App.Updates.Sources;
 using PCL.Core.UI;
 using System;
@@ -16,7 +15,7 @@ public sealed partial class CheckUpdateService
         new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")
     ]);
     
-    public static VersionDataModel? LatestVersion { get; private set; }
+    public static VersionData? LatestVersion { get; private set; }
     
     public static bool IsUpdateDownloaded { get; set; }
 
@@ -38,7 +37,7 @@ public sealed partial class CheckUpdateService
             return;
         }
         
-        Context.Info($"New version found: {LatestVersion.Version.Code}, preparing update");
+        Context.Info($"New version found: {LatestVersion.VersionCode}, preparing update");
 
         if (Config.System.Update.UpdateMode == 2 && !_PromptUpdate()) return;
 
@@ -80,7 +79,7 @@ public sealed partial class CheckUpdateService
                 "PCL", 
                 "Plain Craft Launcher Community Edition.exe");
             if (LatestVersion == null) return false;
-            await _SourceController.DownloadAsync(outputPath, LatestVersion).ConfigureAwait(false);
+            await _SourceController.DownloadAsync(outputPath).ConfigureAwait(false);
             Context.Info("Update package downloaded successfully");
             IsUpdateDownloaded = true;
             return true;
@@ -104,7 +103,7 @@ public sealed partial class CheckUpdateService
         if (LatestVersion == null) return false;
 
         if (MsgBoxWrapper.Show(
-                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Version.Name}){Constants.vbCrLf}" +
+                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.VersionName}){Constants.vbCrLf}" +
                 $"是否立即下载并安装？{Constants.vbCrLf}" +
                 "你也可以稍后在 设置 -> 检查更新 界面中更新。",
                 "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
@@ -119,7 +118,7 @@ public sealed partial class CheckUpdateService
         if (!IsUpdateDownloaded) return false;
 
         if (MsgBoxWrapper.Show(
-                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Version.Name}){Constants.vbCrLf}" +
+                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.VersionName}){Constants.vbCrLf}" +
                 $"已自动下载，是否立即安装？{Constants.vbCrLf}" +
                 "你也可以稍后在 设置 -> 检查更新 界面中安装。",
                 "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;

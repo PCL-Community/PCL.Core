@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using PCL.Core.App.Updates.Models;
+using PCL.Core.Utils;
 
 namespace PCL.Core.App.Updates.Sources;
 
@@ -10,7 +11,7 @@ public interface IUpdateSource
     /// 检查更新
     /// </summary>
     /// <returns>检查更新结果</returns>
-    public Task<VersionDataModel> CheckUpdateAsync();
+    public Task<VersionData> CheckUpdateAsync();
 
     /// <summary>
     /// 获取版本公告列表
@@ -22,8 +23,7 @@ public interface IUpdateSource
     /// 下载更新文件
     /// </summary>
     /// <param name="outputPath">输出路径</param>
-    /// <param name="versionInfo">版本信息</param>
-    public Task DownloadAsync(string outputPath, VersionDataModel versionInfo);
+    public Task DownloadAsync(string outputPath);
     
     /// <summary>
     /// 更新源名称
@@ -34,4 +34,18 @@ public interface IUpdateSource
     /// 更新源是否可用
     /// </summary>
     public bool IsAvailable { get; }
+}
+
+public record VersionData
+{
+    public bool IsAvailable => VersionCode > Basics.VersionCode &&
+                               SemVer.Parse(VersionName) > SemVer.Parse(Basics.VersionName);
+    
+    public required string VersionName { get; init; }
+    
+    public required int VersionCode { get; init; }
+    
+    public required string Sha256 { get; init; }
+    
+    public required string ChangeLog { get; init; }
 }

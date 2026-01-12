@@ -24,12 +24,13 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
     private static readonly string _TempPath = Path.Combine(FileService.TempPath, "Cache", "Update");
     
+    private VersionDataModel? _cachedVersionInfo;
+    
     /// <inheritdoc/>
     /// <exception cref="InvalidOperationException">Throws if version info is null.</exception>
     /// <exception cref="HttpRequestException">Throws if failed to get version info from remote server</exception>
-    public async Task<VersionDataModel> CheckUpdateAsync()
+    public async Task<VersionData> CheckUpdateAsync()
     {
-        VersionDataModel? ret;
         try
         {
             _LogTrace("Start to get version Json info");
@@ -38,24 +39,34 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
                 .ConfigureAwait(false);
             _LogTrace("Version Json info get completed");
 
-            ret = assets?.Assets.FirstOrDefault();
+            _cachedVersionInfo = assets?.Assets.FirstOrDefault();
         }
         catch (Exception ex)
         {
             throw new HttpRequestException("Failed to get version info from remote server", ex);
         }
 
-        return ret ?? throw new InvalidDataException("Not found remote version info");
+        return _cachedVersionInfo is null
+            ? throw new InvalidDataException("Not found remote version info")
+            : new VersionData
+            {
+                VersionName = _cachedVersionInfo.Version.Name,
+                VersionCode = _cachedVersionInfo.Version.Code,
+                Sha256 = _cachedVersionInfo.Sha256,
+                ChangeLog = _cachedVersionInfo.ChangeLog
+            };
     }
 
     #region Download Workflow
 
-    public async Task DownloadAsync(string outputPath, VersionDataModel versionInfo)
+    public async Task DownloadAsync(string outputPath)
     {
         _LogInfo("Start try to download update");
 
         var tempDownloadDir = _PrepareTempDirectory();
-        var (task, isPatch) = await _CreateDownloadTaskAsync(versionInfo, tempDownloadDir).ConfigureAwait(false);
+        var (task, isPatch) = await _CreateDownloadTaskAsync(
+            _cachedVersionInfo ?? throw new InvalidOperationException("Version info is null, haven't checked update"), 
+            tempDownloadDir).ConfigureAwait(false);
 
         _LogInfo("Start to download");
         var manager = new DownloadManager(new FastMirrorSelector(new HttpClient()));

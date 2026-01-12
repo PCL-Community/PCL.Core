@@ -9,16 +9,15 @@ public abstract class NDlFactory
     /// 新建连接。
     /// </summary>
     /// <param name="resId">资源 ID</param>
-    /// <param name="retry">重试计数，用于自动换源</param>
     /// <returns>下载连接</returns>
-    public abstract IDlConnection CreateConnection(string resId, int retry = 0);
+    public abstract IDlConnection? CreateConnection(string resId);
 
     /// <summary>
     /// 新建写入器。
     /// </summary>
     /// <param name="resId">资源 ID</param>
     /// <returns>下载写入器</returns>
-    public abstract IDlWriter CreateWriter(string resId);
+    public abstract IDlWriter? CreateWriter(string resId);
 }
 
 /// <summary>
@@ -29,12 +28,12 @@ public abstract class NDlFactory
 public abstract class NDlFactory<TSourceArgument, TTargetArgument> : NDlFactory
 {
     /// <summary>
-    /// 下载源管理器。
+    /// 下载源映射。
     /// </summary>
-    protected abstract NDlSourceManager<TSourceArgument> SourceManager { get; }
+    protected abstract IDlResourceMapping<TSourceArgument> SourceMapping { get; }
 
     /// <summary>
-    /// 写入目标。
+    /// 写入目标映射。
     /// </summary>
     protected abstract IDlResourceMapping<TTargetArgument> TargetMapping { get; }
 
@@ -45,9 +44,10 @@ public abstract class NDlFactory<TSourceArgument, TTargetArgument> : NDlFactory
     /// <returns>下载连接</returns>
     protected abstract IDlConnection CreateConnection(TSourceArgument source);
 
-    public override IDlConnection CreateConnection(string resId, int retry = 0)
+    public override IDlConnection? CreateConnection(string resId)
     {
-        throw new System.NotImplementedException();
+        var source = SourceMapping.Parse(resId);
+        return (source == null) ? null : CreateConnection(source);
     }
 
     /// <summary>
@@ -57,8 +57,9 @@ public abstract class NDlFactory<TSourceArgument, TTargetArgument> : NDlFactory
     /// <returns>下载写入器</returns>
     protected abstract IDlWriter CreateWriter(TTargetArgument target);
 
-    public override IDlWriter CreateWriter(string resId)
+    public override IDlWriter? CreateWriter(string resId)
     {
-        throw new System.NotImplementedException();
+        var target = TargetMapping.Parse(resId);
+        return (target == null) ? null : CreateWriter(target);
     }
 }

@@ -44,18 +44,23 @@ public sealed class SourceController
                 try
                 {
                     var res = await action(source).ConfigureAwait(false);
-                    _LogInfo($"使用源 {source.SourceName} 处理成功");
-                    _availableSources.Insert(0, source);
+                    _LogInfo($"Source {source.SourceName} processed successfully");
+
+                    // 延迟排序，仅在循环结束时执行一次
+                    if (_availableSources[0] == source) return res;
+                    
                     _availableSources.Remove(source);
+                    _availableSources.Insert(0, source);
+
                     return res;
                 }
                 catch (Exception ex)
                 {
-                    _LogWarning($"源 {source.SourceName} 失效，使用下一个更新源。异常: {ex}");
+                    _LogWarning($"Source {source.SourceName} is unavailable, trying next source", ex);
                 }
             }
-                
-            throw new InvalidOperationException("所有更新源均不可用");
+            
+            throw new InvalidOperationException("All update sources are unavailable");
         }
         finally
         {

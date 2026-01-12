@@ -7,6 +7,7 @@ public static class ValueProcessorManager
 {
     private static readonly Dictionary<Type, Func<object, object>> Filters = new();
     private static readonly Dictionary<Type, Func<object, object, object>> Adders = new();
+    private static readonly Dictionary<Type, Func<object, double, object>> Scalers = new();
     
     private static class Cache<T>
     {
@@ -20,6 +21,7 @@ public static class ValueProcessorManager
         
         Filters[typeof(T)] = o => processor.Filter((T)o)!;
         Adders[typeof(T)] = (o1, o2) => processor.Add((T)o1, (T)o2)!;
+        Scalers[typeof(T)] = (o, f) => processor.Scale((T)o, f)!;
     }
 
     public static T Filter<T>(T value)
@@ -64,6 +66,12 @@ public static class ValueProcessorManager
         var p = Cache<T>.Processor
                 ?? throw new InvalidOperationException($"类型未注册：{typeof(T)}");
         return p.Scale(value, factor);
+    }
+    
+    public static object Scale(object value, double factor)
+    {
+        var t = value.GetType();
+        return Scalers.TryGetValue(t, out var func) ? func(value, factor) : value;
     }
     
     public static T DefaultValue<T>()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.UI.Animation.Animatable;
 using PCL.Core.UI.Animation.Easings;
@@ -11,18 +12,19 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
 {
     public IEasing Easing { get; set; } = new LinearEasing();
     private bool _hasFromValue;
-    private T _from = default!;
+
     public T From
     {
-        get => _from;
+        get;
         set
         {
             _hasFromValue = true;
-            _from = value;
+            field = value;
         }
-    }
+    } = default!;
+
     public T? To { get; set; }
-    public AnimationValueType ValueType { get; set; } = AnimationValueType.Relative;
+    public AnimationValueType ValueType { get; set; } = AnimationValueType.Absolute;
     public TimeSpan Duration { get; set; }
     public TimeSpan Delay { get; set; }
     public T? CurrentValue { get; internal set; }
@@ -38,9 +40,14 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
     }
 
     public int TotalFrames { get; private set; }
+    
+    private int _currentFrame;
 
-    public override bool IsCompleted => CurrentFrame >= TotalFrames;
-    public override int CurrentFrame { get; set; }
+    public override int CurrentFrame
+    {
+        get => Interlocked.CompareExchange(ref _currentFrame, 0, 0);
+        set => Interlocked.Exchange(ref _currentFrame, value);
+    }
     
     private T? _startValue;
 
@@ -78,7 +85,7 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
     private void _RunCore(IAnimatable target)
     {
         // 重置当前帧
-        CurrentFrame = 0;
+        _currentFrame = 0;
 
         // 空值检查
         ArgumentNullException.ThrowIfNull(To);
@@ -98,16 +105,27 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
         // 进行初始赋值
         // target.SetValue(
         //     ValueType == AnimationValueType.Relative ? ValueProcessorManager.Add(From, _startValue)! : From!);
+        
+        // 设置状态
+        Status = AnimationStatus.Running;
     }
 
     public override void Cancel()
     {
         // 确保正常结束
-        CurrentFrame = TotalFrames + 1;
+        Interlocked.Exchange(ref _currentFrame, TotalFrames);
+
+        Status = AnimationStatus.Canceled;
     }
 
     public override IAnimationFrame? ComputeNextFrame(IAnimatable target)
     {
+        if (_currentFrame >= TotalFrames)
+        {
+            Status = AnimationStatus.Completed;
+            return null;
+        }
+        
         return new AnimationFrame<T>
         {
             Target = target,

@@ -7,9 +7,13 @@ namespace PCL.Core.UI.Animation.Core;
 public interface IAnimation
 {
     /// <summary>
-    /// 动画是否已完成。
+    /// 动画名。
     /// </summary>
-    bool IsCompleted { get; }
+    string Name { get; set; }
+    /// <summary>
+    /// 当前动画状态。
+    /// </summary>
+    AnimationStatus Status { get; }
     /// <summary>
     /// 当前动画帧索引。
     /// </summary>

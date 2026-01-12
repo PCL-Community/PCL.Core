@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -18,12 +17,14 @@ namespace PCL.Core.UI.Animation.Core;
 public sealed class AnimationService : GeneralService
 {
     #region Lifecycle
-    
+
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
-    
-    private AnimationService() : base("animation", "动画") { _context = ServiceContext; }
-    
+
+    private AnimationService() : base("animation", "动画")
+    {
+        _context = ServiceContext;
+    }
     
     public override void Start()
     {
@@ -36,7 +37,7 @@ public sealed class AnimationService : GeneralService
     }
 
     #endregion
-    
+
     private static void _RegisterValueProcessors()
     {
         // 在这里注册所有的 ValueProcessor
@@ -48,17 +49,18 @@ public sealed class AnimationService : GeneralService
         ValueProcessorManager.Register(new PointValueProcessor());
         ValueProcessorManager.Register(new ThicknessValueProcessor());
     }
-    
-    private static Channel<(IAnimation, IAnimatable)> _animationChannel = null!;
-    //private static Channel<IAnimationFrame> _frameChannel = null!;
-    private static ConcurrentDictionary<IAnimatable, IAnimationFrame> _frameDictionary = null!;
-    private static SemaphoreSlim _signal = null!;
+
+    private static Channel<(IAnimation Animation, IAnimatable Target)> _animationChannel = null!;
+    // private static Channel<IAnimationFrame> _frameChannel = null!;
+    private static Channel<(IAnimationFrame Frame, IAnimation Source)> _frameChannel = null!;
+    // private static ConcurrentDictionary<IAnimatable, IAnimationFrame> _frameDictionary = null!;
+    private static ConcurrentDictionary<string, IAnimation> _namedAnimations = new();
     private static IClock _clock = null!;
     private static AsyncCountResetEvent _resetEvent = null!;
     private static int _taskCount;
     private static CancellationTokenSource _cts = null!;
     
-    public static int Fps { get; set; } = 60;
+    public static int Fps { get; set; } = 160;
     public static double Scale { get; set; } = 1.0d;
 
     public static IUIAccessProvider UIAccessProvider { get; private set; } = null!;
@@ -67,10 +69,8 @@ public sealed class AnimationService : GeneralService
     {
         // 初始化 Channel 与 Dictionary
         _animationChannel = Channel.CreateUnbounded<(IAnimation, IAnimatable)>();
-        _frameDictionary = new ConcurrentDictionary<IAnimatable, IAnimationFrame>();
-        
-        // 创建信号量
-        _signal = new SemaphoreSlim(0);
+        // _frameChannel = Channel.CreateUnbounded<IAnimationFrame>();
+        _frameChannel = Channel.CreateUnbounded<(IAnimationFrame, IAnimation)>();
         
         // 根据核心数量来确定动画计算 Task 数量
         _taskCount = Environment.ProcessorCount;
@@ -87,28 +87,21 @@ public sealed class AnimationService : GeneralService
         UIAccessProvider = new WpfUIAccessProvider(Lifecycle.CurrentApplication.Dispatcher);
         _ = UIAccessProvider.InvokeAsync(async () =>
         {
-            // if (_cts.IsCancellationRequested) return;
-            
-            // 取出所有动画帧并赋值
-            // while (await _frameChannel.Reader.WaitToReadAsync())
-            // {
-            //     while (_frameChannel.Reader.TryRead(out var frame))
-            //     {
-            //         frame.Target.SetValue(frame.GetAbsoluteValue());
-            //     }
-            //
-            //     await Task.Yield();
-            // }
-
-            while (!_cts.IsCancellationRequested)
+            if (_cts.IsCancellationRequested) return;
+            while (await _frameChannel.Reader.WaitToReadAsync())
             {
-                await _signal.WaitAsync();
-
-                foreach (var frame in _frameDictionary.Values.ToArray())
+                // 读取数据
+                while (_frameChannel.Reader.TryRead(out var item))
                 {
-                    frame.Target.SetValue(frame.GetAbsoluteValue());
-                    _frameDictionary.TryRemove(frame.Target, out _);
+                    // 如果动画源已被标记取消，直接丢弃该帧，不进行赋值
+                    if (item.Source.Status == AnimationStatus.Canceled) 
+                        continue;
+
+                    // 正常赋值
+                    item.Frame.Target.SetValue(item.Frame.GetAbsoluteValue());
                 }
+        
+                await Task.Yield();
             }
         });
 
@@ -136,6 +129,9 @@ public sealed class AnimationService : GeneralService
         
         // 将 ResetEvent 释放
         _resetEvent.Dispose();
+        
+        // 清理 Dictionary
+        _namedAnimations.Clear();
     }
 
     private static void ClockOnTick(object? sender, long e)
@@ -147,7 +143,7 @@ public sealed class AnimationService : GeneralService
     private static async Task _AnimationComputeTaskAsync()
     {
         // 本地动画列表，确保没有一直无法计算的动画
-        var animationList = new List<(IAnimation, IAnimatable)>(8);
+        var animationList = new List<(IAnimation Animation, IAnimatable Target)>(8);
         
         // 持续监听 Channel 中的动画
         while (!_cts.IsCancellationRequested)
@@ -171,42 +167,59 @@ public sealed class AnimationService : GeneralService
                 // TODO: 支持缓存动画计算结果 (由 AnimationData 支持)
                 
                 // 从列表中获取动画
-                var animation = animationList[i];
+                var animationEntry = animationList[i];
                             
-                // 如果动画已经完成，则从列表中移除
-                if (animation.Item1.IsCompleted)
+                // 如果动画已经完成或被取消，则从列表中移除
+                if (animationEntry.Animation.Status is AnimationStatus.Canceled or AnimationStatus.Completed)
                 {
-                    animation.Item1.RaiseCompleted();
+                    animationEntry.Animation.RaiseCompleted();
+                    
+                    if (!string.IsNullOrEmpty(animationEntry.Animation.Name))
+                    {
+                        // 使用显式接口
+                        ((ICollection<KeyValuePair<string, IAnimation>>)_namedAnimations)
+                            .Remove(new KeyValuePair<string, IAnimation>(animationEntry.Animation.Name, animationEntry.Animation));
+                    }
+                    
                     animationList.RemoveAt(i);
                     continue;
                 }
                 
                 // 计算动画的下一帧
-                var frame = animation.Item1.ComputeNextFrame(animation.Item2);
+                var frame = animationEntry.Animation.ComputeNextFrame(animationEntry.Target);
                 // 如果没有计算帧（当动画为 SequentialAnimationGroup 或 ParallelAnimationGroup 这种动画集合时），跳过
                 if (frame is null) continue;
-                // 将动画帧写入 Dictionary
-                //_frameChannel.Writer.TryWrite(frame);
-                _frameDictionary.AddOrUpdate(animation.Item2, frame, (_, oldFrame) =>
-                {
-                    var type = oldFrame.GetType();
-                    
-                    return (IAnimationFrame)Activator.CreateInstance(type, oldFrame.Target, frame.StartValue,
-                        ValueProcessorManager.Add(frame.Value, oldFrame.Value))!;
-                });
-                // 释放信号量
-                _signal.Release();
+                // 将动画帧写入 Channel
+                _frameChannel.Writer.TryWrite((frame, animationEntry.Animation));
                 // 增加当前帧计数
-                animation.Item1.CurrentFrame++;
+                animationEntry.Animation.CurrentFrame++;
             }
-                        
+            
             // 等待 Tick 事件的通知
             await _resetEvent.WaitAsync();
         }
     }
 
+    private static void HandleNamedAnimationConflict(IAnimation animation)
+    {
+        if (string.IsNullOrEmpty(animation.Name)) return;
+
+        _namedAnimations.AddOrUpdate(
+            animation.Name, 
+            animation, // 如果不存在，直接添加
+            (_, existingAnimation) => 
+            {
+                // 如果已存在同名动画，取消旧动画
+                existingAnimation.Cancel();
+                // 替换为新动画
+                return animation;
+            });
+    }
+    
     internal static Task PushAnimationAsync(IAnimation animation, IAnimatable target)
     {
+        HandleNamedAnimationConflict(animation);
+        
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         
         animation.Completed += (_, _) => tcs.SetResult();
@@ -217,6 +230,16 @@ public sealed class AnimationService : GeneralService
     
     internal static void PushAnimationFireAndForget(IAnimation animation, IAnimatable target)
     {
+        HandleNamedAnimationConflict(animation);
+        
         _animationChannel.Writer.TryWrite((animation, target));
+    }
+    
+    public static void CancelAnimationByName(string name)
+    {
+        if (_namedAnimations.TryRemove(name, out var animation))
+        {
+            animation.Cancel();
+        }
     }
 }

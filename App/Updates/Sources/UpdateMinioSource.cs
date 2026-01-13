@@ -8,6 +8,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.Net.Downloader;
@@ -18,6 +19,35 @@ namespace PCL.Core.App.Updates.Sources;
 
 public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateSource
 {
+    #region Data Models
+
+    private sealed record VersionAssetsDataModel
+    {
+        [JsonPropertyName("assets")] public required VersionDataModel[] Assets { get; init; }
+    }
+
+    private sealed record VersionDataModel
+    {
+        [JsonPropertyName("version")] public required VersionInfoDataModel Version { get; init; }
+    
+        [JsonPropertyName("sha256")] public required string Sha256 { get; init; }
+    
+        [JsonPropertyName("changelog")] public required string ChangeLog { get; init; }
+    
+        [JsonPropertyName("patches")] public required string[] Patches { get; init; }
+    
+        [JsonPropertyName("downloads")] public required string[] Downloads { get; init; }
+    }
+
+    private sealed record VersionInfoDataModel
+    {
+        [JsonPropertyName("name")] public required string Name { get; init; }
+    
+        [JsonPropertyName("code")] public required int Code { get; init; }
+    }
+    
+    #endregion
+    
     public bool IsAvailable => !string.IsNullOrWhiteSpace(baseUrl);
 
     public string SourceName => name;

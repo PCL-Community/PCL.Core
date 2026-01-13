@@ -15,6 +15,9 @@ namespace PCL.Core.App.Updates.Sources;
 public sealed class SourceController
 {
     private readonly List<IUpdateSource> _availableSources;
+
+    private IUpdateSource? _currentSource;
+    
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     /// <summary>
@@ -39,19 +42,27 @@ public sealed class SourceController
         await _semaphore.WaitAsync().ConfigureAwait(false);
         try
         {
+            if (_currentSource is not null)
+            {
+                try
+                {
+                    var res = await action(_currentSource).ConfigureAwait(false);
+                    _LogInfo($"Current source {_currentSource.SourceName} processed successfully");
+                    return res;
+                }
+                catch (Exception ex)
+                {
+                    _LogWarning($"Current source {_currentSource.SourceName} is unavailable, trying other sources", ex);
+                }
+            }
             foreach (var source in _availableSources)
             {
                 try
                 {
                     var res = await action(source).ConfigureAwait(false);
-                    _LogInfo($"Source {source.SourceName} processed successfully");
+                    _LogInfo($"Source {source.SourceName} processed successfully, setting as current source");
 
-                    // 延迟排序，仅在循环结束时执行一次
-                    if (_availableSources[0] == source) return res;
-                    
-                    _availableSources.Remove(source);
-                    _availableSources.Insert(0, source);
-
+                    _currentSource = source;
                     return res;
                 }
                 catch (Exception ex)

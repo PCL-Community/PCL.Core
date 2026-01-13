@@ -17,7 +17,8 @@ namespace PCL.Core.App.Configuration;
 /// 全局配置服务。
 /// </summary>
 [LifecycleService(LifecycleState.Loading, Priority = 1919810)]
-public sealed partial class ConfigService : GeneralService
+[LifecycleScope("config", "配置")]
+public sealed partial class ConfigService
 {
     private static readonly Dictionary<string, ConfigItem> _Items = [];
 
@@ -235,10 +236,6 @@ public sealed partial class ConfigService : GeneralService
 
     #region Lifecycle & Initialization
 
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-    public ConfigService() : base("config", "配置") { _context = ServiceContext; }
-
     /// <summary>
     /// 配置服务是否已加载完成。未加载完成时，调用与配置项相关的方法可能会抛出 <see cref="InvalidOperationException"/>。
     /// </summary>
@@ -247,26 +244,27 @@ public sealed partial class ConfigService : GeneralService
     private static bool _isProvidersInitialized = false;
     private static bool _isConfigItemsInitialized = false;
 
-    public override void Start()
+    [LifecycleStart]
+    private static void _Start()
     {
         if (IsInitialized) return;
 #if TRACE
         var timer = new Stopwatch();
         timer.Start();
 #endif
-        ServiceContext.Info("Config initialization started");
+        Context.Info("Config initialization started");
         try
         {
-            ServiceContext.Trace("Initializing providers...");
+            Context.Trace("Initializing providers...");
             _InitializeProviders();
             _isProvidersInitialized = true;
-            ServiceContext.Trace("Initializing config items...");
+            Context.Trace("Initializing config items...");
             _InitializeConfigItems();
-            ServiceContext.Debug($"Finished initialize {_Items.Count} item(s)");
+            Context.Debug($"Finished initialize {_Items.Count} item(s)");
             _isConfigItemsInitialized = true;
-            ServiceContext.Trace("Initializing observers...");
+            Context.Trace("Initializing observers...");
             _InitializeObservers();
-            ServiceContext.Info("Invoking init events...");
+            Context.Info("Invoking init events...");
             foreach (var (_, item) in _Items)
             {
                 item.TriggerEvent(ConfigEvent.Init, null, true, true);
@@ -292,17 +290,25 @@ public sealed partial class ConfigService : GeneralService
                     + $"\n\n如果你不知道发生了什么，无视即可，重新打开启动器后相关配置项可能会恢复到默认值，应不影响正常使用。";
             }
 #endif
-            ServiceContext.Fatal(msg, ex);
+            Context.Fatal(msg, ex);
         }
 #if TRACE
         timer.Stop();
-        ServiceContext.Info($"Config initialization finished in {timer.ElapsedMilliseconds} ms");
+        Context.Info($"Config initialization finished in {timer.ElapsedMilliseconds} ms");
 #endif
     }
 
-    public override void Stop()
+    [LifecycleStop]
+    private static void _Stop()
     {
-        ServiceContext.Info("Saving config...");
+        // 检测是否初始化出错
+        if (Lifecycle.GetServiceLastException(Service.Identifier) is { } ex)
+        {
+            Context.Fatal("配置系统初始化失败", ex);
+            return;
+        }
+        Context.Info("Saving config...");
+        // 停止物流中心并释放资源
         _sharedConfigProvider?.Stop();
         _localConfigProvider?.Stop();
         _instanceConfigProvider?.Stop();

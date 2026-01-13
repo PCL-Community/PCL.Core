@@ -59,8 +59,16 @@ public sealed partial class UpdateService
         }
         catch (InvalidOperationException ex)
         {
-            Context.Warn("All update sources are unavailable", ex);
-            HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+            if (!ex.Message.Contains("All update sources"))
+            {
+                Context.Warn("Unknown exception occurred while checking updates", ex);
+                HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
+            }
+            else
+            {
+                Context.Warn("All update sources are unavailable", ex);
+                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+            }
         }
         catch (Exception ex)
         {
@@ -87,16 +95,23 @@ public sealed partial class UpdateService
         }
         catch (InvalidOperationException ex)
         {
-            Context.Warn("All update sources are unavailable", ex);
-            HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
-            return false;
+            if (!ex.Message.Contains("All update sources"))
+            {
+                Context.Warn("Unknown exception occurred while checking updates", ex);
+                HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
+            }
+            else
+            {
+                Context.Warn("All update sources are unavailable", ex);
+                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+            }
         }
         catch (Exception ex)
         {
             Context.Warn("Unknown exception occurred while checking updates", ex);
             HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
-            return false;
         }
+        return false;
     }
 
     private static bool _PromptUpdate()

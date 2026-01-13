@@ -18,7 +18,7 @@ public sealed partial class UpdateService
     
     public static VersionData? LatestVersion { get; private set; }
     
-    public static bool IsUpdateDownloaded { get; set; }
+    public static bool IsUpdateDownloaded { get; private set; }
 
     [LifecycleStart]
     private static async Task _Start()

@@ -12,7 +12,8 @@ namespace PCL.Core.App.Updates;
 public sealed partial class UpdateService
 {
     private static readonly SourceController _SourceController = new([
-        new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")
+        new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio"),
+        new UpdateMinioSource("https://staticassets.naids.com/resources/pclce/", "Naids")
     ]);
     
     public static VersionData? LatestVersion { get; private set; }

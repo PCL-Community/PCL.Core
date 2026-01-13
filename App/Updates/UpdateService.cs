@@ -8,8 +8,8 @@ using Microsoft.VisualBasic;
 namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.Running)]
-[LifecycleScope("check-update", "检查更新")]
-public sealed partial class CheckUpdateService
+[LifecycleScope("update", "检查更新")]
+public sealed partial class UpdateService
 {
     private static readonly SourceController _SourceController = new([
         new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio")

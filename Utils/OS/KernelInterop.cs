@@ -77,12 +77,6 @@ public static partial class KernelInterop
         public ulong ullAvailExtendedVirtual;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MARGINS { public int leftWidth, rightWidth, topHeight, bottomHeight; }
-
-    [DllImport("dwmapi.dll")]
-    public static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
-
     // ReSharper restore InconsistentNaming, UnusedMember.Local
 
     private static void _ThrowLastWin32Error() => throw new Win32Exception(Marshal.GetLastWin32Error());

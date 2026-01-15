@@ -1,6 +1,29 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using PCL.Core.Utils;
 
-namespace PCL.Core.App.Updates.Models;
+namespace PCL.Core.App.Updates.Sources;
+
+public sealed record VersionInfoData
+{
+    [JsonPropertyName("name")] public required string Name { get; init; }
+    
+    [JsonPropertyName("code")] public required int Code { get; init; }
+}
+
+public sealed record VersionData
+{
+    public bool IsAvailable => Version.Code > Basics.VersionCode &&
+                               SemVer.Parse(Version.Name) > SemVer.Parse(Basics.VersionName);
+    [JsonPropertyName("version")] public required VersionInfoData Version { get; init; }
+    
+    [JsonPropertyName("sha256")] public required string Sha256 { get; init; }
+    
+    [JsonPropertyName("changelog")] public required string ChangeLog { get; init; }
+    
+    [JsonPropertyName("patches")] public required string[] Patches { get; init; }
+    
+    [JsonPropertyName("downloads")] public required string[] Downloads { get; init; }
+}
 
 public record VersionAnnouncementDataModel
 {
@@ -30,3 +53,4 @@ public record AnnouncementBtnInfoModel
     
     [JsonPropertyName("command_paramter")] public required string CommandParameter { get; init; }
 }
+

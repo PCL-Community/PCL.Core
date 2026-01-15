@@ -1,4 +1,3 @@
-using PCL.Core.App.Updates.Models;
 using PCL.Core.IO;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
@@ -19,34 +18,10 @@ namespace PCL.Core.App.Updates.Sources;
 
 public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateSource
 {
-    #region Data Models
-
     private sealed record VersionAssetsDataModel
     {
-        [JsonPropertyName("assets")] public required VersionDataModel[] Assets { get; init; }
+        [JsonPropertyName("assets")] public required VersionData[] Assets { get; init; }
     }
-
-    private sealed record VersionDataModel
-    {
-        [JsonPropertyName("version")] public required VersionInfoDataModel Version { get; init; }
-    
-        [JsonPropertyName("sha256")] public required string Sha256 { get; init; }
-    
-        [JsonPropertyName("changelog")] public required string ChangeLog { get; init; }
-    
-        [JsonPropertyName("patches")] public required string[] Patches { get; init; }
-    
-        [JsonPropertyName("downloads")] public required string[] Downloads { get; init; }
-    }
-
-    private sealed record VersionInfoDataModel
-    {
-        [JsonPropertyName("name")] public required string Name { get; init; }
-    
-        [JsonPropertyName("code")] public required int Code { get; init; }
-    }
-    
-    #endregion
     
     public bool IsAvailable => !string.IsNullOrWhiteSpace(baseUrl);
 
@@ -54,7 +29,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
     private static readonly string _TempPath = Path.Combine(FileService.TempPath, "Cache", "Update");
     
-    private VersionDataModel? _cachedVersionInfo;
+    private VersionData? _cachedVersionInfo;
     
     /// <inheritdoc/>
     /// <exception cref="InvalidOperationException">Throws if version info is null.</exception>
@@ -76,15 +51,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
             throw new HttpRequestException("Failed to get version info from remote server", ex);
         }
 
-        return _cachedVersionInfo is null
-            ? throw new InvalidDataException("Not found remote version info")
-            : new VersionData
-            {
-                VersionName = _cachedVersionInfo.Version.Name,
-                VersionCode = _cachedVersionInfo.Version.Code,
-                Sha256 = _cachedVersionInfo.Sha256,
-                ChangeLog = _cachedVersionInfo.ChangeLog
-            };
+        return _cachedVersionInfo ?? throw new InvalidDataException("Not found remote version info");
     }
 
     #region Download Workflow
@@ -108,7 +75,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     }
 
     private async Task<(DownloadTask task, bool isPatch)> _CreateDownloadTaskAsync(
-        VersionDataModel versionJson,
+        VersionData versionJson,
         string tempDir)
     {
         var updateSha256 = versionJson.Sha256;

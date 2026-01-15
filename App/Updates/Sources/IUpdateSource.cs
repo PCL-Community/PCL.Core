@@ -1,6 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using PCL.Core.App.Updates.Models;
 using PCL.Core.Utils;
 
 namespace PCL.Core.App.Updates.Sources;
@@ -34,18 +33,4 @@ public interface IUpdateSource
     /// 更新源是否可用
     /// </summary>
     public bool IsAvailable { get; }
-}
-
-public record VersionData
-{
-    public bool IsAvailable => VersionCode > Basics.VersionCode &&
-                               SemVer.Parse(VersionName) > SemVer.Parse(Basics.VersionName);
-    
-    public required string VersionName { get; init; }
-    
-    public required int VersionCode { get; init; }
-    
-    public required string Sha256 { get; init; }
-    
-    public required string ChangeLog { get; init; }
 }

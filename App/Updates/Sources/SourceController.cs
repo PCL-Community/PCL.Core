@@ -1,6 +1,4 @@
-using PCL.Core.App.Updates.Models;
 using PCL.Core.Logging;
-using PCL.Core.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;

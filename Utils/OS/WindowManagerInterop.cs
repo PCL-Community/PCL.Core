@@ -14,7 +14,7 @@ namespace PCL.Core.Utils.OS
         private static partial int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
 
         [LibraryImport("dwmapi.dll")]
-        private static partial int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)] ref bool pfEnabled);
+        private static partial int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)] out bool pfEnabled);
 
         /// <summary>
         /// DWM 组合是否可用
@@ -22,8 +22,7 @@ namespace PCL.Core.Utils.OS
         /// <returns></returns>
         public static bool IsCompositionEnabled()
         {
-            bool enabled = false;
-            int hResult = DwmIsCompositionEnabled(ref enabled);
+            int hResult = DwmIsCompositionEnabled(out var enabled);
             if (hResult != 0)
                 throw new Win32Exception(hResult, "Failed to check DWM status");
             return enabled;

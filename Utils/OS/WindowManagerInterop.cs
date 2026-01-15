@@ -1,18 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using PCL.Core.Logging;
+using System;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace PCL.Core.Utils.OS
 {
     public partial class WindowManagerInterop
     {
         [StructLayout(LayoutKind.Sequential)]
-        public struct MARGINS { public int leftWidth, rightWidth, topHeight, bottomHeight; }
+        private struct MARGINS { public int leftWidth, rightWidth, topHeight, bottomHeight; }
 
         [LibraryImport("dwmapi.dll")]
-        public static partial int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+        private static partial int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+
+        [LibraryImport("dwmapi.dll")]
+        private static partial int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)] ref bool pfEnabled);
+
+        /// <summary>
+        /// DWM 组合是否可用
+        /// </summary>
+        /// <returns></returns>
+        public static bool IsCompositionEnabled()
+        {
+            bool enabled = false;
+            int hResult = DwmIsCompositionEnabled(ref enabled);
+            if (hResult != 0)
+                throw new Win32Exception(hResult, "Failed to check DWM status");
+            return enabled;
+        }
+
+        public static void ExtendFrameIntoClientArea(IntPtr hWnd, int margin)
+        {
+            MARGINS margins = new() { leftWidth = margin, rightWidth = margin, topHeight = margin, bottomHeight = margin };
+            if (IsCompositionEnabled())
+            {
+                int hResult = DwmExtendFrameIntoClientArea(hWnd, ref margins);
+                if (hResult != 0) throw new Win32Exception(hResult, "Failed to extend frame into client area");
+            }
+        }
     }
 }

@@ -18,6 +18,7 @@ public class HttpRequestBuilder
 {
     private readonly HttpRequestMessage _request;
     private readonly Dictionary<string, string> _cookies = [];
+    private readonly Dictionary<string, string> _parameter = [];
     private HttpCompletionOption _completionOption = HttpCompletionOption.ResponseContentRead;
     private bool _addLauncherHeader = true;
     private bool _doLog = true;
@@ -127,6 +128,14 @@ public class HttpRequestBuilder
     }
 
     public HttpRequestBuilder WithBearerToken(string token) => WithAuthentication("Bearer", token);
+
+    public HttpRequestBuilder WithAccept(string accept) => WithHeader("Accept", accept);
+
+    public HttpRequestBuilder WithParameter(string key, string value)
+    {
+        _parameter[key] = value;
+        return this;
+    }
 
     public HttpRequestBuilder WithDefaultHeaderOption(bool hasDefaultHeader = true)
     {
@@ -240,6 +249,15 @@ public class HttpRequestBuilder
             _request.Headers.TryAddWithoutValidation("User-Agent", $"PCL-Community/PCL2-CE/{Basics.VersionName} (pclc.cc)");
             _request.Headers.TryAddWithoutValidation("Referer", $"https://{Basics.VersionCode}.ce.open.pcl2.server/");
         }
+
+        _request.RequestUri = new UriBuilder(_request.RequestUri!)
+        {
+            Query = _parameter.Aggregate(_request.RequestUri!.Query, (current, kv) =>
+            {
+                if (current.IsNullOrEmpty()) return $"?{WebUtility.UrlEncode(kv.Key)}={WebUtility.UrlEncode(kv.Value)}";
+                return $"{current}&{WebUtility.UrlEncode(kv.Key)}={WebUtility.UrlEncode(kv.Value)}";
+            })
+        }.Uri;
     }
 
     private void _MakeLog(string msg)

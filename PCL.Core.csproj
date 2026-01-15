@@ -63,6 +63,9 @@
         <PackageReference Include="Polly" Version="8.6.5" />
         <!-- 本地化 -->
         <PackageReference Include="Humanizer.Core.zh-CN" Version="3.0.1" />
+        <!-- 接口 -->
+        <PackageReference Include="Modrinth.Net" Version="3.6.0" />
+        <PackageReference Include="CurseForge.APIClient" Version="4.2.0" />
     </ItemGroup>
     <!-- 信不过巨硬的智障代码，手动包含需要的文件 -->
     <PropertyGroup>
@@ -83,5 +86,8 @@
     <ItemGroup>
         <AdditionalFiles Include="App\LifecycleState.cs" />
         <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Minecraft\ResourceProject\" />
     </ItemGroup>
 </Project>

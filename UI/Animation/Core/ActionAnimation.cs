@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.UI.Animation.Animatable;
@@ -22,7 +23,7 @@ public class ActionAnimation : AnimationBase
     
     private CancellationTokenSource? _cts = new();
     private TaskCompletionSource? _tcs;
-    
+    private int _called = 0;
     
     public override async Task<IAnimation> RunAsync(IAnimatable target)
     {
@@ -37,6 +38,7 @@ public class ActionAnimation : AnimationBase
         // 延迟
         await Task.Delay(Delay);
         
+        Interlocked.Exchange(ref _called, 0);
         _ = AnimationService.PushAnimationAsync(clone, target);
         return await _tcs.Task.ContinueWith<IAnimation>(_ => clone);
     }
@@ -55,6 +57,7 @@ public class ActionAnimation : AnimationBase
             // 延迟
             await Task.Delay(Delay);
             
+            Interlocked.Exchange(ref _called, 0);
             AnimationService.PushAnimationFireAndForget(clone, target);
         });
         
@@ -72,11 +75,16 @@ public class ActionAnimation : AnimationBase
     {
         if (Status is AnimationStatus.Canceled or AnimationStatus.Completed) return null;
         
-        return new ActionAnimationFrame(() =>
+        if (Interlocked.CompareExchange(ref _called, 1, 0) == 0)
         {
-            Action(_cts!.Token);
-            Status = AnimationStatus.Completed;
-            _tcs?.TrySetResult();
-        });
+            return new ActionAnimationFrame(() =>
+            {
+                Action(_cts!.Token);
+                Status = AnimationStatus.Completed;
+                _tcs?.TrySetResult();
+            });
+        }
+
+        return null;
     }
 }

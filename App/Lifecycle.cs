@@ -85,6 +85,7 @@ public sealed class Lifecycle : ILifecycleService
     private static readonly ConcurrentStack<ILifecycleService> _StartedServiceStack = [];
     private static readonly Dictionary<string, ILifecycleService> _ManualServiceMap = [];
     private static readonly HashSet<ILifecycleService> _DeclaredStoppedServices = [];
+    private static readonly ConcurrentDictionary<string, Exception> _ServiceLastExceptionMap = [];
 
     private static string _ServiceName(ILifecycleService service, LifecycleState? state = null)
     {
@@ -126,12 +127,14 @@ public sealed class Lifecycle : ILifecycleService
             try
             {
                 Context.Trace($"正在启动 {name}");
+                ServiceStarting?.Invoke(service.Identifier);
                 await service.StartAsync().ConfigureAwait(!service.SupportAsync);
                 var serviceInfo = new LifecycleServiceInfo(service, state);
                 Context.Debug($"{name} 启动成功");
                 if (_DeclaredStoppedServices.Contains(service))
                 {
                     _DeclaredStoppedServices.Remove(service);
+                    ServiceDeclaredStopped?.Invoke(service.Identifier);
                     Context.Trace($"{name} 已中止");
                 }
                 else
@@ -139,11 +142,14 @@ public sealed class Lifecycle : ILifecycleService
                     // 若该服务未声明自己已结束运行，将其添加到正在运行列表
                     _StartedServiceStack.Push(service);
                     _RunningServiceInfoMap[service.Identifier] = serviceInfo;
+                    ServiceStarted?.Invoke(service.Identifier);
                 }
             }
             catch (Exception ex)
             {
                 Context.Warn($"{name} 启动失败，尝试停止", ex);
+                // 存储异常并停止服务
+                _UpdateLastException(service, ex);
                 _StopService(service, false);
             }
             // 若日志服务已启动则清空日志缓冲
@@ -246,18 +252,73 @@ public sealed class Lifecycle : ILifecycleService
             try
             {
                 Context.Trace($"正在停止 {name}");
+                ServiceStopping?.Invoke(service.Identifier);
                 await service.StopAsync().ConfigureAwait(!async);
+                ServiceStopped?.Invoke(service.Identifier);
                 Context.Debug($"{name} 已停止");
             }
             catch (Exception ex)
             {
-                // 若出错直接忽略
+                // 若出错则存储异常并忽略
                 Context.Warn($"停止 {name} 时出错，已跳过", ex);
+                _UpdateLastException(service, ex);
             }
             // 从正在运行列表移除
             _RemoveRunningInstance(service);
         }
     }
+
+    private static void _UpdateLastException(ILifecycleService service, Exception ex)
+    {
+        _ServiceLastExceptionMap[service.Identifier] = ex;
+        ServiceUnhandledException?.Invoke(service.Identifier, ex);
+    }
+
+    #endregion
+
+    #region 事件
+
+    /// <summary>
+    /// 生命周期状态改变时触发的事件。<br/>
+    /// <b>非异步执行，请注意自行实现必要的异步，否则会卡住生命周期管理线程。</b>
+    /// </summary>
+    public static event Action<LifecycleState>? StateChanged;
+
+    /// <summary>
+    /// 服务项启动前触发的事件。<br/>
+    /// 该事件会在与服务项初始化相同的线程中执行。请注意，该事件可能在多个不同线程中被同时调用。
+    /// </summary>
+    public static event Action<string>? ServiceStarting;
+
+    /// <summary>
+    /// 服务项启动后触发的事件。<br/>
+    /// 该事件会在与服务项初始化相同的线程中执行。请注意，该事件可能在多个不同线程中被同时调用。
+    /// </summary>
+    public static event Action<string>? ServiceStarted;
+
+    /// <summary>
+    /// 服务项停止前触发的事件。特别地，主动声明停止 (<see cref="LifecycleContext.DeclareStopped"/>) 的服务不会触发该事件。<br/>
+    /// 该事件会在与服务项停止相同的线程中执行。请注意，该事件可能在多个不同线程中被同时调用。
+    /// </summary>
+    public static event Action<string>? ServiceStopping;
+
+    /// <summary>
+    /// 服务项停止后触发的事件。特别地，主动声明停止 (<see cref="LifecycleContext.DeclareStopped"/>) 的服务不会触发该事件。<br/>
+    /// 该事件会在与服务项停止相同的线程中执行。请注意，该事件可能在多个不同线程中被同时调用。
+    /// </summary>
+    public static event Action<string>? ServiceStopped;
+
+    /// <summary>
+    /// 服务项主动声明停止 (<see cref="LifecycleContext.DeclareStopped"/>) 触发的事件。<br/>
+    /// 该事件会在与服务项初始化相同的线程中执行。请注意，该事件可能在多个不同线程中被同时调用。
+    /// </summary>
+    public static event Action<string>? ServiceDeclaredStopped;
+
+    /// <summary>
+    /// 服务项抛出异常时触发的事件。<br/>
+    /// 该事件会在服务抛出异常的线程中执行。请注意，该事件可能在多个不同线程中被同时调用。
+    /// </summary>
+    public static event Action<string, Exception>? ServiceUnhandledException;
 
     #endregion
 
@@ -379,12 +440,6 @@ public sealed class Lifecycle : ILifecycleService
         if (enforce is { } state) CurrentState = state;
         else CurrentState++;
     }
-
-    /// <summary>
-    /// 生命周期状态改变时触发的事件。<br/>
-    /// <b>非异步执行，请注意自行实现必要的异步，否则会卡住生命周期管理线程。</b>
-    /// </summary>
-    public static event Action<LifecycleState>? StateChanged;
 
     /// <summary>
     /// 阻塞当前线程并等待到达指定生命周期状态。
@@ -576,6 +631,17 @@ public sealed class Lifecycle : ILifecycleService
         if (identifier == null) return null;
         _RunningServiceInfoMap.TryGetValue(identifier, out var info);
         return info;
+    }
+
+    /// <summary>
+    /// 获取服务项初始化或结束逻辑的最后一次异常。
+    /// </summary>
+    /// <param name="identifier">服务项标识符（即 <see cref="ILifecycleService.Identifier"/> 属性）</param>
+    /// <returns>异常实例，若未出现异常则为 <c>null</c></returns>
+    public static Exception? GetServiceLastException(string identifier)
+    {
+        var result = _ServiceLastExceptionMap.TryGetValue(identifier, out var ex);
+        return result ? ex : null;
     }
 
     /// <summary>

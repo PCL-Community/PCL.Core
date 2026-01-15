@@ -2,9 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.UI.Animation.Animatable;
-using PCL.Core.UI.Animation.Core;
 
-namespace PCL.Core.UI.Animation;
+namespace PCL.Core.UI.Animation.Core;
 
 /// <summary>
 /// 用于在动画系统中执行 Action。
@@ -73,10 +72,11 @@ public class ActionAnimation : AnimationBase
     {
         if (Status is AnimationStatus.Canceled or AnimationStatus.Completed) return null;
         
-        Action(_cts!.Token);
-        Status = AnimationStatus.Completed;
-        _tcs?.TrySetResult();
-
-        return null;
+        return new ActionAnimationFrame(() =>
+        {
+            Action(_cts!.Token);
+            Status = AnimationStatus.Completed;
+            _tcs?.TrySetResult();
+        });
     }
 }

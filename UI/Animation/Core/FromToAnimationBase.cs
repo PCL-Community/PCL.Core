@@ -126,7 +126,7 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
             return null;
         }
         
-        return new AnimationFrame<T>
+        return new FromToAnimationFrame<T>
         {
             Target = target,
             Value = ValueType == AnimationValueType.Relative

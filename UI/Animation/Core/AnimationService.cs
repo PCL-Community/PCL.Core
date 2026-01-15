@@ -60,8 +60,8 @@ public sealed class AnimationService : GeneralService
     private static int _taskCount;
     private static CancellationTokenSource _cts = null!;
     
-    public static int Fps { get; set; } = 160;
-    public static double Scale { get; set; } = 1.0d;
+    public static int Fps { get; set; } = 60;
+    public static double Scale { get; set; } = 0.1d;
 
     public static IUIAccessProvider UIAccessProvider { get; private set; } = null!;
     
@@ -93,12 +93,12 @@ public sealed class AnimationService : GeneralService
                 // 读取数据
                 while (_frameChannel.Reader.TryRead(out var item))
                 {
-                    // 如果动画源已被标记取消，直接丢弃该帧，不进行赋值
+                    // 如果动画源已被标记取消，直接丢弃该帧，不进行处理
                     if (item.Source.Status == AnimationStatus.Canceled) 
                         continue;
 
-                    // 正常赋值
-                    item.Frame.Target.SetValue(item.Frame.GetAbsoluteValue());
+                    // 正常处理
+                    item.Frame.GetAction()();
                 }
         
                 await Task.Yield();

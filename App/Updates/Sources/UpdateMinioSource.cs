@@ -83,9 +83,10 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         _LogInfo("准备下载更新文件");
 
         var tempDownloadDir = _PrepareTempDirectory();
-        var (task, isPatch) = await _CreateDownloadTaskAsync(
-            _cachedVersionInfo ?? throw new InvalidOperationException("版本信息未缓存，无法下载更新"), 
-            tempDownloadDir).ConfigureAwait(false);
+
+        if (_cachedVersionInfo == null) await CheckUpdateAsync();
+        var (task, isPatch) = 
+            await _CreateDownloadTaskAsync(_cachedVersionInfo!, tempDownloadDir).ConfigureAwait(false);
 
         _LogInfo("开始下载更新文件");
         var manager = new DownloadManager(new FastMirrorSelector(new HttpClient()));

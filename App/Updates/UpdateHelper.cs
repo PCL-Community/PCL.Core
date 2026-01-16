@@ -44,8 +44,8 @@ public static class UpdateHelper
 
             if (!triggerRestartAndByEnd) return;
 
-            LogWrapper.Info("Update", "已由于更新强制结束程序");
-            Environment.Exit(0);
+            LogWrapper.Info("Update", "已由于更新结束程序");
+            Lifecycle.Shutdown();
         }
         catch (Exception ex)
         {

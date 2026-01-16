@@ -29,7 +29,7 @@ public sealed partial class CheckUpdateService
         }
 
         Context.Info("检查更新中...");
-        if (!await TryCheckUpdate() || LatestVersion is null) return;
+        if (!await TryCheckUpdateAsync().ConfigureAwait(false) || LatestVersion is null) return;
         
         if (!LatestVersion.IsAvailable)
         {
@@ -41,7 +41,7 @@ public sealed partial class CheckUpdateService
 
         if (Config.System.Update.UpdateMode == 2 && !_PromptUpdate()) return;
 
-        if (!await TryDownloadUpdate()) return;
+        if (!await TryDownloadUpdateAsync().ConfigureAwait(false)) return;
 
         if (Config.System.Update.UpdateMode == 1 && !_PromptInstall()) return;
 
@@ -51,7 +51,7 @@ public sealed partial class CheckUpdateService
 
     #region Public Methods
     
-    public static async Task<bool> TryCheckUpdate()
+    public static async Task<bool> TryCheckUpdateAsync()
     {
         try
         {
@@ -79,7 +79,7 @@ public sealed partial class CheckUpdateService
         return false;
     }
 
-    public static async Task<bool> TryDownloadUpdate()
+    public static async Task<bool> TryDownloadUpdateAsync()
     {
         Context.Info("下载更新包中...");
         try

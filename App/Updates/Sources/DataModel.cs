@@ -25,12 +25,12 @@ public sealed record VersionData
     [JsonPropertyName("downloads")] public required string[] Downloads { get; init; }
 }
 
-public record VersionAnnouncementDataModel
+public record AnnouncementsList
 {
-    [JsonPropertyName("content")] public required VersionAnnouncementContentModel[] Contents { get; init; }
+    [JsonPropertyName("content")] public required AnnouncementContent[] Contents { get; init; }
 };
 
-public record VersionAnnouncementContentModel
+public record AnnouncementContent
 {
     [JsonPropertyName("title")] public required string Title { get; init; }
     
@@ -40,12 +40,12 @@ public record VersionAnnouncementContentModel
     
     [JsonPropertyName("date")] public required string Date { get; init; }
     
-    [JsonPropertyName("btn1")] public required AnnouncementBtnInfoModel? Btn1 { get; init; }
+    [JsonPropertyName("btn1")] public required AnnouncementBtnInfo? Btn1 { get; init; }
     
-    [JsonPropertyName("btn2")] public required AnnouncementBtnInfoModel? Btn2 { get; init; }
+    [JsonPropertyName("btn2")] public required AnnouncementBtnInfo? Btn2 { get; init; }
 }
 
-public record AnnouncementBtnInfoModel
+public record AnnouncementBtnInfo
 {
     [JsonPropertyName("text")] public required string Text { get; init; }
     

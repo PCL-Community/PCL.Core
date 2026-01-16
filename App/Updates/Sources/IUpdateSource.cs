@@ -16,7 +16,7 @@ public interface IUpdateSource
     /// 获取版本公告列表
     /// </summary>
     /// <returns>版本公告列表</returns>
-    public Task<VersionAnnouncementDataModel> GetAnnouncementAsync();
+    public Task<AnnouncementsList> GetAnnouncementAsync();
 
     /// <summary>
     /// 下载更新文件

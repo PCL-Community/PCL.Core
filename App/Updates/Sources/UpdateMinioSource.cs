@@ -155,13 +155,13 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     #region Announcement
 
     /// <inheritdoc/>
-    public async Task<VersionAnnouncementDataModel> GetAnnouncementAsync()
+    public async Task<AnnouncementsList> GetAnnouncementAsync()
     {
-        VersionAnnouncementDataModel? ret;
+        AnnouncementsList? ret;
         try
         {
             _LogTrace("Start to get announcement Json info");
-            ret = await _GetRemoteInfoByNameAsync<VersionAnnouncementDataModel>("announcement")
+            ret = await _GetRemoteInfoByNameAsync<AnnouncementsList>("announcement")
                 .ConfigureAwait(false);
             _LogTrace("Announcement Json info get completed");
         }

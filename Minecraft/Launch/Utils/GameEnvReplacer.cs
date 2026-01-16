@@ -103,7 +103,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     private static Size CalculateMainWindowSize() {
         // TODO: 实现与启动器窗口尺寸一致的逻辑
         var result = new Size(854, 480);
-        result.Height -= 29.5 * UiHelper.GetSystemDpi() / 96; // 标题栏高度
+        result.Height -= 29.5 * WindowInterop.GetSystemDpi() / 96; // 标题栏高度
         return result;
     }
 
@@ -113,7 +113,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     private Size ApplyDpiFixIfNeeded(Size gameSize) {
         if (NeedsDpiFix()) {
             McLaunchUtils.Log($"应用窗口大小 DPI 修复（Java 版本：{selectedJava.Version.Revision}）");
-            var dpiScale = UiHelper.GetSystemDpi() / 96.0;
+            var dpiScale = WindowInterop.GetSystemDpi() / 96.0;
             gameSize.Width /= dpiScale;
             gameSize.Height /= dpiScale;
         }

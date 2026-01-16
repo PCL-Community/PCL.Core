@@ -6,7 +6,7 @@ namespace PCL.Core.Utils.OS;
 
 public static partial class WindowInterop
 {
-    // ReSharper disable InconsistentNaming
+    // ReSharper disable InconsistentNaming UnusedMember.Local
 
     // DWM 外边缘结构定义
     [StructLayout(LayoutKind.Sequential)]
@@ -26,7 +26,29 @@ public static partial class WindowInterop
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-    // ReSharper enable InconsistentNaming
+    // MONITOR_DPI_TYPE enum
+    private enum MONITOR_DPI_TYPE {
+        MDT_EFFECTIVE_DPI = 0,
+        MDT_ANGULAR_DPI = 1,
+        MDT_RAW_DPI = 2,
+        MDT_DEFAULT = MDT_EFFECTIVE_DPI
+    }
+
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+
+    // Get the primary monitor handle
+    private const int MONITOR_DEFAULTTOPRIMARY = 1;
+
+    [LibraryImport("shcore.dll", EntryPoint = "GetDpiForMonitor")]
+    private static partial int GetDpiForMonitor(
+        IntPtr hMonitor,
+        MONITOR_DPI_TYPE dpiType,
+        out uint dpiX,
+        out uint dpiY
+    );
+
+    // ReSharper enable InconsistentNaming UnusedMember.Local
 
     /// <summary>
     /// 检测 DWM 组合是否可用
@@ -83,5 +105,20 @@ public static partial class WindowInterop
         var width = r - l;
         var height = b - t;
         return (x, y, width, height);
+    }
+
+    /// <summary>
+    /// 获取指定屏幕的系统 DPI
+    /// </summary>
+    /// <param name="hWnd">位于指定屏幕上的任意窗口句柄，默认指定主屏</param>
+    public static int GetSystemDpi(IntPtr hWnd = 0) {
+        // Get the monitor handle
+        var hMonitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
+        // 0 is S_OK
+        var hr = GetDpiForMonitor(hMonitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out var dpiX, out _);
+        if (hr == 0)
+            return (int)dpiX;
+        // fallback to default DPI (96)
+        return 96;
     }
 }

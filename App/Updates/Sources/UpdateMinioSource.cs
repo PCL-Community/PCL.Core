@@ -18,10 +18,9 @@ namespace PCL.Core.App.Updates.Sources;
 
 public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateSource
 {
-    private sealed record VersionAssetsDataModel
-    {
-        [JsonPropertyName("assets")] public required VersionData[] Assets { get; init; }
-    }
+    private sealed record VersionAssetsDataModel(
+        [property: JsonPropertyName("assets")] VersionData[] Assets
+    );
     
     public bool IsAvailable => !string.IsNullOrWhiteSpace(baseUrl);
 

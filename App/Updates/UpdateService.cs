@@ -1,19 +1,17 @@
-﻿using System;
+using PCL.Core.Utils.Exts;
+using System;
 using System.Diagnostics;
 using System.IO;
-using PCL.Core.Utils.Exts;
+using System.Threading.Tasks;
 
-namespace PCL.Core.App;
+namespace PCL.Core.App.Updates;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
-public sealed class UpdateService : GeneralService
+[LifecycleScope("update", "处理更新参数")]
+public sealed partial class UpdateService
 {
-    private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
-
-    private UpdateService() : base("update", "更新", false) { _context = ServiceContext; }
-
-    public override void Start()
+    [LifecycleStart]
+    private static async Task _Start()
     {
         var args = Basics.CommandLineArguments;
         
@@ -54,7 +52,7 @@ public sealed class UpdateService : GeneralService
             {
                 var oldProcess = Process.GetProcessById(oldProcessId);
                 Context.Debug("正在等待旧版本进程退出");
-                oldProcess.WaitForExit();
+                await oldProcess.WaitForExitAsync();
                 Context.Trace("旧版本进程已退出");
             }
             catch

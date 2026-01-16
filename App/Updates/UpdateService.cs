@@ -3,7 +3,6 @@ using PCL.Core.UI;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.VisualBasic;
 
 namespace PCL.Core.App.Updates;
 
@@ -25,20 +24,20 @@ public sealed partial class UpdateService
     {
         if (Config.System.Update.UpdateMode == 3)
         {
-            Context.Info("Update mode set to manual, skipping auto-check");
+            Context.Info("更新模式为禁用，跳过检查");
             return;
         }
 
-        Context.Info("Starting update check...");
+        Context.Info("检查更新中...");
         if (!await TryCheckUpdate() || LatestVersion is null) return;
         
         if (!LatestVersion.IsAvailable)
         {
-            Context.Info("Already on the latest version");
+            Context.Info("已经是最新版本，跳过更新");
             return;
         }
         
-        Context.Info($"New version found: {LatestVersion.Version.Code}, preparing update");
+        Context.Info($"发现新版本: {LatestVersion.Version.Code}, 准备更新");
 
         if (Config.System.Update.UpdateMode == 2 && !_PromptUpdate()) return;
 
@@ -46,10 +45,12 @@ public sealed partial class UpdateService
 
         if (Config.System.Update.UpdateMode == 1 && !_PromptInstall()) return;
 
-        Context.Info("Preparing to restart and install update...");
+        Context.Info("准备重启并安装...");
         UpdateHelper.Restart(true, true);
     }
 
+    #region Public Methods
+    
     public static async Task<bool> TryCheckUpdate()
     {
         try
@@ -59,20 +60,20 @@ public sealed partial class UpdateService
         }
         catch (InvalidOperationException ex)
         {
-            if (!ex.Message.Contains("All update sources"))
+            if (ex.Message.Contains("不可用"))
             {
-                Context.Warn("Unknown exception occurred while checking updates", ex);
-                HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
+                Context.Warn("所有更新源均不可用", ex);
+                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
             }
             else
             {
-                Context.Warn("All update sources are unavailable", ex);
-                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+                Context.Warn("检查更新时发生未知异常", ex);
+                HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
             }
         }
         catch (Exception ex)
         {
-            Context.Warn("Unknown exception occurred while checking updates", ex);
+            Context.Warn("检查更新时发生未知异常", ex);
             HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
         }
         return false;
@@ -80,7 +81,7 @@ public sealed partial class UpdateService
 
     public static async Task<bool> TryDownloadUpdate()
     {
-        Context.Info("Downloading update package...");
+        Context.Info("下载更新包中...");
         try
         {
             var outputPath = Path.Combine(
@@ -89,31 +90,35 @@ public sealed partial class UpdateService
                 "Plain Craft Launcher Community Edition.exe");
             if (LatestVersion == null) return false;
             await _SourceController.DownloadAsync(outputPath).ConfigureAwait(false);
-            Context.Info("Update package downloaded successfully");
+            Context.Info("更新包下载完成");
             IsUpdateDownloaded = true;
             return true;
         }
         catch (InvalidOperationException ex)
         {
-            if (!ex.Message.Contains("All update sources"))
+            if (ex.Message.Contains("不可用"))
             {
-                Context.Warn("Unknown exception occurred while checking updates", ex);
-                HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
+                Context.Warn("所有更新源均不可用", ex);
+                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
             }
             else
             {
-                Context.Warn("All update sources are unavailable", ex);
-                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
+                Context.Warn("下载更新包时发生未知异常", ex);
+                HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
             }
         }
         catch (Exception ex)
         {
-            Context.Warn("Unknown exception occurred while checking updates", ex);
+            Context.Warn("下载更新包时发生未知异常", ex);
             HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
         }
         return false;
     }
+    
+    #endregion
 
+    #region Prompt Wrappers
+    
     private static bool _PromptUpdate()
     {
         if (LatestVersion == null) return false;
@@ -124,7 +129,7 @@ public sealed partial class UpdateService
                 "你也可以稍后在 设置 -> 检查更新 界面中更新。",
                 "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
         
-        Context.Info("User cancelled update");
+        Context.Info("用户取消更新");
         return false;
     }
 
@@ -139,7 +144,9 @@ public sealed partial class UpdateService
                 "你也可以稍后在 设置 -> 检查更新 界面中安装。",
                 "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
         
-        Context.Info("User cancelled update");
+        Context.Info("用户取消安装");
         return false;
     }
+    
+    #endregion
 }

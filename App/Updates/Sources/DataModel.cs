@@ -5,7 +5,8 @@ namespace PCL.Core.App.Updates.Sources;
 
 public sealed record VersionInfoData(
     [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("code")] int Code);
+    [property: JsonPropertyName("code")] int Code
+);
 
 public sealed record VersionData (
     [property: JsonPropertyName("version")] VersionInfoData Version,

@@ -8,13 +8,11 @@ using System.Threading.Tasks;
 namespace PCL.Core.App.Updates.Sources;
 
 /// <summary>
-/// 管理多个更新源，尝试找到可用源并缓存用于后续调用。
+/// 管理多个更新源，尝试找到可用源并调用。
 /// </summary>
 public sealed class SourceController
 {
     private readonly List<IUpdateSource> _availableSources;
-
-    private IUpdateSource? _currentSource;
     
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
@@ -40,36 +38,21 @@ public sealed class SourceController
         await _semaphore.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (_currentSource is not null)
-            {
-                try
-                {
-                    var res = await action(_currentSource).ConfigureAwait(false);
-                    _LogInfo($"Current source {_currentSource.SourceName} processed successfully");
-                    return res;
-                }
-                catch (Exception ex)
-                {
-                    _LogWarning($"Current source {_currentSource.SourceName} is unavailable, trying other sources", ex);
-                }
-            }
             foreach (var source in _availableSources)
             {
                 try
                 {
                     var res = await action(source).ConfigureAwait(false);
-                    _LogInfo($"Source {source.SourceName} processed successfully, setting as current source");
-
-                    _currentSource = source;
+                    _LogInfo($"源 {source.SourceName} 处理成功");
                     return res;
                 }
                 catch (Exception ex)
                 {
-                    _LogWarning($"Source {source.SourceName} is unavailable, trying next source", ex);
+                    _LogWarning($"源 {source.SourceName} 不可用，使用下一个源", ex);
                 }
             }
             
-            throw new InvalidOperationException("All update sources are unavailable");
+            throw new InvalidOperationException("所有源均不可用");
         }
         finally
         {

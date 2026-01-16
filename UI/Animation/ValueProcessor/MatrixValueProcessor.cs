@@ -31,4 +31,6 @@ public class MatrixValueProcessor : IValueProcessor<Matrix>
     }
 
     public Matrix DefaultValue() => new();
+    
+    public bool Equal(Matrix value1, Matrix value2) => value1 == value2;
 }

@@ -1,54 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace PCL.Core.UI.Animation.Easings;
 
-/// <summary>
-/// 复合缓动，可以叠加多个缓动，每个缓动有自己的持续时间。
-/// </summary>
-public class CompositeEasing : Easing
+public class CombinedEasing(IEasing ease1, IEasing ease2, double split = 0.5) : Easing
 {
-    private readonly List<(IEasing easing, TimeSpan duration)> _easings;
-    private readonly TimeSpan _totalDuration;
+    private readonly IEasing _ease1 = ease1 ?? throw new ArgumentNullException(nameof(ease1));
+    private readonly IEasing _ease2 = ease2 ?? throw new ArgumentNullException(nameof(ease2));
 
-    public CompositeEasing(params (IEasing easing, TimeSpan duration)[] easings)
+    private readonly double _split = Math.Clamp(split, 0.00001, 0.99999); 
+    
+    protected override double EaseCore(double t)
     {
-        if (easings == null || easings.Length == 0)
-            throw new ArgumentException("至少需要一个缓动");
-
-        _easings = new List<(IEasing easing, TimeSpan duration)>(easings);
-        _totalDuration = easings.Max(e => e.duration);
-    }
-
-    /// <summary>
-    /// 总时长
-    /// </summary>
-    public TimeSpan TotalDuration => _totalDuration;
-
-    protected override double EaseCore(double progress)
-    {
-        var elapsed = _totalDuration * progress;
-
-        var value = 0.0;
-        var totalWeight = 0.0;
-
-        foreach (var (easing, duration) in _easings)
+        if (t < _split)
         {
-            var elapsedForEasing = elapsed < duration ? elapsed : duration;
-            if (elapsedForEasing <= TimeSpan.Zero)
-                continue;
-
-            var localProgress = elapsedForEasing.TotalSeconds / duration.TotalSeconds;
-            var easingValue = easing.Ease(localProgress);
-
-            value += easingValue;
-            totalWeight += 1.0;
+            return _split * _ease1.Ease(t / _split);
         }
 
-        if (totalWeight > 0)
-            value /= totalWeight;
-
-        return value;
+        return (1.0 - _split) * _ease2.Ease((t - _split) / (1.0 - _split)) + _split;
     }
 }

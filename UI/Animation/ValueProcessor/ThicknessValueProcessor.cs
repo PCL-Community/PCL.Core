@@ -31,4 +31,6 @@ public class ThicknessValueProcessor : IValueProcessor<Thickness>
     }
     
     public Thickness DefaultValue() => new();
+    
+    public bool Equal(Thickness value1, Thickness value2) => value1 == value2;
 }

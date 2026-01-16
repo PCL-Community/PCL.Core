@@ -80,4 +80,11 @@ public static class ValueProcessorManager
                 ?? throw new InvalidOperationException($"类型未注册：{typeof(T)}");
         return p.DefaultValue();
     }
+    
+    public static bool Equal<T>(T value1, T value2)
+    {
+        var p = Cache<T>.Processor
+                ?? throw new InvalidOperationException($"类型未注册：{typeof(T)}");
+        return p.Equal(value1, value2);
+    }
 }

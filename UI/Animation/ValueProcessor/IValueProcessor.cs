@@ -41,4 +41,12 @@ public interface IValueProcessor<T>
     /// </summary>
     /// <returns>初始值。</returns>
     T DefaultValue();
+    
+    /// <summary>
+    /// 比较两个值是否相等。
+    /// </summary>
+    /// <param name="value1">第一个值。</param>
+    /// <param name="value2">第二个值。</param>
+    /// <returns></returns>
+    bool Equal(T value1, T value2);
 }

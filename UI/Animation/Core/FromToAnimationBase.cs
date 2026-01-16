@@ -11,17 +11,8 @@ namespace PCL.Core.UI.Animation.Core;
 public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
 {
     public IEasing Easing { get; set; } = new LinearEasing();
-    private bool _hasFromValue;
 
-    public T From
-    {
-        get;
-        set
-        {
-            _hasFromValue = true;
-            field = value;
-        }
-    } = default!;
+    public T From { get; set; } = default!;
 
     public T? To { get; set; }
     public AnimationValueType ValueType { get; set; } = AnimationValueType.Absolute;
@@ -94,7 +85,7 @@ public class FromToAnimationBase<T> : AnimationBase, IFromToAnimation
         _startValue = (T)target.GetValue()!;
 
         // 如果 From 为空，则根据动画值类型设置初始值
-        if (!_hasFromValue)
+        if (!ValueProcessorManager.Equal(_startValue, From))
         {
            From = ValueType == AnimationValueType.Relative ? ValueProcessorManager.DefaultValue<T>() : _startValue;
         }

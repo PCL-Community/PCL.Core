@@ -85,7 +85,7 @@ public sealed partial class UpdateService
         try
         {
             var outputPath = Path.Combine(
-                Basics.ExecutablePath, 
+                Basics.ExecutableDirectory, 
                 "PCL", 
                 "Plain Craft Launcher Community Edition.exe");
             if (LatestVersion == null) return false;

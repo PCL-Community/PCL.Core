@@ -1,152 +1,126 @@
-using PCL.Core.App.Updates.Sources;
-using PCL.Core.UI;
+using PCL.Core.Utils.Exts;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace PCL.Core.App.Updates;
 
-[LifecycleService(LifecycleState.Running)]
-[LifecycleScope("update", "检查更新")]
+[LifecycleService(LifecycleState.BeforeLoading)]
+[LifecycleScope("update", "处理更新参数")]
 public sealed partial class UpdateService
 {
-    private static readonly SourceController _SourceController = new([
-        new UpdateMinioSource("https://s3.pysio.online/pcl2-ce/", "Pysio"),
-        new UpdateMinioSource("https://staticassets.naids.com/resources/pclce/", "Naids")
-    ]);
-    
-    public static VersionData? LatestVersion { get; private set; }
-    
-    public static bool IsUpdateDownloaded { get; private set; }
-
     [LifecycleStart]
     private static async Task _Start()
     {
-        if (Config.System.Update.UpdateMode == 3)
+        var args = Basics.CommandLineArguments;
+
+        if (args is not ["update", _, _, _, _])
         {
-            Context.Info("更新模式为禁用，跳过检查");
+            await _CheckUpdateResultAsync(args).ConfigureAwait(false);
             return;
         }
 
-        Context.Info("检查更新中...");
-        if (!await TryCheckUpdate() || LatestVersion is null) return;
-        
-        if (!LatestVersion.IsAvailable)
-        {
-            Context.Info("已经是最新版本，跳过更新");
-            return;
-        }
-        
-        Context.Info($"发现新版本: {LatestVersion.Version.Code}, 准备更新");
-
-        if (Config.System.Update.UpdateMode == 2 && !_PromptUpdate()) return;
-
-        if (!await TryDownloadUpdate()) return;
-
-        if (Config.System.Update.UpdateMode == 1 && !_PromptInstall()) return;
-
-        Context.Info("准备重启并安装...");
-        UpdateHelper.Restart(true, true);
-    }
-
-    #region Public Methods
-    
-    public static async Task<bool> TryCheckUpdate()
-    {
         try
         {
-            LatestVersion = await _SourceController.CheckUpdateAsync().ConfigureAwait(false);
-            return true;
+            await _UpdateWorkflowAsync(args).ConfigureAwait(false);
         }
-        catch (InvalidOperationException ex)
+        catch (OperationCanceledException ocex)
         {
-            if (ex.Message.Contains("不可用"))
-            {
-                Context.Warn("所有更新源均不可用", ex);
-                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
-            }
-            else
-            {
-                Context.Warn("检查更新时发生未知异常", ex);
-                HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
-            }
+            // 更新过程被取消
+            Context.Error("更新过程被取消", ocex);
         }
         catch (Exception ex)
         {
-            Context.Warn("检查更新时发生未知异常", ex);
-            HintWrapper.Show("检查更新时发生未知异常，可能是网络问题", HintTheme.Error);
+            Context.Error("更新过程出错", ex);
         }
-        return false;
+        finally
+        {
+            Context.RequestExit();
+        }
     }
 
-    public static async Task<bool> TryDownloadUpdate()
+    #region Private Helper
+
+    private static Task _CheckUpdateResultAsync(string[] args)
     {
-        Context.Info("下载更新包中...");
+        switch (args)
+        {
+            case ["update_finished", _]:
+                {
+                    var toDelete = args[1];
+                    File.Delete(toDelete);
+                    Context.Debug("更新来源文件已删除");
+                    break;
+                }
+            case ["update_failed", _]:
+                {
+                    var reason = args[1];
+                    Context.Error(
+                        $"更新失败: {reason}\n" +
+                        $"你可以手动将 exe 文件替换为 PCL 目录中的新版本或再次尝试更新。\n" +
+                        $"若再次尝试仍然失败，请尽快反馈这个问题");
+                    break;
+                }
+            default: Context.Debug("无更新任务"); break;
+        }
+
+        Context.DeclareStopped();
+        return Task.CompletedTask;
+    }
+
+    private static async Task _UpdateWorkflowAsync(string[] args)
+    {
+        Context.Info("开始更新");
+
+        //Lifecycle.PendingLogDirectory = Path.Combine(Basics.ExecutableDirectory, "Log"); already set
+        Lifecycle.PendingLogFileName = "LastPending_Update.log";
+
+        var oldProcessId = args[1].Convert<int>();
+        Context.Debug($"旧版本进程 ID: {oldProcessId}");
+
         try
         {
-            var outputPath = Path.Combine(
-                Basics.ExecutableDirectory, 
-                "PCL", 
-                "Plain Craft Launcher Community Edition.exe");
-            if (LatestVersion == null) return false;
-            await _SourceController.DownloadAsync(outputPath).ConfigureAwait(false);
-            Context.Info("更新包下载完成");
-            IsUpdateDownloaded = true;
-            return true;
+            var oldProcess = Process.GetProcessById(oldProcessId);
+            Context.Debug("正在等待旧版本进程退出");
+            await oldProcess.WaitForExitAsync().ConfigureAwait(false);
+            Context.Trace("旧版本进程已退出");
         }
-        catch (InvalidOperationException ex)
+        catch
         {
-            if (ex.Message.Contains("不可用"))
-            {
-                Context.Warn("所有更新源均不可用", ex);
-                HintWrapper.Show("所有更新源均不可用，可能是网络问题", HintTheme.Error);
-            }
-            else
-            {
-                Context.Warn("下载更新包时发生未知异常", ex);
-                HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
-            }
+            // ArgumentException: throws if process not found
+            /* ignored */
         }
-        catch (Exception ex)
+
+        Context.Debug("正在替换文件");
+
+        var target = args[2];
+        var source = args[3];
+
+        Context.Trace($"目标: {target}");
+        Context.Trace($"来源: {source}");
+        
+        Exception? ex = null;
+        try
         {
-            Context.Warn("下载更新包时发生未知异常", ex);
-            HintWrapper.Show("下载更新包时发生未知异常，可能是网络问题", HintTheme.Error);
+            File.Replace(source, target, null);
         }
-        return false;
-    }
-    
-    #endregion
+        catch (Exception e)
+        {
+            ex = e;
+        }
 
-    #region Prompt Wrappers
-    
-    private static bool _PromptUpdate()
-    {
-        if (LatestVersion == null) return false;
+        Context.Trace("替换完成");
 
-        if (MsgBoxWrapper.Show(
-                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Version.Name})\r\n" +
-                $"是否立即下载并安装？\r\n" +
-                "你也可以稍后在 设置 -> 检查更新 界面中更新。",
-                "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
-        
-        Context.Info("用户取消更新");
-        return false;
+        var restart = args[4].Convert<bool>();
+        if (restart)
+        {
+            var restartArgs = ex == null ? $"finished \"{source}\"" : $"failed \"{ex.Message}\"";
+            restartArgs = $"update_{restartArgs}";
+            Context.Debug($"重启中，使用参数: {restartArgs}");
+            Process.Start(target, restartArgs);
+        }
     }
 
-    private static bool _PromptInstall()
-    {
-        if (LatestVersion == null) return false;
-        if (!IsUpdateDownloaded) return false;
-
-        if (MsgBoxWrapper.Show(
-                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Version.Name})\r\n" +
-                $"已自动下载，是否立即安装？\r\n" +
-                "你也可以稍后在 设置 -> 检查更新 界面中安装。",
-                "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
-        
-        Context.Info("用户取消安装");
-        return false;
-    }
-    
     #endregion
 }

@@ -68,7 +68,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
                 0 => "sr",
                 1 => "fr",
                 _ => "sr"
-            } + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "64");
+            } + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64");
             
             var assets = await _GetRemoteInfoByNameAsync<VersionAssetsDataModel>(
                 $"updates-{channelName}", "updates/").ConfigureAwait(false);

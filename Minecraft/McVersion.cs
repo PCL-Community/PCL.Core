@@ -1,11 +1,9 @@
-﻿using PCL.Core.Minecraft.Instance.Utils;
-using PCL.Core.Utils.Exts;
-using System;
-using System.Diagnostics;
+﻿using System;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using PCL.Core.App;
 
 namespace PCL.Core.Minecraft;
 
@@ -19,11 +17,25 @@ public enum McVersionType
     Unknown
 }
 
-public class McVersion
+[LifecycleService(LifecycleState.Loaded, Priority = 100)]
+[LifecycleScope("mc_version", "MC 版本")]
+public sealed partial class McVersion
 {
-#pragma warning disable CA2211
-    public static JsonNode Manifest = RefreshManifest();
+#pragma warning disable CS8618
+    // Expected CS8618
+    // Initialized when loaded
+    public static JsonNode Manifest { get; set; }
 #pragma warning restore
+
+    [LifecycleStart]
+    private static async Task _Start()
+    {
+        Manifest = await RefreshManifest();
+    }
+
+    [LifecycleStop]
+    private static void _Stop() { }
+
     public McVersion(string id)
     {
         Id = id;
@@ -31,21 +43,22 @@ public class McVersion
         var manifest = Manifest;
         if (manifest["versions"] is not null)
         {
-            JsonArray versions = manifest["versions"] as JsonArray ?? [];
-            JsonNode? current = null;
-            foreach (var version in versions)
-            {
-                if (version != null && (version["id"]?.ToString() ?? "") == id)
-                {
-                    current = version;
-                    break;
-                }
-            }
+            var versions = manifest["versions"] as JsonArray ?? [];
+            var current = versions.OfType<JsonNode>().FirstOrDefault(version => (version["id"]?.ToString() ?? "") == id);
 
             if (current is null)
                 throw new FormatException();
 
             JsonUrl = current["url"]?.ToString() ?? "";
+
+            var time = current["time"]?.GetValue<DateTime>().ToUniversalTime();
+            var releaseTime = current["releaseTime"]?.GetValue<DateTime>().ToUniversalTime();
+
+            if (time is null || releaseTime is null)
+                throw new FormatException();
+
+            Time = (DateTime)time;
+            ReleaseTime = (DateTime)releaseTime;
 
             switch (current["type"]?.ToString() ?? "")
             {
@@ -75,15 +88,18 @@ public class McVersion
                             VersionType = McVersionType.Fool;
                             break;
                         default:
-                            var releaseDate = current["releaseTime"]?.GetValue<DateTime>().ToUniversalTime().AddHours(2);
+                            var releaseDate = current["releaseTime"]?.GetValue<DateTime>().ToUniversalTime()
+                                .AddHours(2);
                             if (releaseDate is { Month: 4, Day: 1 })
                             {
                                 VersionType = McVersionType.Fool;
                                 break;
                             }
+
                             VersionType = McVersionType.Snapshot;
                             break;
                     }
+
                     break;
                 case "release":
                     VersionType = McVersionType.Release;
@@ -98,26 +114,76 @@ public class McVersion
                     VersionType = McVersionType.Unknown;
                     break;
             }
+
         }
-        
+        else
+            throw new FormatException();
+
         return;
-        
-       
     }
     public string Id { get; }
     public McVersionType VersionType { get; }
     public string JsonUrl { get; }
     public DateTime Time { get; }
     public DateTime ReleaseTime { get; }
-    
-    public static JsonNode RefreshManifest()
+
+    public static bool operator <(McVersion first, McVersion second)
+    {
+        return first.ReleaseTime < second.ReleaseTime;
+    } 
+    public static bool operator <=(McVersion first, McVersion second)
+    {
+        return first.ReleaseTime <= second.ReleaseTime;
+    }
+
+    public static bool operator >(McVersion first, McVersion second)
+    {
+        return first.ReleaseTime > second.ReleaseTime;
+    }
+    public static bool operator >=(McVersion first, McVersion second)
+    {
+        return first.ReleaseTime >= second.ReleaseTime;
+    }
+
+    public static bool operator ==(McVersion first, McVersion second)
+    {
+        return first.Id == second.Id;
+    }
+    public static bool operator !=(McVersion first, McVersion second)
+    {
+        return first.Id != second.Id;
+    }
+
+    public async static Task<JsonNode> RefreshManifest()
     {
         var client = new HttpClient();
-        var getTask = client.GetAsync("https://piston-meta.mojang.com/mc/game/version_manifest.json");
-        getTask.Wait();
-        var readTask = getTask.Result.Content.ReadAsStringAsync();
-        readTask.Wait();
-        return Manifest = JsonNode.Parse(readTask.Result ?? "") ?? new JsonObject();
+        var getTask = await client.GetAsync("https://piston-meta.mojang.com/mc/game/version_manifest.json");
+        var readTask = await getTask.Content.ReadAsStringAsync();
+        return Manifest = JsonNode.Parse(readTask) ?? new JsonObject();
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (ReferenceEquals(this, obj))
+            return true;
+
+        if (ReferenceEquals(obj, null))
+            return false;
+
+        try
+        {
+            var converted = (McVersion)obj;
+            return Id == converted.Id;
+        }
+        catch (InvalidCastException)
+        {
+            return false;
+        }
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Id, (int)VersionType);
     }
 }
 

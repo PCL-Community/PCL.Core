@@ -80,9 +80,7 @@ public class McVersionRanges(IList<McVersionRange> ranges)
 
     public override string ToString()
     {
-        string str = "";
-        foreach (var range in RangeList) 
-            str += $", {range}";
+        var str = RangeList.Aggregate("", (current, range) => current + $", {range}");
         return str[2..];
     }
 }

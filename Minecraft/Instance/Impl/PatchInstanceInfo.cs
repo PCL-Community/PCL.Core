@@ -81,7 +81,8 @@ public class PatchInstanceInfo {
         switch (VersionType) {
             case McVersionType.Fool:
                 return Basics.GetAppImagePath("Blocks/GoldBlock.png");
-            case McVersionType.Old:
+            case McVersionType.OldAlpha:
+            case McVersionType.OldBeta:
                 return Basics.GetAppImagePath("Blocks/CobbleStone.png");
             case McVersionType.Snapshot:
                 return Basics.GetAppImagePath("Blocks/CommandBlock.png");

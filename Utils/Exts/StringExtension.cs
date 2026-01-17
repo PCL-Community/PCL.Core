@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace PCL.Core.Utils.Exts;
@@ -139,6 +140,26 @@ public static class StringExtension
                 >= 'P' and <= 'Z' => c - 'P' + 21,
                 _ => throw new ArgumentOutOfRangeException(nameof(input), $"Character '{c}' out of Base32 range")
             };
+        }
+    }
+
+    extension(string input)
+    {
+          
+        public T ParseToEnum<T>() where T : struct, Enum
+        {
+            if (String.IsNullOrWhiteSpace(input))
+            {
+                return (T)(object)0;
+            }
+            else if (int.TryParse(input, out int numericValue))
+            {
+                return (T)(object)numericValue;
+            }
+            else
+            {
+                return Enum.Parse<T>(input, true);
+            }
         }
     }
 

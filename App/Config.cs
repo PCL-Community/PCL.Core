@@ -32,7 +32,7 @@ public static partial class Config
         [ConfigItem<bool>("HintRenderer", false)] public partial bool Renderer { get; set; }
 
         /// <summary>
-        /// 渲染器选择提示。
+        /// 使用调试级别 Log4j2 配置提示。
         /// </summary>
         [ConfigItem<bool>("HintDebugLog4j2Config", false)] public partial bool DebugLog4j2Config { get; set; }
         

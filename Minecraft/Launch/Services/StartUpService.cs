@@ -36,7 +36,7 @@ public class StartUpService(IMcInstance? instance) {
 
     private void _ValidatePaths(CancellationTokenSource source) {
         if (instance == null) {
-            throw new InvalidOperationException("未选择Minecraft实例");
+            throw new InvalidOperationException("未选择 Minecraft 实例");
         }
 
         // 检查路径中的特殊字符
@@ -44,7 +44,7 @@ public class StartUpService(IMcInstance? instance) {
             throw new InvalidOperationException($"游戏路径中不可包含 ! 或 ;（{instance.IsolatedPath}）");
         }
 
-        // UTF-8代码页下的路径检查
+        // UTF-8 代码页下的路径检查
         if (EncodingUtils.IsDefaultEncodingUtf8() && !Config.Hint.NonAsciiGamePath && !instance.Path.IsASCII()) {
             var userChoice = MsgBoxWrapper.Show(
                 $"欲启动实例 \"{instance.Name}\" 的路径中存在可能影响游戏正常运行的字符（非 ASCII 字符），是否仍旧启动游戏？\n\n如果不清楚具体作用，你可以先选择 \"继续\"，发现游戏在启动后很快出现崩溃的情况后再尝试修改游戏路径等操作",
@@ -73,7 +73,7 @@ public class StartUpService(IMcInstance? instance) {
         try {
             instance!.Load();
             if (instance.CardType == McInstanceCardType.Error) {
-                throw new InvalidOperationException($"Minecraft存在问题：{instance.Desc}");
+                throw new InvalidOperationException($"Minecraft 存在问题：{instance.Desc}");
             }
         } catch (Exception ex) {
             throw new InvalidOperationException($"加载实例失败：{ex.Message}");
@@ -132,11 +132,11 @@ public class StartUpService(IMcInstance? instance) {
 }
 
 /// <summary>
-/// PreCheckService的静态工厂类，用于简化使用
+/// PreCheckService 的静态工厂类，用于简化使用
 /// </summary>
 public static class PreCheckServiceFactory {
     /// <summary>
-    /// 为当前实例创建PreCheckService并执行预检查
+    /// 为当前实例创建 PreCheckService 并执行预检查
     /// </summary>
     public static async Task PreCheckForCurrentInstanceAsync(CancellationTokenSource source) {
         var currentInstance = FolderService.FolderManager.CurrentInst;

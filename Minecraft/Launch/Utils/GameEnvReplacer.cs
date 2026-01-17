@@ -103,17 +103,17 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     private static Size CalculateMainWindowSize() {
         // TODO: 实现与启动器窗口尺寸一致的逻辑
         var result = new Size(854, 480);
-        result.Height -= 29.5 * UiHelper.GetSystemDpi() / 96; // 标题栏高度
+        result.Height -= 29.5 * WindowInterop.GetSystemDpi() / 96; // 标题栏高度
         return result;
     }
 
     /// <summary>
-    /// 应用DPI修复（如果需要）
+    /// 应用 DPI 修复（如果需要）
     /// </summary>
     private Size ApplyDpiFixIfNeeded(Size gameSize) {
         if (NeedsDpiFix()) {
-            McLaunchUtils.Log($"应用窗口大小DPI修复（Java版本：{selectedJava.Version.Revision}）");
-            var dpiScale = UiHelper.GetSystemDpi() / 96.0;
+            McLaunchUtils.Log($"应用窗口大小 DPI 修复（Java 版本：{selectedJava.Version.Revision}）");
+            var dpiScale = WindowInterop.GetSystemDpi() / 96.0;
             gameSize.Width /= dpiScale;
             gameSize.Height /= dpiScale;
         }
@@ -122,7 +122,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
 
     /// <summary>
-    /// 判断是否需要DPI修复
+    /// 判断是否需要 DPI 修复
     /// </summary>
     private bool NeedsDpiFix() {
         return instance.InstanceInfo.McVersionBuild <= MINECRAFT_LEGACY_VERSION_BUILD &&
@@ -133,7 +133,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
 
     /// <summary>
-    /// 获取Natives文件夹路径
+    /// 获取 Natives 文件夹路径
     /// </summary>
     private string GetNativesFolder() {
         var primaryPath = Path.Combine(instance.Path, instance.Name, "-natives");
@@ -151,7 +151,7 @@ public class GameEnvReplacer(IMcInstance instance, JavaInfo selectedJava) {
     }
     
     /// <summary>
-    /// 构建ClassPath字符串
+    /// 构建 ClassPath 字符串
     /// </summary>
     private async Task<string> BuildClassPathAsync() {
         var cpStrings = new List<string> {

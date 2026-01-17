@@ -49,11 +49,6 @@ public static partial class Config
         [ConfigItem<bool>("HintHandInstall", false)] public partial bool ManualInstall { get; set; }
 
         /// <summary>
-        /// 购买正版提示。
-        /// </summary>
-        [ConfigItem<bool>("HintBuy", false)] public partial bool BuyGame { get; set; }
-
-        /// <summary>
         /// 清理垃圾提示。
         /// </summary>
         [ConfigItem<int>("HintClearRubbish", 0)] public partial int CleanJunkFile { get; set; }
@@ -106,12 +101,7 @@ public static partial class Config
         /// <summary>
         /// 启动时的社区版提示。
         /// </summary>
-        [ConfigItem<bool>("UiLauncherCEHint", false)] public partial bool CEMessage { get; set; }
-
-        /// <summary>
-        /// 社区版提示计数。
-        /// </summary>
-        [ConfigItem<int>("UiLauncherCEHintCount", 0)] public partial int CEMessageCount { get; set; }
+        [ConfigItem<bool>("UiLauncherCEHint", true)] public partial bool CEMessage { get; set; }
 
         /// <summary>
         /// 投影管理首次使用提示。
@@ -121,7 +111,7 @@ public static partial class Config
         /// <summary>
         /// 已显示的公告。
         /// </summary>
-        [ConfigItem<string>("SystemSystemAnnouncement", "", ConfigSource.Local)] public partial string ShowedAnnouncements { get; set; }
+        [ConfigItem<string>("SystemSystemAnnouncement", "")] public partial string ShowedAnnouncements { get; set; }
     }
 
     /// <summary>
@@ -183,6 +173,11 @@ public static partial class Config
         /// 第三方认证服务器。
         /// </summary>
         [ConfigItem<string>("CacheAuthServerServer", "", ConfigSource.SharedEncrypt)] public partial string AuthServerAddress { get; set; }
+        
+        /// <summary>
+        /// MC 版本 Drops。
+        /// </summary>
+        [ConfigItem<string>("CacheDrops", "")] public partial string Drops { get; set; }
     }
 
     /// <summary>
@@ -238,16 +233,6 @@ public static partial class Config
         [ConfigItem<string>("SystemSystemCache", "")] public partial string CacheDirectory { get; set; }
 
         /// <summary>
-        /// 检查更新。
-        /// </summary>
-        [ConfigItem<int>("SystemSystemUpdate", 0, ConfigSource.Local)] public partial int UpdateSolution { get; set; }
-
-        /// <summary>
-        /// 更新分支。
-        /// </summary>
-        [ConfigItem<int>("SystemSystemUpdateBranch", 0, ConfigSource.Local)] public partial int UpdateBranch { get; set; }
-
-        /// <summary>
         /// 启动器公告。
         /// </summary>
         [ConfigItem<int>("SystemSystemActivity", 0, ConfigSource.Local)] public partial int AnnounceSolution { get; set; }
@@ -277,6 +262,19 @@ public static partial class Config
         /// </summary>
         [ConfigItem<string>("LaunchUuid", "")] public partial string LaunchUuid { get; set; }
 
+        [ConfigGroup("Update")] partial class UpdateConfigGroup
+        {
+            /// <summary>
+            /// 检查更新。
+            /// </summary>
+            [ConfigItem<int>("SystemSystemUpdate", 1, ConfigSource.Local)] public partial int UpdateMode { get; set; }
+
+            /// <summary>
+            /// 更新分支。
+            /// </summary>
+            [ConfigItem<int>("SystemUpdateChannel", 0, ConfigSource.Local)] public partial int UpdateChannel { get; set; }
+        }
+
         [ConfigGroup("HttpProxy")] partial class HttpProxyConfigGroup
         {
             [ConfigItem<string>("SystemHttpProxy", "", ConfigSource.SharedEncrypt)] public partial string CustomAddress { get; set; }
@@ -285,12 +283,19 @@ public static partial class Config
             [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string CustomPassword { get; set; }
         }
 
+        [ConfigGroup("NetworkConfig")]
+        partial class NetworkConfigGroup
+        {
+            [ConfigItem<bool>("SystemNetEnableDoH", true)] public partial bool EnableDoH { get; set; }
+        }
+
         [ConfigGroup("Debug")] partial class DebugConfigGroup
         {
             [ConfigItem<bool>("SystemDebugMode", false)] public partial bool Enabled { get; set; }
             [ConfigItem<int>("SystemDebugAnim", 9)] public partial int AnimationSpeed { get; set; }
             [ConfigItem<bool>("SystemDebugDelay", false)] public partial bool AddRandomDelay { get; set; }
             [ConfigItem<bool>("SystemDebugSkipCopy", false)] public partial bool DontCopy { get; set; }
+            [ConfigItem<bool>("SystemDebugAllowRestrictedFeature", false)] public partial bool AllowRestrictedFeature { get; set; }
         }
     }
 
@@ -404,7 +409,7 @@ public static partial class Config
         [ConfigItem<LinkProtocolPreference>("LinkProtocolPreference", LinkProtocolPreference.Tcp)] public partial LinkProtocolPreference ProtocolPreference { get; set; }
 
         /// <summary>
-        /// 尝试打通对称性 NAT。
+        /// 尝试使用端口猜测打通对称性 NAT。
         /// </summary>
         [ConfigItem<bool>("LinkTryPunchSym", true)] public partial bool TryPunchSym { get; set; }
 
@@ -412,6 +417,11 @@ public static partial class Config
         /// 启用 IPv6。
         /// </summary>
         [ConfigItem<bool>("LinkEnableIPv6", true)] public partial bool EnableIPv6 { get; set; }
+        
+        /// <summary>
+        /// 在日志中输出 Cli 信息以用于调试。
+        /// </summary>
+        [ConfigItem<bool>("LinkEnableCliOutput", false)] public partial bool EnableCliOutput { get; set; }
     }
 
     /// <summary>
@@ -438,6 +448,11 @@ public static partial class Config
         /// 锁定窗口大小。
         /// </summary>
         [ConfigItem<bool>("UiLockWindowSize", false)] public partial bool LockWindowSize { get; set; }
+
+        /// <summary>
+        /// 在启动游戏时显示你知道吗。
+        /// </summary>
+        [ConfigItem<bool>("UiShowLaunchingHint", true, ConfigSource.Local)] public partial bool ShowLaunchingHint { get; set; }
 
         /// <summary>
         /// 窗口标题类型。
@@ -662,23 +677,30 @@ public static partial class Config
         /// <summary>
         /// 功能隐藏。
         /// </summary>
-        [ConfigGroup("Hide")] partial class HideConfigGroup
+        [ConfigGroup("Hide")]
+        partial class HideConfigGroup
         {
+            // 主页面
             [ConfigItem<bool>("UiHiddenPageDownload", false, ConfigSource.Local)] public partial bool PageDownload { get; set; }
-            [ConfigItem<bool>("UiHiddenPageLink", false, ConfigSource.Local)] public partial bool PageLink { get; set; }
             [ConfigItem<bool>("UiHiddenPageSetup", false, ConfigSource.Local)] public partial bool PageSetup { get; set; }
-            [ConfigItem<bool>("UiHiddenPageOther", false, ConfigSource.Local)] public partial bool PageOther { get; set; }
-            [ConfigItem<bool>("UiHiddenFunctionSelect", false, ConfigSource.Local)] public partial bool FunctionSelect { get; set; }
-            [ConfigItem<bool>("UiHiddenFunctionModUpdate", false, ConfigSource.Local)] public partial bool FunctionModUpdate { get; set; }
-            [ConfigItem<bool>("UiHiddenFunctionHidden", false, ConfigSource.Local)] public partial bool FunctionHidden { get; set; }
+            [ConfigItem<bool>("UiHiddenPageTools", false, ConfigSource.Local)] public partial bool PageTools { get; set; }
+
+            // 子页面 设置
             [ConfigItem<bool>("UiHiddenSetupLaunch", false, ConfigSource.Local)] public partial bool SetupLaunch { get; set; }
             [ConfigItem<bool>("UiHiddenSetupUi", false, ConfigSource.Local)] public partial bool SetupUi { get; set; }
             [ConfigItem<bool>("UiHiddenSetupSystem", false, ConfigSource.Local)] public partial bool SetupSystem { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherHelp", false, ConfigSource.Local)] public partial bool OtherHelp { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherFeedback", false, ConfigSource.Local)] public partial bool OtherFeedback { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherVote", false, ConfigSource.Local)] public partial bool OtherVote { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherAbout", false, ConfigSource.Local)] public partial bool OtherAbout { get; set; }
-            [ConfigItem<bool>("UiHiddenOtherTest", false, ConfigSource.Local)] public partial bool OtherTest { get; set; }
+            [ConfigItem<bool>("UiHiddenSetupUpdate", false, ConfigSource.Local)] public partial bool SetupUpdate { get; set; }
+            [ConfigItem<bool>("UiHiddenSetupGameLink", false, ConfigSource.Local)] public partial bool SetupGameLink { get; set; } // 新增
+            [ConfigItem<bool>("UiHiddenSetupAbout", false, ConfigSource.Local)] public partial bool SetupAbout { get; set; } // 修正名称
+            [ConfigItem<bool>("UiHiddenSetupFeedback", false, ConfigSource.Local)] public partial bool SetupFeedback { get; set; } // 修正名称
+            [ConfigItem<bool>("UiHiddenSetupLog", false, ConfigSource.Local)] public partial bool SetupLog { get; set; } // 修正名称
+
+            // 子页面 工具
+            [ConfigItem<bool>("UiHiddenToolsGameLink", false, ConfigSource.Local)] public partial bool ToolsGameLink { get; set; } // 新增
+            [ConfigItem<bool>("UiHiddenToolsHelp", false, ConfigSource.Local)] public partial bool ToolsHelp { get; set; } // 新增
+            [ConfigItem<bool>("UiHiddenToolsTest", false, ConfigSource.Local)] public partial bool ToolsTest { get; set; } // 新增
+
+            // 子页面 实例设置
             [ConfigItem<bool>("UiHiddenVersionEdit", false, ConfigSource.Local)] public partial bool InstanceEdit { get; set; }
             [ConfigItem<bool>("UiHiddenVersionExport", false, ConfigSource.Local)] public partial bool InstanceExport { get; set; }
             [ConfigItem<bool>("UiHiddenVersionSave", false, ConfigSource.Local)] public partial bool InstanceSave { get; set; }
@@ -688,6 +710,11 @@ public static partial class Config
             [ConfigItem<bool>("UiHiddenVersionShader", false, ConfigSource.Local)] public partial bool InstanceShader { get; set; }
             [ConfigItem<bool>("UiHiddenVersionSchematic", false, ConfigSource.Local)] public partial bool InstanceSchematic { get; set; }
             [ConfigItem<bool>("UiHiddenVersionServer", false, ConfigSource.Local)] public partial bool InstanceServer { get; set; }
+
+            // 特定功能
+            [ConfigItem<bool>("UiHiddenFunctionSelect", false, ConfigSource.Local)] public partial bool FunctionSelect { get; set; }
+            [ConfigItem<bool>("UiHiddenFunctionModUpdate", false, ConfigSource.Local)] public partial bool FunctionModUpdate { get; set; }
+            [ConfigItem<bool>("UiHiddenFunctionHidden", false, ConfigSource.Local)] public partial bool FunctionHidden { get; set; }
         }
     }
 
@@ -889,10 +916,8 @@ public static partial class Config
         [ConfigItem<string>("VersionForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ForgeVersion { get; }
         [ConfigItem<string>("VersionNeoForge", "", ConfigSource.GameInstance)] public partial ArgConfig<string> NeoForgeVersion { get; }
         [ConfigItem<string>("VersionCleanroom", "", ConfigSource.GameInstance)] public partial ArgConfig<string> CleanroomVersion { get; }
-        [ConfigItem<string>("VersionOriginal", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> McVersion { get; }
-        [ConfigItem<int>("VersionOriginalMain", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMajor { get; }
-        [ConfigItem<int>("VersionOriginalSub", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> VersionMinor { get; }
-        [ConfigItem<int>("VersionApiCode", -1, ConfigSource.GameInstance)] public partial ArgConfig<int> SortCode { get; }
+        [ConfigItem<string>("VersionVanillaName", "Unknown", ConfigSource.GameInstance)] public partial ArgConfig<string> VanillaVersionName { get; }
+        [ConfigItem<string>("VersionVanilla", "0.0.0", ConfigSource.GameInstance)] public partial ArgConfig<string> VanillaVersion { get; }
         [ConfigItem<string>("VersionModpackVersion", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackVersion { get; }
         [ConfigItem<string>("VersionModpackSource", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackSource { get; }
         [ConfigItem<string>("VersionModpackId", "", ConfigSource.GameInstance)] public partial ArgConfig<string> ModpackId { get; }

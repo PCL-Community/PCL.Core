@@ -3,9 +3,11 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Net.Security;
 using System.Security.Authentication;
 using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Net.Http.Client;
 using Polly;
 
 namespace PCL.Core.Net;
@@ -21,16 +23,17 @@ public sealed class NetworkService : GeneralService {
     public override void Start()
     {
         var services = new ServiceCollection();
-        services.AddHttpClient("default").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        services.AddHttpClient("default").ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
                 UseProxy = true,
-                AutomaticDecompression = DecompressionMethods.All, //在这里添加 None 的给我重学二进制去 😡
-                SslProtocols = SslProtocols.None,
+                AutomaticDecompression = DecompressionMethods.All,
                 Proxy = HttpProxyManager.Instance,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 25,
                 UseCookies = false, //禁止自动 Cookie 管理
-                MaxConnectionsPerServer = 64,
+                ConnectCallback = Config.System.NetworkConfig.EnableDoH
+                    ? HostConnectionHandler.Instance.GetConnectionAsync
+                    : null
             }
         );
         _provider = services.BuildServiceProvider();

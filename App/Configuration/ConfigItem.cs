@@ -15,15 +15,11 @@ public class ConfigItem<TValue>(
     ConfigSource source
 ) : IConfigScope, ConfigItem
 {
-    /// <summary>
-    /// 配置键。
-    /// </summary>
     public string Key { get; } = key;
 
-    /// <summary>
-    /// 配置来源。
-    /// </summary>
     public ConfigSource Source { get; set; } = source;
+
+    Type ConfigItem.Type => typeof(TValue);
 
     private Func<TValue>? _defaultValueGetter = defaultValue;
     private TValue? _defaultValue;
@@ -61,9 +57,6 @@ public class ConfigItem<TValue>(
     private bool _enableCache = true;
     private ConfigValueCache<TValue> _valueCache = new();
 
-    /// <summary>
-    /// 是否启用值缓存，默认为 <c>true</c>。设为 <c>false</c> 将清除已存在的缓存。
-    /// </summary>
     public bool EnableCache
     {
         get => _enableCache;
@@ -227,9 +220,28 @@ public class ConfigItem<TValue>(
     #endregion
 }
 
+/// <summary>
+/// <see cref="ConfigItem{TValue}"/> 的非泛型方法抽象层，用于手动解决巨硬
+/// 2025 年仍未支持的极其先进的隐式去泛型化。
+/// </summary>
 // ReSharper disable once InconsistentNaming
 public interface ConfigItem
 {
+    /// <summary>
+    /// 配置键。
+    /// </summary>
+    public string Key { get; }
+
+    /// <summary>
+    /// 配置来源。
+    /// </summary>
+    public ConfigSource Source { get; set; }
+
+    /// <summary>
+    /// 配置的 CLR 类型。
+    /// </summary>
+    public Type Type { get; }
+
     /// <summary>
     /// 传入事件观察器以观察事件。
     /// </summary>
@@ -314,4 +326,9 @@ public interface ConfigItem
     /// 我们都不想给非引用类型装箱，但是龙猫想。
     /// </summary>
     public object DefaultValueNoType { get; }
+
+    /// <summary>
+    /// 是否启用值缓存，默认为 <c>true</c>。设为 <c>false</c> 将清除已存在的缓存。
+    /// </summary>
+    public bool EnableCache { get; set; }
 }

@@ -31,6 +31,11 @@ public static partial class Config
         /// </summary>
         [ConfigItem<bool>("HintRenderer", false)] public partial bool Renderer { get; set; }
 
+        /// <summary>
+        /// 使用调试级别 Log4j2 配置提示。
+        /// </summary>
+        [ConfigItem<bool>("HintDebugLog4j2Config", false)] public partial bool DebugLog4j2Config { get; set; }
+        
         // [ConfigItem<int>("HintDownload", 0)] public partial int Download { get; set; }
 
         /// <summary>
@@ -883,6 +888,7 @@ public static partial class Config
         [ConfigItem<bool>("VersionAdvanceDisableJLW", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> DisableJlw { get; }
         [ConfigItem<bool>("VersionAdvanceUseProxyV2", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> UseProxy { get; }
         [ConfigItem<bool>("VersionAdvanceDisableRW", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> DisableRw { get; }
+        [ConfigItem<bool>("VersionUseDebugLog4j2Config", false, ConfigSource.GameInstance)] public partial ArgConfig<bool> UseDebugLof4j2Config { get; }
         [ConfigItem<int>("VersionRamType", 2, ConfigSource.GameInstance)] public partial ArgConfig<int> MemorySolution { get; }
         [ConfigItem<int>("VersionRamCustom", 15, ConfigSource.GameInstance)] public partial ArgConfig<int> CustomMemorySize { get; }
         [ConfigItem<int>("VersionRamOptimize", 0, ConfigSource.GameInstance)] public partial ArgConfig<int> OptimizeMemoryResolution { get; }

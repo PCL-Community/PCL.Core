@@ -10,12 +10,18 @@ namespace PCL.Core.Minecraft.Launch.Utils;
 
 public static class LaunchEnvUtils {
     private const string JavaWrapperResource = "Resources/java-wrapper.jar";
+    private const string DebugLegacyLog4j2ConfigResource = "Resources/log4j2-legacy-debug.xml";
+    private const string DebugLog4j2ConfigResource = "Resources/log4j2-debug.xml";
     private const string LinkDResource = "Resources/linkd.exe";
 
     private static readonly object ExtractJavaWrapperLock = new();
+    private static readonly object ExtractLegacyDebugLog4j2ConfigLock = new();
+    private static readonly object ExtractDebugLog4j2ConfigLock = new();
     private static readonly object ExtractLinkDLock = new();
 
     public static string ExtractJavaWrapper() => ExtractFile(JavaWrapperResource, "JavaWrapper.jar", ExtractJavaWrapperLock);
+    public static string ExtractLegacyDebugLog4j2Config() => ExtractFile(DebugLegacyLog4j2ConfigResource, "log4j2-legacy-debug.xml", ExtractLegacyDebugLog4j2ConfigLock);
+    public static string ExtractDebugLog4j2Config() => ExtractFile(DebugLog4j2ConfigResource, "log4j2-debug.xml", ExtractDebugLog4j2ConfigLock);
     public static string ExtractLinkD() => ExtractFile(LinkDResource, "linkd.exe", ExtractLinkDLock);
 
     private static string ExtractFile(string resourceName, string fileName, object lockObj) {

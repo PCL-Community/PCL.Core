@@ -37,7 +37,7 @@ public sealed partial class CheckUpdateService
             return;
         }
         
-        Context.Info($"发现新版本: {LatestVersion.Version.Code}, 准备更新");
+        Context.Info($"发现新版本: {LatestVersion.Code}, 准备更新");
 
         if (Config.System.Update.UpdateMode == 2 && !_PromptUpdate()) return;
 
@@ -124,7 +124,7 @@ public sealed partial class CheckUpdateService
         if (LatestVersion == null) return false;
 
         if (MsgBoxWrapper.Show(
-                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Version.Name})\r\n" +
+                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Name})\r\n" +
                 $"是否立即下载并安装？\r\n" +
                 "你也可以稍后在 设置 -> 检查更新 界面中更新。",
                 "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;
@@ -139,7 +139,7 @@ public sealed partial class CheckUpdateService
         if (!IsUpdateDownloaded) return false;
 
         if (MsgBoxWrapper.Show(
-                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Version.Name})\r\n" +
+                $"启动器有新版本可用 ({Basics.VersionName} -> {LatestVersion.Name})\r\n" +
                 $"已自动下载，是否立即安装？\r\n" +
                 "你也可以稍后在 设置 -> 检查更新 界面中安装。",
                 "发现新版本", MsgBoxTheme.Info, true, "立刻更新", "以后再说") == 1) return true;

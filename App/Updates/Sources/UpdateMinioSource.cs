@@ -18,9 +18,26 @@ namespace PCL.Core.App.Updates.Sources;
 
 public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateSource
 {
+    #region Data Models
+
     private sealed record VersionAssetsDataModel(
-        [property: JsonPropertyName("assets")] VersionData[] Assets
+        [property: JsonPropertyName("assets")] VersionDataModel[] Assets
     );
+
+    private sealed record VersionInfoDataModel(
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("code")] int Code
+    );
+
+    private sealed record VersionDataModel(
+        [property: JsonPropertyName("version")] VersionInfoDataModel Version,
+        [property: JsonPropertyName("sha256")] string Sha256,
+        [property: JsonPropertyName("changelog")] string ChangeLog,
+        [property: JsonPropertyName("patches")] string[] Patches,
+        [property: JsonPropertyName("downloads")] string[] Downloads
+    );
+
+    #endregion
     
     public bool IsAvailable => !string.IsNullOrWhiteSpace(baseUrl);
 
@@ -28,41 +45,55 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
     private static readonly string _TempPath = Path.Combine(FileService.TempPath, "Cache", "Update");
     
-    private VersionData? _cachedVersionInfo;
-    
     /// <inheritdoc/>
     /// <exception cref="InvalidOperationException">当版本信息为 null 时抛出</exception>
     /// <exception cref="HttpRequestException">当获取版本信息失败时抛出</exception>
     public async Task<VersionData> CheckUpdateAsync()
     {
+        var ret = await _GetVersionDataModelAsync();
+        return new VersionData(
+            ret.Version.Code,
+            ret.Version.Name,
+            ret.ChangeLog);
+    }
+    
+    private async Task<VersionDataModel> _GetVersionDataModelAsync()
+    {
+        VersionDataModel? ret;
         try
         {
             _LogTrace("开始获取版本信息");
-            var channelName = _GetChannelName();
-            var assets = await _GetRemoteInfoByNameAsync<VersionAssetsDataModel>($"updates-{channelName}", "updates/")
-                .ConfigureAwait(false);
+            var channelName = Config.System.Update.UpdateChannel switch
+            {
+                0 => "sr",
+                1 => "fr",
+                _ => "sr"
+            } + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "64");
+            
+            var assets = await _GetRemoteInfoByNameAsync<VersionAssetsDataModel>(
+                $"updates-{channelName}", "updates/").ConfigureAwait(false);
             _LogTrace("版本信息获取完成");
 
-            _cachedVersionInfo = assets?.Assets.FirstOrDefault();
+            ret = assets?.Assets.FirstOrDefault();
         }
         catch (Exception ex)
         {
             throw new HttpRequestException("从远程获取版本信息失败", ex);
         }
 
-        return _cachedVersionInfo ?? throw new InvalidDataException("未找到远程版本信息");
+        return ret ?? throw new InvalidDataException("未找到远程版本信息");
     }
 
     /// <inheritdoc/>
     /// <exception cref="InvalidOperationException">当公告信息为 null 时抛出</exception>
     /// <exception cref="HttpRequestException">当获取公告信息失败时抛出</exception>
-    public async Task<AnnouncementsList> GetAnnouncementAsync()
+    public async Task<AnnouncementsListModel> GetAnnouncementAsync()
     {
-        AnnouncementsList? ret;
+        AnnouncementsListModel? ret;
         try
         {
             _LogTrace("开始获取公告信息");
-            ret = await _GetRemoteInfoByNameAsync<AnnouncementsList>("announcement")
+            ret = await _GetRemoteInfoByNameAsync<AnnouncementsListModel>("announcement")
                 .ConfigureAwait(false);
             _LogTrace("公告信息获取完成");
         }
@@ -84,9 +115,9 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
         var tempDownloadDir = _PrepareTempDirectory();
 
-        if (_cachedVersionInfo == null) await CheckUpdateAsync();
-        var (task, isPatch) = 
-            await _CreateDownloadTaskAsync(_cachedVersionInfo!, tempDownloadDir).ConfigureAwait(false);
+        var (task, isPatch) = await _CreateDownloadTaskAsync(
+            await _GetVersionDataModelAsync(), 
+            tempDownloadDir).ConfigureAwait(false);
 
         _LogInfo("开始下载更新文件");
         var manager = new DownloadManager(new FastMirrorSelector(new HttpClient()));
@@ -98,7 +129,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
     }
 
     private async Task<(DownloadTask task, bool isPatch)> _CreateDownloadTaskAsync(
-        VersionData versionJson,
+        VersionDataModel versionJson,
         string tempDir)
     {
         var updateSha256 = versionJson.Sha256;
@@ -192,25 +223,6 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
         _LogTrace("远程信息拉取完成");
 
         return remoteJson;
-    }
-
-    /// <summary>
-    /// 获取通道名称
-    /// </summary>
-    /// <returns>通道名称</returns>
-    private static string _GetChannelName()
-    {
-        var channelName = string.Empty;
-        channelName += Config.System.Update.UpdateChannel switch
-        {
-            0 => "sr",
-            1 => "fr",
-            _ => "sr"
-        };
-
-        channelName += RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-
-        return channelName;
     }
 
     #region Logger Wrapper

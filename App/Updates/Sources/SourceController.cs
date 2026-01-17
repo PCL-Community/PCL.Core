@@ -83,7 +83,7 @@ public sealed class SourceController
     /// <summary>
     /// 获取公告列表。
     /// </summary>
-    public Task<AnnouncementsList> GetAnnouncementListAsync() =>
+    public Task<AnnouncementsListModel> GetAnnouncementListAsync() =>
         _TryFindSourceAsync(s => s.GetAnnouncementAsync());
 
     /// <summary>

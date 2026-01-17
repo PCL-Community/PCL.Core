@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using PCL.Core.Utils;
 
 namespace PCL.Core.App.Updates.Sources;
 
@@ -14,7 +16,7 @@ public interface IUpdateSource
     /// 获取版本公告列表
     /// </summary>
     /// <returns>版本公告列表</returns>
-    public Task<AnnouncementsList> GetAnnouncementAsync();
+    public Task<AnnouncementsListModel> GetAnnouncementAsync();
 
     /// <summary>
     /// 下载更新文件
@@ -32,3 +34,31 @@ public interface IUpdateSource
     /// </summary>
     public bool IsAvailable { get; }
 }
+
+public sealed record VersionData(
+    int Code,
+    string Name,
+    string ChangeLog)
+{
+    public bool IsAvailable => Code > Basics.VersionCode &&
+                               SemVer.Parse(Name) > SemVer.Parse(Basics.VersionName);
+}
+
+public record AnnouncementsListModel(
+    [property: JsonPropertyName("content")] AnnouncementContentModel[] Contents
+);
+
+public record AnnouncementContentModel(
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("detail")] string Detail,
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("date")] string Date,
+    [property: JsonPropertyName("btn1")] AnnouncementBtnInfoModel? Btn1,
+    [property: JsonPropertyName("btn2")] AnnouncementBtnInfoModel? Btn2
+);
+
+public record AnnouncementBtnInfoModel (
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("command")] string Command,
+    [property: JsonPropertyName("command_paramter")] string CommandParameter
+);

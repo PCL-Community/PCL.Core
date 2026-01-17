@@ -143,6 +143,26 @@ public static class StringExtension
         }
     }
 
+    extension(string input)
+    {
+          
+        public T ParseToEnum<T>() where T : struct, Enum
+        {
+            if (String.IsNullOrWhiteSpace(input))
+            {
+                return (T)(object)0;
+            }
+            else if (int.TryParse(input, out int numericValue))
+            {
+                return (T)(object)numericValue;
+            }
+            else
+            {
+                return Enum.Parse<T>(input, true);
+            }
+        }
+    }
+
     extension([NotNullWhen(false)] string? value)
     {
         /// <summary>
@@ -214,22 +234,6 @@ public static class StringExtension
         public bool IsASCII()
         {
             return str.All(c => c < 128);
-        }
-  
-        public static T ParseToEnum<T>(this string str) where T : struct, Enum
-        {
-            if (String.IsNullOrWhiteSpace(str))
-            {
-                return (T)(object)0;
-            }
-            else if (int.TryParse(str, out int numericValue))
-            {
-                return (T)(object)numericValue;
-            }
-            else
-            {
-                return Enum.Parse<T>(str, true);
-            }
         }
 
         public bool StartsWithF(string prefix, bool ignoreCase = false)

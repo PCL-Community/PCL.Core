@@ -245,8 +245,13 @@ public static class InfoMergeHandler {
             return McVersionType.Fool;
         }
 
-        if (releaseTime.Year > 2000 && releaseTime <= new DateTime(2011, 11, 16)) {
-            return McVersionType.Old;
+        if (releaseTime.Year > 2000 && releaseTime < new DateTime(2010, 12, 03)) {
+            return McVersionType.OldAlpha;
+        }
+
+        if (releaseTime > new DateTime(2010, 12, 03) && releaseTime < new DateTime(2011, 09, 19))
+        {
+            return McVersionType.OldAlpha;
         }
 
         if (versionJson.TryGetPropertyValue("type", out var typeElement)) {

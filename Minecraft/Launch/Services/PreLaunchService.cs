@@ -249,7 +249,8 @@ public class PreLaunchService(IMcInstance instance, JavaInfo selectedJava) {
         var mcVersionMinor = instance.InstanceInfo.McVersionMinor;
         var mcReleaseDate = instance.InstanceInfo.McReleaseDate;
         var isUnder11 = mcReleaseDate < new DateTime(2012, 1, 12) 
-                          || instance.InstanceInfo.VersionType == McVersionType.Old
+                          || instance.InstanceInfo.VersionType == McVersionType.OldAlpha
+                          || instance.InstanceInfo.VersionType == McVersionType.OldBeta
                           || (mcVersionMinor == 1 && instance.InstanceInfo.McVersionBuild < 1);
 
         // For 1.0 and lower version, return "none" as no language option is available

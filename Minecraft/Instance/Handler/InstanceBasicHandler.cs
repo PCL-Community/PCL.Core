@@ -42,7 +42,8 @@ public static class InstanceBasicHandler {
             McVersionType.Release => McInstanceCardType.Release,
             McVersionType.Snapshot => McInstanceCardType.Snapshot,
             McVersionType.Fool => McInstanceCardType.Fool,
-            McVersionType.Old => McInstanceCardType.Old,
+            McVersionType.OldAlpha => McInstanceCardType.Old,
+            McVersionType.OldBeta => McInstanceCardType.Old,
             _ => McInstanceCardType.UnknownPatchers
         };
     }

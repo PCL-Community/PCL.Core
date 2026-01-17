@@ -46,7 +46,8 @@ public sealed partial class CheckUpdateService
         if (Config.System.Update.UpdateMode == 1 && !_PromptInstall()) return;
 
         Context.Info("准备重启并安装...");
-        UpdateHelper.Restart(true, true);
+        // 这个 UpdateHelper.Restart 使用 Lifecycle.Shutdown 会和动画系统冲突产生各种妙妙小问题，先注释掉
+        //UpdateHelper.Restart(true, true);
     }
 
     #region Public Methods

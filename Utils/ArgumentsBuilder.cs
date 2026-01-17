@@ -7,7 +7,29 @@ namespace PCL.Core.Utils;
 
 public class ArgumentsBuilder
 {
-    private readonly List<KeyValuePair<string, string?>> _args = [];
+    private readonly List<Argument> _args = [];
+
+    private enum ArgumentStyle
+    {
+        Flag,
+
+        /// <summary>
+        /// Concated by '=' symbol.
+        /// </summary>
+        Equals,
+
+        /// <summary>
+        /// Concated by space.
+        /// </summary>
+        Space
+    }
+
+    private readonly struct Argument(string key, string? value, ArgumentStyle style)
+    {
+        public readonly string Key = key ?? throw new ArgumentNullException(nameof(key));
+        public readonly string? Value = value;
+        public readonly ArgumentStyle Style = style;
+    }
 
     /// <summary>
     /// 添加键值对参数（自动处理空格转义）
@@ -18,7 +40,20 @@ public class ArgumentsBuilder
     {
         if (key is null) throw new NullReferenceException(nameof(key));
         if (value is null) throw new NullReferenceException(nameof(value));
-        _args.Add(new KeyValuePair<string, string?>(key, _handleValue(value)));
+        _args.Add(new Argument(key, _HandleValue(value), ArgumentStyle.Equals));
+        return this;
+    }
+
+    /// <summary>
+    /// 添加由空格连接到键值对参数（自动处理空格转义）
+    /// </summary>
+    /// <param name="key">参数名（不带前缀）</param>
+    /// <param name="value">参数值</param>
+    public ArgumentsBuilder AddWithSpace(string key, string value)
+    {
+        if (key is null) throw new NullReferenceException(nameof(key));
+        if (value is null) throw new NullReferenceException(nameof(value));
+        _args.Add(new Argument(key, _HandleValue(value), ArgumentStyle.Space));
         return this;
     }
 
@@ -29,7 +64,7 @@ public class ArgumentsBuilder
     public ArgumentsBuilder AddFlag(string flag)
     {
         if (flag is null) throw new NullReferenceException(nameof(flag));
-        _args.Add(new KeyValuePair<string, string?>(flag, null));
+        _args.Add(new Argument(flag, null, ArgumentStyle.Flag));
         return this;
     }
 
@@ -39,6 +74,15 @@ public class ArgumentsBuilder
     public ArgumentsBuilder AddIf(bool condition, string key, string value)
     {
         if (condition) Add(key, value);
+        return this;
+    }
+
+    /// <summary>
+    /// 条件添加由空格连接的参数（仅当condition为true时添加）
+    /// </summary>
+    public ArgumentsBuilder AddWithSpaceIf(bool condition, string key, string value)
+    {
+        if (condition) AddWithSpace(key, value);
         return this;
     }
 
@@ -96,8 +140,17 @@ public class ArgumentsBuilder
             // 添加值（如果有）
             if (arg.Value is not null)
             {
-                sb.Append('=')
-                    .Append(arg.Value);
+                switch (arg.Style)
+                {
+                    case ArgumentStyle.Equals:
+                        sb.Append('=')
+                            .Append(arg.Value);
+                        break;
+                    case ArgumentStyle.Space:
+                        sb.Append(' ')
+                            .Append(arg.Value);
+                        break;
+                }
             }
         }
 
@@ -117,7 +170,7 @@ public class ArgumentsBuilder
     private static readonly char[] _CharNeedToQute = [' ', '=', '|', '"'];
 
     // 转义包含空格的值（用双引号包裹）
-    private static string _handleValue(string value)
+    private static string _HandleValue(string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return $"\"{value}\"";
         return value.All(x => !_CharNeedToQute.Contains(x))

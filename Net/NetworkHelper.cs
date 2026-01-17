@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
 
 namespace PCL.Core.Net;
 
@@ -12,5 +13,10 @@ public static class NetworkHelper
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         return port;
+    }
+    
+    public static bool IsNetworkAvailable()
+    {
+        return NetworkInterface.GetIsNetworkAvailable();
     }
 }

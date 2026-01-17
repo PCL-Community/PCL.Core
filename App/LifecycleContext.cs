@@ -14,6 +14,8 @@ public class LifecycleContext(
     Action onDeclareStopped,
     Action onRequestStopLoading)
 {
+    #region 日志输出
+    
     public void CustomLog(
         string message,
         Exception? ex = null,
@@ -27,6 +29,13 @@ public class LifecycleContext(
     public void Warn(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Warning, actionLevel);
     public void Error(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Error, actionLevel);
     public void Fatal(string message, Exception? ex = null, ActionLevel? actionLevel = null) => CustomLog(message, ex, LogLevel.Fatal, actionLevel);
+    
+    #endregion
+
+    /// <summary>
+    /// 服务项自身实例。
+    /// </summary>
+    public ILifecycleService ServiceInstance => service;
 
     /// <summary>
     /// 请求退出程序。仅可在 <see cref="LifecycleState.BeforeLoading"/> 状态调用。

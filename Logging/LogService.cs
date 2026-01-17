@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using PCL.Core.App;
 using PCL.Core.UI;
@@ -12,7 +13,7 @@ public class LogService : ILifecycleLogService
 {
     public string Identifier => "log";
     public string Name => "日志服务";
-    public bool SupportAsyncStart => false;
+    public bool SupportAsync => false;
 
     private static LifecycleContext? _context;
     private static LifecycleContext Context => _context!;
@@ -23,7 +24,7 @@ public class LogService : ILifecycleLogService
 
     private static bool _wrapperRegistered = false;
 
-    public void Start()
+    public Task StartAsync()
     {
         Context.Trace("正在初始化 Logger 实例");
         var config = new LoggerConfiguration(Path.Combine(Basics.ExecutableDirectory, "PCL", "Log"));
@@ -31,12 +32,14 @@ public class LogService : ILifecycleLogService
         Context.Trace("正在注册日志事件");
         LogWrapper.OnLog += _OnWrapperLog;
         _wrapperRegistered = true;
+        return Task.CompletedTask;
     }
 
-    public void Stop()
+    public Task StopAsync()
     {
         if (_wrapperRegistered) LogWrapper.OnLog -= _OnWrapperLog;
         _logger?.Dispose();
+        return Task.CompletedTask;
     }
 
     private static void _LogAction(ActionLevel level, string formatted, string plain, Exception? ex)
@@ -52,7 +55,7 @@ public class LogService : ILifecycleLogService
         // hint
         if (level is ActionLevel.Hint or ActionLevel.HintErr)
         {
-            HintWrapper.Show(plain, (level == ActionLevel.Hint) ? HintTheme.Normal : HintTheme.Error);
+            HintWrapper.Show(plain, (level == ActionLevel.Hint) ? HintTheme.Info : HintTheme.Error);
         }
 
         // message box

@@ -128,7 +128,7 @@ public class UpdateMinioSource(string baseUrl, string name = "Minio") : IUpdateS
 
         return (new DownloadTask(
                 new Uri(RandomUtils.PickRandom(downloads)),
-                Path.Combine(tempDir, $"{updateSha256}.bin")),
+                Path.Combine(tempDir, $"{updateSha256}.zip")),
             false);
     }
 

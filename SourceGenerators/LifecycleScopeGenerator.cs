@@ -168,6 +168,7 @@ public class LifecycleScopeGenerator : IIncrementalGenerator
         sb.AppendLine($"    public string Name => {model.Name.ToLiteral()};");
         sb.AppendLine($"    public bool SupportAsync => {(model.SupportAsync ? "true" : "false")};");
         sb.AppendLine("    private static LifecycleContext Context => _context!;");
+        sb.AppendLine("    private static ILifecycleService Service => Context.ServiceInstance;");
         sb.AppendLine();
 
         // StopAsync() implementation
